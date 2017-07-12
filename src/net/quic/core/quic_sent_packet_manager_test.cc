@@ -960,7 +960,6 @@ TEST_F(QuicSentPacketManagerTest, NewRetransmissionTimeout) {
   QuicSentPacketManagerPeer::SetPerspective(&manager_, Perspective::IS_CLIENT);
   client_config.SetConnectionOptionsToSend(options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   EXPECT_CALL(*send_algorithm_, PacingRate(_))
       .WillRepeatedly(Return(QuicBandwidth::Zero()));
@@ -1108,7 +1107,6 @@ TEST_F(QuicSentPacketManagerTest,
   QuicTagVector options;
   options.push_back(kCONH);
   QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
   manager_.SetFromConfig(config);
@@ -1348,7 +1346,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateTimeLossDetectionFromOptions) {
   QuicTagVector options;
   options.push_back(kTIME);
   QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
   manager_.SetFromConfig(config);
@@ -1367,7 +1364,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateCongestionControlFromOptions) {
   manager_.SetFromConfig(config);
   EXPECT_EQ(kReno, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
                        ->GetCongestionControlType());
-  EXPECT_TRUE(QuicSentPacketManagerPeer::UsingPacing(&manager_));
 
   options.clear();
   options.push_back(kTBBR);
@@ -1376,7 +1372,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateCongestionControlFromOptions) {
   manager_.SetFromConfig(config);
   EXPECT_EQ(kBBR, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
                       ->GetCongestionControlType());
-  EXPECT_TRUE(QuicSentPacketManagerPeer::UsingPacing(&manager_));
 
   options.clear();
   options.push_back(kBYTE);
@@ -1385,7 +1380,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateCongestionControlFromOptions) {
   manager_.SetFromConfig(config);
   EXPECT_EQ(kCubic, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
                         ->GetCongestionControlType());
-  EXPECT_TRUE(QuicSentPacketManagerPeer::UsingPacing(&manager_));
 
   options.clear();
   options.push_back(kRENO);
@@ -1395,54 +1389,9 @@ TEST_F(QuicSentPacketManagerTest, NegotiateCongestionControlFromOptions) {
   manager_.SetFromConfig(config);
   EXPECT_EQ(kRenoBytes, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
                             ->GetCongestionControlType());
-  EXPECT_TRUE(QuicSentPacketManagerPeer::UsingPacing(&manager_));
-
-  // Test with PCC enabled and disabled.
-  FLAGS_quic_reloadable_flag_quic_enable_pcc = false;
-  const CongestionControlType prior_cc_type =
-      QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
-          ->GetCongestionControlType();
-  options.clear();
-  options.push_back(kTPCC);
-  QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
-  EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
-  manager_.SetFromConfig(config);
-  // No change will be made to the congestion-control algorithm.
-  // Defaults to current type, as set in previous test.
-  EXPECT_NE(kPCC, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
-                      ->GetCongestionControlType());
-  EXPECT_EQ(prior_cc_type, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
-                               ->GetCongestionControlType());
-  EXPECT_TRUE(QuicSentPacketManagerPeer::UsingPacing(&manager_));
-
-  FLAGS_quic_reloadable_flag_quic_enable_pcc = true;
-  options.clear();
-  options.push_back(kTPCC);
-  QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
-  EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
-  manager_.SetFromConfig(config);
-  // Don't check the tag, since the actual implementation is
-  // platform-specific (i.e. it may be stubbed out).  If the
-  // implementation does return PCC as the type, however, make sure
-  // that the packet manager does NOT wrap it with a PacingSender.
-  const bool should_pace = QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
-                               ->GetCongestionControlType() != kPCC;
-  EXPECT_EQ(should_pace, QuicSentPacketManagerPeer::UsingPacing(&manager_));
-
-  // Make sure that the flag for disabling pacing actually works.
-  FLAGS_quic_disable_pacing_for_perf_tests = true;
-  options.clear();
-  options.push_back(kBYTE);
-  QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
-  EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
-  manager_.SetFromConfig(config);
-  EXPECT_EQ(kCubic, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
-                        ->GetCongestionControlType());
-  EXPECT_FALSE(QuicSentPacketManagerPeer::UsingPacing(&manager_));
 }
 
 TEST_F(QuicSentPacketManagerTest, NegotiateClientCongestionControlFromOptions) {
-  FLAGS_quic_reloadable_flag_quic_enable_pcc = true;
   QuicConfig config;
   QuicTagVector options;
 
@@ -1451,7 +1400,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateClientCongestionControlFromOptions) {
       QuicSentPacketManagerPeer::GetSendAlgorithm(manager_);
   options.push_back(kRENO);
   config.SetClientConnectionOptions(options);
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
   manager_.SetFromConfig(config);
@@ -1498,7 +1446,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateNumConnectionsFromOptions) {
   QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
   EXPECT_CALL(*send_algorithm_, SetNumEmulatedConnections(1));
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   manager_.SetFromConfig(config);
 
@@ -1507,7 +1454,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateNumConnectionsFromOptions) {
   client_config.SetConnectionOptionsToSend(options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
   EXPECT_CALL(*send_algorithm_, SetNumEmulatedConnections(1));
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   manager_.SetFromConfig(client_config);
 }
@@ -1522,7 +1468,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateNConnectionFromOptions) {
   options.push_back(kNCON);
   QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   manager_.SetFromConfig(config);
 
@@ -1537,7 +1482,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateNoTLPFromOptionsAtServer) {
   options.push_back(kNTLP);
   QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   manager_.SetFromConfig(config);
   EXPECT_EQ(0u, QuicSentPacketManagerPeer::GetMaxTailLossProbes(&manager_));
@@ -1551,7 +1495,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateNoTLPFromOptionsAtClient) {
   QuicSentPacketManagerPeer::SetPerspective(&manager_, Perspective::IS_CLIENT);
   client_config.SetConnectionOptionsToSend(options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   manager_.SetFromConfig(client_config);
   EXPECT_EQ(0u, QuicSentPacketManagerPeer::GetMaxTailLossProbes(&manager_));
@@ -1564,7 +1507,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateTLPRttFromOptionsAtServer) {
   options.push_back(kTLPR);
   QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   manager_.SetFromConfig(config);
   EXPECT_TRUE(
@@ -1579,7 +1521,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateTLPRttFromOptionsAtClient) {
   QuicSentPacketManagerPeer::SetPerspective(&manager_, Perspective::IS_CLIENT);
   client_config.SetConnectionOptionsToSend(options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   manager_.SetFromConfig(client_config);
   EXPECT_TRUE(
@@ -1594,7 +1535,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateNewRTOFromOptionsAtServer) {
   options.push_back(kNRTO);
   QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   manager_.SetFromConfig(config);
   EXPECT_TRUE(QuicSentPacketManagerPeer::GetUseNewRto(&manager_));
@@ -1609,7 +1549,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateNewRTOFromOptionsAtClient) {
   QuicSentPacketManagerPeer::SetPerspective(&manager_, Perspective::IS_CLIENT);
   client_config.SetConnectionOptionsToSend(options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   manager_.SetFromConfig(client_config);
   EXPECT_TRUE(QuicSentPacketManagerPeer::GetUseNewRto(&manager_));
@@ -1623,7 +1562,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateUndoFromOptionsAtServer) {
   options.push_back(kUNDO);
   QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   manager_.SetFromConfig(config);
   EXPECT_TRUE(QuicSentPacketManagerPeer::GetUndoRetransmits(&manager_));
@@ -1675,7 +1613,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateUndoFromOptionsAtClient) {
   QuicSentPacketManagerPeer::SetPerspective(&manager_, Perspective::IS_CLIENT);
   client_config.SetConnectionOptionsToSend(options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   manager_.SetFromConfig(client_config);
   EXPECT_TRUE(QuicSentPacketManagerPeer::GetUndoRetransmits(&manager_));
@@ -1688,7 +1625,6 @@ TEST_F(QuicSentPacketManagerTest, UseInitialRoundTripTimeToSend) {
 
   QuicConfig config;
   config.SetInitialRoundTripTimeUsToSend(initial_rtt_us);
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
   manager_.SetFromConfig(config);

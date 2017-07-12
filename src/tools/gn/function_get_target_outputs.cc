@@ -93,7 +93,7 @@ Value RunGetTargetOutputs(Scope* scope,
     *err = Err(function, "No targets defined in this context.");
     return Value();
   }
-  for (auto* item : *collector) {
+  for (const auto& item : *collector) {
     if (item->label() != label)
       continue;
 

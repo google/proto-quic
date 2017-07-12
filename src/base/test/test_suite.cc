@@ -135,8 +135,7 @@ int RunUnitTestsUsingBaseTestSuite(int argc, char **argv) {
                          Bind(&TestSuite::Run, Unretained(&test_suite)));
 }
 
-TestSuite::TestSuite(int argc, char** argv)
-    : initialized_command_line_(false), created_feature_list_(false) {
+TestSuite::TestSuite(int argc, char** argv) : initialized_command_line_(false) {
   PreInitialize();
   InitializeFromCommandLine(argc, argv);
   // Logging must be initialized before any thread has a chance to call logging
@@ -146,7 +145,7 @@ TestSuite::TestSuite(int argc, char** argv)
 
 #if defined(OS_WIN)
 TestSuite::TestSuite(int argc, wchar_t** argv)
-    : initialized_command_line_(false), created_feature_list_(false) {
+    : initialized_command_line_(false) {
   PreInitialize();
   InitializeFromCommandLine(argc, argv);
   // Logging must be initialized before any thread has a chance to call logging
@@ -342,13 +341,10 @@ void TestSuite::Initialize() {
     debug::WaitForDebugger(60, true);
   }
 #endif
-
   // Set up a FeatureList instance, so that code using that API will not hit a
-  // an error that it's not set. If a FeatureList was created in this way (i.e.
-  // one didn't exist previously), it will be cleared in Shutdown() via
-  // ClearInstanceForTesting().
-  created_feature_list_ =
-      FeatureList::InitializeInstance(std::string(), std::string());
+  // an error that it's not set. It will be cleared automatically.
+  // TODO(chaopeng) Should load the actually features in command line here.
+  scoped_feature_list_.InitFromCommandLine(std::string(), std::string());
 
 #if defined(OS_IOS)
   InitIOSTestMessageLoop();
@@ -412,10 +408,6 @@ void TestSuite::Initialize() {
 
 void TestSuite::Shutdown() {
   base::debug::StopProfiling();
-
-  // Clear the FeatureList that was created by Initialize().
-  if (created_feature_list_)
-    FeatureList::ClearInstanceForTesting();
 }
 
 }  // namespace base

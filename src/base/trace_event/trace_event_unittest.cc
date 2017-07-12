@@ -2808,7 +2808,6 @@ TEST_F(TraceEventTestFixture, ThreadOnceBlocking) {
   thread.task_runner()->PostTask(
       FROM_HERE, BindOnce(&TraceWithAllMacroVariants, &task_complete_event));
   task_complete_event.Wait();
-  task_complete_event.Reset();
 
   WaitableEvent task_start_event(WaitableEvent::ResetPolicy::AUTOMATIC,
                                  WaitableEvent::InitialState::NOT_SIGNALED);
@@ -2828,8 +2827,6 @@ TEST_F(TraceEventTestFixture, ThreadOnceBlocking) {
 
   // The following sequence ensures that the FlushCurrentThread task has been
   // executed in the thread before continuing.
-  task_start_event.Reset();
-  task_stop_event.Reset();
   thread.task_runner()->PostTask(
       FROM_HERE,
       BindOnce(&BlockUntilStopped, &task_start_event, &task_stop_event));
@@ -2843,7 +2840,6 @@ TEST_F(TraceEventTestFixture, ThreadOnceBlocking) {
   thread.task_runner()->PostTask(
       FROM_HERE, BindOnce(&TraceWithAllMacroVariants, &task_complete_event));
   task_complete_event.Wait();
-  task_complete_event.Reset();
   EndTraceAndFlushInThreadWithMessageLoop();
   ValidateAllTraceMacrosCreatedData(trace_parsed_);
 }

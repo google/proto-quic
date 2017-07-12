@@ -1,8 +1,8 @@
 # `base/numerics`
 
-This directory contains templates providing well-defined semantics for safely
-handling a variety of numeric operations, including most common arithmetic
-operations and conversions.
+This directory contains a dependency-free, header-only library of templates
+providing well-defined semantics for safely handling a variety of numeric
+operations, including most common arithmetic operations and conversions.
 
 The public API is broken out into the following header files:
 
@@ -23,12 +23,12 @@ and `Numeric` templates that are convertable to an underlying C numeric type.
 The conversion priority for `Numeric` type coercions is:
 
 *   `StrictNumeric` coerces to `ClampedNumeric` and `CheckedNumeric`
-*   `ClampedNumeric` coerces to `CheckedNumeric` 
+*   `ClampedNumeric` coerces to `CheckedNumeric`
 ***
 
 [TOC]
 
-## Conversion functions and `StrictNumeric<>` in `safe_conversions.h`
+## Conversion functions and StrictNumeric<> in safe_conversions.h
 
 This header includes a collection of helper `constexpr` templates for safely
 performing a range of conversions, assignments, and tests.
@@ -65,7 +65,7 @@ performing a range of conversions, assignments, and tests.
     parameter as an unsigned result (thus avoiding an overflow if the value
     is the signed, two's complement minimum).
 
-### `StrictNumeric<>`
+### StrictNumeric<>
 
 `StrictNumeric<>` is a wrapper type that performs assignments and copies via
 the `strict_cast` template, and can perform valid arithmetic comparisons
@@ -78,7 +78,7 @@ sufficient range to represent the underlying type.
     of the supplied arithmetic or StrictNumeric type.
 *   `SizeT` - Alias for `StrictNumeric<size_t>`.
 
-## `CheckedNumeric<>` in `checked_math.h`
+## CheckedNumeric<> in checked_math.h
 
 `CheckedNumeric<>` implements all the logic and operators for detecting integer
 boundary conditions such as overflow, underflow, and invalid conversions.
@@ -180,7 +180,7 @@ arithmetic types to `CheckedNumeric` types:
 *   `MakeCheckedNum()` - Creates a new `CheckedNumeric` from the underlying type
     of the supplied arithmetic or directly convertible type.
 
-## `ClampedNumeric<>` in `clamped_math.h`
+## ClampedNumeric<> in clamped_math.h
 
 `ClampedNumeric<>` implements all the logic and operators for clamped
 (non-sticky saturating) arithmetic operations and conversions. The

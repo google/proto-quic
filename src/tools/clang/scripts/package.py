@@ -261,6 +261,10 @@ def main():
                  'lib/clang/*/lib/darwin/*asan_iossim*',
                  'lib/clang/*/lib/darwin/*profile_osx*',
                  'lib/clang/*/lib/darwin/*profile_iossim*',
+                 # And the OSX and ios builtin libraries (iossim is lipo'd into
+                 # ios) for the _IsOSVersionAtLeast runtime function.
+                 'lib/clang/*/lib/darwin/*.ios.a',
+                 'lib/clang/*/lib/darwin/*.osx.a',
                  ])
   elif sys.platform.startswith('linux'):
     # Copy the libstdc++.so.6 we linked Clang against so it can run.

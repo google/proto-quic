@@ -14,13 +14,5 @@
   <string>${XCODE_VERSION}</string>
   <key>DTXcodeBuild</key>
   <string>${XCODE_BUILD}</string>
-  <key>CFBundleShortVersionString</key>
-  <string>${VERSION}</string>
-  <key>CFBundleVersion</key>
-  <string>${VERSION_BUILD}</string>
-  <key>CFBundleIdentifier</key>
-  <string>org.chromium.${PRODUCT_NAME:rfc1034identifier}</string>
-  <key>SCM_REVISION</key>
-  <string>${COMMIT_HASH}</string>
 </dict>
 </plist>

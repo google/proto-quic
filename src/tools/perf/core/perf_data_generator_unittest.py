@@ -275,3 +275,30 @@ class PerfDataGeneratorTest(unittest.TestCase):
                 'build1-b1': ['test'],
                 'build2-b1': ['other_test', 'test'],
             }))
+
+  def testExtraTestsAreLoadedFromFile(self):
+    tests = {
+        'Linux Perf': {}
+    }
+
+    mock_extras_json = '''
+        {
+            "comment": [ "This is comment and therefore should be skipped." ],
+            "Mojo Linux Perf": {}
+        }
+    '''
+
+    mock_waterfall_name = 'hello'
+
+    def mockIsFile(path):
+      return path.endswith('%s.extras.json' % mock_waterfall_name)
+
+    with mock.patch('os.path.isfile', side_effect=mockIsFile):
+      with mock.patch('__builtin__.open',
+                      mock.mock_open(read_data=mock_extras_json)):
+        perf_data_generator.append_extra_tests({'name': mock_waterfall_name},
+                                               tests)
+
+    self.assertTrue('Linux Perf' in tests)
+    self.assertTrue('Mojo Linux Perf' in tests)
+    self.assertFalse('comment' in tests)

@@ -1710,6 +1710,16 @@ if (enable_java_templates) {
             invoker.extensions_to_not_compress,
           ]
         }
+        if (defined(invoker.png_to_webp) && invoker.png_to_webp) {
+          _webp_target = "//third_party/libwebp:cwebp($host_toolchain)"
+          deps += [ _webp_target ]
+          args += [
+            "--png-to-webp",
+            "--webp-binary",
+            rebase_path(get_label_info(_webp_target, "root_out_dir") + "/cwebp",
+                        root_build_dir),
+          ]
+        }
         if (defined(invoker.exclude_xxxhdpi) && invoker.exclude_xxxhdpi) {
           args += [ "--exclude-xxxhdpi" ]
           if (defined(invoker.xxxhdpi_whitelist)) {
@@ -1726,6 +1736,7 @@ if (enable_java_templates) {
                                "aapt_locale_whitelist",
                                "alternative_android_sdk_jar",
                                "android_aapt_path",
+                               "png_to_webp",
                                "exclude_xxxhdpi",
                                "extensions_to_not_compress",
                                "xxxhdpi_whitelist",
@@ -1777,6 +1788,7 @@ if (enable_java_templates) {
                                "aapt_locale_whitelist",
                                "alternative_android_sdk_jar",
                                "android_aapt_path",
+                               "png_to_webp",
                                "exclude_xxxhdpi",
                                "extensions_to_not_compress",
                                "xxxhdpi_whitelist",

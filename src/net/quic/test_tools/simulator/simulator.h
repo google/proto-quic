@@ -6,12 +6,11 @@
 #define NET_QUIC_TEST_TOOLS_SIMULATOR_SIMULATOR_H_
 
 #include <map>
-#include <unordered_map>
-#include <unordered_set>
 
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_containers.h"
 #include "net/quic/test_tools/simulator/actor.h"
 #include "net/quic/test_tools/simulator/alarm_factory.h"
 
@@ -127,8 +126,8 @@ class Simulator : public QuicConnectionHelperInterface {
   std::multimap<QuicTime, Actor*> schedule_;
   // For each actor, maintain the time it is scheduled at.  The value for
   // unscheduled actors is QuicTime::Infinite().
-  std::unordered_map<Actor*, QuicTime> scheduled_times_;
-  std::unordered_set<std::string> actor_names_;
+  QuicUnorderedMap<Actor*, QuicTime> scheduled_times_;
+  QuicUnorderedSet<std::string> actor_names_;
 
   DISALLOW_COPY_AND_ASSIGN(Simulator);
 };

@@ -135,6 +135,13 @@ template("msvc_toolchain") {
       sys_include_flags = ""
     }
 
+    clflags = ""
+
+    # Pass /FC flag to the compiler if needed.
+    if (msvc_use_absolute_paths) {
+      clflags += "/FC "
+    }
+
     tool("cc") {
       rspfile = "{{output}}.rsp"
       precompiled_header_type = "msvc"
@@ -143,7 +150,7 @@ template("msvc_toolchain") {
       # Label names may have spaces in them so the pdbname must be quoted. The
       # source and output don't need to be quoted because GN knows they're a
       # full file name and will quote automatically when necessary.
-      command = "$env_wrapper$cl /nologo /showIncludes /FC @$rspfile /c {{source}} /Fo{{output}} /Fd\"$pdbname\""
+      command = "$env_wrapper$cl /nologo /showIncludes ${clflags} @$rspfile /c {{source}} /Fo{{output}} /Fd\"$pdbname\""
       depsformat = "msvc"
       description = "CC {{output}}"
       outputs = [
@@ -160,7 +167,7 @@ template("msvc_toolchain") {
       pdbname = "{{target_out_dir}}/{{label_name}}_cc.pdb"
 
       # See comment in CC tool about quoting.
-      command = "$env_wrapper$cl /nologo /showIncludes /FC @$rspfile /c {{source}} /Fo{{output}} /Fd\"$pdbname\""
+      command = "$env_wrapper$cl /nologo /showIncludes ${clflags} @$rspfile /c {{source}} /Fo{{output}} /Fd\"$pdbname\""
       depsformat = "msvc"
       description = "CXX {{output}}"
       outputs = [

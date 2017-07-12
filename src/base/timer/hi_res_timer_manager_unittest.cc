@@ -7,9 +7,9 @@
 #include <memory>
 #include <utility>
 
-#include "base/message_loop/message_loop.h"
 #include "base/power_monitor/power_monitor.h"
 #include "base/power_monitor/power_monitor_device_source.h"
+#include "base/test/scoped_task_environment.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -21,7 +21,8 @@ TEST(HiResTimerManagerTest, ToggleOnOff) {
   // The power monitor creates Window to receive power notifications from
   // Windows, which makes this test flaky if you run while the machine
   // goes in or out of AC power.
-  base::MessageLoop loop(base::MessageLoop::TYPE_UI);
+  test::ScopedTaskEnvironment scoped_task_environment(
+      test::ScopedTaskEnvironment::MainThreadType::UI);
   std::unique_ptr<base::PowerMonitorSource> power_monitor_source(
       new base::PowerMonitorDeviceSource());
   std::unique_ptr<base::PowerMonitor> power_monitor(

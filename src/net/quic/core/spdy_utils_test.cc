@@ -9,6 +9,7 @@
 #include "net/quic/platform/api/quic_flag_utils.h"
 #include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_string_piece.h"
+#include "net/quic/platform/api/quic_test.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/test/gtest_util.h"
 
@@ -30,7 +31,9 @@ static std::unique_ptr<QuicHeaderList> FromList(
   return headers;
 }
 
-TEST(CopyAndValidateHeaders, NormalUsage) {
+using CopyAndValidateHeaders = QuicTest;
+
+TEST_F(CopyAndValidateHeaders, NormalUsage) {
   auto headers = FromList({// All cookie crumbs are joined.
                            {"cookie", " part 1"},
                            {"cookie", "part 2 "},
@@ -69,7 +72,7 @@ TEST(CopyAndValidateHeaders, NormalUsage) {
   EXPECT_EQ(-1, content_length);
 }
 
-TEST(CopyAndValidateHeaders, EmptyName) {
+TEST_F(CopyAndValidateHeaders, EmptyName) {
   auto headers = FromList({{"foo", "foovalue"}, {"", "barvalue"}, {"baz", ""}});
   int64_t content_length = -1;
   SpdyHeaderBlock block;
@@ -77,7 +80,7 @@ TEST(CopyAndValidateHeaders, EmptyName) {
       SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
 }
 
-TEST(CopyAndValidateHeaders, UpperCaseName) {
+TEST_F(CopyAndValidateHeaders, UpperCaseName) {
   auto headers =
       FromList({{"foo", "foovalue"}, {"bar", "barvalue"}, {"bAz", ""}});
   int64_t content_length = -1;
@@ -86,7 +89,7 @@ TEST(CopyAndValidateHeaders, UpperCaseName) {
       SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
 }
 
-TEST(CopyAndValidateHeaders, MultipleContentLengths) {
+TEST_F(CopyAndValidateHeaders, MultipleContentLengths) {
   auto headers = FromList({{"content-length", "9"},
                            {"foo", "foovalue"},
                            {"content-length", "9"},
@@ -106,7 +109,7 @@ TEST(CopyAndValidateHeaders, MultipleContentLengths) {
   EXPECT_EQ(9, content_length);
 }
 
-TEST(CopyAndValidateHeaders, InconsistentContentLengths) {
+TEST_F(CopyAndValidateHeaders, InconsistentContentLengths) {
   auto headers = FromList({{"content-length", "9"},
                            {"foo", "foovalue"},
                            {"content-length", "8"},
@@ -118,7 +121,7 @@ TEST(CopyAndValidateHeaders, InconsistentContentLengths) {
       SpdyUtils::CopyAndValidateHeaders(*headers, &content_length, &block));
 }
 
-TEST(CopyAndValidateHeaders, LargeContentLength) {
+TEST_F(CopyAndValidateHeaders, LargeContentLength) {
   auto headers = FromList({{"content-length", "9000000000"},
                            {"foo", "foovalue"},
                            {"bar", "barvalue"},
@@ -134,7 +137,7 @@ TEST(CopyAndValidateHeaders, LargeContentLength) {
   EXPECT_EQ(9000000000, content_length);
 }
 
-TEST(CopyAndValidateHeaders, MultipleValues) {
+TEST_F(CopyAndValidateHeaders, MultipleValues) {
   auto headers = FromList({{"foo", "foovalue"},
                            {"bar", "barvalue"},
                            {"baz", ""},
@@ -151,7 +154,7 @@ TEST(CopyAndValidateHeaders, MultipleValues) {
   EXPECT_EQ(-1, content_length);
 }
 
-TEST(CopyAndValidateHeaders, MoreThanTwoValues) {
+TEST_F(CopyAndValidateHeaders, MoreThanTwoValues) {
   auto headers = FromList({{"set-cookie", "value1"},
                            {"set-cookie", "value2"},
                            {"set-cookie", "value3"}});
@@ -165,7 +168,7 @@ TEST(CopyAndValidateHeaders, MoreThanTwoValues) {
   EXPECT_EQ(-1, content_length);
 }
 
-TEST(CopyAndValidateHeaders, Cookie) {
+TEST_F(CopyAndValidateHeaders, Cookie) {
   auto headers = FromList({{"foo", "foovalue"},
                            {"bar", "barvalue"},
                            {"cookie", "value1"},
@@ -180,7 +183,7 @@ TEST(CopyAndValidateHeaders, Cookie) {
   EXPECT_EQ(-1, content_length);
 }
 
-TEST(CopyAndValidateHeaders, MultipleCookies) {
+TEST_F(CopyAndValidateHeaders, MultipleCookies) {
   auto headers = FromList({{"foo", "foovalue"},
                            {"bar", "barvalue"},
                            {"cookie", "value1"},
@@ -196,7 +199,9 @@ TEST(CopyAndValidateHeaders, MultipleCookies) {
   EXPECT_EQ(-1, content_length);
 }
 
-TEST(CopyAndValidateTrailers, SimplestValidList) {
+using CopyAndValidateTrailers = QuicTest;
+
+TEST_F(CopyAndValidateTrailers, SimplestValidList) {
   // Verify that the simplest trailers are valid: just a final byte offset that
   // gets parsed successfully.
   auto trailers = FromList({{kFinalOffsetHeaderKey, "1234"}});
@@ -207,7 +212,7 @@ TEST(CopyAndValidateTrailers, SimplestValidList) {
   EXPECT_EQ(1234u, final_byte_offset);
 }
 
-TEST(CopyAndValidateTrailers, EmptyTrailerList) {
+TEST_F(CopyAndValidateTrailers, EmptyTrailerList) {
   // An empty trailer list will fail as required key kFinalOffsetHeaderKey is
   // not present.
   QuicHeaderList trailers;
@@ -217,7 +222,7 @@ TEST(CopyAndValidateTrailers, EmptyTrailerList) {
       SpdyUtils::CopyAndValidateTrailers(trailers, &final_byte_offset, &block));
 }
 
-TEST(CopyAndValidateTrailers, FinalByteOffsetNotPresent) {
+TEST_F(CopyAndValidateTrailers, FinalByteOffsetNotPresent) {
   // Validation fails if required kFinalOffsetHeaderKey is not present, even if
   // the rest of the header block is valid.
   auto trailers = FromList({{"key", "value"}});
@@ -227,7 +232,7 @@ TEST(CopyAndValidateTrailers, FinalByteOffsetNotPresent) {
                                                   &block));
 }
 
-TEST(CopyAndValidateTrailers, EmptyName) {
+TEST_F(CopyAndValidateTrailers, EmptyName) {
   // Trailer validation will fail with an empty header key, in an otherwise
   // valid block of trailers.
   auto trailers = FromList({{"", "value"}, {kFinalOffsetHeaderKey, "1234"}});
@@ -237,7 +242,7 @@ TEST(CopyAndValidateTrailers, EmptyName) {
                                                   &block));
 }
 
-TEST(CopyAndValidateTrailers, PseudoHeaderInTrailers) {
+TEST_F(CopyAndValidateTrailers, PseudoHeaderInTrailers) {
   // Pseudo headers are illegal in trailers.
   auto trailers =
       FromList({{":pseudo_key", "value"}, {kFinalOffsetHeaderKey, "1234"}});
@@ -247,7 +252,7 @@ TEST(CopyAndValidateTrailers, PseudoHeaderInTrailers) {
                                                   &block));
 }
 
-TEST(CopyAndValidateTrailers, DuplicateTrailers) {
+TEST_F(CopyAndValidateTrailers, DuplicateTrailers) {
   // Duplicate trailers are allowed, and their values are concatenated into a
   // single string delimted with '\0'. Some of the duplicate headers
   // deliberately have an empty value.
@@ -275,7 +280,7 @@ TEST(CopyAndValidateTrailers, DuplicateTrailers) {
           Pair("other_key", "value")));
 }
 
-TEST(CopyAndValidateTrailers, DuplicateCookies) {
+TEST_F(CopyAndValidateTrailers, DuplicateCookies) {
   // Duplicate cookie headers in trailers should be concatenated into a single
   //  "; " delimted string.
   FLAGS_quic_reloadable_flag_quic_handle_duplicate_trailers = true;
@@ -297,7 +302,9 @@ TEST(CopyAndValidateTrailers, DuplicateCookies) {
           Pair("key", "value")));
 }
 
-TEST(GetUrlFromHeaderBlock, Basic) {
+using GetUrlFromHeaderBlock = QuicTest;
+
+TEST_F(GetUrlFromHeaderBlock, Basic) {
   SpdyHeaderBlock headers;
   EXPECT_EQ(SpdyUtils::GetUrlFromHeaderBlock(headers), "");
   headers[":scheme"] = "https";
@@ -313,7 +320,9 @@ TEST(GetUrlFromHeaderBlock, Basic) {
             "https://www.google.com/index.html");
 }
 
-TEST(GetHostNameFromHeaderBlock, NormalUsage) {
+using GetHostNameFromHeaderBlock = QuicTest;
+
+TEST_F(GetHostNameFromHeaderBlock, NormalUsage) {
   SpdyHeaderBlock headers;
   EXPECT_EQ(SpdyUtils::GetHostNameFromHeaderBlock(headers), "");
   headers[":scheme"] = "https";
@@ -333,7 +342,9 @@ TEST(GetHostNameFromHeaderBlock, NormalUsage) {
   EXPECT_EQ(SpdyUtils::GetHostNameFromHeaderBlock(headers), "192.168.1.1");
 }
 
-TEST(PopulateHeaderBlockFromUrl, NormalUsage) {
+using PopulateHeaderBlockFromUrl = QuicTest;
+
+TEST_F(PopulateHeaderBlockFromUrl, NormalUsage) {
   string url = "https://www.google.com/index.html";
   SpdyHeaderBlock headers;
   EXPECT_TRUE(SpdyUtils::PopulateHeaderBlockFromUrl(url, &headers));
@@ -342,7 +353,7 @@ TEST(PopulateHeaderBlockFromUrl, NormalUsage) {
   EXPECT_EQ("/index.html", headers[":path"].as_string());
 }
 
-TEST(PopulateHeaderBlockFromUrl, UrlWithNoPath) {
+TEST_F(PopulateHeaderBlockFromUrl, UrlWithNoPath) {
   string url = "https://www.google.com";
   SpdyHeaderBlock headers;
   EXPECT_TRUE(SpdyUtils::PopulateHeaderBlockFromUrl(url, &headers));
@@ -351,7 +362,7 @@ TEST(PopulateHeaderBlockFromUrl, UrlWithNoPath) {
   EXPECT_EQ("/", headers[":path"].as_string());
 }
 
-TEST(PopulateHeaderBlockFromUrl, Failure) {
+TEST_F(PopulateHeaderBlockFromUrl, Failure) {
   SpdyHeaderBlock headers;
   EXPECT_FALSE(SpdyUtils::PopulateHeaderBlockFromUrl("/", &headers));
   EXPECT_FALSE(SpdyUtils::PopulateHeaderBlockFromUrl("/index.html", &headers));

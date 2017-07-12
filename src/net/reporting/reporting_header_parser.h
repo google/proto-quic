@@ -18,6 +18,10 @@ class ReportingContext;
 
 class NET_EXPORT ReportingHeaderParser {
  public:
+  static void RecordHeaderDiscardedForNoReportingService();
+  static void RecordHeaderDiscardedForInvalidSSLInfo();
+  static void RecordHeaderDiscardedForCertStatusError();
+
   static void ParseHeader(ReportingContext* context,
                           const GURL& url,
                           const std::string& json_value);

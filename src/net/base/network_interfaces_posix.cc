@@ -1,23 +1,19 @@
-// Copyright (c) 2011 The Chromium Authors. All rights reserved.
+// Copyright 2015 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/base/network_interfaces.h"
+#include "net/base/network_interfaces_posix.h"
 
+#include <net/if.h>
+#include <netinet/in.h>
 #include <sys/types.h>
 
 #include <memory>
 #include <set>
 
-#if !defined(OS_NACL)
-#include "net/base/network_interfaces_posix.h"
-#include <net/if.h>
-#include <netinet/in.h>
-#endif  // !defined(OS_NACL)
+#include "net/base/network_interfaces.h"
 
 namespace net {
-
-#if !defined(OS_NACL)
 namespace internal {
 
 // The application layer can pass |policy| defined in net_util.h to
@@ -58,25 +54,13 @@ bool IsLoopbackOrUnspecifiedAddress(const sockaddr* addr) {
 }
 
 }  // namespace internal
-#else   // OS_NACL
-bool GetNetworkList(NetworkInterfaceList* networks, int policy) {
-  NOTIMPLEMENTED();
-  return false;
-}
-
-std::string GetWifiSSID() {
-  NOTIMPLEMENTED();
-  return "";
-}
-#endif  // OS_NACL
 
 WifiPHYLayerProtocol GetWifiPHYLayerProtocol() {
   return WIFI_PHY_LAYER_PROTOCOL_UNKNOWN;
 }
 
 std::unique_ptr<ScopedWifiOptions> SetWifiOptions(int options) {
-  return std::unique_ptr<ScopedWifiOptions>();
+  return nullptr;
 }
-
 
 }  // namespace net

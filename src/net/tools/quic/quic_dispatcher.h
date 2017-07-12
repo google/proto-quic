@@ -9,7 +9,6 @@
 #define NET_TOOLS_QUIC_QUIC_DISPATCHER_H_
 
 #include <memory>
-#include <unordered_map>
 #include <vector>
 
 #include "base/macros.h"
@@ -96,7 +95,7 @@ class QuicDispatcher : public QuicTimeWaitListManager::Visitor,
   void OnConnectionAddedToTimeWaitList(QuicConnectionId connection_id) override;
 
   using SessionMap =
-      std::unordered_map<QuicConnectionId, std::unique_ptr<QuicSession>>;
+      QuicUnorderedMap<QuicConnectionId, std::unique_ptr<QuicSession>>;
 
   const SessionMap& session_map() const { return session_map_; }
 
@@ -292,7 +291,7 @@ class QuicDispatcher : public QuicTimeWaitListManager::Visitor,
   friend class test::QuicDispatcherPeer;
   friend class StatelessRejectorProcessDoneCallback;
 
-  typedef std::unordered_set<QuicConnectionId> QuicConnectionIdSet;
+  typedef QuicUnorderedSet<QuicConnectionId> QuicConnectionIdSet;
 
   bool HandlePacketForTimeWait(const QuicPacketPublicHeader& header);
 

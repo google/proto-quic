@@ -147,13 +147,9 @@
             ],
             "experiments": [
                 {
-                    "name": "LastUsedDate_IncreaseDropdownItemHeight_Experiment",
-                    "params": {
-                        "dropdown_item_height": "56"
-                    },
+                    "name": "BankName_Experiment",
                     "enable_features": [
-                        "AutofillCreditCardLastUsedDateDisplay",
-                        "AutofillCreditCardPopupLayout"
+                        "AutofillCreditCardBankNameDisplay"
                     ]
                 }
             ]
@@ -399,6 +395,25 @@
                         "cssExternalScannerNoPreload": "false",
                         "cssExternalScannerPreload": "true"
                     }
+                }
+            ]
+        }
+    ],
+    "CaptivePortalCertificateList": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "CaptivePortalCertificateList"
+                    ]
                 }
             ]
         }

@@ -366,7 +366,7 @@ Value RunConfig(const FunctionCallNode* function,
     *err = Err(function, "Can't define a config in this context.");
     return Value();
   }
-  collector->push_back(config.release());
+  collector->push_back(std::move(config));
 
   return Value();
 }
@@ -919,7 +919,7 @@ Value RunPool(const FunctionCallNode* function,
     *err = Err(function, "Can't define a pool in this context.");
     return Value();
   }
-  collector->push_back(pool.release());
+  collector->push_back(std::move(pool));
 
   return Value();
 }

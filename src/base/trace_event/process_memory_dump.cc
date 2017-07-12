@@ -356,8 +356,12 @@ void ProcessMemoryDump::AsValueInto(TracedValue* value) const {
 void ProcessMemoryDump::AddOwnershipEdge(const MemoryAllocatorDumpGuid& source,
                                          const MemoryAllocatorDumpGuid& target,
                                          int importance) {
-  DCHECK(allocator_dumps_edges_.count(source) == 0 ||
-         allocator_dumps_edges_[source].overridable);
+  // This will either override an existing edge or create a new one.
+  auto it = allocator_dumps_edges_.find(source);
+  if (it != allocator_dumps_edges_.end()) {
+    DCHECK_EQ(target.ToUint64(),
+              allocator_dumps_edges_[source].target.ToUint64());
+  }
   allocator_dumps_edges_[source] = {
       source, target, importance, kEdgeTypeOwnership, false /* overridable */};
 }
@@ -426,8 +430,9 @@ void ProcessMemoryDump::CreateSharedMemoryOwnershipEdgeInternal(
 
     // Create an edge between local dump of the client and the local dump of the
     // SharedMemoryTracker. Do not need to create the dumps here since the
-    // tracker would create them.
-    AddOwnershipEdge(client_local_dump_guid, local_shm_guid);
+    // tracker would create them. The importance is also required here for the
+    // case of single process mode.
+    AddOwnershipEdge(client_local_dump_guid, local_shm_guid, importance);
 
     // TODO(ssid): Handle the case of weak dumps here. This needs a new function
     // GetOrCreaetGlobalDump() in PMD since we need to change the behavior of

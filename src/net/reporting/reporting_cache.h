@@ -14,13 +14,13 @@
 #include "base/values.h"
 #include "net/base/net_export.h"
 #include "net/reporting/reporting_client.h"
+#include "net/reporting/reporting_report.h"
 #include "url/gurl.h"
 #include "url/origin.h"
 
 namespace net {
 
 class ReportingContext;
-struct ReportingReport;
 
 // The cache holds undelivered reports and clients (per-origin endpoint
 // configurations) in memory. (It is not responsible for persisting them.)
@@ -76,12 +76,12 @@ class NET_EXPORT ReportingCache {
   // Removes a set of reports. Any reports that are pending will not be removed
   // immediately, but rather marked doomed and removed once they are no longer
   // pending.
-  virtual void RemoveReports(
-      const std::vector<const ReportingReport*>& reports) = 0;
+  virtual void RemoveReports(const std::vector<const ReportingReport*>& reports,
+                             ReportingReport::Outcome outcome) = 0;
 
   // Removes all reports. Like |RemoveReports()|, pending reports are doomed
   // until no longer pending.
-  virtual void RemoveAllReports() = 0;
+  virtual void RemoveAllReports(ReportingReport::Outcome outcome) = 0;
 
   // Creates or updates a client for a particular origin and a particular
   // endpoint.

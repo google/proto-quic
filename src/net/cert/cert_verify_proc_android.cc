@@ -34,7 +34,9 @@ namespace {
 base::LazyInstance<scoped_refptr<CertNetFetcher>>::Leaky g_cert_net_fetcher =
     LAZY_INSTANCE_INITIALIZER;
 
-// TODO(joth): Fetch the authentication type from SSL rather than hardcode.
+// Android ignores the authType parameter to
+// X509TrustManager.checkServerTrusted, so pass in a dummy value. See
+// https://crbug.com/627154.
 const char kAuthType[] = "RSA";
 
 // The maximum number of AIA fetches that TryVerifyWithAIAFetching() will

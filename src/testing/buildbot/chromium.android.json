@@ -1601,6 +1601,48 @@
       }
     ]
   },
+  "Android WebView L (dbg)": {
+    "cts_tests": [
+      {
+        "arch": "arm64",
+        "platform": "L"
+      }
+    ],
+    "instrumentation_tests": [
+      {
+        "test": "system_webview_shell_layout_test_apk"
+      }
+    ]
+  },
+  "Android WebView M (dbg)": {
+    "cts_tests": [
+      {
+        "arch": "arm64",
+        "platform": "M"
+      }
+    ],
+    "instrumentation_tests": [
+      {
+        "test": "system_webview_shell_layout_test_apk"
+      },
+      {
+        "test": "webview_ui_test_app_test_apk"
+      }
+    ]
+  },
+  "Android WebView N (dbg)": {
+    "cts_tests": [
+      {
+        "arch": "arm64",
+        "platform": "N"
+      }
+    ],
+    "instrumentation_tests": [
+      {
+        "test": "system_webview_shell_layout_test_apk"
+      }
+    ]
+  },
   "Android arm Builder (dbg)": {
     "additional_compile_targets": [
       "dump_syms",

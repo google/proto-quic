@@ -9,8 +9,9 @@ from contrib.cluster_telemetry import page_set
 from contrib.cluster_telemetry import repaint_helpers
 
 from telemetry import benchmark
-from telemetry.core import discover
 from telemetry import story
+
+from py_utils import discover
 
 from measurements import skpicture_printer
 

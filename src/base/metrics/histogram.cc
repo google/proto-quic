@@ -165,6 +165,8 @@ HistogramBase* Histogram::Factory::Build() {
       minimum_ = registered_ranges->range(1);
       maximum_ = registered_ranges->range(bucket_count_ - 1);
     }
+    DCHECK_EQ(minimum_, registered_ranges->range(1));
+    DCHECK_EQ(maximum_, registered_ranges->range(bucket_count_ - 1));
 
     // Try to create the histogram using a "persistent" allocator. As of
     // 2016-02-25, the availability of such is controlled by a base::Feature
@@ -359,6 +361,18 @@ uint32_t Histogram::FindCorruption(const HistogramSamples& samples) const {
   return inconsistencies;
 }
 
+Sample Histogram::declared_min() const {
+  if (bucket_ranges_->bucket_count() < 2)
+    return -1;
+  return bucket_ranges_->range(1);
+}
+
+Sample Histogram::declared_max() const {
+  if (bucket_ranges_->bucket_count() < 2)
+    return -1;
+  return bucket_ranges_->range(bucket_ranges_->bucket_count() - 1);
+}
+
 Sample Histogram::ranges(uint32_t i) const {
   return bucket_ranges_->range(i);
 }
@@ -432,9 +446,9 @@ HistogramType Histogram::GetHistogramType() const {
 bool Histogram::HasConstructionArguments(Sample expected_minimum,
                                          Sample expected_maximum,
                                          uint32_t expected_bucket_count) const {
-  return ((expected_minimum == declared_min_) &&
-          (expected_maximum == declared_max_) &&
-          (expected_bucket_count == bucket_count()));
+  return (expected_bucket_count == bucket_count() &&
+          expected_minimum == declared_min() &&
+          expected_maximum == declared_max());
 }
 
 void Histogram::Add(int value) {
@@ -463,7 +477,10 @@ std::unique_ptr<HistogramSamples> Histogram::SnapshotSamples() const {
 }
 
 std::unique_ptr<HistogramSamples> Histogram::SnapshotDelta() {
+#if DCHECK_IS_ON()
   DCHECK(!final_delta_created_);
+#endif
+
   // The code below has subtle thread-safety guarantees! All changes to
   // the underlying SampleVectors use atomic integer operations, which guarantee
   // eventual consistency, but do not guarantee full synchronization between
@@ -484,8 +501,10 @@ std::unique_ptr<HistogramSamples> Histogram::SnapshotDelta() {
 }
 
 std::unique_ptr<HistogramSamples> Histogram::SnapshotFinalDelta() const {
+#if DCHECK_IS_ON()
   DCHECK(!final_delta_created_);
   final_delta_created_ = true;
+#endif
 
   return SnapshotUnloggedSamples();
 }
@@ -520,14 +539,12 @@ bool Histogram::SerializeInfoImpl(Pickle* pickle) const {
       pickle->WriteUInt32(bucket_ranges()->checksum());
 }
 
+// TODO(bcwhite): Remove minimum/maximum parameters from here and call chain.
 Histogram::Histogram(const std::string& name,
                      Sample minimum,
                      Sample maximum,
                      const BucketRanges* ranges)
-  : HistogramBase(name),
-    bucket_ranges_(ranges),
-    declared_min_(minimum),
-    declared_max_(maximum) {
+    : HistogramBase(name), bucket_ranges_(ranges) {
   // TODO(bcwhite): Make this a DCHECK once crbug/734049 is resolved.
   CHECK(ranges) << name << ": " << minimum << "-" << maximum;
   unlogged_samples_.reset(new SampleVector(HashMetricName(name), ranges));
@@ -542,10 +559,7 @@ Histogram::Histogram(const std::string& name,
                      const DelayedPersistentAllocation& logged_counts,
                      HistogramSamples::Metadata* meta,
                      HistogramSamples::Metadata* logged_meta)
-    : HistogramBase(name),
-      bucket_ranges_(ranges),
-      declared_min_(minimum),
-      declared_max_(maximum) {
+    : HistogramBase(name), bucket_ranges_(ranges) {
   // TODO(bcwhite): Make this a DCHECK once crbug/734049 is resolved.
   CHECK(ranges) << name << ": " << minimum << "-" << maximum;
   unlogged_samples_.reset(

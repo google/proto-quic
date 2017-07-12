@@ -44,6 +44,8 @@ public class Promise<T> {
 
     /**
      * A function class for use when chaining Promises with {@link Promise#then(Function)}.
+     * @param <A> The type of the function input.
+     * @param <R> The type of the function output.
      */
     public interface Function<A, R> {
         R apply(A argument);
@@ -51,6 +53,8 @@ public class Promise<T> {
 
     /**
      * A function class for use when chaining Promises with {@link Promise#then(AsyncFunction)}.
+     * @param <A> The type of the function input.
+     * @param <R> The type of the function output.
      */
     public interface AsyncFunction<A, R> {
         Promise<R> apply(A argument);
@@ -295,6 +299,16 @@ public class Promise<T> {
         checkThread();
 
         return mState == REJECTED;
+    }
+
+    /**
+     * Must be called after the promise has been fulfilled.
+     *
+     * @return The promised result.
+     */
+    public T getResult() {
+        assert isFulfilled();
+        return mResult;
     }
 
     /**

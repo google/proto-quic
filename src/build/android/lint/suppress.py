@@ -9,8 +9,8 @@
 # pylint: disable=no-member
 
 
+import argparse
 import collections
-import optparse
 import os
 import re
 import sys
@@ -23,7 +23,8 @@ from pylib.constants import host_paths
 
 _TMP_DIR_RE = re.compile(r'^/tmp/.*/(SRC_ROOT[0-9]+|PRODUCT_DIR)/')
 _THIS_FILE = os.path.abspath(__file__)
-_CONFIG_PATH = os.path.join(os.path.dirname(_THIS_FILE), 'suppressions.xml')
+_DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(_THIS_FILE),
+                                    'suppressions.xml')
 _DOC = (
     '\nSTOP! It looks like you want to suppress some lint errors:\n'
     '- Have you tried identifing the offending patch?\n'
@@ -121,13 +122,16 @@ def _Suppress(config_path, result_path):
 
 
 def main():
-  parser = optparse.OptionParser(usage='%prog RESULT-FILE')
-  _, args = parser.parse_args()
+  parser = argparse.ArgumentParser(description=__doc__)
+  parser.add_argument('--config',
+                      help='Path to suppression.xml config file',
+                      default=_DEFAULT_CONFIG_PATH)
+  parser.add_argument('result_path',
+                      help='Lint results xml file',
+                      metavar='RESULT_FILE')
+  args = parser.parse_args()
 
-  if len(args) != 1 or not os.path.exists(args[0]):
-    parser.error('Must provide RESULT-FILE')
-
-  _Suppress(_CONFIG_PATH, args[0])
+  _Suppress(args.config, args.result_path)
 
 
 if __name__ == '__main__':

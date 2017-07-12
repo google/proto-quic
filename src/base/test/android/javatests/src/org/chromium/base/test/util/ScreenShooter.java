@@ -9,6 +9,7 @@ import static org.junit.Assert.assertTrue;
 
 import android.app.Instrumentation;
 import android.content.res.Configuration;
+import android.graphics.Point;
 import android.os.Build;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.uiautomator.UiDevice;
@@ -120,12 +121,13 @@ public class ScreenShooter extends TestWatcher {
         String model = Build.MODEL.replace(' ', '_');
         // Emulator model names are "SDK_built_for_x86" or similar, so use something more useful
         if (model.toUpperCase(Locale.ROOT).contains("SDK")) {
+            Point displaySize = mDevice.getDisplaySizeDp();
             // Make sure we have a consistent name whatever the orientation.
             if (InstrumentationRegistry.getContext().getResources()
                     .getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
-                model = "Emulator_" + mDevice.getDisplayHeight() + '_' + mDevice.getDisplayWidth();
+                model = "Emulator_" + displaySize.y + '_' + displaySize.x;
             } else {
-                model = "Emulator_" + mDevice.getDisplayWidth() + '_' + mDevice.getDisplayHeight();
+                model = "Emulator_" + displaySize.x + '_' + displaySize.y;
             }
         }
         return model;

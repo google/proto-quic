@@ -1815,6 +1815,7 @@ test("base_perftests") {
 
     # "test/run_all_unittests.cc",
     "json/json_perftest.cc",
+    "synchronization/waitable_event_perftest.cc",
     "threading/thread_perftest.cc",
   ]
   deps = [
@@ -2208,6 +2209,7 @@ test("base_unittests") {
     "template_util_unittest.cc",
     "test/histogram_tester_unittest.cc",
     "test/mock_callback_unittest.cc",
+    "test/scoped_feature_list_unittest.cc",
     "test/scoped_mock_time_message_loop_task_runner_unittest.cc",
     "test/scoped_task_environment_unittest.cc",
     "test/scoped_task_scheduler_unittest.cc",

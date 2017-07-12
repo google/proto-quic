@@ -173,8 +173,8 @@ class BASE_EXPORT Histogram : public HistogramBase {
   //----------------------------------------------------------------------------
   // Accessors for factory construction, serialization and testing.
   //----------------------------------------------------------------------------
-  Sample declared_min() const { return declared_min_; }
-  Sample declared_max() const { return declared_max_; }
+  Sample declared_min() const;
+  Sample declared_max() const;
   virtual Sample ranges(uint32_t i) const;
   virtual uint32_t bucket_count() const;
   const BucketRanges* bucket_ranges() const { return bucket_ranges_; }
@@ -305,18 +305,17 @@ class BASE_EXPORT Histogram : public HistogramBase {
   // Does not own this object. Should get from StatisticsRecorder.
   const BucketRanges* bucket_ranges_;
 
-  Sample declared_min_;  // Less than this goes into the first bucket.
-  Sample declared_max_;  // Over this goes into the last bucket.
-
   // Samples that have not yet been logged with SnapshotDelta().
   std::unique_ptr<HistogramSamples> unlogged_samples_;
 
   // Accumulation of all samples that have been logged with SnapshotDelta().
   std::unique_ptr<HistogramSamples> logged_samples_;
 
+#if DCHECK_IS_ON()  // Don't waste memory if it won't be used.
   // Flag to indicate if PrepareFinalDelta has been previously called. It is
   // used to DCHECK that a final delta is not created multiple times.
   mutable bool final_delta_created_ = false;
+#endif
 
   DISALLOW_COPY_AND_ASSIGN(Histogram);
 };

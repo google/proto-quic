@@ -9,11 +9,11 @@
 #include <memory>
 #include <set>
 #include <utility>
+#include <vector>
 
 #include "base/containers/hash_tables.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/scoped_vector.h"
 #include "tools/gn/err.h"
 #include "tools/gn/input_file.h"
 #include "tools/gn/pattern.h"
@@ -41,7 +41,7 @@ class Scope {
   typedef base::hash_map<base::StringPiece, Value, base::StringPieceHash>
       KeyValueMap;
   // Holds an owning list of Items.
-  typedef ScopedVector<Item> ItemVector;
+  typedef std::vector<std::unique_ptr<Item>> ItemVector;
 
   // A flag to indicate whether a function should recurse into nested scopes,
   // or only operate on the current scope.

@@ -1887,11 +1887,9 @@ TEST(HttpCache, SimpleGET_ParallelValidationNoMatch) {
   // entries since none of them matched the headers of the earlier one.
   EXPECT_TRUE(cache.IsWriterPresent(kSimpleGET_Transaction.url));
 
-  // Note that there are only 3 entries created and not 5 since every other
-  // transaction would have gone to the network.
   EXPECT_EQ(5, cache.network_layer()->transaction_count());
   EXPECT_EQ(0, cache.disk_cache()->open_count());
-  EXPECT_EQ(3, cache.disk_cache()->create_count());
+  EXPECT_EQ(5, cache.disk_cache()->create_count());
 
   // All requests depend on the writer, and the writer is between Start and
   // Read, i.e. idle.
@@ -1907,7 +1905,72 @@ TEST(HttpCache, SimpleGET_ParallelValidationNoMatch) {
 
   EXPECT_EQ(5, cache.network_layer()->transaction_count());
   EXPECT_EQ(0, cache.disk_cache()->open_count());
-  EXPECT_EQ(3, cache.disk_cache()->create_count());
+  EXPECT_EQ(5, cache.disk_cache()->create_count());
+}
+
+// Parallel validation results in 200 for 1 transaction and validation matches
+// for subsequent transactions.
+TEST(HttpCache, SimpleGET_ParallelValidationNoMatch1) {
+  MockHttpCache cache;
+  MockHttpRequest request(kSimpleGET_Transaction);
+
+  MockTransaction transaction(kSimpleGET_Transaction);
+  transaction.load_flags |= LOAD_VALIDATE_CACHE;
+  MockHttpRequest validate_request(transaction);
+  std::vector<std::unique_ptr<Context>> context_list;
+  const int kNumTransactions = 5;
+  for (int i = 0; i < kNumTransactions; ++i) {
+    context_list.push_back(base::MakeUnique<Context>());
+    auto& c = context_list[i];
+    c->result = cache.CreateTransaction(&c->trans);
+    ASSERT_THAT(c->result, IsOk());
+    EXPECT_EQ(LOAD_STATE_IDLE, c->trans->GetLoadState());
+
+    MockHttpRequest* this_request = &request;
+    if (i == 1)
+      this_request = &validate_request;
+
+    c->result = c->trans->Start(this_request, c->callback.callback(),
+                                NetLogWithSource());
+  }
+
+  // All requests are waiting for the active entry.
+  for (auto& context : context_list) {
+    EXPECT_EQ(LOAD_STATE_WAITING_FOR_CACHE, context->trans->GetLoadState());
+  }
+
+  // Allow all requests to move from the Create queue to the active entry.
+  base::RunLoop().RunUntilIdle();
+
+  // The first request should be a writer at this point, and the second
+  // request should have passed the validation phase and created a new
+  // entry. Rest of them should be added to the new entry.
+  EXPECT_TRUE(cache.IsWriterPresent(kSimpleGET_Transaction.url));
+  EXPECT_EQ(3, cache.GetCountDoneHeadersQueue(kSimpleGET_Transaction.url));
+
+  EXPECT_EQ(2, cache.network_layer()->transaction_count());
+  EXPECT_EQ(0, cache.disk_cache()->open_count());
+  EXPECT_EQ(2, cache.disk_cache()->create_count());
+
+  // All requests depend on the writer, and the writer is between Start and
+  // Read, i.e. idle.
+  for (auto& context : context_list) {
+    EXPECT_EQ(LOAD_STATE_IDLE, context->trans->GetLoadState());
+  }
+
+  EXPECT_EQ(1, cache.disk_cache()->doomed_count());
+
+  for (size_t i = 0; i < context_list.size(); i++) {
+    if (context_list[i]->result == ERR_IO_PENDING)
+      context_list[i]->result = context_list[i]->callback.WaitForResult();
+
+    ReadAndVerifyTransaction(context_list[i]->trans.get(),
+                             kSimpleGET_Transaction);
+  }
+
+  EXPECT_EQ(2, cache.network_layer()->transaction_count());
+  EXPECT_EQ(0, cache.disk_cache()->open_count());
+  EXPECT_EQ(2, cache.disk_cache()->create_count());
 }
 
 // Tests that a GET followed by a DELETE results in DELETE immediately starting
@@ -2156,7 +2219,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationCancelReader) {
   // The pending transactions will be added to a new entry.
   base::RunLoop().RunUntilIdle();
 
-  EXPECT_EQ(1, cache.GetCountDoneHeadersQueue(kSimpleGET_Transaction.url));
+  EXPECT_EQ(2, cache.GetCountDoneHeadersQueue(kSimpleGET_Transaction.url));
   EXPECT_TRUE(cache.IsWriterPresent(kSimpleGET_Transaction.url));
 
   // Complete the rest of the transactions.
@@ -2165,7 +2228,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationCancelReader) {
     ReadAndVerifyTransaction(c->trans.get(), kSimpleGET_Transaction);
   }
 
-  EXPECT_EQ(3, cache.network_layer()->transaction_count());
+  EXPECT_EQ(2, cache.network_layer()->transaction_count());
   EXPECT_EQ(0, cache.disk_cache()->open_count());
   EXPECT_EQ(2, cache.disk_cache()->create_count());
 }
@@ -2230,10 +2293,6 @@ TEST(HttpCache, SimpleGET_ParallelValidationCancelWriter) {
   c->trans->ResumeNetworkStart();
   base::RunLoop().RunUntilIdle();
 
-  // Headers transaction would have doomed the new entry created.
-  EXPECT_TRUE(
-      cache.disk_cache()->IsDiskEntryDoomed(kSimpleGET_Transaction.url));
-
   // Complete the rest of the transactions.
   for (auto& context : context_list) {
     if (!context)
@@ -2243,7 +2302,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationCancelWriter) {
 
   EXPECT_EQ(4, cache.network_layer()->transaction_count());
   EXPECT_EQ(0, cache.disk_cache()->open_count());
-  EXPECT_EQ(2, cache.disk_cache()->create_count());
+  EXPECT_EQ(3, cache.disk_cache()->create_count());
 }
 
 // Tests when a writer is destroyed mid-read and entry is marked as truncated,
@@ -2372,10 +2431,6 @@ TEST(HttpCache, SimpleGET_ParallelValidationStopCaching) {
   c->trans->ResumeNetworkStart();
   base::RunLoop().RunUntilIdle();
 
-  // Headers transaction would have doomed the new entry created.
-  EXPECT_TRUE(
-      cache.disk_cache()->IsDiskEntryDoomed(kSimpleGET_Transaction.url));
-
   // Complete the rest of the transactions.
   for (auto& context : context_list) {
     if (!context)
@@ -2385,7 +2440,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationStopCaching) {
 
   EXPECT_EQ(4, cache.network_layer()->transaction_count());
   EXPECT_EQ(0, cache.disk_cache()->open_count());
-  EXPECT_EQ(2, cache.disk_cache()->create_count());
+  EXPECT_EQ(3, cache.disk_cache()->create_count());
 }
 
 // Tests that a transaction is currently in headers phase and is destroyed
@@ -2679,7 +2734,7 @@ TEST(HttpCache, FastNoStoreGET_DoneWithPending) {
 
   EXPECT_EQ(3, cache.network_layer()->transaction_count());
   EXPECT_EQ(0, cache.disk_cache()->open_count());
-  EXPECT_EQ(2, cache.disk_cache()->create_count());
+  EXPECT_EQ(3, cache.disk_cache()->create_count());
 
   // Now, make sure that the second request asks for the entry not to be stored.
   request_handler.set_no_store(true);
@@ -2694,7 +2749,7 @@ TEST(HttpCache, FastNoStoreGET_DoneWithPending) {
 
   EXPECT_EQ(3, cache.network_layer()->transaction_count());
   EXPECT_EQ(0, cache.disk_cache()->open_count());
-  EXPECT_EQ(2, cache.disk_cache()->create_count());
+  EXPECT_EQ(3, cache.disk_cache()->create_count());
 
   RemoveMockTransaction(&kFastNoStoreGET_Transaction);
 }

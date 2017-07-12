@@ -15,12 +15,12 @@ IUnknownImpl::~IUnknownImpl() {
 }
 
 ULONG STDMETHODCALLTYPE IUnknownImpl::AddRef() {
-  base::AtomicRefCountInc(&ref_count_);
+  ref_count_.Increment();
   return 1;
 }
 
 ULONG STDMETHODCALLTYPE IUnknownImpl::Release() {
-  if (!base::AtomicRefCountDec(&ref_count_)) {
+  if (!ref_count_.Decrement()) {
     delete this;
     return 0;
   }

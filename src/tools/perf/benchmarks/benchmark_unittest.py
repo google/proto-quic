@@ -12,10 +12,10 @@ from core import perf_benchmark
 
 from telemetry import benchmark as benchmark_module
 from telemetry import decorators
-from telemetry.core import discover
 from telemetry.internal.browser import browser_options
 from telemetry.testing import progress_reporter
 
+from py_utils import discover
 
 def _GetAllPerfBenchmarks():
   return discover.DiscoverClasses(

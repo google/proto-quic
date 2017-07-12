@@ -4,6 +4,7 @@
 
 #include "net/quic/test_tools/simulator/simulator.h"
 
+#include "net/quic/platform/api/quic_containers.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_test.h"
@@ -98,7 +99,7 @@ class CounterPort : public UnconstrainedPortInterface {
   QuicByteCount bytes_;
   QuicPacketCount packets_;
 
-  std::unordered_map<string, QuicPacketCount> per_destination_packet_counter_;
+  QuicUnorderedMap<string, QuicPacketCount> per_destination_packet_counter_;
 };
 
 // Sends the packet to the specified destination at the uplink rate.  Provides a

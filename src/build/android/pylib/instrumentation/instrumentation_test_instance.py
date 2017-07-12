@@ -4,7 +4,6 @@
 
 import collections
 import copy
-import json
 import logging
 import os
 import pickle
@@ -21,6 +20,7 @@ from pylib.instrumentation import test_result
 from pylib.instrumentation import instrumentation_parser
 from pylib.utils import dexdump
 from pylib.utils import proguard
+from pylib.utils import shared_preference_utils
 
 with host_paths.SysPath(host_paths.BUILD_COMMON_PATH):
   import unittest_util # pylint: disable=import-error
@@ -507,6 +507,9 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     self._edit_shared_prefs = []
     self._initializeEditPrefsAttributes(args)
 
+    self._replace_system_package = None
+    self._initializeReplaceSystemPackageAttributes(args)
+
     self._external_shard_index = args.test_launcher_shard_index
     self._total_external_shards = args.test_launcher_total_shards
 
@@ -687,21 +690,14 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     if not isinstance(args.shared_prefs_file, str):
       logging.warning("Given non-string for a filepath")
       return
+    self._edit_shared_prefs = shared_preference_utils.ExtractSettingsFromJson(
+        args.shared_prefs_file)
 
-    # json.load() loads strings as unicode, which causes issues when trying
-    # to edit string values in preference files, so convert to Python strings
-    def unicode_to_str(data):
-      if isinstance(data, dict):
-        return {unicode_to_str(key): unicode_to_str(value)
-                for key, value in data.iteritems()}
-      elif isinstance(data, list):
-        return [unicode_to_str(element) for element in data]
-      elif isinstance(data, unicode):
-        return data.encode('utf-8')
-      return data
-
-    with open(args.shared_prefs_file) as prefs_file:
-      self._edit_shared_prefs = unicode_to_str(json.load(prefs_file))
+  def _initializeReplaceSystemPackageAttributes(self, args):
+    if (not hasattr(args, 'replace_system_package')
+        or not args.replace_system_package):
+      return
+    self._replace_system_package = args.replace_system_package
 
   @property
   def additional_apks(self):
@@ -758,6 +754,10 @@ class InstrumentationTestInstance(test_instance.TestInstance):
   @property
   def render_results_dir(self):
     return self._render_results_dir
+
+  @property
+  def replace_system_package(self):
+    return self._replace_system_package
 
   @property
   def screenshot_dir(self):

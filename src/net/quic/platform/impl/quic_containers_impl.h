@@ -6,12 +6,31 @@
 #define NET_QUIC_PLATFORM_IMPL_QUIC_CONTAINERS_IMPL_H_
 
 #include <unordered_map>
+#include <unordered_set>
 
 #include "base/containers/small_map.h"
 #include "net/base/interval_set.h"
 #include "net/base/linked_hash_map.h"
 
 namespace net {
+
+// TODO(mpw): s/std::unordered_map/gtl::node_hash_map/ once node_hash_map is
+//   PG3-compatible.
+template <typename Key,
+          typename Value,
+          typename Hash = typename std::unordered_map<Key, Value>::hasher,
+          typename Eq = typename std::unordered_map<Key, Value>::key_equal,
+          typename Alloc =
+              typename std::unordered_map<Key, Value>::allocator_type>
+using QuicUnorderedMapImpl = std::unordered_map<Key, Value, Hash, Eq, Alloc>;
+
+// TODO(mpw): s/std::unordered_set/gtl::node_hash_set/ once node_hash_set is
+//   PG3-compatible.
+template <typename Key,
+          typename Hash = typename std::unordered_set<Key>::hasher,
+          typename Eq = typename std::unordered_set<Key>::key_equal,
+          typename Alloc = typename std::unordered_set<Key>::allocator_type>
+using QuicUnorderedSetImpl = std::unordered_set<Key, Hash, Eq, Alloc>;
 
 // A map which offers insertion-ordered iteration.
 template <typename Key, typename Value>

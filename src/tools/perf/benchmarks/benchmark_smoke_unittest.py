@@ -14,11 +14,12 @@ import sys
 import unittest
 
 from telemetry import benchmark as benchmark_module
-from telemetry.core import discover
 from telemetry import decorators
 from telemetry.internal.browser import browser_finder
 from telemetry.testing import options_for_unittests
 from telemetry.testing import progress_reporter
+
+from py_utils import discover
 
 from benchmarks import battor
 from benchmarks import image_decoding

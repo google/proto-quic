@@ -86,6 +86,10 @@ if (is_android) {
     google_play_services_package = "//third_party/android_tools"
   }
 
+  if (!defined(system_webview_apk_target)) {
+    system_webview_apk_target = "//android_webview:system_webview_apk"
+  }
+
   webview_public_framework_jar =
       "//third_party/android_platform/webview/frameworks_7.1.1_r28.jar"
   if (!defined(webview_framework_jar)) {

@@ -41,11 +41,17 @@
 //
 // These APIs are not thread safe. All methods must be called from the same
 // sequence (not necessarily the construction sequence), except for the
-// destructor and SetTaskRunner() which may be called from any sequence when the
-// timer is not running (i.e. when Start() has never been called or Stop() has
-// been called since the last Start()). By default, the scheduled tasks will be
-// run on the same sequence that the Timer was *started on*, but this can be
-// changed *prior* to Start() via SetTaskRunner().
+// destructor and SetTaskRunner().
+// - The destructor may be called from any sequence when the timer is not
+// running and there is no scheduled task active, i.e. when Start() has never
+// been called or after AbandonAndStop() has been called.
+// - SetTaskRunner() may be called from any sequence when the timer is not
+// running, i.e. when Start() has never been called or Stop() has been called
+// since the last Start().
+//
+// By default, the scheduled tasks will be run on the same sequence that the
+// Timer was *started on*, but this can be changed *prior* to Start() via
+// SetTaskRunner().
 
 #ifndef BASE_TIMER_TIMER_H_
 #define BASE_TIMER_TIMER_H_
@@ -126,6 +132,14 @@ class BASE_EXPORT Timer {
   // is not running.
   virtual void Stop();
 
+  // Stop running task (if any) and abandon scheduled task (if any).
+  void AbandonAndStop() {
+    AbandonScheduledTask();
+
+    Stop();
+    // No more member accesses here: |this| could be deleted at this point.
+  }
+
   // Call this method to reset the timer delay. The |user_task_| must be set. If
   // the timer is not running, this will start it by posting a task.
   virtual void Reset();
@@ -165,14 +179,6 @@ class BASE_EXPORT Timer {
 
   // Called by BaseTimerTaskInternal when the delayed task fires.
   void RunScheduledTask();
-
-  // Stop running task (if any) and abandon scheduled task (if any).
-  void AbandonAndStop() {
-    AbandonScheduledTask();
-
-    Stop();
-    // No more member accesses here: |this| could be deleted at this point.
-  }
 
   // When non-null, the |scheduled_task_| was posted to call RunScheduledTask()
   // at |scheduled_run_time_|.

@@ -32,7 +32,7 @@ bool MessagePumpFuchsia::FileDescriptorWatcher::StopWatchingFileDescriptor() {
 }
 
 MessagePumpFuchsia::MessagePumpFuchsia() : keep_running_(true) {
-  CHECK(mx_port_create(MX_PORT_OPT_V2, &port_) == MX_OK);
+  CHECK(mx_port_create(0, &port_) == MX_OK);
 }
 
 MessagePumpFuchsia::~MessagePumpFuchsia() {

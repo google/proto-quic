@@ -144,6 +144,9 @@ class MockDiskCache : public disk_cache::Backend {
   // Returns number of times a cache entry was successfully created.
   int create_count() const { return create_count_; }
 
+  // Returns number of doomed entries.
+  int doomed_count() const { return doomed_count_; }
+
   // Fail any subsequent CreateEntry and OpenEntry.
   void set_fail_requests() { fail_requests_ = true; }
 
@@ -169,6 +172,7 @@ class MockDiskCache : public disk_cache::Backend {
   EntryMap entries_;
   int open_count_;
   int create_count_;
+  int doomed_count_;
   bool fail_requests_;
   bool soft_failures_;
   bool double_create_check_;

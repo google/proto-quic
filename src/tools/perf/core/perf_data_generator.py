@@ -23,8 +23,9 @@ from core import path_util
 path_util.AddTelemetryToPath()
 
 from telemetry import benchmark as benchmark_module
-from telemetry.core import discover
 from telemetry import decorators
+
+from py_utils import discover
 
 from core.sharding_map_generator import load_benchmark_sharding_map
 
@@ -852,17 +853,42 @@ def get_json_config_file_for_waterfall(waterfall):
   return os.path.join(buildbot_dir, filename)
 
 
+def get_extras_json_config_file_for_waterfall(waterfall):
+  filename = '%s.extras.json' % waterfall['name']
+  buildbot_dir = os.path.join(path_util.GetChromiumSrcDir(), 'tools', 'perf')
+  return os.path.join(buildbot_dir, filename)
+
+
+def append_extra_tests(waterfall, tests):
+  """Appends extra tests to |tests|.
+
+  Those extra tests are loaded from tools/perf/<waterfall name>.extras.json.
+  """
+  extra_config_file = get_extras_json_config_file_for_waterfall(waterfall)
+  if os.path.isfile(extra_config_file):
+    with open(extra_config_file) as extra_fp:
+      extra_tests = json.load(extra_fp)
+      for key, value in extra_tests.iteritems():
+        if key == 'comment':
+          continue
+        assert key not in tests
+        tests[key] = value
+
+
 def tests_are_up_to_date(waterfalls):
   up_to_date = True
   all_tests = {}
   for w in waterfalls:
     tests = generate_all_tests(w)
+    # Note: |all_tests| don't cover those manually-specified tests added by
+    # append_extra_tests().
+    all_tests.update(tests)
+    append_extra_tests(w, tests)
     tests_data = json.dumps(tests, indent=2, separators=(',', ': '),
                             sort_keys=True)
     config_file = get_json_config_file_for_waterfall(w)
     with open(config_file, 'r') as fp:
       config_data = fp.read().strip()
-    all_tests.update(tests)
     up_to_date &= tests_data == config_data
   verify_all_tests_in_benchmark_csv(all_tests,
                                     get_all_waterfall_benchmarks_metadata())
@@ -873,11 +899,14 @@ def update_all_tests(waterfalls):
   all_tests = {}
   for w in waterfalls:
     tests = generate_all_tests(w)
+    # Note: |all_tests| don't cover those manually-specified tests added by
+    # append_extra_tests().
+    all_tests.update(tests)
+    append_extra_tests(w, tests)
     config_file = get_json_config_file_for_waterfall(w)
     with open(config_file, 'w') as fp:
       json.dump(tests, fp, indent=2, separators=(',', ': '), sort_keys=True)
       fp.write('\n')
-    all_tests.update(tests)
   verify_all_tests_in_benchmark_csv(all_tests,
                                     get_all_waterfall_benchmarks_metadata())
 

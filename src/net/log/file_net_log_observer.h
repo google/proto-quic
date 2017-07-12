@@ -15,7 +15,7 @@
 namespace base {
 class Value;
 class FilePath;
-class SingleThreadTaskRunner;
+class SequencedTaskRunner;
 }  // namespace base
 
 namespace net {
@@ -42,17 +42,12 @@ class NetLogCaptureMode;
 // large this file can grow; all events added will be written to the file.
 //
 // The consumer must call StartObserving before calling StopObserving, and must
-// call each method exactly once in the lifetime of the observer. StartObserving
-// and StopObserving must be called on the same thread, but there is no
-// restriction on which thread is used.
+// call each method exactly once in the lifetime of the observer.
 class NET_EXPORT FileNetLogObserver : public NetLog::ThreadSafeObserver {
  public:
   // Creates a FileNetLogObserver in bounded mode.
   //
-  // |file_task_runner| indicates the task runner that should be used to post
-  // tasks from the main thread to the file thread.
-  //
-  // |directory| is the directory where the log files will be.
+  // |directory| is the directory where the log files will be written to.
   //
   // |max_total_size| is the approximate limit on the cumulative size of all
   // netlog files.
@@ -64,7 +59,6 @@ class NET_EXPORT FileNetLogObserver : public NetLog::ThreadSafeObserver {
   // the log. It should generally be a modified version of GetNetConstants().
   // If not present, the output of GetNetConstants() will be used.
   static std::unique_ptr<FileNetLogObserver> CreateBounded(
-      scoped_refptr<base::SingleThreadTaskRunner> file_task_runner,
       const base::FilePath& directory,
       size_t max_total_size,
       size_t total_num_files,
@@ -72,16 +66,12 @@ class NET_EXPORT FileNetLogObserver : public NetLog::ThreadSafeObserver {
 
   // Creates a FileNetLogObserver in unbounded mode.
   //
-  // |file_task_runner| indicates the task runner that should be used to post
-  // tasks from the main thread to the file thread.
-  //
-  // |log_path| is where the log file will be.
+  // |log_path| is where the log file will be written to.
   //
   // |constants| is an optional legend for decoding constant values used in
   // the log. It should generally be a modified version of GetNetConstants().
   // If not present, the output of GetNetConstants() will be used.
   static std::unique_ptr<FileNetLogObserver> CreateUnbounded(
-      scoped_refptr<base::SingleThreadTaskRunner> file_task_runner,
       const base::FilePath& log_path,
       std::unique_ptr<base::Value> constants);
 
@@ -98,11 +88,11 @@ class NET_EXPORT FileNetLogObserver : public NetLog::ThreadSafeObserver {
   // |polled_data| is an optional argument used to add additional network stack
   // state to the log.
   //
-  // |callback| will be run on whichever thread StopObserving() was called on
-  // once all file writing is complete and the netlog files can be accessed
-  // safely.
+  // If non-null, |optional_callback| will be run on whichever thread
+  // StopObserving() was called on once all file writing is complete and the
+  // netlog files can be accessed safely.
   void StopObserving(std::unique_ptr<base::Value> polled_data,
-                     const base::Closure& callback);
+                     base::OnceClosure optional_callback);
 
   // NetLog::ThreadSafeObserver
   void OnAddEntry(const NetLogEntry& entry) override;
@@ -113,29 +103,26 @@ class NET_EXPORT FileNetLogObserver : public NetLog::ThreadSafeObserver {
   class BoundedFileWriter;
   class UnboundedFileWriter;
 
-  FileNetLogObserver(
-      scoped_refptr<base::SingleThreadTaskRunner> file_task_runner,
-      std::unique_ptr<FileWriter> file_writer,
-      scoped_refptr<WriteQueue> write_queue,
-      std::unique_ptr<base::Value> constants);
+  FileNetLogObserver(scoped_refptr<base::SequencedTaskRunner> file_task_runner,
+                     std::unique_ptr<FileWriter> file_writer,
+                     scoped_refptr<WriteQueue> write_queue,
+                     std::unique_ptr<base::Value> constants);
 
-  scoped_refptr<base::SingleThreadTaskRunner> file_task_runner_;
+  scoped_refptr<base::SequencedTaskRunner> file_task_runner_;
 
-  // The |write_queue_| object is shared between the file thread and the main
-  // thread, and should be alive for the entirety of the observer's lifetime.
-  // It should be destroyed once both the observer has been destroyed and all
-  // tasks posted to the file thread have completed.
+  // The |write_queue_| object is shared between the file task runner and the
+  // main thread, and should be alive for the entirety of the observer's
+  // lifetime. It should be destroyed once both the observer has been destroyed
+  // and all tasks posted to the file task runner have completed.
   scoped_refptr<WriteQueue> write_queue_;
 
-  // This is the owning reference to a file thread object. The observer is
-  // responsible for destroying the file thread object by posting a task from
-  // the main thread to the file thread to destroy the FileWriter when the
-  // observer is destroyed.
+  // The FileNetLogObserver is shared between the main thread and
+  // |file_task_runner_|.
   //
-  // The use of base::Unretained with |file_writer_| to post tasks to the file
-  // thread is safe because the FileWriter object will be alive until the
-  // observer's destruction.
-  FileWriter* file_writer_;
+  // Conceptually FileNetLogObserver owns it, however on destruction its
+  // deletion is deferred until outstanding tasks on |file_task_runner_| have
+  // finished (since it is posted using base::Unretained()).
+  std::unique_ptr<FileWriter> file_writer_;
 
   DISALLOW_COPY_AND_ASSIGN(FileNetLogObserver);
 };

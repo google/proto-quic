@@ -5,6 +5,8 @@
 #ifndef NET_COOKIES_COOKIE_STORE_UNITTEST_H_
 #define NET_COOKIES_COOKIE_STORE_UNITTEST_H_
 
+#include <stdint.h>
+
 #include <set>
 #include <string>
 #include <vector>
@@ -226,60 +228,59 @@ class CookieStoreTest : public testing::Test {
     callback.WaitUntilDone();
   }
 
-  int DeleteCanonicalCookie(CookieStore* cs, const CanonicalCookie& cookie) {
+  uint32_t DeleteCanonicalCookie(CookieStore* cs,
+                                 const CanonicalCookie& cookie) {
     DCHECK(cs);
-    ResultSavingCookieCallback<int> callback;
+    ResultSavingCookieCallback<uint32_t> callback;
     cs->DeleteCanonicalCookieAsync(
-        cookie, base::Bind(&ResultSavingCookieCallback<int>::Run,
+        cookie, base::Bind(&ResultSavingCookieCallback<uint32_t>::Run,
                            base::Unretained(&callback)));
     callback.WaitUntilDone();
     return callback.result();
   }
 
-  int DeleteCreatedBetween(CookieStore* cs,
-                            const base::Time& delete_begin,
-                            const base::Time& delete_end) {
+  uint32_t DeleteCreatedBetween(CookieStore* cs,
+                                const base::Time& delete_begin,
+                                const base::Time& delete_end) {
     DCHECK(cs);
-    ResultSavingCookieCallback<int> callback;
+    ResultSavingCookieCallback<uint32_t> callback;
     cs->DeleteAllCreatedBetweenAsync(
         delete_begin, delete_end,
-        base::Bind(
-            &ResultSavingCookieCallback<int>::Run,
-            base::Unretained(&callback)));
-    callback.WaitUntilDone();
-    return callback.result();
-  }
-
-  int DeleteAllCreatedBetweenWithPredicate(
-      CookieStore* cs,
-      const base::Time delete_begin,
-      const base::Time delete_end,
-      const CookieStore::CookiePredicate& predicate) {
-    DCHECK(cs);
-    ResultSavingCookieCallback<int> callback;
-    cs->DeleteAllCreatedBetweenWithPredicateAsync(
-        delete_begin, delete_end, predicate,
-        base::Bind(&ResultSavingCookieCallback<int>::Run,
+        base::Bind(&ResultSavingCookieCallback<uint32_t>::Run,
                    base::Unretained(&callback)));
     callback.WaitUntilDone();
     return callback.result();
   }
 
-  int DeleteSessionCookies(CookieStore* cs) {
+  uint32_t DeleteAllCreatedBetweenWithPredicate(
+      CookieStore* cs,
+      const base::Time delete_begin,
+      const base::Time delete_end,
+      const CookieStore::CookiePredicate& predicate) {
     DCHECK(cs);
-    ResultSavingCookieCallback<int> callback;
-    cs->DeleteSessionCookiesAsync(
-        base::Bind(
-            &ResultSavingCookieCallback<int>::Run,
-            base::Unretained(&callback)));
+    ResultSavingCookieCallback<uint32_t> callback;
+    cs->DeleteAllCreatedBetweenWithPredicateAsync(
+        delete_begin, delete_end, predicate,
+        base::Bind(&ResultSavingCookieCallback<uint32_t>::Run,
+                   base::Unretained(&callback)));
     callback.WaitUntilDone();
     return callback.result();
   }
 
-  int DeleteAll(CookieStore* cs) {
+  uint32_t DeleteSessionCookies(CookieStore* cs) {
     DCHECK(cs);
-    ResultSavingCookieCallback<int> callback;
-    cs->DeleteAllAsync(base::Bind(&ResultSavingCookieCallback<int>::Run,
+    ResultSavingCookieCallback<uint32_t> callback;
+    cs->DeleteSessionCookiesAsync(
+        base::Bind(&ResultSavingCookieCallback<uint32_t>::Run,
+                   base::Unretained(&callback)));
+    callback.WaitUntilDone();
+    return callback.result();
+  }
+
+  uint32_t DeleteAll(CookieStore* cs) {
+    DCHECK(cs);
+    ResultSavingCookieCallback<uint32_t> callback;
+    cs->DeleteAllAsync(base::Bind(&ResultSavingCookieCallback<uint32_t>::Run,
                                   base::Unretained(&callback)));
     callback.WaitUntilDone();
     return callback.result();
@@ -1216,7 +1217,7 @@ TYPED_TEST_P(CookieStoreTest, TestDeleteAll) {
   EXPECT_EQ(2u, this->GetAllCookies(cs).size());
 
   // Delete both, and make sure it works
-  EXPECT_EQ(2, this->DeleteAll(cs));
+  EXPECT_EQ(2u, this->DeleteAll(cs));
   EXPECT_EQ(0u, this->GetAllCookies(cs).size());
 }
 
@@ -1238,14 +1239,14 @@ TYPED_TEST_P(CookieStoreTest, TestDeleteAllCreatedBetween) {
                          this->GetCookies(cs, this->http_www_foo_.url()));
 
   // Remove cookies in empty intervals.
-  EXPECT_EQ(0, this->DeleteCreatedBetween(cs, last_month, last_minute));
-  EXPECT_EQ(0, this->DeleteCreatedBetween(cs, next_minute, next_month));
+  EXPECT_EQ(0u, this->DeleteCreatedBetween(cs, last_month, last_minute));
+  EXPECT_EQ(0u, this->DeleteCreatedBetween(cs, next_minute, next_month));
   // Check that the cookie is still there.
   this->MatchCookieLines("A=B",
                          this->GetCookies(cs, this->http_www_foo_.url()));
 
   // Remove the cookie with an interval defined by two dates.
-  EXPECT_EQ(1, this->DeleteCreatedBetween(cs, last_minute, next_minute));
+  EXPECT_EQ(1u, this->DeleteCreatedBetween(cs, last_minute, next_minute));
   // Check that the cookie disappeared.
   this->MatchCookieLines(std::string(),
                          this->GetCookies(cs, this->http_www_foo_.url()));
@@ -1257,7 +1258,7 @@ TYPED_TEST_P(CookieStoreTest, TestDeleteAllCreatedBetween) {
                          this->GetCookies(cs, this->http_www_foo_.url()));
 
   // Remove the cookie with a null ending time.
-  EXPECT_EQ(1, this->DeleteCreatedBetween(cs, last_minute, base::Time()));
+  EXPECT_EQ(1u, this->DeleteCreatedBetween(cs, last_minute, base::Time()));
   // Check that the cookie disappeared.
   this->MatchCookieLines(std::string(),
                          this->GetCookies(cs, this->http_www_foo_.url()));
@@ -1284,7 +1285,7 @@ TYPED_TEST_P(CookieStoreTest, TestDeleteAllCreatedBetweenWithPredicate) {
   EXPECT_TRUE(this->SetCookie(cs, this->https_www_foo_.url(), "E=B"));
 
   // Delete cookies.
-  EXPECT_EQ(2,  // Deletes A=B, E=B
+  EXPECT_EQ(2u,  // Deletes A=B, E=B
             this->DeleteAllCreatedBetweenWithPredicate(
                 cs, now, base::Time::Max(),
                 base::Bind(&CookieHasValue, desired_value)));
@@ -1294,20 +1295,21 @@ TYPED_TEST_P(CookieStoreTest, TestDeleteAllCreatedBetweenWithPredicate) {
                          this->GetCookies(cs, this->https_www_foo_.url()));
 
   // Now check that using a null predicate will do nothing.
-  EXPECT_EQ(0, this->DeleteAllCreatedBetweenWithPredicate(
-                   cs, now, base::Time::Max(), CookieStore::CookiePredicate()));
+  EXPECT_EQ(0u,
+            this->DeleteAllCreatedBetweenWithPredicate(
+                cs, now, base::Time::Max(), CookieStore::CookiePredicate()));
 
   // Finally, check that we don't delete cookies when our time range is off.
   desired_value = "D";
-  EXPECT_EQ(0, this->DeleteAllCreatedBetweenWithPredicate(
-                   cs, last_month, last_minute,
-                   base::Bind(&CookieHasValue, desired_value)));
+  EXPECT_EQ(0u, this->DeleteAllCreatedBetweenWithPredicate(
+                    cs, last_month, last_minute,
+                    base::Bind(&CookieHasValue, desired_value)));
   this->MatchCookieLines("C=D;Y=Z",
                          this->GetCookies(cs, this->https_www_foo_.url()));
   // Same thing, but with a good time range.
-  EXPECT_EQ(1, this->DeleteAllCreatedBetweenWithPredicate(
-                   cs, now, base::Time::Max(),
-                   base::Bind(&CookieHasValue, desired_value)));
+  EXPECT_EQ(1u, this->DeleteAllCreatedBetweenWithPredicate(
+                    cs, now, base::Time::Max(),
+                    base::Bind(&CookieHasValue, desired_value)));
   this->MatchCookieLines("Y=Z",
                          this->GetCookies(cs, this->https_www_foo_.url()));
 }
@@ -1440,14 +1442,14 @@ TYPED_TEST_P(CookieStoreTest, EmptyName) {
   EXPECT_EQ(1u, list.size());
   EXPECT_EQ("", list[0].Name());
   EXPECT_EQ("a", list[0].Value());
-  EXPECT_EQ(1, this->DeleteAll(cs));
+  EXPECT_EQ(1u, this->DeleteAll(cs));
 
   EXPECT_TRUE(this->SetCookieWithOptions(cs, url_foo, "=b", options));
   list = this->GetAllCookiesForURL(cs, url_foo);
   EXPECT_EQ(1u, list.size());
   EXPECT_EQ("", list[0].Name());
   EXPECT_EQ("b", list[0].Value());
-  EXPECT_EQ(1, this->DeleteAll(cs));
+  EXPECT_EQ(1u, this->DeleteAll(cs));
 }
 
 TYPED_TEST_P(CookieStoreTest, CookieOrdering) {
@@ -1570,20 +1572,20 @@ TYPED_TEST_P(CookieStoreTest, DeleteCanonicalCookieAsync) {
   CookieList cookies = this->GetCookieListWithOptions(
       cs, this->www_foo_foo_.url(), CookieOptions());
   ASSERT_EQ(1u, cookies.size());
-  EXPECT_EQ(1, this->DeleteCanonicalCookie(cs, cookies[0]));
+  EXPECT_EQ(1u, this->DeleteCanonicalCookie(cs, cookies[0]));
   EXPECT_EQ(1u, this->GetAllCookies(cs).size());
   EXPECT_EQ("", this->GetCookies(cs, this->www_foo_foo_.url()));
   EXPECT_EQ("A=C", this->GetCookies(cs, this->www_foo_bar_.url()));
 
   // Deleting the "/foo" cookie again should fail.
-  EXPECT_EQ(0, this->DeleteCanonicalCookie(cs, cookies[0]));
+  EXPECT_EQ(0u, this->DeleteCanonicalCookie(cs, cookies[0]));
 
   // Try to delete the "/bar" cookie after overwriting it with a new cookie.
   cookies = this->GetCookieListWithOptions(cs, this->www_foo_bar_.url(),
                                            CookieOptions());
   ASSERT_EQ(1u, cookies.size());
   EXPECT_TRUE(this->SetCookie(cs, this->http_www_foo_.url(), "A=D;Path=/bar"));
-  EXPECT_EQ(0, this->DeleteCanonicalCookie(cs, cookies[0]));
+  EXPECT_EQ(0u, this->DeleteCanonicalCookie(cs, cookies[0]));
   EXPECT_EQ(1u, this->GetAllCookies(cs).size());
   EXPECT_EQ("A=D", this->GetCookies(cs, this->www_foo_bar_.url()));
 
@@ -1591,7 +1593,7 @@ TYPED_TEST_P(CookieStoreTest, DeleteCanonicalCookieAsync) {
   cookies = this->GetCookieListWithOptions(cs, this->www_foo_bar_.url(),
                                            CookieOptions());
   ASSERT_EQ(1u, cookies.size());
-  EXPECT_EQ(1, this->DeleteCanonicalCookie(cs, cookies[0]));
+  EXPECT_EQ(1u, this->DeleteCanonicalCookie(cs, cookies[0]));
   EXPECT_EQ(0u, this->GetAllCookies(cs).size());
   EXPECT_EQ("", this->GetCookies(cs, this->www_foo_bar_.url()));
 }

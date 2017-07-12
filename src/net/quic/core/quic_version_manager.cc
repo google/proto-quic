@@ -13,6 +13,7 @@ QuicVersionManager::QuicVersionManager(QuicVersionVector supported_versions)
     : enable_version_40_(GetQuicFlag(FLAGS_quic_enable_version_40)),
       enable_version_39_(FLAGS_quic_reloadable_flag_quic_enable_version_39),
       enable_version_38_(FLAGS_quic_reloadable_flag_quic_enable_version_38),
+      disable_version_36_(FLAGS_quic_reloadable_flag_quic_disable_version_36),
       allowed_supported_versions_(supported_versions),
       filtered_supported_versions_(
           FilterSupportedVersions(supported_versions)) {}
@@ -27,10 +28,13 @@ const QuicVersionVector& QuicVersionManager::GetSupportedVersions() {
 void QuicVersionManager::MaybeRefilterSupportedVersions() {
   if (enable_version_40_ != GetQuicFlag(FLAGS_quic_enable_version_40) ||
       enable_version_39_ != FLAGS_quic_reloadable_flag_quic_enable_version_39 ||
-      enable_version_38_ != FLAGS_quic_reloadable_flag_quic_enable_version_38) {
+      enable_version_38_ != FLAGS_quic_reloadable_flag_quic_enable_version_38 ||
+      disable_version_36_ !=
+          FLAGS_quic_reloadable_flag_quic_disable_version_36) {
     enable_version_40_ = GetQuicFlag(FLAGS_quic_enable_version_40);
     enable_version_39_ = FLAGS_quic_reloadable_flag_quic_enable_version_39;
     enable_version_38_ = FLAGS_quic_reloadable_flag_quic_enable_version_38;
+    disable_version_36_ = FLAGS_quic_reloadable_flag_quic_disable_version_36;
     RefilterSupportedVersions();
   }
 }

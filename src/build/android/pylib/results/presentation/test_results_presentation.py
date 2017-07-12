@@ -110,15 +110,14 @@ def flakiness_dashbord_link(test_name, suite_name):
 def logs_cell(result, test_name, suite_name):
   """Formats result logs data for processing in jinja template."""
   link_list = []
-  for name, href in result.get('links', {}).iteritems():
+  result_link_dict = result.get('links', {})
+  result_link_dict['flakiness'] = flakiness_dashbord_link(
+      test_name, suite_name)
+  for name, href in sorted(result_link_dict.items()):
     link_list.append(link(
         data=name,
         href=href,
         target=LinkTarget.NEW_TAB))
-  link_list.append(link(
-      data='flakiness',
-      href=flakiness_dashbord_link(test_name, suite_name),
-      target=LinkTarget.NEW_TAB))
   if link_list:
     return links_cell(link_list)
   else:

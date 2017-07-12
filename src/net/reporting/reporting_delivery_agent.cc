@@ -170,7 +170,8 @@ class ReportingDeliveryAgentImpl : public ReportingDeliveryAgent,
   void OnUploadComplete(const std::unique_ptr<Delivery>& delivery,
                         ReportingUploader::Outcome outcome) {
     if (outcome == ReportingUploader::Outcome::SUCCESS) {
-      cache()->RemoveReports(delivery->reports);
+      cache()->RemoveReports(delivery->reports,
+                             ReportingReport::Outcome::DELIVERED);
       endpoint_manager()->InformOfEndpointRequest(delivery->endpoint, true);
     } else {
       cache()->IncrementReportsAttempts(delivery->reports);

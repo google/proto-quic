@@ -38,6 +38,7 @@ using TargetToPBXTarget = std::unordered_map<const Target*, PBXTarget*>;
 const char kEarlGreyFileNameIdentifier[] = "egtest.mm";
 const char kXCTestFileNameIdentifier[] = "xctest.mm";
 const char kXCTestModuleTargetNamePostfix[] = "_module";
+const char kXCUITestRunnerTargetNamePostfix[] = "_runner";
 
 struct SafeEnvironmentVariableInfo {
   const char* name;
@@ -100,10 +101,25 @@ bool IsApplicationTarget(const Target* target) {
              "com.apple.product-type.application";
 }
 
+bool IsXCUITestRunnerTarget(const Target* target) {
+  return IsApplicationTarget(target) &&
+         base::EndsWith(target->label().name(),
+                        kXCUITestRunnerTargetNamePostfix,
+                        base::CompareCase::SENSITIVE);
+}
+
 bool IsXCTestModuleTarget(const Target* target) {
   return target->output_type() == Target::CREATE_BUNDLE &&
          target->bundle_data().product_type() ==
              "com.apple.product-type.bundle.unit-test" &&
+         base::EndsWith(target->label().name(), kXCTestModuleTargetNamePostfix,
+                        base::CompareCase::SENSITIVE);
+}
+
+bool IsXCUITestModuleTarget(const Target* target) {
+  return target->output_type() == Target::CREATE_BUNDLE &&
+         target->bundle_data().product_type() ==
+             "com.apple.product-type.bundle.ui-testing" &&
          base::EndsWith(target->label().name(), kXCTestModuleTargetNamePostfix,
                         base::CompareCase::SENSITIVE);
 }
@@ -488,6 +504,18 @@ void XcodeWriter::CreateProductsProject(
         if (target->bundle_data().product_type().empty())
           continue;
 
+        // For XCUITest, two CREATE_BUNDLE targets are generated:
+        // ${target_name}_runner and ${target_name}_module, however, Xcode
+        // requires only one target named ${target_name} to run tests.
+        if (IsXCUITestRunnerTarget(target))
+          continue;
+        std::string pbxtarget_name = target->label().name();
+        if (IsXCUITestModuleTarget(target)) {
+          std::string target_name = target->label().name();
+          pbxtarget_name = target_name.substr(
+              0, target_name.rfind(kXCTestModuleTargetNamePostfix));
+        }
+
         // Test files need to be known to Xcode for proper indexing and for
         // discovery of tests function for XCTest, but the compilation is done
         // via ninja and thus must prevent Xcode from linking object files via
@@ -500,13 +528,13 @@ void XcodeWriter::CreateProductsProject(
         }
 
         PBXNativeTarget* native_target = main_project->AddNativeTarget(
-            target->label().name(), std::string(),
+            pbxtarget_name, std::string(),
             RebasePath(target->bundle_data()
                            .GetBundleRootDirOutput(target->settings())
                            .value(),
                        build_settings->build_dir()),
             target->bundle_data().product_type(),
-            GetBuildScript(target->label().name(), ninja_extra_args, env.get()),
+            GetBuildScript(pbxtarget_name, ninja_extra_args, env.get()),
             extra_attributes);
         bundle_target_to_pbxtarget.insert(
             std::make_pair(target, native_target));

@@ -61,28 +61,38 @@ variable name or the '{{' and '}}' which surround it."
   '("true" "false" "if" "else"))
 
 (defvar gn-font-lock-target-declaration-keywords
-  '("action" "action_foreach" "copy" "executable" "group" "loadable_module"
-    "shared_library" "source_set" "static_library"))
+  '("action" "action_foreach" "bundle_data" "copy" "create_bundle" "executable"
+    "group" "loadable_module" "shared_library" "source_set" "static_library"
+    "target"))
 
+;; pool() is handled specially since it's also a variable name
 (defvar gn-font-lock-buildfile-fun-keywords
   '("assert" "config" "declare_args" "defined" "exec_script" "foreach"
-    "get_label_info" "get_path_info" "get_target_outputs" "getenv" "import"
-    "print" "process_file_template" "read_file" "rebase_path"
-    "set_default_toolchain" "set_defaults" "set_sources_assignment_filter"
-    "template" "tool" "toolchain" "toolchain_args" "write_file"))
+    "forward_variables_from" "get_label_info" "get_path_info"
+    "get_target_outputs" "getenv" "import" "not_needed" "print"
+    "process_file_template" "read_file" "rebase_path" "set_default_toolchain"
+    "set_defaults" "set_sources_assignment_filter" "split_list" "template"
+    "tool" "toolchain" "write_file"))
 
 (defvar gn-font-lock-predefined-var-keywords
   '("current_cpu" "current_os" "current_toolchain" "default_toolchain"
-    "host_cpu" "host_os" "python_path" "root_build_dir" "root_gen_dir"
-    "root_out_dir" "target_cpu" "target_gen_dir" "target_os" "target_out_dir"))
+    "host_cpu" "host_os" "invoker" "python_path" "root_build_dir" "root_gen_dir"
+    "root_out_dir" "target_cpu" "target_gen_dir" "target_name" "target_os"
+    "target_out_dir"))
 
 (defvar gn-font-lock-var-keywords
-  '("all_dependent_configs" "allow_circular_includes_from" "args" "asmflags"
-    "cflags" "cflags_c" "cflags_cc" "cflags_objc" "cflags_objcc"
-    "check_includes" "complete_static_lib" "configs" "data" "data_deps"
+  '("all_dependent_configs" "allow_circular_includes_from" "arflags" "args"
+    "asmflags" "assert_no_deps" "bundle_deps_filter" "bundle_executable_dir"
+    "bundle_plugins_dir" "bundle_resources_dir" "bundle_root_dir" "cflags"
+    "cflags_c" "cflags_cc" "cflags_objc" "cflags_objcc" "check_includes"
+    "code_signing_args" "code_signing_outputs" "code_signing_script"
+    "code_signing_sources" "complete_static_lib" "configs" "data" "data_deps"
     "defines" "depfile" "deps" "include_dirs" "inputs" "ldflags" "lib_dirs"
-    "libs" "output_extension" "output_name" "outputs" "public" "public_configs"
-    "public_deps" "script" "sources" "testonly" "visibility"))
+    "libs" "output_dir" "output_extension" "output_name"
+    "output_prefix_override" "outputs" "pool" "precompiled_header"
+    "precompiled_header_type" "precompiled_source" "product_type" "public"
+    "public_configs" "public_deps" "response_file_contents" "script" "sources"
+    "testonly" "visibility" "write_runtime_deps"))
 
 (defconst gn-font-lock-keywords
   `((,(regexp-opt gn-font-lock-reserved-keywords 'words) .
@@ -91,6 +101,9 @@ variable name or the '{{' and '}}' which surround it."
      font-lock-type-face)
     (,(regexp-opt gn-font-lock-buildfile-fun-keywords 'words) .
      font-lock-function-name-face)
+    ;; pool() as a function
+    ("\\<\\(pool\\)\\s-*("
+     (1 font-lock-function-name-face))
     (,(regexp-opt gn-font-lock-predefined-var-keywords 'words) .
      font-lock-constant-face)
     (,(regexp-opt gn-font-lock-var-keywords 'words) .

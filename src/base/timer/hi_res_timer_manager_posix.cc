@@ -18,6 +18,10 @@ HighResolutionTimerManager::~HighResolutionTimerManager() {
 void HighResolutionTimerManager::OnPowerStateChange(bool on_battery_power) {
 }
 
+void HighResolutionTimerManager::OnSuspend() {}
+
+void HighResolutionTimerManager::OnResume() {}
+
 void HighResolutionTimerManager::UseHiResClock(bool use) {
 }
 

@@ -119,11 +119,11 @@ TEST(ThroughputAnalyzerTest, MaximumRequests) {
                                 ? "http://127.0.0.1/test.html"
                                 : "http://example.com/test.html";
 
-    EXPECT_EQ(test.use_local_requests,
-              nqe::internal::IsPrivateHost(
-                  context.host_resolver(),
-                  HostPortPair(GURL(url).host(), GURL(url).EffectiveIntPort()),
-                  base::MakeUnique<BoundTestNetLog>()->bound()));
+    EXPECT_EQ(
+        test.use_local_requests,
+        nqe::internal::IsPrivateHost(
+            context.host_resolver(),
+            HostPortPair(GURL(url).host(), GURL(url).EffectiveIntPort())));
     for (size_t i = 0; i < 1000; ++i) {
       std::unique_ptr<URLRequest> request(
           context.CreateRequest(GURL(url), DEFAULT_PRIORITY, &test_delegate,

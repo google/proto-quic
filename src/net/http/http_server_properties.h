@@ -175,6 +175,12 @@ class NET_EXPORT_PRIVATE AlternativeServiceInfo {
     return alternative_service_;
   }
 
+  NextProto protocol() const { return alternative_service_.protocol; }
+
+  HostPortPair host_port_pair() const {
+    return alternative_service_.host_port_pair();
+  }
+
   base::Time expiration() const { return expiration_; }
 
   const QuicVersionVector& advertised_versions() const {

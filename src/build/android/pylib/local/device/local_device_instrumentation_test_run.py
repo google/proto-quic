@@ -7,13 +7,15 @@ import logging
 import os
 import posixpath
 import re
+import sys
 import tempfile
 import time
 
+from devil.android import crash_handler
 from devil.android import device_errors
 from devil.android import device_temp_file
 from devil.android import flag_changer
-from devil.android.sdk import shared_prefs
+from devil.android.tools import system_app
 from devil.utils import reraiser_thread
 from pylib import valgrind_tools
 from pylib.android import logdog_logcat_monitor
@@ -24,6 +26,7 @@ from pylib.local.device import local_device_environment
 from pylib.local.device import local_device_test_run
 from pylib.utils import google_storage_helper
 from pylib.utils import logdog_helper
+from pylib.utils import shared_preference_utils
 from py_trace_event import trace_event
 from py_utils import contextlib_ext
 from py_utils import tempfile_ext
@@ -112,6 +115,7 @@ class LocalDeviceInstrumentationTestRun(
     super(LocalDeviceInstrumentationTestRun, self).__init__(env, test_instance)
     self._flag_changers = {}
     self._ui_capture_dir = dict()
+    self._replace_package_contextmanager = None
 
   #override
   def TestPackage(self):
@@ -125,25 +129,39 @@ class LocalDeviceInstrumentationTestRun(
     def individual_device_set_up(dev, host_device_tuples):
       steps = []
 
+      if self._test_instance.replace_system_package:
+        # We need the context manager to be applied before modifying any shared
+        # preference files in case the replacement APK needs to be set up, and
+        # it needs to be applied while the test is running. Thus, it needs to
+        # be applied early during setup, but must still be applied during
+        # _RunTest, which isn't possible using 'with' without applying the
+        # context manager up in test_runner. Instead, we manually invoke
+        # its __enter__ and __exit__ methods in setup and teardown
+        self._replace_package_contextmanager = system_app.ReplaceSystemApp(
+            dev, self._test_instance.replace_system_package.package,
+            self._test_instance.replace_system_package.replacement_apk)
+        steps.append(self._replace_package_contextmanager.__enter__)
+
       def install_helper(apk, permissions):
         @trace_event.traced("apk_path")
-        def install_helper_internal(apk_path=apk.path):
+        def install_helper_internal(d, apk_path=apk.path):
           # pylint: disable=unused-argument
-          dev.Install(apk, permissions=permissions)
-        return install_helper_internal
+          d.Install(apk, permissions=permissions)
+        return lambda: crash_handler.RetryOnSystemCrash(
+            install_helper_internal, dev)
 
-      def incremental_install_helper(dev, apk, script):
+      def incremental_install_helper(apk, script):
         @trace_event.traced("apk_path")
-        def incremental_install_helper_internal(apk_path=apk.path):
+        def incremental_install_helper_internal(d, apk_path=apk.path):
           # pylint: disable=unused-argument
           local_device_test_run.IncrementalInstall(
-              dev, apk, script)
-        return incremental_install_helper_internal
+              d, apk, script)
+        return lambda: crash_handler.RetryOnSystemCrash(
+            incremental_install_helper_internal, dev)
 
       if self._test_instance.apk_under_test:
         if self._test_instance.apk_under_test_incremental_install_script:
           steps.append(incremental_install_helper(
-                           dev,
                            self._test_instance.apk_under_test,
                            self._test_instance.
                                apk_under_test_incremental_install_script))
@@ -154,7 +172,6 @@ class LocalDeviceInstrumentationTestRun(
 
       if self._test_instance.test_apk_incremental_install_script:
         steps.append(incremental_install_helper(
-                         dev,
                          self._test_instance.test_apk,
                          self._test_instance.
                              test_apk_incremental_install_script))
@@ -179,30 +196,11 @@ class LocalDeviceInstrumentationTestRun(
             dev.RunShellCommand(['am', 'set-debug-app', '--persistent',
                                  self._test_instance.package_info.package],
                                 check_return=True)
+
       @trace_event.traced
       def edit_shared_prefs():
-        for pref in self._test_instance.edit_shared_prefs:
-          prefs = shared_prefs.SharedPrefs(dev, pref['package'],
-                                           pref['filename'])
-          prefs.Load()
-          for key in pref.get('remove', []):
-            try:
-              prefs.Remove(key)
-            except KeyError:
-              logging.warning("Attempted to remove non-existent key %s", key)
-          for key, value in pref.get('set', {}).iteritems():
-            if isinstance(value, bool):
-              prefs.SetBoolean(key, value)
-            elif isinstance(value, basestring):
-              prefs.SetString(key, value)
-            elif isinstance(value, long) or isinstance(value, int):
-              prefs.SetLong(key, value)
-            elif isinstance(value, list):
-              prefs.SetStringSet(key, value)
-            else:
-              raise ValueError("Given invalid value type %s for key %s" % (
-                  str(type(value)), key))
-          prefs.Commit()
+        shared_preference_utils.ApplySharedPreferenceSettings(
+            dev, self._test_instance.edit_shared_prefs)
 
       @trace_event.traced
       def push_test_data():
@@ -278,6 +276,9 @@ class LocalDeviceInstrumentationTestRun(
 
       if self._test_instance.ui_screenshot_dir:
         pull_ui_screen_captures(dev)
+
+      if self._replace_package_contextmanager:
+        self._replace_package_contextmanager.__exit__(*sys.exc_info())
 
     @trace_event.traced
     def pull_ui_screen_captures(dev):

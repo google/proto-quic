@@ -706,6 +706,35 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, CancelJobsBeforeBinding) {
   EXPECT_TRUE(HttpStreamFactoryImplPeer::IsJobControllerDeleted(factory_));
 }
 
+// Test that the controller does not create alternative job when the advertised
+// versions in AlternativeServiceInfo do not contain any version that is
+// supported.
+TEST_F(HttpStreamFactoryImplJobControllerTest,
+       DoNotCreateAltJobIfQuicVersionsUnsupported) {
+  tcp_data_ = base::MakeUnique<SequencedSocketData>(nullptr, 0, nullptr, 0);
+  tcp_data_->set_connect_data(MockConnect(ASYNC, OK));
+  HttpRequestInfo request_info;
+  request_info.method = "GET";
+  request_info.url = GURL("https://www.google.com");
+
+  Initialize(request_info);
+  url::SchemeHostPort server(request_info.url);
+  AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
+  base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
+  session_->http_server_properties()->SetQuicAlternativeService(
+      server, alternative_service, expiration, {QUIC_VERSION_UNSUPPORTED});
+
+  request_ =
+      job_controller_->Start(&request_delegate_, nullptr, net_log_.bound(),
+                             HttpStreamRequest::HTTP_STREAM, DEFAULT_PRIORITY);
+  EXPECT_TRUE(job_controller_->main_job());
+  EXPECT_FALSE(job_controller_->alternative_job());
+
+  request_.reset();
+  VerifyBrokenAlternateProtocolMapping(request_info, false);
+  EXPECT_TRUE(HttpStreamFactoryImplPeer::IsJobControllerDeleted(factory_));
+}
+
 TEST_F(HttpStreamFactoryImplJobControllerTest, OnStreamFailedForBothJobs) {
   quic_data_ = base::MakeUnique<MockQuicData>();
   quic_data_->AddConnect(ASYNC, ERR_FAILED);
@@ -2081,8 +2110,8 @@ TEST_P(HttpStreamFactoryImplJobControllerPreconnectTest,
 }
 
 // Test that GetAlternativeServiceInfoFor will include a list of advertised
-// versions. Returns an empty list if advertised versions are missing in
-// HttpServerProperties.
+// versions, which contains a version that is supported. Returns an empty list
+// if advertised versions are missing in HttpServerProperties.
 TEST_F(HttpStreamFactoryImplJobControllerTest, GetAlternativeServiceInfoFor) {
   HttpRequestInfo request_info;
   request_info.method = "GET";
@@ -2105,30 +2134,61 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, GetAlternativeServiceInfoFor) {
   // Verify that JobController get an empty list of supported QUIC versions.
   EXPECT_TRUE(alt_svc_info.advertised_versions().empty());
 
-  // Set alternative service for the same server with QUIC_VERSION_39 specified.
+  // Set alternative service for the same server with the same list of versions
+  // that is supported.
+  QuicVersionVector supported_versions =
+      session_->params().quic_supported_versions;
   ASSERT_TRUE(session_->http_server_properties()->SetQuicAlternativeService(
-      server, alternative_service, expiration, {QUIC_VERSION_39}));
+      server, alternative_service, expiration, supported_versions));
 
   alt_svc_info = JobControllerPeer::GetAlternativeServiceInfoFor(
       job_controller_, request_info, &request_delegate_,
       HttpStreamRequest::HTTP_STREAM);
-  EXPECT_EQ(1u, alt_svc_info.advertised_versions().size());
-  // Verify that JobController returns the single version specified in set.
-  EXPECT_EQ(QUIC_VERSION_39, alt_svc_info.advertised_versions()[0]);
+  std::sort(supported_versions.begin(), supported_versions.end());
+  EXPECT_EQ(supported_versions, alt_svc_info.advertised_versions());
+
+  QuicVersion unsupported_version_1(QUIC_VERSION_UNSUPPORTED);
+  QuicVersion unsupported_version_2(QUIC_VERSION_UNSUPPORTED);
+  for (const QuicVersion& version : AllSupportedVersions()) {
+    if (std::find(supported_versions.begin(), supported_versions.end(),
+                  version) != supported_versions.end())
+      continue;
+    if (unsupported_version_1 == QUIC_VERSION_UNSUPPORTED) {
+      unsupported_version_1 = version;
+      continue;
+    }
+    unsupported_version_2 = version;
+    break;
+  }
 
   // Set alternative service for the same server with two QUIC versions:
-  // QUIC_VERSION_35, QUIC_VERSION_39.
+  // - one unsupported version: |unsupported_version_1|,
+  // - one supported version: session_->params().quic_supported_versions[0].
+  QuicVersionVector mixed_quic_versions = {
+      unsupported_version_1, session_->params().quic_supported_versions[0]};
   ASSERT_TRUE(session_->http_server_properties()->SetQuicAlternativeService(
-      server, alternative_service, expiration,
-      {QUIC_VERSION_35, QUIC_VERSION_39}));
+      server, alternative_service, expiration, mixed_quic_versions));
 
   alt_svc_info = JobControllerPeer::GetAlternativeServiceInfoFor(
       job_controller_, request_info, &request_delegate_,
       HttpStreamRequest::HTTP_STREAM);
   EXPECT_EQ(2u, alt_svc_info.advertised_versions().size());
   // Verify that JobController returns the list of versions specified in set.
-  EXPECT_EQ(QUIC_VERSION_35, alt_svc_info.advertised_versions()[0]);
-  EXPECT_EQ(QUIC_VERSION_39, alt_svc_info.advertised_versions()[1]);
+  std::sort(mixed_quic_versions.begin(), mixed_quic_versions.end());
+  EXPECT_EQ(mixed_quic_versions, alt_svc_info.advertised_versions());
+
+  // Set alternative service for the same server with two unsupported QUIC
+  // versions: |unsupported_version_1|, |unsupported_version_2|.
+  ASSERT_TRUE(session_->http_server_properties()->SetQuicAlternativeService(
+      server, alternative_service, expiration,
+      {unsupported_version_1, unsupported_version_2}));
+
+  alt_svc_info = JobControllerPeer::GetAlternativeServiceInfoFor(
+      job_controller_, request_info, &request_delegate_,
+      HttpStreamRequest::HTTP_STREAM);
+  // Verify that JobController returns no valid alternative service.
+  EXPECT_EQ(kProtoUnknown, alt_svc_info.alternative_service().protocol);
+  EXPECT_EQ(0u, alt_svc_info.advertised_versions().size());
 }
 
 }  // namespace test

@@ -115,6 +115,7 @@ class NET_EXPORT_PRIVATE QuicStreamRequest {
   // |destination| will be resolved and resulting IPEndPoint used to open a
   // QuicConnection.  This can be different than HostPortPair::FromURL(url).
   int Request(const HostPortPair& destination,
+              QuicVersion quic_version,
               PrivacyMode privacy_mode,
               int cert_verify_flags,
               const GURL& url,
@@ -202,7 +203,6 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       QuicClock* clock,
       size_t max_packet_length,
       const std::string& user_agent_id,
-      const QuicVersionVector& supported_versions,
       bool store_server_configs_in_properties,
       bool close_sessions_on_ip_change,
       bool mark_quic_broken_when_network_blackholes,
@@ -233,6 +233,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   // OnRequestComplete asynchronously.
   int Create(const QuicServerId& server_id,
              const HostPortPair& destination,
+             QuicVersion quic_version,
              int cert_verify_flags,
              const GURL& url,
              QuicStringPiece method,
@@ -404,6 +405,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   bool HasActiveJob(const QuicServerId& server_id) const;
   bool HasActiveCertVerifierJob(const QuicServerId& server_id) const;
   int CreateSession(const QuicSessionKey& key,
+                    const QuicVersion& quic_version,
                     int cert_verify_flags,
                     bool require_confirmation,
                     const AddressList& address_list,
@@ -514,8 +516,6 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
 
   // Map of QuicServerId to owning CertVerifierJob.
   CertVerifierJobMap active_cert_verifier_jobs_;
-
-  const QuicVersionVector supported_versions_;
 
   // True if QUIC should be marked as broken when a connection blackholes after
   // the handshake is confirmed.

@@ -444,11 +444,11 @@ class NET_EXPORT CookieMonster : public CookieStore {
   CookieList GetCookieListWithOptions(const GURL& url,
                                       const CookieOptions& options);
 
-  int DeleteAllCreatedBetween(const base::Time& delete_begin,
-                              const base::Time& delete_end);
+  uint32_t DeleteAllCreatedBetween(const base::Time& delete_begin,
+                                   const base::Time& delete_end);
 
   // Predicate will be called with the calling thread.
-  int DeleteAllCreatedBetweenWithPredicate(
+  uint32_t DeleteAllCreatedBetweenWithPredicate(
       const base::Time& delete_begin,
       const base::Time& delete_end,
       const base::Callback<bool(const CanonicalCookie&)>& predicate);
@@ -462,13 +462,13 @@ class NET_EXPORT CookieMonster : public CookieStore {
 
   void DeleteCookie(const GURL& url, const std::string& cookie_name);
 
-  int DeleteCanonicalCookie(const CanonicalCookie& cookie);
+  uint32_t DeleteCanonicalCookie(const CanonicalCookie& cookie);
 
   bool SetCookieWithCreationTime(const GURL& url,
                                  const std::string& cookie_line,
                                  const base::Time& creation_time);
 
-  int DeleteSessionCookies();
+  uint32_t DeleteSessionCookies();
 
   // The first access to the cookie store initializes it. This method should be
   // called before any access to the cookie store.
@@ -675,9 +675,7 @@ class NET_EXPORT CookieMonster : public CookieStore {
   // Histogram variables; see CookieMonster::InitializeHistograms() in
   // cookie_monster.cc for details.
   base::HistogramBase* histogram_expiration_duration_minutes_;
-  base::HistogramBase* histogram_evicted_last_access_minutes_;
   base::HistogramBase* histogram_count_;
-  base::HistogramBase* histogram_cookie_deletion_cause_;
   base::HistogramBase* histogram_cookie_type_;
   base::HistogramBase* histogram_cookie_source_scheme_;
   base::HistogramBase* histogram_cookie_delete_equivalent_;

@@ -6,10 +6,10 @@ import inspect
 import os
 import sys
 
-from telemetry.core import discover
 from telemetry import story
 import video
 
+from py_utils import discover
 
 # Import all submodules' StorySet classes.
 start_dir = os.path.dirname(os.path.abspath(__file__))

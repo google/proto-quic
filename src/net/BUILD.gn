@@ -140,8 +140,6 @@ component("net") {
     "base/net_string_util.h",
     "base/network_interfaces.cc",
     "base/network_interfaces.h",
-    "base/network_interfaces_posix.cc",
-    "base/network_interfaces_posix.h",
     "base/parse_number.cc",
     "base/parse_number.h",
     "base/port_util.cc",
@@ -465,10 +463,13 @@ component("net") {
       "base/network_delegate.h",
       "base/network_delegate_impl.cc",
       "base/network_delegate_impl.h",
+      "base/network_interfaces_getifaddrs.cc",
+      "base/network_interfaces_getifaddrs.h",
       "base/network_interfaces_linux.cc",
       "base/network_interfaces_linux.h",
-      "base/network_interfaces_mac.cc",
-      "base/network_interfaces_mac.h",
+      "base/network_interfaces_nacl.cc",
+      "base/network_interfaces_posix.cc",
+      "base/network_interfaces_posix.h",
       "base/network_interfaces_win.cc",
       "base/network_interfaces_win.h",
       "base/network_throttle_manager.h",
@@ -1810,6 +1811,18 @@ component("net") {
       ]
     }
 
+    if (!is_nacl) {
+      sources -= [ "base/network_interfaces_nacl.cc" ]
+    }
+
+    # Use getifaddrs() on POSIX platforms, except Linux and Android.
+    if (!is_posix || is_linux || is_android) {
+      sources -= [
+        "base/network_interfaces_getifaddrs.cc",
+        "base/network_interfaces_getifaddrs.h",
+      ]
+    }
+
     if (use_gio) {
       deps += [ "//build/linux/libgio" ]
     }
@@ -1903,8 +1916,6 @@ component("net") {
         "base/network_change_notifier_mac.h",
         "base/network_config_watcher_mac.cc",
         "base/network_config_watcher_mac.h",
-        "base/network_interfaces_mac.cc",
-        "base/network_interfaces_mac.h",
         "base/platform_mime_util_mac.mm",
         "cert/test_root_certs_mac.cc",
         "cert/x509_util_ios_and_mac.cc",
@@ -4520,6 +4531,7 @@ test("net_unittests") {
     "base/network_activity_monitor_unittest.cc",
     "base/network_change_notifier_unittest.cc",
     "base/network_change_notifier_win_unittest.cc",
+    "base/network_interfaces_getifaddrs_unittest.cc",
     "base/network_interfaces_unittest.cc",
     "base/network_throttle_manager_impl_unittest.cc",
     "base/parse_number_unittest.cc",
@@ -5382,6 +5394,11 @@ test("net_unittests") {
     net_unfiltered_sources += [ "cert/x509_util_ios_and_mac_unittest.cc" ]
 
     bundle_deps = [ ":net_unittests_bundle_data" ]
+  }
+
+  # Use getifaddrs() on POSIX platforms, except Linux and Android.
+  if (!is_posix || is_linux || is_android) {
+    sources -= [ "base/network_interfaces_getifaddrs_unittest.cc" ]
   }
 
   # Unit tests that aren't supported by the current ICU alternatives on Android.

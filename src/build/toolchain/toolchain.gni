@@ -42,6 +42,10 @@ declare_args() {
   # Currently disabled on LLD because of a bug (fixed upstream).
   # See https://crbug.com/716209.
   generate_linker_map = is_android && is_official_build
+
+  # Use absolute file paths in the compiler diagnostics and __FILE__ macro
+  # if needed.
+  msvc_use_absolute_paths = false
 }
 
 if (generate_linker_map) {

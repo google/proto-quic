@@ -370,10 +370,13 @@ bool MockDiskEntry::ignore_callbacks_ = false;
 //-----------------------------------------------------------------------------
 
 MockDiskCache::MockDiskCache()
-    : open_count_(0), create_count_(0), fail_requests_(false),
-      soft_failures_(false), double_create_check_(true),
-      fail_sparse_requests_(false) {
-}
+    : open_count_(0),
+      create_count_(0),
+      doomed_count_(0),
+      fail_requests_(false),
+      soft_failures_(false),
+      double_create_check_(true),
+      fail_sparse_requests_(false) {}
 
 MockDiskCache::~MockDiskCache() {
   ReleaseAll();
@@ -468,6 +471,7 @@ int MockDiskCache::DoomEntry(const std::string& key,
   if (it != entries_.end()) {
     it->second->Release();
     entries_.erase(it);
+    doomed_count_++;
   }
 
   if (GetTestModeForEntry(key) & TEST_MODE_SYNC_CACHE_START)

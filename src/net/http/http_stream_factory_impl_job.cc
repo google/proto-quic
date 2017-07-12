@@ -162,6 +162,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
                                 HostPortPair destination,
                                 GURL origin_url,
                                 NextProto alternative_protocol,
+                                QuicVersion quic_version,
                                 const ProxyServer& alternative_proxy_server,
                                 bool enable_ip_based_pooling,
                                 NetLog* net_log)
@@ -188,6 +189,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       using_quic_(
           alternative_protocol == kProtoQUIC ||
           ShouldForceQuic(session, destination, origin_url, proxy_info)),
+      quic_version_(quic_version),
       expect_spdy_(alternative_protocol == kProtoHTTP2 && !using_quic_),
       using_spdy_(false),
       should_reconsider_proxy_(false),
@@ -208,6 +210,16 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
       stream_type_(HttpStreamRequest::BIDIRECTIONAL_STREAM),
       init_connection_already_resumed_(false),
       ptr_factory_(this) {
+  // The Job is forced to use QUIC without a designated version, try the
+  // preferred QUIC version that is supported by default.
+  if (quic_version_ == QUIC_VERSION_UNSUPPORTED &&
+      ShouldForceQuic(session, destination, origin_url, proxy_info)) {
+    quic_version_ = session->params().quic_supported_versions[0];
+  }
+
+  if (using_quic_)
+    DCHECK_NE(quic_version_, QUIC_VERSION_UNSUPPORTED);
+
   DCHECK(session);
   if (alternative_protocol != kProtoUnknown) {
     // The job cannot have protocol requirements dictated by alternative service
@@ -898,10 +910,10 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionImpl() {
       destination = destination_;
       ssl_config = &server_ssl_config_;
     }
-    int rv =
-        quic_request_.Request(destination, request_info_.privacy_mode,
-                              ssl_config->GetCertVerifyFlags(), url,
-                              request_info_.method, net_log_, io_callback_);
+    int rv = quic_request_.Request(
+        destination, quic_version_, request_info_.privacy_mode,
+        ssl_config->GetCertVerifyFlags(), url, request_info_.method, net_log_,
+        io_callback_);
     if (rv == OK) {
       using_existing_quic_session_ = true;
     } else {
@@ -1466,7 +1478,8 @@ HttpStreamFactoryImpl::JobFactory::CreateMainJob(
   return base::MakeUnique<HttpStreamFactoryImpl::Job>(
       delegate, job_type, session, request_info, priority, proxy_info,
       server_ssl_config, proxy_ssl_config, destination, origin_url,
-      kProtoUnknown, ProxyServer(), enable_ip_based_pooling, net_log);
+      kProtoUnknown, QUIC_VERSION_UNSUPPORTED, ProxyServer(),
+      enable_ip_based_pooling, net_log);
 }
 
 std::unique_ptr<HttpStreamFactoryImpl::Job>
@@ -1482,12 +1495,14 @@ HttpStreamFactoryImpl::JobFactory::CreateAltSvcJob(
     HostPortPair destination,
     GURL origin_url,
     NextProto alternative_protocol,
+    QuicVersion quic_version,
     bool enable_ip_based_pooling,
     NetLog* net_log) {
   return base::MakeUnique<HttpStreamFactoryImpl::Job>(
       delegate, job_type, session, request_info, priority, proxy_info,
       server_ssl_config, proxy_ssl_config, destination, origin_url,
-      alternative_protocol, ProxyServer(), enable_ip_based_pooling, net_log);
+      alternative_protocol, quic_version, ProxyServer(),
+      enable_ip_based_pooling, net_log);
 }
 
 std::unique_ptr<HttpStreamFactoryImpl::Job>
@@ -1508,8 +1523,8 @@ HttpStreamFactoryImpl::JobFactory::CreateAltProxyJob(
   return base::MakeUnique<HttpStreamFactoryImpl::Job>(
       delegate, job_type, session, request_info, priority, proxy_info,
       server_ssl_config, proxy_ssl_config, destination, origin_url,
-      kProtoUnknown, alternative_proxy_server, enable_ip_based_pooling,
-      net_log);
+      kProtoUnknown, QUIC_VERSION_UNSUPPORTED, alternative_proxy_server,
+      enable_ip_based_pooling, net_log);
 }
 
 }  // namespace net

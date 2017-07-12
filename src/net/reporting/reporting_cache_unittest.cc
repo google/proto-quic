@@ -108,7 +108,7 @@ TEST_F(ReportingCacheTest, Reports) {
   ASSERT_TRUE(report);
   EXPECT_EQ(1, report->attempts);
 
-  cache()->RemoveReports(reports);
+  cache()->RemoveReports(reports, ReportingReport::Outcome::UNKNOWN);
   EXPECT_EQ(3, observer()->cache_update_count());
 
   cache()->GetReports(&reports);
@@ -126,7 +126,7 @@ TEST_F(ReportingCacheTest, RemoveAllReports) {
   cache()->GetReports(&reports);
   EXPECT_EQ(2u, reports.size());
 
-  cache()->RemoveAllReports();
+  cache()->RemoveAllReports(ReportingReport::Outcome::UNKNOWN);
   EXPECT_EQ(3, observer()->cache_update_count());
 
   cache()->GetReports(&reports);
@@ -148,7 +148,7 @@ TEST_F(ReportingCacheTest, RemovePendingReports) {
   EXPECT_TRUE(cache()->IsReportPendingForTesting(reports[0]));
   EXPECT_FALSE(cache()->IsReportDoomedForTesting(reports[0]));
 
-  cache()->RemoveReports(reports);
+  cache()->RemoveReports(reports, ReportingReport::Outcome::UNKNOWN);
   EXPECT_TRUE(cache()->IsReportPendingForTesting(reports[0]));
   EXPECT_TRUE(cache()->IsReportDoomedForTesting(reports[0]));
   EXPECT_EQ(2, observer()->cache_update_count());
@@ -179,7 +179,7 @@ TEST_F(ReportingCacheTest, RemoveAllPendingReports) {
   EXPECT_TRUE(cache()->IsReportPendingForTesting(reports[0]));
   EXPECT_FALSE(cache()->IsReportDoomedForTesting(reports[0]));
 
-  cache()->RemoveAllReports();
+  cache()->RemoveAllReports(ReportingReport::Outcome::UNKNOWN);
   EXPECT_TRUE(cache()->IsReportPendingForTesting(reports[0]));
   EXPECT_TRUE(cache()->IsReportDoomedForTesting(reports[0]));
   EXPECT_EQ(2, observer()->cache_update_count());

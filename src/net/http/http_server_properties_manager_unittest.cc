@@ -1628,7 +1628,7 @@ TEST_P(HttpServerPropertiesManagerTest, PersistAdvertisedVersionsToPref) {
       "\"expiration\":\"13758804000000000\",\"host\":\"www.google.com\","
       "\"port\":1234,\"protocol_str\":\"h2\"}]}},"
       "{\"https://mail.google.com:80\":{\"alternative_service\":[{"
-      "\"advertised_versions\":[37],\"expiration\":\"9223372036854775807\","
+      "\"advertised_versions\":[39],\"expiration\":\"9223372036854775807\","
       "\"host\":\"foo.google.com\",\"port\":444,\"protocol_str\":\"quic\"}],"
       "\"network_stats\":{\"srtt\":42}}}],\"supports_quic\":{"
       "\"address\":\"127.0.0.1\",\"used_quic\":true},\"version\":5}";
@@ -1731,7 +1731,7 @@ TEST_P(HttpServerPropertiesManagerTest,
       "{\"quic_servers\":{\"https://mail.google.com:80\":"
       "{\"server_info\":\"quic_server_info1\"}},\"servers\":["
       "{\"https://www.google.com:80\":"
-      "{\"alternative_service\":[{\"advertised_versions\":[37],"
+      "{\"alternative_service\":[{\"advertised_versions\":[39],"
       "\"expiration\":\"13756212000000000\",\"port\":443,"
       "\"protocol_str\":\"quic\"}]}}],\"supports_quic\":"
       "{\"address\":\"127.0.0.1\",\"used_quic\":true},\"version\":5}";

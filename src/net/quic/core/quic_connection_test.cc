@@ -582,7 +582,6 @@ class TestConnection : public QuicConnection {
     QuicTagVector connection_options;
     connection_options.push_back(kMTUH);
     config.SetConnectionOptionsToSend(connection_options);
-    EXPECT_CALL(*send_algorithm, GetCongestionControlType());
     EXPECT_CALL(*send_algorithm, SetFromConfig(_, _));
     SetFromConfig(config);
 
@@ -2689,7 +2688,6 @@ TEST_P(QuicConnectionTest, RetransmitPacketsWithInitialEncryption) {
 
 TEST_P(QuicConnectionTest, BufferNonDecryptablePackets) {
   // SetFromConfig is always called after construction from InitializeSession.
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   QuicConfig config;
   connection_.SetFromConfig(config);
@@ -2719,7 +2717,6 @@ TEST_P(QuicConnectionTest, BufferNonDecryptablePackets) {
 
 TEST_P(QuicConnectionTest, Buffer100NonDecryptablePackets) {
   // SetFromConfig is always called after construction from InitializeSession.
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   QuicConfig config;
   config.set_max_undecryptable_packets(100);
@@ -2858,7 +2855,6 @@ TEST_P(QuicConnectionTest, InitialTimeout) {
   EXPECT_FALSE(connection_.GetTimeoutAlarm()->IsSet());
 
   // SetFromConfig sets the initial timeouts before negotiation.
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   QuicConfig config;
   connection_.SetFromConfig(config);
@@ -3310,7 +3306,6 @@ TEST_P(QuicConnectionTest, NoMtuDiscoveryAfterConnectionClosed) {
 
 TEST_P(QuicConnectionTest, TimeoutAfterSend) {
   EXPECT_TRUE(connection_.connected());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   QuicConfig config;
   connection_.SetFromConfig(config);
@@ -3357,7 +3352,6 @@ TEST_P(QuicConnectionTest, TimeoutAfterSend) {
 TEST_P(QuicConnectionTest, TimeoutAfterRetransmission) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_TRUE(connection_.connected());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   QuicConfig config;
   connection_.SetFromConfig(config);
@@ -3432,7 +3426,6 @@ TEST_P(QuicConnectionTest, NewTimeoutAfterSendSilentClose) {
   // Same test as above, but complete a handshake which enables silent close,
   // causing no connection close packet to be sent.
   EXPECT_TRUE(connection_.connected());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   QuicConfig config;
 
@@ -3495,7 +3488,6 @@ TEST_P(QuicConnectionTest, NewTimeoutAfterSendSilentClose) {
 TEST_P(QuicConnectionTest, TimeoutAfterReceive) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_TRUE(connection_.connected());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   QuicConfig config;
   connection_.SetFromConfig(config);
@@ -3544,7 +3536,6 @@ TEST_P(QuicConnectionTest, TimeoutAfterReceive) {
 TEST_P(QuicConnectionTest, TimeoutAfterReceiveNotSendWhenUnacked) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_TRUE(connection_.connected());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   QuicConfig config;
   connection_.SetFromConfig(config);
@@ -3604,7 +3595,6 @@ TEST_P(QuicConnectionTest, TimeoutAfterReceiveNotSendWhenUnacked) {
 TEST_P(QuicConnectionTest, TimeoutAfter5ClientRTOs) {
   connection_.SetMaxTailLossProbes(2);
   EXPECT_TRUE(connection_.connected());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   QuicConfig config;
   QuicTagVector connection_options;
@@ -3639,7 +3629,6 @@ TEST_P(QuicConnectionTest, TimeoutAfter3ClientRTOs) {
   FLAGS_quic_reloadable_flag_quic_enable_3rtos = true;
   connection_.SetMaxTailLossProbes(2);
   EXPECT_TRUE(connection_.connected());
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
   QuicConfig config;
   QuicTagVector connection_options;
@@ -3743,7 +3732,6 @@ TEST_P(QuicConnectionTest, LoopThroughSendingPackets) {
 TEST_P(QuicConnectionTest, LoopThroughSendingPacketsWithTruncation) {
   // Set up a larger payload than will fit in one packet.
   const string payload(connection_.max_packet_length(), 'a');
-  EXPECT_CALL(*send_algorithm_, GetCongestionControlType()).Times(AnyNumber());
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _)).Times(AnyNumber());
 
   // Now send some packets with no truncation.

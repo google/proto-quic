@@ -40,7 +40,7 @@
 #endif  // defined(OS_POSIX)
 
 #if defined(OS_WIN)
-#include <objbase.h>
+#include "base/win/com_init_util.h"
 #endif  // defined(OS_WIN)
 
 namespace base {
@@ -439,18 +439,12 @@ TEST_F(TaskSchedulerImplTest, COMSTATaskRunnersRunWithCOMSTA) {
   WaitableEvent task_ran(WaitableEvent::ResetPolicy::MANUAL,
                          WaitableEvent::InitialState::NOT_SIGNALED);
   com_sta_task_runner->PostTask(
-      FROM_HERE,
-      Bind(
-          [](scoped_refptr<TaskRunner> single_thread_task_runner,
-             WaitableEvent* task_ran) {
-            HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-            if (SUCCEEDED(hr)) {
-              ADD_FAILURE() << "COM STA was not initialized on this thread";
-              CoUninitialize();
-            }
-            task_ran->Signal();
-          },
-          com_sta_task_runner, Unretained(&task_ran)));
+      FROM_HERE, Bind(
+                     [](WaitableEvent* task_ran) {
+                       win::AssertComApartmentType(win::ComApartmentType::STA);
+                       task_ran->Signal();
+                     },
+                     Unretained(&task_ran)));
   task_ran.Wait();
 }
 #endif  // defined(OS_WIN)

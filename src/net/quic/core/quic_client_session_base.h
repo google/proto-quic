@@ -10,6 +10,7 @@
 #include "base/macros.h"
 #include "net/quic/core/quic_crypto_client_stream.h"
 #include "net/quic/core/quic_spdy_session.h"
+#include "net/quic/platform/api/quic_containers.h"
 #include "net/quic/platform/api/quic_export.h"
 
 namespace net {
@@ -25,7 +26,7 @@ class QuicSpdyClientStream;
 // session affinity for requests corresponding to cross-origin push
 // promised streams.
 using QuicPromisedByUrlMap =
-    std::unordered_map<std::string, QuicClientPromisedInfo*>;
+    QuicUnorderedMap<std::string, QuicClientPromisedInfo*>;
 
 // The maximum time a promises stream can be reserved without being
 // claimed by a client request.
@@ -119,7 +120,7 @@ class QUIC_EXPORT_PRIVATE QuicClientSessionBase
   // For QuicSpdyClientStream to detect that a response corresponds to a
   // promise.
   using QuicPromisedByIdMap =
-      std::unordered_map<QuicStreamId, std::unique_ptr<QuicClientPromisedInfo>>;
+      QuicUnorderedMap<QuicStreamId, std::unique_ptr<QuicClientPromisedInfo>>;
 
   // As per rfc7540, section 10.5: track promise streams in "reserved
   // (remote)".  The primary key is URL from the promise request

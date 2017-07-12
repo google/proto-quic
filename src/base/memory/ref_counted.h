@@ -174,15 +174,15 @@ class BASE_EXPORT RefCountedThreadSafeBase {
         << " The first reference to such a object has to be made by AdoptRef or"
         << " MakeRefCounted.";
 #endif
-    AtomicRefCountInc(&ref_count_);
+    ref_count_.Increment();
   }
 
   ALWAYS_INLINE bool ReleaseImpl() const {
 #if DCHECK_IS_ON()
     DCHECK(!in_dtor_);
-    DCHECK(!AtomicRefCountIsZero(&ref_count_));
+    DCHECK(!ref_count_.IsZero());
 #endif
-    if (!AtomicRefCountDec(&ref_count_)) {
+    if (!ref_count_.Decrement()) {
 #if DCHECK_IS_ON()
       in_dtor_ = true;
 #endif

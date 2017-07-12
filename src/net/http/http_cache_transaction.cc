@@ -165,6 +165,7 @@ HttpCache::Transaction::Transaction(RequestPriority priority, HttpCache* cache)
       handling_206_(false),
       cache_pending_(false),
       done_reading_(false),
+      done_headers_create_new_entry_(false),
       vary_mismatch_(false),
       couldnt_conditionalize_request_(false),
       bypass_lock_for_test_(false),
@@ -760,6 +761,9 @@ int HttpCache::Transaction::DoLoop(int result) {
       case STATE_ADD_TO_ENTRY_COMPLETE:
         rv = DoAddToEntryComplete(rv);
         break;
+      case STATE_DONE_HEADERS_ADD_TO_ENTRY_COMPLETE:
+        rv = DoDoneHeadersAddToEntryComplete(rv);
+        break;
       case STATE_CACHE_READ_RESPONSE:
         DCHECK_EQ(OK, rv);
         rv = DoCacheReadResponse();
@@ -1119,10 +1123,23 @@ int HttpCache::Transaction::DoCreateEntryComplete(int result) {
       // already created the entry. If we want to eliminate this issue, we
       // need an atomic OpenOrCreate() method exposed by the disk cache.
       DLOG(WARNING) << "Unable to create cache entry";
+
+      // Set the mode to NONE in order to bypass the cache entry and read from
+      // the network directly.
       mode_ = NONE;
-      if (partial_)
-        partial_->RestoreHeaders(&custom_request_->extra_headers);
-      TransitionToState(STATE_SEND_REQUEST);
+      if (!done_headers_create_new_entry_) {
+        if (partial_)
+          partial_->RestoreHeaders(&custom_request_->extra_headers);
+        TransitionToState(STATE_SEND_REQUEST);
+        return OK;
+      }
+      // The headers have already been received as a result of validation,
+      // triggering the doom of the old entry.  So no network request needs to
+      // be sent. Note that since mode_ is NONE, the response won't be written
+      // to cache. Transition to STATE_CACHE_WRITE_RESPONSE as that's the state
+      // the transaction left off on when it tried to create the new entry.
+      done_headers_create_new_entry_ = false;
+      TransitionToState(STATE_CACHE_WRITE_RESPONSE);
   }
   return OK;
 }
@@ -1131,13 +1148,25 @@ int HttpCache::Transaction::DoAddToEntry() {
   TRACE_EVENT0("io", "HttpCacheTransaction::DoAddToEntry");
   DCHECK(new_entry_);
   cache_pending_ = true;
-  TransitionToState(STATE_ADD_TO_ENTRY_COMPLETE);
   net_log_.BeginEvent(NetLogEventType::HTTP_CACHE_ADD_TO_ENTRY);
   DCHECK(entry_lock_waiting_since_.is_null());
-  entry_lock_waiting_since_ = TimeTicks::Now();
   int rv = cache_->AddTransactionToEntry(new_entry_, this);
-  if (rv == ERR_IO_PENDING)
-    AddCacheLockTimeoutHandler(new_entry_);
+  DCHECK_EQ(rv, ERR_IO_PENDING);
+
+  // If headers phase is already done then we are here because of validation not
+  // matching and creating a new entry. This transaction should be the
+  // first transaction of that new entry and thus it should not be subject
+  // to any cache lock delays, thus returning early from here.
+  if (done_headers_create_new_entry_) {
+    DCHECK_EQ(mode_, WRITE);
+    TransitionToState(STATE_DONE_HEADERS_ADD_TO_ENTRY_COMPLETE);
+    return rv;
+  }
+
+  TransitionToState(STATE_ADD_TO_ENTRY_COMPLETE);
+
+  entry_lock_waiting_since_ = TimeTicks::Now();
+  AddCacheLockTimeoutHandler(new_entry_);
   return rv;
 }
 
@@ -1154,7 +1183,6 @@ void HttpCache::Transaction::AddCacheLockTimeoutHandler(ActiveEntry* entry) {
   } else {
     int timeout_milliseconds = 20 * 1000;
     if (partial_ && entry->writer && entry->writer->range_requested_) {
-      // Quickly timeout and bypass the cache if we're a range request and
       // we're blocked by the reader/writer lock. Doing so eliminates a long
       // running issue, http://crbug.com/31014, where two of the same media
       // resources could not be played back simultaneously due to one locking
@@ -1239,6 +1267,26 @@ int HttpCache::Transaction::DoAddToEntryComplete(int result) {
     DCHECK(mode_ & READ_META);
     TransitionToState(STATE_CACHE_READ_RESPONSE);
   }
+  return OK;
+}
+
+int HttpCache::Transaction::DoDoneHeadersAddToEntryComplete(int result) {
+  // This transaction's response headers did not match its ActiveEntry so it
+  // created a new ActiveEntry (new_entry_) to write to (and doomed the old
+  // one). Now that the new entry has been created, start writing the response.
+
+  DCHECK_EQ(result, OK);
+  DCHECK_EQ(mode_, WRITE);
+  DCHECK(new_entry_);
+  DCHECK(response_.headers);
+
+  cache_pending_ = false;
+  entry_ = new_entry_;
+  done_headers_create_new_entry_ = false;
+  DCHECK_NE(response_.headers->response_code(), 304);
+  DCHECK(cache_->CanTransactionWriteResponseHeaders(
+      entry_, this, partial_ != nullptr, false));
+  TransitionToState(STATE_CACHE_WRITE_RESPONSE);
   return OK;
 }
 
@@ -1727,7 +1775,6 @@ int HttpCache::Transaction::DoOverwriteCachedResponse() {
 
 int HttpCache::Transaction::DoCacheWriteResponse() {
   TRACE_EVENT0("io", "HttpCacheTransaction::DoCacheWriteResponse");
-  TransitionToState(STATE_CACHE_WRITE_RESPONSE_COMPLETE);
 
   // Invalidate any current entry with a successful response if this transaction
   // cannot write to this entry. This transaction then continues to read from
@@ -1736,12 +1783,21 @@ int HttpCache::Transaction::DoCacheWriteResponse() {
   if (entry_ && response_.headers &&
       !cache_->CanTransactionWriteResponseHeaders(
           entry_, this, partial_ != nullptr, is_match)) {
-    cache_->DoneWritingToEntry(entry_, false, this);
+    done_headers_create_new_entry_ = true;
+
+    // The transaction needs to overwrite this response. Doom the current entry,
+    // create a new one (by going to STATE_INIT_ENTRY), and then jump straight
+    // to writing out the response, bypassing the headers checks. The mode_ is
+    // set to WRITE in order to doom any other existing entries that might exist
+    // so that this transaction can go straight to writing a response.
+    mode_ = WRITE;
+    TransitionToState(STATE_INIT_ENTRY);
+    cache_->DoomEntryValidationNoMatch(entry_);
     entry_ = nullptr;
-    mode_ = NONE;
     return OK;
   }
 
+  TransitionToState(STATE_CACHE_WRITE_RESPONSE_COMPLETE);
   return WriteResponseInfoToEntry(truncated_);
 }
 
