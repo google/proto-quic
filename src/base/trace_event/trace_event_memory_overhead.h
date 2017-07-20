@@ -36,7 +36,6 @@ class BASE_EXPORT TraceEventMemoryOverhead {
     kHeapProfilerAllocationRegister,
     kHeapProfilerTypeNameDeduplicator,
     kHeapProfilerStackFrameDeduplicator,
-    kHeapProfilerStringDeduplicator,
     kStdString,
     kBaseValue,
     kTraceEventMemoryOverhead,

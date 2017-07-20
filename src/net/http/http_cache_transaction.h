@@ -43,7 +43,7 @@ class SSLPrivateKey;
 
 // This is the transaction that is returned by the HttpCache transaction
 // factory.
-class HttpCache::Transaction : public HttpTransaction {
+class NET_EXPORT_PRIVATE HttpCache::Transaction : public HttpTransaction {
  public:
   // The transaction has the following modes, which apply to how it may access
   // its cache entry.
@@ -182,6 +182,12 @@ class HttpCache::Transaction : public HttpTransaction {
 
   // Returns the estimate of dynamically allocated memory in bytes.
   size_t EstimateMemoryUsage() const;
+
+  // Sets fail state such that a future Read fails with |error_code|.
+  void SetSharedWritingFailState(int error_code);
+
+  RequestPriority priority() const { return priority_; }
+  PartialData* partial() { return partial_.get(); }
 
  private:
   static const size_t kNumValidationHeaders = 2;

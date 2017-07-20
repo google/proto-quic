@@ -38,6 +38,12 @@ namespace debug {
 // done in official builds because it has security implications).
 BASE_EXPORT bool EnableInProcessStackDumping();
 
+#if defined(OS_POSIX)
+BASE_EXPORT void SetStackDumpFirstChanceCallback(bool (*handler)(int,
+                                                                 void*,
+                                                                 void*));
+#endif
+
 // Returns end of the stack, or 0 if we couldn't get it.
 #if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 BASE_EXPORT uintptr_t GetStackEnd();

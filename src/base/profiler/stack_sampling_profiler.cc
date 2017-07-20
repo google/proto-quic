@@ -31,7 +31,7 @@ namespace {
 
 // This value is used when there is no collection in progress and thus no ID
 // for referencing the active collection to the SamplingThread.
-const int NULL_COLLECTION_ID = -1;
+const int NULL_PROFILER_ID = -1;
 
 void ChangeAtomicFlags(subtle::Atomic32* flags,
                        subtle::Atomic32 set,
@@ -139,12 +139,13 @@ class StackSamplingProfiler::SamplingThread : public Thread {
   };
 
   struct CollectionContext {
-    CollectionContext(PlatformThreadId target,
+    CollectionContext(int profiler_id,
+                      PlatformThreadId target,
                       const SamplingParams& params,
                       const CompletedCallback& callback,
                       WaitableEvent* finished,
                       std::unique_ptr<NativeStackSampler> sampler)
-        : collection_id(next_collection_id_.GetNext()),
+        : profiler_id(profiler_id),
           target(target),
           params(params),
           callback(callback),
@@ -152,9 +153,9 @@ class StackSamplingProfiler::SamplingThread : public Thread {
           native_sampler(std::move(sampler)) {}
     ~CollectionContext() {}
 
-    // An identifier for this collection, used to uniquely identify it to
-    // outside interests.
-    const int collection_id;
+    // An identifier for the profiler associated with this collection, used to
+    // uniquely identify the collection to outside interests.
+    const int profiler_id;
 
     const PlatformThreadId target;     // ID of The thread being sampled.
     const SamplingParams params;       // Information about how to sample.
@@ -177,8 +178,8 @@ class StackSamplingProfiler::SamplingThread : public Thread {
     // The collected stack samples. The active profile is always at the back().
     CallStackProfiles profiles;
 
-   private:
-    static StaticAtomicSequenceNumber next_collection_id_;
+    // Sequence number for generating new profiler ids.
+    static AtomicSequenceNumber next_profiler_id;
   };
 
   // Gets the single instance of this class.
@@ -228,8 +229,11 @@ class StackSamplingProfiler::SamplingThread : public Thread {
   // Get task runner that is usable from the sampling thread itself.
   scoped_refptr<SingleThreadTaskRunner> GetTaskRunnerOnSamplingThread();
 
-  // Finishes a collection and reports collected data via callback.
-  void FinishCollection(CollectionContext* collection);
+  // Finishes a collection and reports collected data via callback. Returns
+  // the new collection params, if a new collection should be started. The
+  // |collection| should already have been removed from |active_collections_|
+  // by the caller, as this is needed to avoid flakyness in unit tests.
+  Optional<SamplingParams> FinishCollection(CollectionContext* collection);
 
   // Records a single sample of a collection.
   void RecordSample(CollectionContext* collection);
@@ -361,8 +365,8 @@ void StackSamplingProfiler::SamplingThread::TestAPI::ShutdownTaskAndSignalEvent(
   event->Signal();
 }
 
-StaticAtomicSequenceNumber StackSamplingProfiler::SamplingThread::
-    CollectionContext::next_collection_id_;
+AtomicSequenceNumber
+    StackSamplingProfiler::SamplingThread::CollectionContext::next_profiler_id;
 
 StackSamplingProfiler::SamplingThread::SamplingThread()
     : Thread("StackSamplingProfiler") {}
@@ -378,7 +382,7 @@ int StackSamplingProfiler::SamplingThread::Add(
     std::unique_ptr<CollectionContext> collection) {
   // This is not to be run on the sampling thread.
 
-  int id = collection->collection_id;
+  int id = collection->profiler_id;
   scoped_refptr<SingleThreadTaskRunner> task_runner =
       GetOrCreateTaskRunnerForAdd();
 
@@ -475,16 +479,19 @@ StackSamplingProfiler::SamplingThread::GetTaskRunnerOnSamplingThread() {
   return Thread::task_runner();
 }
 
-void StackSamplingProfiler::SamplingThread::FinishCollection(
+Optional<StackSamplingProfiler::SamplingParams>
+StackSamplingProfiler::SamplingThread::FinishCollection(
     CollectionContext* collection) {
   DCHECK_EQ(GetThreadId(), PlatformThread::CurrentId());
+  DCHECK_EQ(0u, active_collections_.count(collection->profiler_id));
 
   // If there is no duration for the final profile (because it was stopped),
   // calculate it now.
   if (!collection->profiles.empty() &&
       collection->profiles.back().profile_duration == TimeDelta()) {
     collection->profiles.back().profile_duration =
-        Time::Now() - collection->profile_start_time;
+        Time::Now() - collection->profile_start_time +
+        collection->params.sampling_interval;
   }
 
   // Extract some information so callback and event-signalling can still be
@@ -495,16 +502,13 @@ void StackSamplingProfiler::SamplingThread::FinishCollection(
   CallStackProfiles profiles = std::move(collection->profiles);
   WaitableEvent* finished = collection->finished;
 
-  // Remove this collection from the map of known ones.  The |collection|
-  // parameter is invalid after this point.
-  size_t count = active_collections_.erase(collection->collection_id);
-  DCHECK_EQ(1U, count);
-
   // Run the associated callback, passing the collected profiles.
-  callback.Run(std::move(profiles));
+  Optional<SamplingParams> new_params = callback.Run(std::move(profiles));
 
   // Signal that this collection is finished.
   finished->Signal();
+
+  return new_params;
 }
 
 void StackSamplingProfiler::SamplingThread::RecordSample(
@@ -532,7 +536,8 @@ void StackSamplingProfiler::SamplingThread::RecordSample(
 
   // If this is the last sample of a burst, record the total time.
   if (collection->sample == collection->params.samples_per_burst - 1) {
-    profile.profile_duration = Time::Now() - collection->profile_start_time;
+    profile.profile_duration = Time::Now() - collection->profile_start_time +
+                               collection->params.sampling_interval;
     collection->native_sampler->ProfileRecordingStopped(stack_buffer_.get());
   }
 }
@@ -561,16 +566,16 @@ void StackSamplingProfiler::SamplingThread::AddCollectionTask(
     std::unique_ptr<CollectionContext> collection) {
   DCHECK_EQ(GetThreadId(), PlatformThread::CurrentId());
 
-  const int collection_id = collection->collection_id;
+  const int profiler_id = collection->profiler_id;
   const TimeDelta initial_delay = collection->params.initial_delay;
 
   active_collections_.insert(
-      std::make_pair(collection_id, std::move(collection)));
+      std::make_pair(profiler_id, std::move(collection)));
 
   GetTaskRunnerOnSamplingThread()->PostDelayedTask(
       FROM_HERE,
       BindOnce(&SamplingThread::PerformCollectionTask, Unretained(this),
-               collection_id),
+               profiler_id),
       initial_delay);
 
   // Another increment of "add events" serves to invalidate any pending
@@ -589,7 +594,12 @@ void StackSamplingProfiler::SamplingThread::RemoveCollectionTask(int id) {
   if (found == active_collections_.end())
     return;
 
-  FinishCollection(found->second.get());
+  // Remove |collection| from |active_collections_|.
+  std::unique_ptr<CollectionContext> collection = std::move(found->second);
+  size_t count = active_collections_.erase(id);
+  DCHECK_EQ(1U, count);
+
+  FinishCollection(collection.get());
   ScheduleShutdownIfIdle();
 }
 
@@ -612,19 +622,39 @@ void StackSamplingProfiler::SamplingThread::PerformCollectionTask(int id) {
   RecordSample(collection);
 
   // Update the time of the next sample recording.
-  if (UpdateNextSampleTime(collection)) {
+  const bool collection_finished = !UpdateNextSampleTime(collection);
+  if (!collection_finished) {
     bool success = GetTaskRunnerOnSamplingThread()->PostDelayedTask(
         FROM_HERE,
         BindOnce(&SamplingThread::PerformCollectionTask, Unretained(this), id),
         std::max(collection->next_sample_time - Time::Now(), TimeDelta()));
     DCHECK(success);
-  } else {
-    // All capturing has completed so finish the collection. By not re-adding
-    // it to the task queue, the collection will "expire" (i.e. no further work
-    // will be done). The |collection| variable will be invalid after this call.
-    FinishCollection(collection);
-    ScheduleShutdownIfIdle();
+    return;
   }
+
+  // Take ownership of |collection| and remove it from the map. If collection is
+  // to be restarted, a new collection task will be added below.
+  std::unique_ptr<CollectionContext> owned_collection =
+      std::move(found->second);
+  size_t count = active_collections_.erase(id);
+  DCHECK_EQ(1U, count);
+
+  // All capturing has completed so finish the collection. If no new params
+  // are returned, a new collection should not be started.
+  Optional<SamplingParams> new_params = FinishCollection(collection);
+  if (!new_params.has_value()) {
+    // By not adding it to the task queue, the collection will "expire" (i.e.
+    // no further work will be done).
+    ScheduleShutdownIfIdle();
+    return;
+  }
+
+  // Restart the collection with the new params. Keep the same id so the
+  // Stop() operation continues to work.
+  auto new_collection = MakeUnique<SamplingThread::CollectionContext>(
+      id, collection->target, new_params.value(), collection->callback,
+      collection->finished, std::move(collection->native_sampler));
+  AddCollectionTask(std::move(new_collection));
 }
 
 void StackSamplingProfiler::SamplingThread::ShutdownTask(int add_events) {
@@ -744,7 +774,7 @@ StackSamplingProfiler::StackSamplingProfiler(
       // and "manual" so that it can be waited in multiple places.
       profiling_inactive_(WaitableEvent::ResetPolicy::MANUAL,
                           WaitableEvent::InitialState::SIGNALED),
-      collection_id_(NULL_COLLECTION_ID),
+      profiler_id_(NULL_PROFILER_ID),
       test_delegate_(test_delegate) {}
 
 StackSamplingProfiler::~StackSamplingProfiler() {
@@ -781,17 +811,18 @@ void StackSamplingProfiler::Start() {
   profiling_inactive_.Wait();
   profiling_inactive_.Reset();
 
-  DCHECK_EQ(NULL_COLLECTION_ID, collection_id_);
-  collection_id_ = SamplingThread::GetInstance()->Add(
+  DCHECK_EQ(NULL_PROFILER_ID, profiler_id_);
+  profiler_id_ = SamplingThread::GetInstance()->Add(
       MakeUnique<SamplingThread::CollectionContext>(
+          SamplingThread::CollectionContext::next_profiler_id.GetNext(),
           thread_id_, params_, completed_callback_, &profiling_inactive_,
           std::move(native_sampler)));
-  DCHECK_NE(NULL_COLLECTION_ID, collection_id_);
+  DCHECK_NE(NULL_PROFILER_ID, profiler_id_);
 }
 
 void StackSamplingProfiler::Stop() {
-  SamplingThread::GetInstance()->Remove(collection_id_);
-  collection_id_ = NULL_COLLECTION_ID;
+  SamplingThread::GetInstance()->Remove(profiler_id_);
+  profiler_id_ = NULL_PROFILER_ID;
 }
 
 // static

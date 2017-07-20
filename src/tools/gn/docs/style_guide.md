@@ -1,25 +1,27 @@
-# GN Style Guide 
+# GN Style Guide
 
 [TOC]
+
 ## Naming and ordering within the file
 
 ### Location of build files
 
 It usually makes sense to have more build files closer to the code than
-fewer ones at the toplevel (this is in contrast with what we did with
-GYP). This makes things easier to find and owners reviews easier since
-changes are more focused.
+fewer ones at the top level; this is in contrast with what we did with
+GYP. This makes things easier to find, and also makes the set of owners
+required for reviews smaller since changes are more focused to particular
+subdirectories.
 
 ### Targets
 
-  * Most BUILD files should have a target with the same name of the
+  * Most BUILD files should have a target with the same name as the
     directory. This target should be the first target.
-  * Other targets should be in "some order that makes sense." Usually
+  * Other targets should be in some logical order -- usually
     more important targets will be first, and unit tests will follow the
     corresponding target. If there's no clear ordering, consider
     alphabetical order.
   * Test support libraries should be static libraries named "test\_support".
-    So "//ui/compositor:test\_support". Test support libraries should
+    For example, "//ui/compositor:test\_support". Test support libraries should
     include as public deps the non-test-support version of the library
     so tests need only depend on the test\_support target (rather than
     both).
@@ -99,7 +101,7 @@ Conditions should be written to minimize the number of conditional blocks.
 GN contains a built-in code formatter which defines the formatting style.
 Some additional notes:
 
-  * Variables are `lower_case_with_underscores`
+  * Variables are `lower_case_with_underscores`.
   * Comments should be complete sentences with periods at the end.
   * Compiler flags and such should always be commented with what they do
     and why the flag is needed.
@@ -165,7 +167,7 @@ to the link line of the final binary.
     loadable module, you normally need to use source sets. This is because
     object files with no symbols referenced from within the shared library will
     not be linked into the final library at all. This omission will happen even
-    if that object file has a symbol marked for export that targets dependant
+    if that object file has a symbol marked for export that targets dependent
     on that shared library need. This will result in undefined symbols when
     linking later targets.
 
@@ -203,14 +205,14 @@ on the value of the `is_component_build` variable. This allows release builds
 to be linked statically in a large binary, but for developers to use shared
 libraries for most operations.
 
-A shared library will be listed on the link line of dependant targets and will
+A shared library will be listed on the link line of dependent targets and will
 be loaded automatically by the operating system when the application starts
 and symbols automatically resolved. A loadable module will not be linked
 directly and the application must manually load it.
 
 On Windows and Linux shared libraries and loadable modules result in the same
 type of file (`.dll` and `.so`, respectively). The only difference is in how
-they are linked to dependant targets. On these platforms, having a `deps`
+they are linked to dependent targets. On these platforms, having a `deps`
 dependency on a loadable module is the same as having a `data_deps`
 (non-linked) dependency on a shared library.
 

@@ -13,6 +13,8 @@
 
 #include "base/callback.h"
 #include "base/macros.h"
+#include "build/build_config.h"
+
 #include "net/base/net_export.h"
 #include "net/socket/server_socket.h"
 #include "net/socket/socket_descriptor.h"
@@ -27,8 +29,8 @@ class NET_EXPORT UnixDomainServerSocket : public ServerSocket {
  public:
   // Credentials of a peer process connected to the socket.
   struct NET_EXPORT Credentials {
-#if defined(OS_LINUX) || defined(OS_ANDROID)
-    // Linux/Android API provides more information about the connected peer
+#if defined(OS_LINUX) || defined(OS_ANDROID) || defined(OS_FUCHSIA)
+    // Linux and Fuchsia provide more information about the connected peer
     // than Windows/OS X. It's useful for permission-based authorization on
     // Android.
     pid_t process_id;

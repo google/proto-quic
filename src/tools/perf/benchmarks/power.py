@@ -76,7 +76,7 @@ class IdlePlatformBenchmark(perf_benchmark.PerfBenchmark):
   Our power benchmarks are prone to noise caused by other things running on the
   system. This benchmark is intended to help find the sources of noise.
   """
-  def CreateTimelineBasedMeasurementOptions(self):
+  def CreateCoreTimelineBasedMeasurementOptions(self):
     options = timeline_based_measurement.Options(
         chrome_trace_category_filter.ChromeTraceCategoryFilter())
     options.config.enable_battor_trace = True

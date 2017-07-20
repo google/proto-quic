@@ -11,6 +11,7 @@
 #include <string>
 
 #include "base/macros.h"
+#include "net/quic/core/quic_iovector.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_endian.h"
 #include "net/quic/platform/api/quic_export.h"
@@ -242,8 +243,7 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   size_t BuildDataPacket(const QuicPacketHeader& header,
                          const QuicFrames& frames,
                          char* buffer,
-                         size_t packet_length,
-                         QuicStreamFrameDataProducer* data_producer);
+                         size_t packet_length);
 
   // Returns a new public reset packet.
   static std::unique_ptr<QuicEncryptedPacket> BuildPublicResetPacket(
@@ -264,8 +264,7 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
                       QuicDataWriter* writer);
   bool AppendStreamFrame(const QuicStreamFrame& frame,
                          bool last_frame_in_packet,
-                         QuicDataWriter* writer,
-                         QuicStreamFrameDataProducer* data_producer);
+                         QuicDataWriter* writer);
 
   // SetDecrypter sets the primary decrypter, replacing any that already exists,
   // and takes ownership. If an alternative decrypter is in place then the
@@ -313,6 +312,14 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   // to ciphertext no larger than |ciphertext_size|.
   size_t GetMaxPlaintextSize(size_t ciphertext_size);
 
+  // Let data_producer_ save |data_length| data starts at |iov_offset| in |iov|.
+  // TODO(fayang): Remove this method when data is saved before it is consumed.
+  void SaveStreamData(QuicStreamId id,
+                      QuicIOVector iov,
+                      size_t iov_offset,
+                      QuicStreamOffset offset,
+                      QuicByteCount data_length);
+
   const std::string& detailed_error() { return detailed_error_; }
 
   // The minimum packet number length required to represent |packet_number|.
@@ -324,6 +331,9 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
     quic_version_ = versions[0];
   }
 
+  // Returns true if data_producer_ is not null.
+  bool HasDataProducer() const { return data_producer_ != nullptr; }
+
   // Returns byte order to read/write integers and floating numbers.
   Endianness endianness() const;
 
@@ -332,6 +342,10 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   Perspective perspective() const { return perspective_; }
 
   QuicTag last_version_tag() { return last_version_tag_; }
+
+  void set_data_producer(QuicStreamFrameDataProducer* data_producer) {
+    data_producer_ = data_producer;
+  }
 
  private:
   friend class test::QuicFramerPeer;
@@ -531,6 +545,10 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   QuicTime::Delta last_timestamp_;
   // The diversification nonce from the last received packet.
   DiversificationNonce last_nonce_;
+
+  // If not null, framer asks data_producer_ to save and write stream frame
+  // data. Not owned.
+  QuicStreamFrameDataProducer* data_producer_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicFramer);
 };

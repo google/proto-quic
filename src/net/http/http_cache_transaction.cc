@@ -580,6 +580,11 @@ size_t HttpCache::Transaction::EstimateMemoryUsage() const {
   return 0;
 }
 
+void HttpCache::Transaction::SetSharedWritingFailState(int result) {
+  // TODO(shivanisha): Implement when integrating with HttpCache::Writers.
+  NOTIMPLEMENTED();
+}
+
 //-----------------------------------------------------------------------------
 
 // A few common patterns: (Foo* means Foo -> FooComplete)
@@ -1155,8 +1160,8 @@ int HttpCache::Transaction::DoAddToEntry() {
 
   // If headers phase is already done then we are here because of validation not
   // matching and creating a new entry. This transaction should be the
-  // first transaction of that new entry and thus it should not be subject
-  // to any cache lock delays, thus returning early from here.
+  // first transaction of that new entry and thus it will not have cache lock
+  // delays, thus returning early from here.
   if (done_headers_create_new_entry_) {
     DCHECK_EQ(mode_, WRITE);
     TransitionToState(STATE_DONE_HEADERS_ADD_TO_ENTRY_COMPLETE);
@@ -1609,7 +1614,8 @@ int HttpCache::Transaction::DoSuccessfulSendRequest() {
 
   // Invalidate any cached GET with a successful PUT or DELETE.
   if (mode_ == WRITE && (method_ == "PUT" || method_ == "DELETE")) {
-    if (NonErrorResponse(new_response->headers->response_code())) {
+    if (NonErrorResponse(new_response->headers->response_code()) &&
+        (entry_ && !entry_->doomed)) {
       int ret = cache_->DoomEntry(cache_key_, NULL);
       DCHECK_EQ(OK, ret);
     }
@@ -1893,6 +1899,8 @@ int HttpCache::Transaction::DoHeadersPhaseCannotProceed(int result) {
   // network transaction.
   if (network_trans_)
     network_trans_.reset();
+
+  new_response_ = nullptr;
 
   SetRequest(net_log_);
 
@@ -2902,8 +2910,10 @@ void HttpCache::Transaction::OnCacheLockTimeout(base::TimeTicks start_time) {
 
 void HttpCache::Transaction::DoomPartialEntry(bool delete_object) {
   DVLOG(2) << "DoomPartialEntry";
-  int rv = cache_->DoomEntry(cache_key_, NULL);
-  DCHECK_EQ(OK, rv);
+  if (entry_ && !entry_->doomed) {
+    int rv = cache_->DoomEntry(cache_key_, NULL);
+    DCHECK_EQ(OK, rv);
+  }
   cache_->DoneWithEntry(entry_, this, false /* process_cancel */,
                         partial_ != nullptr);
   entry_ = NULL;

@@ -20,8 +20,6 @@ BASE_EXPORT void InitJavaExceptionReporter();
 // DumpWithoutCrashing does not work for child processes on Android.
 BASE_EXPORT void InitJavaExceptionReporterForChildProcess();
 
-bool RegisterJavaExceptionReporterJni(JNIEnv* env);
-
 }  // namespace android
 }  // namespace base
 

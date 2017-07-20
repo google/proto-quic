@@ -101,10 +101,6 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames, false)
 // Allows one self address change.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_allow_one_address_change, false)
 
-// If true, QUIC BBR stores a max filtered number of bytes delivered at a rate
-// faster than the sending rate.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes, true)
-
 // Support bandwidth resumption in QUIC BBR.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_bandwidth_resumption, false)
 
@@ -126,15 +122,6 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_fix_adaptive_time_loss, false)
 // compressed for QUIC version >= 38.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_random_padding, true)
 
-// Increase BBR's inflight limit if recent ack rate is low.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_slow_recent_delivery, false)
-
-// Congestion window gain for QUIC BBR during slow delivery.
-QUIC_FLAG(double, FLAGS_quic_bbr_slow_delivery_cwnd_gain, 4.0f)
-
-// Threshold multiplier below which delivery is considered slow.
-QUIC_FLAG(double, FLAGS_quic_bbr_slow_delivery_threshold_multiplier, 0.5f)
-
 // If true, update state if trailing headers with a :final-offset key are
 // received for a previously closed QUIC stream.
 QUIC_FLAG(bool,
@@ -143,9 +130,6 @@ QUIC_FLAG(bool,
 
 // If enabled, use refactored stream creation methods.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_refactor_stream_creation, false)
-
-// A second take on fixing QUIC BBR packet conservation.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_fix_conservation2, true)
 
 // If true, GFEs generate and validate source address token using the actual
 // client IP for proxied session.
@@ -198,3 +182,17 @@ QUIC_FLAG(bool,
 
 // If true, disables support for QUIC version 36.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_disable_version_36, false)
+
+// If true, disables support for the packets-based QUIC congestion control
+// algorithms.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_disable_packets_based_cc, false)
+
+// When enabled, adds up to 1.5x the previously measured ack aggregation in
+// bytes to the CWND, but reduces that amount by 1/2 the bytes acked since the
+// queue was drained.
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes3,
+          false)
+
+// When enabled, ack frame uses a deque internally instead of a set.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_frames_deque, false)

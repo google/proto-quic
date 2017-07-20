@@ -27,14 +27,14 @@ import zipfile
 # Do NOT CHANGE this if you don't know what you're doing -- see
 # https://chromium.googlesource.com/chromium/src/+/master/docs/updating_clang.md
 # Reverting problematic clang rolls is safe, though.
-CLANG_REVISION = '305735'
+CLANG_REVISION = '307486'
 
 use_head_revision = 'LLVM_FORCE_HEAD_REVISION' in os.environ
 if use_head_revision:
   CLANG_REVISION = 'HEAD'
 
 # This is incremented when pushing a new build of Clang at the same revision.
-CLANG_SUB_REVISION=3
+CLANG_SUB_REVISION=1
 
 PACKAGE_VERSION = "%s-%s" % (CLANG_REVISION, CLANG_SUB_REVISION)
 
@@ -588,7 +588,7 @@ def UpdateClang(args):
 
   # Build PDBs for archival on Windows.  Don't use RelWithDebInfo since it
   # has different optimization defaults than Release.
-  if sys.platform == 'win32' and args.bootstrap:
+  if sys.platform == 'win32':
     cflags += ['/Zi']
     cxxflags += ['/Zi']
     ldflags += ['/DEBUG', '/OPT:REF', '/OPT:ICF']
@@ -850,6 +850,11 @@ def main():
   if (use_head_revision or args.llvm_force_head_revision or
       args.force_local_build):
     AddSvnToPathOnWin()
+
+  if use_head_revision:
+    # TODO(hans): Trunk was updated; remove after the next roll.
+    global VERSION
+    VERSION = '6.0.0'
 
   global CLANG_REVISION, PACKAGE_VERSION
   if args.print_revision:

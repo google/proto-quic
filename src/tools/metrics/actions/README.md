@@ -115,9 +115,9 @@ changes.  The owners should be added in the original user action description.
 If you are using a user action heavily and understand it intimately, feel free
 to add yourself as an owner. @chromium.org email addresses are preferred.
 
-### Beware `not_user_action="true"`
+### Beware `not_user_triggered="true"`
 
-actions.xml allows you to annotate an action as `not_user_action="true"`.  This
+actions.xml allows you to annotate an action as `not_user_triggered="true"`.  This
 feature should be used rarely.  If you think you want to annotate your action
 thusly, please re-review the best practices above.
 

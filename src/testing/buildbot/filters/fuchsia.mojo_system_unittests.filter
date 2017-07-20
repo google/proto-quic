@@ -1,0 +1,13 @@
+# TODO(fuchsia): Fix the tests and delete this file. crbug.com/740791
+
+-*MultiprocessMessagePipeTest*
+-DataPipeTest*
+-MessagePipeTest.SharedBufferHandlePingPong
+-PlatformWrapperTest.Wrap*
+-PlatformSharedBufferTest.TooBig
+-PlatformChannelPairPosixTest*
+-SharedBufferTest*
+-SignalsTest.*
+-SharedBufferTest.PassSharedBufferLocal
+-EmbedderTest.*
+-MessageTest.Serialize*

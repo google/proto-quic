@@ -26,6 +26,8 @@ GENRB_ALIAS_SOURCE = $(GENRB_SYNTHETIC_ALIAS)\
 GENRB_SOURCE =\
  am.txt\
  ar.txt\
+ ar_DZ.txt ar_EH.txt ar_LB.txt ar_LY.txt ar_MA.txt ar_MR.txt ar_SA.txt\
+ ar_SO.txt ar_TN.txt\
  bg.txt\
  bn.txt\
  ca.txt\
@@ -34,8 +36,13 @@ GENRB_SOURCE =\
  de.txt de_AT.txt de_CH.txt\
  el.txt\
  en.txt en_001.txt en_150.txt\
- en_GB.txt en_US.txt en_AU.txt en_CA.txt en_IN.txt en_NZ.txt en_ZA.txt\
+ en_GB.txt en_US.txt en_AU.txt en_CA.txt en_HK.txt en_IN.txt en_NZ.txt\
+ en_SG.txt en_ZA.txt\
  es.txt es_ES.txt es_419.txt es_AR.txt es_MX.txt es_US.txt\
+ es_BO.txt es_BR.txt es_BZ.txt es_CL.txt es_CO.txt es_CR.txt es_CU.txt\
+ es_DO.txt es_EA.txt es_EC.txt es_GQ.txt es_GT.txt es_HN.txt es_IC.txt\
+ es_NI.txt es_PA.txt es_PE.txt es_PH.txt es_PR.txt es_PY.txt es_SV.txt\
+ es_UY.txt es_VE.txt\
  et.txt\
  fa.txt\
  fi.txt\

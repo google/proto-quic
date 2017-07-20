@@ -10,8 +10,6 @@
 // must provide a non-empty decode buffer. Continue with calls to Resume() if
 // Start, and any subsequent calls to Resume, returns kDecodeInProgress.
 
-#include <string>
-
 #include "base/logging.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
@@ -20,6 +18,7 @@
 #include "net/http2/hpack/decoder/hpack_string_decoder.h"
 #include "net/http2/hpack/http2_hpack_constants.h"
 #include "net/http2/platform/api/http2_export.h"
+#include "net/http2/platform/api/http2_string.h"
 
 namespace net {
 
@@ -94,7 +93,7 @@ class HTTP2_EXPORT_PRIVATE HpackEntryDecoder {
   // in decoding the entry type and its varint.
   DecodeStatus Resume(DecodeBuffer* db, HpackEntryDecoderListener* listener);
 
-  std::string DebugString() const;
+  Http2String DebugString() const;
   void OutputDebugString(std::ostream& out) const;
 
  private:

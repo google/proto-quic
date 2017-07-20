@@ -12,6 +12,7 @@ test_support_sources = [
   "src/crypto/test/test_util.cc",
   "src/crypto/test/test_util.h",
   "src/ssl/test/async_bio.h",
+  "src/ssl/test/fuzzer.h",
   "src/ssl/test/packeted_bio.h",
   "src/ssl/test/test_config.h",
 ]
@@ -62,55 +63,11 @@ crypto_test_sources = [
   "src/crypto/test/gtest_main.cc",
   "src/crypto/thread_test.cc",
   "src/crypto/x509/x509_test.cc",
+  "src/crypto/x509v3/tab_test.cc",
+  "src/crypto/x509v3/v3name_test.cc",
 ]
 
 ssl_test_sources = [
   "src/crypto/test/gtest_main.cc",
   "src/ssl/ssl_test.cc",
 ]
-
-template("create_tests") {
-  executable("boringssl_example_mul") {
-    sources = [
-      "src/crypto/fipsmodule/ec/example_mul.c",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
-  }
-
-  executable("boringssl_tab_test") {
-    sources = [
-      "src/crypto/x509v3/tab_test.c",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
-  }
-
-  executable("boringssl_v3name_test") {
-    sources = [
-      "src/crypto/x509v3/v3name_test.c",
-    ]
-    sources += test_support_sources
-    if (defined(invoker.configs_exclude)) {
-      configs -= invoker.configs_exclude
-    }
-    configs += invoker.configs
-    deps = invoker.deps + [ "//build/config:exe_and_shlib_deps" ]
-  }
-
-  group(target_name) {
-    deps = [
-      ":boringssl_example_mul",
-      ":boringssl_tab_test",
-      ":boringssl_v3name_test",
-    ]
-  }
-}

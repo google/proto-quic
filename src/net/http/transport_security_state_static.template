@@ -24,9 +24,6 @@ static const char* const kNoRejectedPublicKeys[] = {
     nullptr,
 };
 
-// kNoReportURI is a placeholder for when a pinset does not have a report URI.
-static const char kNoReportURI[] = "";
-
 [[ACCEPTABLE_CERTS]]
 
 static const net::TransportSecurityStateSource::Pinset kPinsets[] = [[PINSETS]];

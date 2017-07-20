@@ -156,8 +156,6 @@ class NET_EXPORT HttpNetworkSession : public base::MemoryCoordinatorClient {
     bool quic_force_hol_blocking;
     // If true, race cert verification with host resolution.
     bool quic_race_cert_verification;
-    // If true, configure QUIC sockets to not fragment packets.
-    bool quic_do_not_fragment;
     // If true, estimate the initial RTT for QUIC connections based on network.
     bool quic_estimate_initial_rtt;
 

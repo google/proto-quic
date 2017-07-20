@@ -102,8 +102,9 @@ TEST(NetLogUtil, CreateNetLogEntriesForActiveObjectsMultipleContexts) {
       contexts[i]->set_net_log(&net_log);
       contexts[i]->Init();
       context_set.insert(contexts[i].get());
-      requests.push_back(contexts[i]->CreateRequest(
-          GURL("about:hats"), DEFAULT_PRIORITY, &delegate));
+      requests.push_back(
+          contexts[i]->CreateRequest(GURL("about:hats"), DEFAULT_PRIORITY,
+                                     &delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
     }
     TestNetLog test_net_log;
     CreateNetLogEntriesForActiveObjects(context_set,

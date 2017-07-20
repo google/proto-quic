@@ -201,10 +201,6 @@ static jint PercentageOfResidentNativeLibraryCode(
   return NativeLibraryPrefetcher::PercentageOfResidentNativeLibraryCode();
 }
 
-bool RegisterLibraryLoaderEntryHook(JNIEnv* env) {
-  return RegisterNativesImpl(env);
-}
-
 void SetVersionNumber(const char* version_number) {
   g_library_version_number = strdup(version_number);
 }

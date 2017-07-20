@@ -30,7 +30,7 @@ symatics should exist.  This is an exact match.
 */
 
 
-/* TREE
+/** TREE
  *Callback(VoidFunc)
  *  Type()
  *    PrimitiveType(void)
@@ -38,7 +38,7 @@ symatics should exist.  This is an exact match.
  */
 callback VoidFunc = void();
 
-/* TREE
+/** TREE
  *Callback(VoidFuncLongErr)
  *  Type()
  *    PrimitiveType(void)
@@ -47,7 +47,7 @@ callback VoidFunc = void();
  */
 callback VoidFuncLongErr = void ( long );
 
-/* TREE
+/** TREE
  *Callback(VoidFuncLong)
  *  Type()
  *    PrimitiveType(void)
@@ -58,7 +58,7 @@ callback VoidFuncLongErr = void ( long );
  */
 callback VoidFuncLong = void ( long L1 );
 
-/* TREE
+/** TREE
  *Callback(VoidFuncLongArray)
  *  Type()
  *    PrimitiveType(void)
@@ -70,7 +70,7 @@ callback VoidFuncLong = void ( long L1 );
  */
 callback VoidFuncLongArray = void ( long[] L1 );
 
-/* TREE
+/** TREE
  *Callback(VoidFuncLongArray5)
  *  Type()
  *    PrimitiveType(void)
@@ -83,7 +83,7 @@ callback VoidFuncLongArray = void ( long[] L1 );
 callback VoidFuncLongArray5 = void ( long[5] L1 );
 
 
-/* TREE
+/** TREE
  *Callback(VoidFuncLongArray54)
  *  Type()
  *    PrimitiveType(void)
@@ -100,7 +100,7 @@ callback VoidFuncLongArray5 = void ( long[5] L1 );
 callback VoidFuncLongArray54 = void ( long[5] L1, long long [4] L2 );
 
 
-/* TREE
+/** TREE
  *Callback(VoidFuncLongIdent)
  *  Type()
  *    PrimitiveType(void)

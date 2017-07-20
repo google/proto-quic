@@ -17,6 +17,7 @@
 #include "net/socket/next_proto.h"
 #include "net/spdy/chromium/spdy_http_utils.h"
 #include "net/spdy/core/spdy_header_block.h"
+#include "quic_http_stream.h"
 
 namespace net {
 namespace {
@@ -224,6 +225,16 @@ bool BidirectionalStreamQuicImpl::GetLoadTimingInfo(
     load_timing_info->socket_reused = true;
   }
   return true;
+}
+
+void BidirectionalStreamQuicImpl::PopulateNetErrorDetails(
+    NetErrorDetails* details) {
+  DCHECK(details);
+  details->connection_info =
+      QuicHttpStream::ConnectionInfoFromQuicVersion(session_->GetQuicVersion());
+  session_->PopulateNetErrorDetails(details);
+  if (session_->IsCryptoHandshakeConfirmed() && stream_)
+    details->quic_connection_error = stream_->connection_error();
 }
 
 void BidirectionalStreamQuicImpl::OnStreamReady(int rv) {

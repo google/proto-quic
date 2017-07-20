@@ -207,6 +207,9 @@ class BASE_EXPORT Histogram : public HistogramBase {
   void WriteHTMLGraph(std::string* output) const override;
   void WriteAscii(std::string* output) const override;
 
+  // TODO(bcwhite): Remove this after crbug/736675.
+  void ValidateHistogramContents() const override;
+
  protected:
   // This class, defined entirely within the .cc file, contains all the
   // common logic for building a Histogram and can be overridden by more

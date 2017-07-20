@@ -4,6 +4,8 @@
 
 package org.chromium.base;
 
+import android.annotation.SuppressLint;
+import android.os.Build;
 import android.os.Process;
 import android.os.StrictMode;
 import android.os.SystemClock;
@@ -45,18 +47,32 @@ public class EarlyTraceEvent {
     static final class Event {
         final String mName;
         final int mThreadId;
-        final long mBeginTimeMs;
-        long mEndTimeMs;
+        final long mBeginTimeNanos;
+        final long mBeginThreadTimeMillis;
+        long mEndTimeNanos;
+        long mEndThreadTimeMillis;
 
         Event(String name) {
             mName = name;
             mThreadId = Process.myTid();
-            mBeginTimeMs = SystemClock.elapsedRealtime();
+            mBeginTimeNanos = elapsedRealtimeNanos();
+            mBeginThreadTimeMillis = SystemClock.currentThreadTimeMillis();
         }
 
         void end() {
-            assert mEndTimeMs == 0;
-            mEndTimeMs = SystemClock.elapsedRealtime();
+            assert mEndTimeNanos == 0;
+            assert mEndThreadTimeMillis == 0;
+            mEndTimeNanos = elapsedRealtimeNanos();
+            mEndThreadTimeMillis = SystemClock.currentThreadTimeMillis();
+        }
+
+        @SuppressLint("NewApi")
+        private static long elapsedRealtimeNanos() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                return SystemClock.elapsedRealtimeNanos();
+            } else {
+                return SystemClock.elapsedRealtime() * 1000000;
+            }
         }
     }
 
@@ -176,15 +192,16 @@ public class EarlyTraceEvent {
     }
 
     private static void dumpEvents(List<Event> events) {
-        long nativeNowUs = TimeUtils.nativeGetTimeTicksNowUs();
-        long javaNowUs = SystemClock.elapsedRealtime() * 1000;
-        long offsetMs = (nativeNowUs - javaNowUs) / 1000;
-        for (Event event : events) {
-            nativeRecordEarlyEvent(event.mName, event.mBeginTimeMs + offsetMs,
-                    event.mEndTimeMs + offsetMs, event.mThreadId);
+        long nativeNowNanos = TimeUtils.nativeGetTimeTicksNowUs() * 1000;
+        long javaNowNanos = Event.elapsedRealtimeNanos();
+        long offsetNanos = nativeNowNanos - javaNowNanos;
+        for (Event e : events) {
+            nativeRecordEarlyEvent(e.mName, e.mBeginTimeNanos + offsetNanos,
+                    e.mEndTimeNanos + offsetNanos, e.mThreadId,
+                    e.mEndThreadTimeMillis - e.mBeginThreadTimeMillis);
         }
     }
 
-    private static native void nativeRecordEarlyEvent(
-            String name, long beginTimeMs, long endTimeMs, int threadId);
+    private static native void nativeRecordEarlyEvent(String name, long beginTimNanos,
+            long endTimeNanos, int threadId, long threadDurationMillis);
 }

@@ -86,6 +86,7 @@ bool SharedMemory::MapAt(off_t offset, size_t bytes) {
     mapped_size_ = bytes;
     DCHECK_EQ(0U, reinterpret_cast<uintptr_t>(memory_) &
         (SharedMemory::MAP_MINIMUM_ALIGNMENT - 1));
+    mapped_id_ = shm_.GetGUID();
     SharedMemoryTracker::GetInstance()->IncrementMemoryUsage(*this);
   } else {
     memory_ = NULL;
@@ -103,6 +104,7 @@ bool SharedMemory::Unmap() {
     DPLOG(ERROR) << "munmap";
   memory_ = NULL;
   mapped_size_ = 0;
+  mapped_id_ = UnguessableToken();
   return true;
 }
 

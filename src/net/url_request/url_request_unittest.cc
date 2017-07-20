@@ -155,6 +155,10 @@ namespace net {
 
 namespace {
 
+namespace test0 {
+#include "net/http/transport_security_state_static_unittest0.h"
+}
+
 const base::string16 kChrome(ASCIIToUTF16("chrome"));
 const base::string16 kSecret(ASCIIToUTF16("secret"));
 const base::string16 kUser(ASCIIToUTF16("user"));
@@ -1166,7 +1170,7 @@ TEST_F(URLRequestTest, AllowFileURLs) {
   }
 }
 
-#if defined(OS_POSIX)  // Bacause of symbolic links.
+#if defined(OS_POSIX) && !defined(OS_FUCHSIA)  // Because of symbolic links.
 
 TEST_F(URLRequestTest, SymlinksToFiles) {
   base::ScopedTempDir temp_dir;
@@ -1211,8 +1215,8 @@ TEST_F(URLRequestTest, SymlinksToFiles) {
   {
     TestDelegate d;
     default_context_.set_network_delegate(&network_delegate);
-    std::unique_ptr<URLRequest> r(
-        default_context_.CreateRequest(good_file_url, DEFAULT_PRIORITY, &d));
+    std::unique_ptr<URLRequest> r(default_context_.CreateRequest(
+        good_file_url, DEFAULT_PRIORITY, &d, TRAFFIC_ANNOTATION_FOR_TESTS));
     r->Start();
     base::RunLoop().Run();
     // good_file_url should be allowed.
@@ -1223,8 +1227,8 @@ TEST_F(URLRequestTest, SymlinksToFiles) {
   {
     TestDelegate d;
     default_context_.set_network_delegate(&network_delegate);
-    std::unique_ptr<URLRequest> r(
-        default_context_.CreateRequest(bad_file_url, DEFAULT_PRIORITY, &d));
+    std::unique_ptr<URLRequest> r(default_context_.CreateRequest(
+        bad_file_url, DEFAULT_PRIORITY, &d, TRAFFIC_ANNOTATION_FOR_TESTS));
     r->Start();
     base::RunLoop().Run();
     // bad_file_url should be rejected.
@@ -1267,8 +1271,8 @@ TEST_F(URLRequestTest, SymlinksToDirs) {
   {
     TestDelegate d;
     default_context_.set_network_delegate(&network_delegate);
-    std::unique_ptr<URLRequest> r(
-        default_context_.CreateRequest(good_file_url, DEFAULT_PRIORITY, &d));
+    std::unique_ptr<URLRequest> r(default_context_.CreateRequest(
+        good_file_url, DEFAULT_PRIORITY, &d, TRAFFIC_ANNOTATION_FOR_TESTS));
     r->Start();
     base::RunLoop().Run();
     // good_file_url should be allowed.
@@ -1279,8 +1283,8 @@ TEST_F(URLRequestTest, SymlinksToDirs) {
   {
     TestDelegate d;
     default_context_.set_network_delegate(&network_delegate);
-    std::unique_ptr<URLRequest> r(
-        default_context_.CreateRequest(bad_file_url, DEFAULT_PRIORITY, &d));
+    std::unique_ptr<URLRequest> r(default_context_.CreateRequest(
+        bad_file_url, DEFAULT_PRIORITY, &d, TRAFFIC_ANNOTATION_FOR_TESTS));
     r->Start();
     base::RunLoop().Run();
     // bad_file_url should be rejected.
@@ -1290,7 +1294,7 @@ TEST_F(URLRequestTest, SymlinksToDirs) {
   }
 }
 
-#endif  // defined(OS_POSIX)
+#endif  // defined(OS_POSIX) && !defined(OS_FUCHSIA)
 
 TEST_F(URLRequestTest, FileDirCancelTest) {
   // Put in mock resource provider.
@@ -6747,6 +6751,9 @@ class MockCTPolicyEnforcer : public CTPolicyEnforcer {
 
 // Tests that Expect CT headers are processed correctly.
 TEST_F(URLRequestTestHTTP, ExpectCTHeader) {
+#if !BUILDFLAG(INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST)
+  SetTransportSecurityStateSourceForTesting(&test0::kHSTSSource);
+#endif
   EmbeddedTestServer https_test_server(net::EmbeddedTestServer::TYPE_HTTPS);
   https_test_server.SetSSLConfig(
       net::EmbeddedTestServer::CERT_COMMON_NAME_IS_DOMAIN);
@@ -9215,6 +9222,9 @@ TEST_F(HTTPSRequestTest, HTTPSExpiredTest) {
 // the |certificate_errors_are_fatal| flag correctly. This flag will cause
 // the interstitial to be fatal.
 TEST_F(HTTPSRequestTest, HTTPSPreloadedHSTSTest) {
+#if !BUILDFLAG(INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST)
+  SetTransportSecurityStateSourceForTesting(&test0::kHSTSSource);
+#endif
   EmbeddedTestServer test_server(net::EmbeddedTestServer::TYPE_HTTPS);
   test_server.SetSSLConfig(net::EmbeddedTestServer::CERT_MISMATCHED_NAME);
   test_server.ServeFilesFromSourceDirectory("net/data/ssl");
@@ -9254,6 +9264,9 @@ TEST_F(HTTPSRequestTest, HTTPSPreloadedHSTSTest) {
 // This tests that cached HTTPS page loads do not cause any updates to the
 // TransportSecurityState.
 TEST_F(HTTPSRequestTest, HTTPSErrorsNoClobberTSSTest) {
+#if !BUILDFLAG(INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST)
+  SetTransportSecurityStateSourceForTesting(&test0::kHSTSSource);
+#endif
   // The actual problem -- CERT_MISMATCHED_NAME in this case -- doesn't
   // matter. It just has to be any error.
   EmbeddedTestServer test_server(net::EmbeddedTestServer::TYPE_HTTPS);
@@ -10157,6 +10170,9 @@ TEST_F(HTTPSOCSPTest, MAYBE_RevokedStapled) {
 }
 
 TEST_F(HTTPSOCSPTest, ExpectStapleReportSentOnMissing) {
+#if !BUILDFLAG(INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST)
+  SetTransportSecurityStateSourceForTesting(&test0::kHSTSSource);
+#endif
   EmbeddedTestServer https_test_server(net::EmbeddedTestServer::TYPE_HTTPS);
   https_test_server.SetSSLConfig(
       net::EmbeddedTestServer::CERT_COMMON_NAME_IS_DOMAIN);

@@ -81,6 +81,9 @@ class FileDescriptorWatcherTest
       base::RunLoop().RunUntilIdle();
     }
 
+    // Ensure that OtherThread is done processing before closing fds.
+    other_thread_.Stop();
+
     EXPECT_EQ(0, IGNORE_EINTR(close(pipe_fds_[0])));
     EXPECT_EQ(0, IGNORE_EINTR(close(pipe_fds_[1])));
   }
@@ -116,7 +119,7 @@ class FileDescriptorWatcherTest
   std::unique_ptr<FileDescriptorWatcher::Controller> WatchWritable() {
     std::unique_ptr<FileDescriptorWatcher::Controller> controller =
         FileDescriptorWatcher::WatchWritable(
-            read_file_descriptor(),
+            write_file_descriptor(),
             Bind(&Mock::WritableCallback, Unretained(&mock_)));
     EXPECT_TRUE(controller);
     return controller;
@@ -167,14 +170,11 @@ class FileDescriptorWatcherTest
 TEST_P(FileDescriptorWatcherTest, WatchWritable) {
   auto controller = WatchWritable();
 
-// On Mac and iOS, the write end of a newly created pipe is writable without
-// blocking.
-#if defined(OS_MACOSX)
+  // The write end of a newly created pipe is immediately writable.
   RunLoop run_loop;
   EXPECT_CALL(mock_, WritableCallback())
       .WillOnce(testing::Invoke(&run_loop, &RunLoop::Quit));
   run_loop.Run();
-#endif  // defined(OS_MACOSX)
 }
 
 TEST_P(FileDescriptorWatcherTest, WatchReadableOneByte) {

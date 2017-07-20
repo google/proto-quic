@@ -5,20 +5,20 @@
 #ifndef BASE_TRACE_EVENT_HEAP_PROFILER_STACK_FRAME_DEDUPLICATOR_H_
 #define BASE_TRACE_EVENT_HEAP_PROFILER_STACK_FRAME_DEDUPLICATOR_H_
 
-#include <map>
+#include <deque>
 #include <string>
-#include <vector>
+#include <unordered_map>
 
 #include "base/base_export.h"
+#include "base/containers/flat_map.h"
 #include "base/macros.h"
 #include "base/trace_event/heap_profiler_allocation_context.h"
+#include "base/trace_event/trace_event_impl.h"
 
 namespace base {
 namespace trace_event {
 
-class StringDeduplicator;
 class TraceEventMemoryOverhead;
-class TracedValue;
 
 // A data structure that allows grouping a set of backtraces in a space-
 // efficient manner by creating a call tree and writing it as a set of (node,
@@ -27,7 +27,7 @@ class TracedValue;
 // of |StackFrame|s to index into |frames_|. So there is a trie for bottum-up
 // lookup of a backtrace for deduplication, and a tree for compact storage in
 // the trace log.
-class BASE_EXPORT StackFrameDeduplicator {
+class BASE_EXPORT StackFrameDeduplicator : public ConvertableToTraceFormat {
  public:
   // A node in the call tree.
   struct FrameNode {
@@ -45,15 +45,13 @@ class BASE_EXPORT StackFrameDeduplicator {
     constexpr static int kInvalidFrameIndex = -1;
 
     // Indices into |frames_| of frames called from the current frame.
-    std::map<StackFrame, int> children;
+    base::flat_map<StackFrame, int> children;
   };
 
-  using ConstIterator = std::vector<FrameNode>::const_iterator;
+  using ConstIterator = std::deque<FrameNode>::const_iterator;
 
-  // |string_deduplication| is used during serialization, and is expected
-  // to outlive instances of this class.
-  explicit StackFrameDeduplicator(StringDeduplicator* string_deduplicator);
-  ~StackFrameDeduplicator();
+  StackFrameDeduplicator();
+  ~StackFrameDeduplicator() override;
 
   // Inserts a backtrace where |beginFrame| is a pointer to the bottom frame
   // (e.g. main) and |endFrame| is a pointer past the top frame (most recently
@@ -65,19 +63,27 @@ class BASE_EXPORT StackFrameDeduplicator {
   ConstIterator begin() const { return frames_.begin(); }
   ConstIterator end() const { return frames_.end(); }
 
-  // Appends new |stackFrames| dictionary items that were added after the
-  // last call to this function.
-  void SerializeIncrementally(TracedValue* traced_value);
+  // Writes the |stackFrames| dictionary as defined in https://goo.gl/GerkV8 to
+  // the trace log.
+  void AppendAsTraceFormat(std::string* out) const override;
 
   // Estimates memory overhead including |sizeof(StackFrameDeduplicator)|.
-  void EstimateTraceMemoryOverhead(TraceEventMemoryOverhead* overhead);
+  void EstimateTraceMemoryOverhead(TraceEventMemoryOverhead* overhead) override;
 
  private:
-  StringDeduplicator* string_deduplicator_;
+  // Checks that existing backtrace identified by |frame_index| equals
+  // to the one identified by |begin_frame|, |end_frame|.
+  bool Match(int frame_index,
+             const StackFrame* begin_frame,
+             const StackFrame* end_frame) const;
 
-  std::map<StackFrame, int> roots_;
-  std::vector<FrameNode> frames_;
-  size_t last_exported_index_;
+  base::flat_map<StackFrame, int> roots_;
+  std::deque<FrameNode> frames_;
+
+  // {backtrace_hash -> frame_index} map for finding backtraces that are
+  // already added. Backtraces themselves are not stored in the map, instead
+  // Match() is used on the found frame_index to detect collisions.
+  std::unordered_map<size_t, int> backtrace_lookup_table_;
 
   DISALLOW_COPY_AND_ASSIGN(StackFrameDeduplicator);
 };

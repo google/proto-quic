@@ -33,10 +33,12 @@ clean_exit () {
     if [ "$GDBSERVER_PID" ]; then
       log "Killing background gdbserver process: $GDBSERVER_PID"
       kill -9 $GDBSERVER_PID >/dev/null 2>&1
+      rm -f "$GDBSERVER_PIDFILE"
     fi
     if [ "$TARGET_GDBSERVER" ]; then
       log "Removing target gdbserver binary: $TARGET_GDBSERVER."
-      "$ADB" shell "$COMMAND_PREFIX" rm "$TARGET_GDBSERVER" "$COMMAND_SUFFIX" >/dev/null 2>&1
+      "$ADB" shell "$COMMAND_PREFIX" rm "$TARGET_GDBSERVER" \
+          "$TARGET_DOMAIN_SOCKET" "$COMMAND_SUFFIX" >/dev/null 2>&1
     fi
     log "Cleaning up: $TMPDIR"
     rm -rf "$TMPDIR"
@@ -369,6 +371,11 @@ if [[ -z "$SYMBOL_DIR" && -z "$CHROMIUM_OUTPUT_DIR" ]]; then
    fi
 fi
 
+if ls *.so >/dev/null 2>&1; then
+  panic ".so files found in your working directory. These will conflict with " \
+      "library lookup logic. Change your working directory and try again."
+fi
+
 # Detect the build type and symbol directory. This is done by finding
 # the most recent sub-directory containing debug shared libraries under
 # $CHROMIUM_OUTPUT_DIR.
@@ -483,7 +490,8 @@ adb_shell () {
 # This returns an NDK-compatible architecture name.
 # out: NDK Architecture name, or empty string.
 get_gyp_target_arch () {
-  local RANDOM_LIB=$(ls "$SYMBOL_DIR"/lib*.so | head -n1)
+  # ls prints a broken pipe error when there are a lot of libs.
+  local RANDOM_LIB=$(ls "$SYMBOL_DIR"/lib*.so 2>/dev/null| head -n1)
   local SO_DESC=$(file $RANDOM_LIB)
   case $ARCH in
     *32-bit*ARM,*) echo "arm";;
@@ -756,7 +764,8 @@ get_file_timestamp () {
 }
 
 # Allow several concurrent debugging sessions
-TARGET_GDBSERVER=/data/data/$PACKAGE_NAME/gdbserver-adb-gdb-$TMP_ID
+APP_DATA_DIR=$("$ADB" shell run-as $PACKAGE_NAME /system/bin/sh -c pwd)
+TARGET_GDBSERVER="$APP_DATA_DIR/gdbserver-adb-gdb-$TMP_ID"
 TMP_TARGET_GDBSERVER=/data/local/tmp/gdbserver-adb-gdb-$TMP_ID
 
 # Return the build fingerprint contained in a build.prop file.
@@ -930,6 +939,7 @@ fi
 # so we can add them to solib-search-path later.
 SOLIB_DIRS=$(find $PULL_LIBS_DIR -mindepth 1 -maxdepth 4 -type d | \
              grep -v "^$" | tr '\n' ':')
+SOLIB_DIRS=${SOLIB_DIRS%:}  # Strip trailing :
 
 # This is a re-implementation of gdbclient, where we use compatible
 # versions of gdbserver and $GDBNAME to ensure that everything works
@@ -938,22 +948,23 @@ SOLIB_DIRS=$(find $PULL_LIBS_DIR -mindepth 1 -maxdepth 4 -type d | \
 
 # Push gdbserver to the device
 log "Pushing gdbserver $GDBSERVER to $TARGET_GDBSERVER"
-"$ADB" push $GDBSERVER $TMP_TARGET_GDBSERVER &>/dev/null
-"$ADB" shell $COMMAND_PREFIX cp $TMP_TARGET_GDBSERVER $TARGET_GDBSERVER $COMMAND_SUFFIX
-"$ADB" shell rm $TMP_TARGET_GDBSERVER
+"$ADB" push $GDBSERVER $TMP_TARGET_GDBSERVER >/dev/null && \
+    adb_shell $COMMAND_PREFIX cp $TMP_TARGET_GDBSERVER $TARGET_GDBSERVER $COMMAND_SUFFIX && \
+    adb_shell rm $TMP_TARGET_GDBSERVER
 fail_panic "Could not copy gdbserver to the device!"
 
 if [ -z "$PORT" ]; then
-    PORT=5039
+  # Random port to allow multiple concurrent sessions.
+  PORT=$(( $RANDOM % 1000 + 5039 ))
 fi
 HOST_PORT=$PORT
-TARGET_PORT=$PORT
+TARGET_DOMAIN_SOCKET=$APP_DATA_DIR/gdb-socket-$HOST_PORT
 
 # Select correct app_process for architecture.
 case $TARGET_ARCH in
       arm|x86|mips) GDBEXEC=app_process32;;
       arm64|x86_64) GDBEXEC=app_process64;;
-      *) fail_panic "Unknown app_process for architecture!";;
+      *) panic "Unknown app_process for architecture!";;
 esac
 
 # Default to app_process if bit-width specific process isn't found.
@@ -976,10 +987,10 @@ log "Pulling $GDBEXEC from device"
 fail_panic "Could not retrieve $GDBEXEC from the device!"
 
 # Setup network redirection
-log "Setting network redirection (host:$HOST_PORT -> device:$TARGET_PORT)"
-"$ADB" forward tcp:$HOST_PORT tcp:$TARGET_PORT
+log "Setting network redirection (host:$HOST_PORT -> device:$TARGET_DOMAIN_SOCKET)"
+"$ADB" forward tcp:$HOST_PORT localfilesystem:$TARGET_DOMAIN_SOCKET
 fail_panic "Could not setup network redirection from \
-host:localhost:$HOST_PORT to device:localhost:$TARGET_PORT!"
+host:localhost:$HOST_PORT to device:$TARGET_DOMAIN_SOCKET"
 
 # Start gdbserver in the background
 # Note that using run-as requires the package to be debuggable.
@@ -990,9 +1001,11 @@ host:localhost:$HOST_PORT to device:localhost:$TARGET_PORT!"
 #
 log "Starting gdbserver in the background:"
 GDBSERVER_LOG=$TMPDIR/gdbserver-$TMP_ID.log
-log "adb shell $COMMAND_PREFIX $TARGET_GDBSERVER :$TARGET_PORT \
+log "adb shell $COMMAND_PREFIX $TARGET_GDBSERVER \
+  --once +$TARGET_DOMAIN_SOCKET \
   --attach $PID $COMMAND_SUFFIX"
-"$ADB" shell $COMMAND_PREFIX $TARGET_GDBSERVER :$TARGET_PORT \
+"$ADB" shell $COMMAND_PREFIX $TARGET_GDBSERVER \
+  --once +$TARGET_DOMAIN_SOCKET \
   --attach $PID $COMMAND_SUFFIX > $GDBSERVER_LOG 2>&1 &
 GDBSERVER_PID=$!
 echo "$GDBSERVER_PID" > $GDBSERVER_PIDFILE
@@ -1000,49 +1013,57 @@ log "background job pid: $GDBSERVER_PID"
 
 # Sleep to allow gdbserver to attach to the remote process and be
 # ready to connect to.
-log "Sleeping ${ATTACH_DELAY}s to allow gdbserver to attach."
+log "Sleeping ${ATTACH_DELAY}s to ensure gdbserver is alive"
 sleep "$ATTACH_DELAY"
 log "Job control: $(jobs -l)"
 STATE=$(jobs -l | awk '$2 == "'$GDBSERVER_PID'" { print $3; }')
 if [ "$STATE" != "Running" ]; then
   echo "ERROR: GDBServer either failed to run or attach to PID $PID!"
-  if [ $(adb_shell su -c getenforce) != "Permissive" ];  then
-    echo "Device mode is Enforcing. Changing Device mode to Permissive "
-    $(adb_shell su -c setenforce 0)
-    if [ $(adb_shell su -c getenforce) != "Permissive" ]; then
-      echo "ERROR: Failed to Change Device mode to Permissive"
-      echo "Failure log (use --verbose for more information):"
-      cat $GDBSERVER_LOG
-      exit 1
-    fi
-  else
-    echo "Failure log (use --verbose for more information):"
-    cat $GDBSERVER_LOG
-    exit 1
-  fi
+  echo "Here is the output from gdbserver (also try --verbose for more):"
+  echo "===== gdbserver.log start ====="
+  cat $GDBSERVER_LOG
+  echo ="===== gdbserver.log end ======"
+  exit 1
 fi
 
 # Generate a file containing useful GDB initialization commands
 readonly COMMANDS=$TMPDIR/gdb.init
 log "Generating GDB initialization commands file: $COMMANDS"
-echo -n "" > $COMMANDS
-echo "set print pretty 1" >> $COMMANDS
-echo "python" >> $COMMANDS
-echo "import sys" >> $COMMANDS
-echo "sys.path.insert(0, '$CHROMIUM_SRC/tools/gdb/')" >> $COMMANDS
-echo "try:" >> $COMMANDS
-echo "  import gdb_chrome" >> $COMMANDS
-echo "finally:" >> $COMMANDS
-echo "  sys.path.pop(0)" >> $COMMANDS
-echo "end" >> $COMMANDS
-echo "file $TMPDIR/$GDBEXEC" >> $COMMANDS
-echo "directory $CHROMIUM_SRC" >> $COMMANDS
-echo "set solib-absolute-prefix $PULL_LIBS_DIR" >> $COMMANDS
-echo "set solib-search-path $SOLIB_DIRS:$PULL_LIBS_DIR:$SYMBOL_DIR" \
-    >> $COMMANDS
-echo "echo Attaching and reading symbols, this may take a while.." \
-    >> $COMMANDS
-echo "target remote :$HOST_PORT" >> $COMMANDS
+cat > $COMMANDS <<EOF
+set print pretty 1
+python
+import sys
+sys.path.insert(0, '$CHROMIUM_SRC/tools/gdb/')
+try:
+  import gdb_chrome
+finally:
+  sys.path.pop(0)
+end
+file $TMPDIR/$GDBEXEC
+directory $CHROMIUM_SRC
+set solib-absolute-prefix $PULL_LIBS_DIR
+set solib-search-path $SOLIB_DIRS:$PULL_LIBS_DIR:$SYMBOL_DIR
+echo Attaching and reading symbols, this may take a while.."
+python
+# Copied from ndk-gdb.py:
+def target_remote_with_retry(target, timeout_seconds):
+  import time
+  end_time = time.time() + timeout_seconds
+  while True:
+    try:
+      gdb.execute('target remote ' + target)
+      return True
+    except gdb.error as e:
+      time_left = end_time - time.time()
+      if time_left < 0 or time_left > timeout_seconds:
+        print("Error: unable to connect to device.")
+        print(e)
+        return False
+      time.sleep(min(0.25, time_left))
+
+target_remote_with_retry(':$HOST_PORT', 5)
+end
+EOF
 
 if [ "$GDBINIT" ]; then
   cat "$GDBINIT" >> $COMMANDS

@@ -33,6 +33,7 @@ HostPortPair HostPortPair::FromIPEndPoint(const IPEndPoint& ipe) {
   return HostPortPair(ipe.ToStringWithoutPort(), ipe.port());
 }
 
+// static
 HostPortPair HostPortPair::FromString(const std::string& str) {
   std::vector<base::StringPiece> key_port = base::SplitStringPiece(
       str, ":", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);

@@ -50,11 +50,13 @@ if (enable_java_templates) {
            rebase_path(android_sdk_build_tools, root_build_dir) + CR
   _data += "android_sdk_build_tools_version=$android_sdk_build_tools_version$CR"
   _data +=
+      "android_sdk_tools_version_suffix=$android_sdk_tools_version_suffix$CR"
+  _data +=
       "android_sdk_root=" + rebase_path(android_sdk_root, root_build_dir) + CR
   _data += "android_sdk_version=$android_sdk_version$CR"
   _data += "android_tool_prefix=" +
            rebase_path(android_tool_prefix, root_build_dir) + CR
-  write_file("$root_build_dir/build_vars.txt", _data)
+  write_file(android_build_vars, _data)
 }
 
 # Copy to the lib.unstripped directory so that gdb can easily find it.

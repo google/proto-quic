@@ -92,7 +92,6 @@ class PolicyTemplateGenerator:
           'webview_android': ('webview',       'android'),
           'chrome_os':       ('chrome_os',     'chrome_os'),
           'chrome_frame':    ('chrome_frame',  'win'),
-          'ios':             ('chrome',        'ios'),
         }[product_platform_part]
         platforms = [platform]
       since_version, until_version = version_part.split('-')

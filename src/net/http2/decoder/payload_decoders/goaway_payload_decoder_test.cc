@@ -6,21 +6,18 @@
 
 #include <stddef.h>
 
-#include <string>
-
 #include "base/logging.h"
 #include "net/http2/decoder/http2_frame_decoder_listener.h"
 #include "net/http2/decoder/payload_decoders/payload_decoder_base_test_util.h"
 #include "net/http2/http2_constants.h"
 #include "net/http2/http2_structures_test_util.h"
+#include "net/http2/platform/api/http2_string.h"
 #include "net/http2/test_tools/frame_parts.h"
 #include "net/http2/test_tools/frame_parts_collector.h"
 #include "net/http2/tools/http2_frame_builder.h"
 #include "net/http2/tools/http2_random.h"
 #include "net/http2/tools/random_decoder_test.h"
 #include "testing/gtest/include/gtest/gtest.h"
-
-using std::string;
 
 namespace net {
 namespace test {
@@ -100,7 +97,7 @@ INSTANTIATE_TEST_CASE_P(VariousLengths,
 TEST_P(GoAwayOpaqueDataLengthTests, ValidLength) {
   Http2GoAwayFields goaway;
   Randomize(&goaway, RandomPtr());
-  string opaque_data = Random().RandString(length_);
+  Http2String opaque_data = Random().RandString(length_);
   Http2FrameBuilder fb;
   fb.Append(goaway);
   fb.Append(opaque_data);

@@ -165,6 +165,20 @@ class CookieMonsterTestBase : public CookieStoreTest<T> {
     return callback.result();
   }
 
+  bool SetCookieWithCreationTime(CookieMonster* cm,
+                                 const GURL& url,
+                                 const std::string& cookie_line,
+                                 base::Time creation_time) {
+    DCHECK(cm);
+    ResultSavingCookieCallback<bool> callback;
+    cm->SetCookieWithCreationTimeForTesting(
+        url, cookie_line, creation_time,
+        base::Bind(&ResultSavingCookieCallback<bool>::Run,
+                   base::Unretained(&callback)));
+    callback.WaitUntilDone();
+    return callback.result();
+  }
+
   uint32_t DeleteAllCreatedBetween(CookieMonster* cm,
                                    const base::Time& delete_begin,
                                    const base::Time& delete_end) {
@@ -1387,15 +1401,19 @@ TEST_F(CookieMonsterTest, TestCookieDeleteAllCreatedBetweenTimestamps) {
 
   // Create 5 cookies with different creation dates.
   EXPECT_TRUE(
-      cm->SetCookieWithCreationTime(http_www_foo_.url(), "T-0=Now", now));
-  EXPECT_TRUE(cm->SetCookieWithCreationTime(
-      http_www_foo_.url(), "T-1=Yesterday", now - TimeDelta::FromDays(1)));
-  EXPECT_TRUE(cm->SetCookieWithCreationTime(
-      http_www_foo_.url(), "T-2=DayBefore", now - TimeDelta::FromDays(2)));
-  EXPECT_TRUE(cm->SetCookieWithCreationTime(
-      http_www_foo_.url(), "T-3=ThreeDays", now - TimeDelta::FromDays(3)));
-  EXPECT_TRUE(cm->SetCookieWithCreationTime(http_www_foo_.url(), "T-7=LastWeek",
-                                            now - TimeDelta::FromDays(7)));
+      SetCookieWithCreationTime(cm.get(), http_www_foo_.url(), "T-0=Now", now));
+  EXPECT_TRUE(SetCookieWithCreationTime(cm.get(), http_www_foo_.url(),
+                                        "T-1=Yesterday",
+                                        now - TimeDelta::FromDays(1)));
+  EXPECT_TRUE(SetCookieWithCreationTime(cm.get(), http_www_foo_.url(),
+                                        "T-2=DayBefore",
+                                        now - TimeDelta::FromDays(2)));
+  EXPECT_TRUE(SetCookieWithCreationTime(cm.get(), http_www_foo_.url(),
+                                        "T-3=ThreeDays",
+                                        now - TimeDelta::FromDays(3)));
+  EXPECT_TRUE(SetCookieWithCreationTime(cm.get(), http_www_foo_.url(),
+                                        "T-7=LastWeek",
+                                        now - TimeDelta::FromDays(7)));
 
   // Try to delete threedays and the daybefore.
   EXPECT_EQ(2u, DeleteAllCreatedBetween(cm.get(), now - TimeDelta::FromDays(3),
@@ -1436,15 +1454,19 @@ TEST_F(CookieMonsterTest,
 
   // Create 5 cookies with different creation dates.
   EXPECT_TRUE(
-      cm->SetCookieWithCreationTime(http_www_foo_.url(), "T-0=Now", now));
-  EXPECT_TRUE(cm->SetCookieWithCreationTime(
-      http_www_foo_.url(), "T-1=Yesterday", now - TimeDelta::FromDays(1)));
-  EXPECT_TRUE(cm->SetCookieWithCreationTime(
-      http_www_foo_.url(), "T-2=DayBefore", now - TimeDelta::FromDays(2)));
-  EXPECT_TRUE(cm->SetCookieWithCreationTime(
-      http_www_foo_.url(), "T-3=ThreeDays", now - TimeDelta::FromDays(3)));
-  EXPECT_TRUE(cm->SetCookieWithCreationTime(http_www_foo_.url(), "T-7=LastWeek",
-                                            now - TimeDelta::FromDays(7)));
+      SetCookieWithCreationTime(cm.get(), http_www_foo_.url(), "T-0=Now", now));
+  EXPECT_TRUE(SetCookieWithCreationTime(cm.get(), http_www_foo_.url(),
+                                        "T-1=Yesterday",
+                                        now - TimeDelta::FromDays(1)));
+  EXPECT_TRUE(SetCookieWithCreationTime(cm.get(), http_www_foo_.url(),
+                                        "T-2=DayBefore",
+                                        now - TimeDelta::FromDays(2)));
+  EXPECT_TRUE(SetCookieWithCreationTime(cm.get(), http_www_foo_.url(),
+                                        "T-3=ThreeDays",
+                                        now - TimeDelta::FromDays(3)));
+  EXPECT_TRUE(SetCookieWithCreationTime(cm.get(), http_www_foo_.url(),
+                                        "T-7=LastWeek",
+                                        now - TimeDelta::FromDays(7)));
 
   // Try to delete threedays and the daybefore, but we should do nothing due
   // to the predicate.
@@ -2636,125 +2658,6 @@ TEST_F(CookieMonsterTest, SetAllCookies) {
   ASSERT_TRUE(++it != cookies.end());
   EXPECT_EQ("Y", it->Name());
   EXPECT_EQ("Z", it->Value());
-}
-
-TEST_F(CookieMonsterTest, ComputeCookieDiff) {
-  std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr, nullptr));
-
-  base::Time now = base::Time::Now();
-  base::Time creation_time = now - base::TimeDelta::FromSeconds(1);
-
-  std::unique_ptr<CanonicalCookie> cookie1(base::MakeUnique<CanonicalCookie>(
-      "A", "B", "." + http_www_foo_.url().host(), "/", creation_time,
-      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      COOKIE_PRIORITY_DEFAULT));
-  std::unique_ptr<CanonicalCookie> cookie2(base::MakeUnique<CanonicalCookie>(
-      "C", "D", "." + http_www_foo_.url().host(), "/", creation_time,
-      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      COOKIE_PRIORITY_DEFAULT));
-  std::unique_ptr<CanonicalCookie> cookie3(base::MakeUnique<CanonicalCookie>(
-      "E", "F", "." + http_www_foo_.url().host(), "/", creation_time,
-      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      COOKIE_PRIORITY_DEFAULT));
-  std::unique_ptr<CanonicalCookie> cookie4(base::MakeUnique<CanonicalCookie>(
-      "G", "H", "." + http_www_foo_.url().host(), "/", creation_time,
-      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      COOKIE_PRIORITY_DEFAULT));
-  std::unique_ptr<CanonicalCookie> cookie4_with_new_value(
-      base::MakeUnique<CanonicalCookie>(
-          "G", "iamnew", "." + http_www_foo_.url().host(), "/", creation_time,
-          base::Time(), base::Time(), false, false,
-          CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
-  std::unique_ptr<CanonicalCookie> cookie5(base::MakeUnique<CanonicalCookie>(
-      "I", "J", "." + http_www_foo_.url().host(), "/", creation_time,
-      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      COOKIE_PRIORITY_DEFAULT));
-  std::unique_ptr<CanonicalCookie> cookie5_with_new_creation_time(
-      base::MakeUnique<CanonicalCookie>(
-          "I", "J", "." + http_www_foo_.url().host(), "/", now, base::Time(),
-          base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-          COOKIE_PRIORITY_DEFAULT));
-  std::unique_ptr<CanonicalCookie> cookie6(base::MakeUnique<CanonicalCookie>(
-      "K", "L", "." + http_www_foo_.url().host(), "/foo", creation_time,
-      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      COOKIE_PRIORITY_DEFAULT));
-  std::unique_ptr<CanonicalCookie> cookie6_with_new_path(
-      base::MakeUnique<CanonicalCookie>(
-          "K", "L", "." + http_www_foo_.url().host(), "/bar", creation_time,
-          base::Time(), base::Time(), false, false,
-          CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
-  std::unique_ptr<CanonicalCookie> cookie7(base::MakeUnique<CanonicalCookie>(
-      "M", "N", "." + http_www_foo_.url().host(), "/foo", creation_time,
-      base::Time(), base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      COOKIE_PRIORITY_DEFAULT));
-  std::unique_ptr<CanonicalCookie> cookie7_with_new_path(
-      base::MakeUnique<CanonicalCookie>(
-          "M", "N", "." + http_www_foo_.url().host(), "/bar", creation_time,
-          base::Time(), base::Time(), false, false,
-          CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
-
-  CookieList old_cookies;
-  old_cookies.push_back(*cookie1);
-  old_cookies.push_back(*cookie2);
-  old_cookies.push_back(*cookie4);
-  old_cookies.push_back(*cookie5);
-  old_cookies.push_back(*cookie6);
-  old_cookies.push_back(*cookie7);
-
-  CookieList new_cookies;
-  new_cookies.push_back(*cookie1);
-  new_cookies.push_back(*cookie3);
-  new_cookies.push_back(*cookie4_with_new_value);
-  new_cookies.push_back(*cookie5_with_new_creation_time);
-  new_cookies.push_back(*cookie6_with_new_path);
-  new_cookies.push_back(*cookie7);
-  new_cookies.push_back(*cookie7_with_new_path);
-
-  CookieList cookies_to_add;
-  CookieList cookies_to_delete;
-
-  cm->ComputeCookieDiff(&old_cookies, &new_cookies, &cookies_to_add,
-                        &cookies_to_delete);
-
-  // |cookie1| has not changed.
-  EXPECT_FALSE(IsCookieInList(*cookie1, cookies_to_add));
-  EXPECT_FALSE(IsCookieInList(*cookie1, cookies_to_delete));
-
-  // |cookie2| has been deleted.
-  EXPECT_FALSE(IsCookieInList(*cookie2, cookies_to_add));
-  EXPECT_TRUE(IsCookieInList(*cookie2, cookies_to_delete));
-
-  // |cookie3| has been added.
-  EXPECT_TRUE(IsCookieInList(*cookie3, cookies_to_add));
-  EXPECT_FALSE(IsCookieInList(*cookie3, cookies_to_delete));
-
-  // |cookie4| has a new value: new cookie overrides the old one (which does not
-  // need to be explicitly removed).
-  EXPECT_FALSE(IsCookieInList(*cookie4, cookies_to_add));
-  EXPECT_FALSE(IsCookieInList(*cookie4, cookies_to_delete));
-  EXPECT_TRUE(IsCookieInList(*cookie4_with_new_value, cookies_to_add));
-  EXPECT_FALSE(IsCookieInList(*cookie4_with_new_value, cookies_to_delete));
-
-  // |cookie5| has a new creation time: new cookie overrides the old one (which
-  // does not need to be explicitly removed).
-  EXPECT_FALSE(IsCookieInList(*cookie5, cookies_to_add));
-  EXPECT_FALSE(IsCookieInList(*cookie5, cookies_to_delete));
-  EXPECT_TRUE(IsCookieInList(*cookie5_with_new_creation_time, cookies_to_add));
-  EXPECT_FALSE(
-      IsCookieInList(*cookie5_with_new_creation_time, cookies_to_delete));
-
-  // |cookie6| has a new path: the new cookie does not overrides the old one,
-  // which needs to be explicitly removed.
-  EXPECT_FALSE(IsCookieInList(*cookie6, cookies_to_add));
-  EXPECT_TRUE(IsCookieInList(*cookie6, cookies_to_delete));
-  EXPECT_TRUE(IsCookieInList(*cookie6_with_new_path, cookies_to_add));
-  EXPECT_FALSE(IsCookieInList(*cookie6_with_new_path, cookies_to_delete));
-
-  // |cookie7| is kept and |cookie7_with_new_path| is added as a new cookie.
-  EXPECT_FALSE(IsCookieInList(*cookie7, cookies_to_add));
-  EXPECT_FALSE(IsCookieInList(*cookie7, cookies_to_delete));
-  EXPECT_TRUE(IsCookieInList(*cookie7_with_new_path, cookies_to_add));
-  EXPECT_FALSE(IsCookieInList(*cookie7_with_new_path, cookies_to_delete));
 }
 
 // Check that DeleteAll does flush (as a sanity check that flush_count()

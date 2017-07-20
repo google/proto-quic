@@ -1,8 +1,10 @@
 #include <openssl/arm_arch.h>
 
 .text
-#if defined(__thumb2__)
+#if defined(__thumb2__) || defined(__clang__)
 .syntax	unified
+#endif
+#if defined(__thumb2__)
 .thumb
 #else
 .code	32

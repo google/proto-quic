@@ -102,6 +102,7 @@
     *   [defines: [string list] C preprocessor defines.](#defines)
     *   [depfile: [string] File name for input dependencies for actions.](#depfile)
     *   [deps: [label list] Private linked dependencies.](#deps)
+    *   [xcode_extra_attributes: [scope] Extra attributes for Xcode projects.](#depfile)
     *   [include_dirs: [directory list] Additional include directories.](#include_dirs)
     *   [inputs: [file list] Additional compile-time dependencies.](#inputs)
     *   [ldflags: [string list] Flags passed to the linker.](#ldflags)
@@ -123,6 +124,7 @@
     *   [response_file_contents: [string list] Contents of .rsp file for actions.](#response_file_contents)
     *   [script: [file name] Script file for actions.](#script)
     *   [sources: [file list] Source files for a target.](#sources)
+    *   [xcode_test_application_name: [string] Xcode test application name for unit or ui test.](#xcode_test_application_name)
     *   [testonly: [boolean] Declares a target must only be used for testing.](#testonly)
     *   [visibility: [label list] A list of labels that can depend on a target.](#visibility)
     *   [write_runtime_deps: Writes the target's runtime_deps to the given path.](#write_runtime_deps)
@@ -1347,6 +1349,11 @@
           bundle_resources_dir = bundle_root_dir
           bundle_executable_dir = bundle_root_dir
           bundle_plugins_dir = bundle_root_dir + "/Plugins"
+
+          xcode_extra_attributes = {
+            ONLY_ACTIVE_ARCH = "YES"
+            DEBUG_INFORMATION_FORMAT = "dwarf"
+          }
         } else {
           bundle_root_dir = "${root_build_dir}/target_name/Contents"
           bundle_resources_dir = bundle_root_dir + "/Resources"
@@ -1395,7 +1402,8 @@
   Deps: data_deps, deps, public_deps
   Dependent configs: all_dependent_configs, public_configs
   General: check_includes, configs, data, inputs, output_name,
-           output_extension, public, sources, testonly, visibility
+           output_extension, public, sources, testonly, visibility,
+           xcode_extra_attributes
 ```
 ### <a name="group"></a>**group**: Declare a named group of targets.
 
@@ -4487,6 +4495,26 @@
 
   See also "public_deps".
 ```
+### <a name="xcode_extra_attributes"></a>**xcode_extra_attributes**: Extra attributes for Xcode projects.
+
+```
+  The value defined in this scope will be copied to the EXTRA_ATTRIBUTES
+  property of the generated Xcode project. They are only meaningful when
+  generating with --ide=xcode.
+
+  See "gn help create_bundle" for more information.
+```
+
+#### **Example**
+
+```
+  create_bundle("chrome") {
+    xcode_extra_attributes = {
+      ONLY_ACTIVE_ARCH = "YES"
+    }
+    ...
+  }
+```
 ### <a name="include_dirs"></a>**include_dirs**: Additional include directories.
 
 ```
@@ -5178,6 +5206,24 @@
 
   copy
     The source are the source files to copy.
+```
+### <a name="xcode_test_application_name"></a>**xcode_test_application_name**: Xcode test application name for unit or ui test target.
+
+```
+  Each Xcode unit and ui test target must have a test application target, and
+  this value is used to specify the relationship. Only meaningful to Xcode
+  (used as part of the Xcode project generation).
+
+  See "gn help create_bundle" for more information.
+```
+
+#### **Example**
+
+```
+  create_bundle("chrome_xctest") {
+    xcode_test_application_name = "chrome"
+    ...
+  }
 ```
 ### <a name="testonly"></a>**testonly**: Declares a target must only be used for testing.
 

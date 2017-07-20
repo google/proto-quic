@@ -183,7 +183,7 @@ int main(int argc, char* argv[]) {
     }
 
     const std::map<int, std::string> reserved_ids =
-        auditor.GetReservedUniqueIDs();
+        TrafficAnnotationAuditor::GetReservedUniqueIDs();
     for (const auto& item : reserved_ids)
       items.push_back(item);
 
@@ -199,12 +199,12 @@ int main(int argc, char* argv[]) {
   }
 
   // Dump Errors and Warnings to stdout.
-  // TODO(rhalavati@): The outputs are now limited to syntax errors. Will be
-  // expanded when repository is full compatible.
   const std::vector<AuditorResult>& errors = auditor.errors();
   for (const auto& error : errors) {
-    if (error.type() == AuditorResult::ResultType::ERROR_SYNTAX)
-      printf("Error: %s\n", error.ToText().c_str());
+    printf("%s: %s\n",
+           error.type() == AuditorResult::ResultType::ERROR_SYNTAX ? "Error"
+                                                                   : "Warning",
+           error.ToText().c_str());
   }
 
   return 0;

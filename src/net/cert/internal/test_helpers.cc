@@ -161,7 +161,7 @@ bool ReadCertChainFromFile(const std::string& file_path_ascii,
     const std::string& block_data = pem_tokenizer.data();
 
     CertErrors errors;
-    if (!net::ParsedCertificate::CreateAndAddToVector(
+    if (!ParsedCertificate::CreateAndAddToVector(
             bssl::UniquePtr<CRYPTO_BUFFER>(CRYPTO_BUFFER_new(
                 reinterpret_cast<const uint8_t*>(block_data.data()),
                 block_data.size(), nullptr)),

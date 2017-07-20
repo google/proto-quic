@@ -6,11 +6,14 @@
 
 #include <stdint.h>
 
+#include <stack>
 #include <utility>
 
 #include "base/bits.h"
-#include "base/json/json_writer.h"
+#include "base/json/string_escape.h"
 #include "base/memory/ptr_util.h"
+#include "base/trace_event/common/trace_event_common.h"
+#include "base/trace_event/trace_event_impl.h"
 #include "base/trace_event/trace_event_memory_overhead.h"
 #include "base/values.h"
 
@@ -26,7 +29,7 @@ const char kTypeBool = 'b';
 const char kTypeInt = 'i';
 const char kTypeDouble = 'd';
 const char kTypeString = 's';
-const char kTypeCStr = '*';
+const char kTypeCStr = '*';  // only used for key names
 
 #ifndef NDEBUG
 const bool kStackTypeDict = false;
@@ -454,12 +457,100 @@ void TracedValue::AppendAsTraceFormat(std::string* out) const {
   DCHECK_CURRENT_CONTAINER_IS(kStackTypeDict);
   DCHECK_CONTAINER_STACK_DEPTH_EQ(1u);
 
-  // TODO(primiano): this could be smarter, skip the ToBaseValue encoding and
-  // produce the JSON on its own. This will require refactoring JSONWriter
-  // to decouple the base::Value traversal from the JSON writing bits
-  std::string tmp;
-  JSONWriter::Write(*ToBaseValue(), &tmp);
-  *out += tmp;
+  struct State {
+    enum Type { kTypeDict, kTypeArray };
+    Type type;
+    bool needs_comma;
+  };
+
+  auto maybe_append_key_name = [](State current_state, PickleIterator* it,
+                                  std::string* out) {
+    if (current_state.type == State::kTypeDict) {
+      EscapeJSONString(ReadKeyName(*it), true, out);
+      out->append(":");
+    }
+  };
+
+  std::stack<State> state_stack;
+
+  out->append("{");
+  state_stack.push({State::kTypeDict});
+
+  PickleIterator it(pickle_);
+  for (const char* type; it.ReadBytes(&type, 1);) {
+    switch (*type) {
+      case kTypeEndDict:
+        out->append("}");
+        state_stack.pop();
+        continue;
+
+      case kTypeEndArray:
+        out->append("]");
+        state_stack.pop();
+        continue;
+    }
+
+    State& current_state = state_stack.top();
+    if (current_state.needs_comma) {
+      out->append(",");
+    }
+
+    switch (*type) {
+      case kTypeStartDict:
+        maybe_append_key_name(current_state, &it, out);
+        out->append("{");
+        state_stack.push({State::kTypeDict});
+        break;
+
+      case kTypeStartArray:
+        maybe_append_key_name(current_state, &it, out);
+        out->append("[");
+        state_stack.push({State::kTypeArray});
+        break;
+
+      case kTypeBool: {
+        TraceEvent::TraceValue json_value;
+        CHECK(it.ReadBool(&json_value.as_bool));
+        maybe_append_key_name(current_state, &it, out);
+        TraceEvent::AppendValueAsJSON(TRACE_VALUE_TYPE_BOOL, json_value, out);
+      } break;
+
+      case kTypeInt: {
+        int value;
+        CHECK(it.ReadInt(&value));
+        maybe_append_key_name(current_state, &it, out);
+        TraceEvent::TraceValue json_value;
+        json_value.as_int = value;
+        TraceEvent::AppendValueAsJSON(TRACE_VALUE_TYPE_INT, json_value, out);
+      } break;
+
+      case kTypeDouble: {
+        TraceEvent::TraceValue json_value;
+        CHECK(it.ReadDouble(&json_value.as_double));
+        maybe_append_key_name(current_state, &it, out);
+        TraceEvent::AppendValueAsJSON(TRACE_VALUE_TYPE_DOUBLE, json_value, out);
+      } break;
+
+      case kTypeString: {
+        std::string value;
+        CHECK(it.ReadString(&value));
+        maybe_append_key_name(current_state, &it, out);
+        TraceEvent::TraceValue json_value;
+        json_value.as_string = value.c_str();
+        TraceEvent::AppendValueAsJSON(TRACE_VALUE_TYPE_STRING, json_value, out);
+      } break;
+
+      default:
+        NOTREACHED();
+    }
+
+    current_state.needs_comma = true;
+  }
+
+  out->append("}");
+  state_stack.pop();
+
+  DCHECK(state_stack.empty());
 }
 
 void TracedValue::EstimateTraceMemoryOverhead(

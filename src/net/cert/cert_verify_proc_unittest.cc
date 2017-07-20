@@ -134,6 +134,8 @@ CertVerifyProcType GetDefaultCertVerifyProcType() {
   return CERT_VERIFY_PROC_MAC;
 #elif defined(OS_WIN)
   return CERT_VERIFY_PROC_WIN;
+#elif defined(OS_FUCHSIA)
+  return CERT_VERIFY_PROC_BUILTIN;
 #else
 // Will fail to compile.
 #endif

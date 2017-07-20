@@ -14,13 +14,13 @@
 
 #include <functional>
 #include <memory>
-#include <string>
 #include <type_traits>
 
 #include "base/logging.h"
-#include "base/strings/string_piece.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
+#include "net/http2/platform/api/http2_string.h"
+#include "net/http2/platform/api/http2_string_piece.h"
 #include "net/http2/tools/failure.h"
 #include "net/http2/tools/http2_random.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -31,12 +31,12 @@ namespace test {
 // Some helpers.
 
 template <typename T, size_t N>
-base::StringPiece ToStringPiece(T (&data)[N]) {
-  return base::StringPiece(reinterpret_cast<const char*>(data), N * sizeof(T));
+Http2StringPiece ToStringPiece(T (&data)[N]) {
+  return Http2StringPiece(reinterpret_cast<const char*>(data), N * sizeof(T));
 }
 
-// strings/hex_ascii_dump.h doesn't support StringPiece args for this case.
-std::string HexEncode(base::StringPiece s);
+// strings/hex_ascii_dump.h doesn't support Http2StringPiece args for this case.
+Http2String HexEncode(Http2StringPiece s);
 
 // Overwrite the enum with some random value, probably not a valid value for
 // the enum type, but which fits into its storage.

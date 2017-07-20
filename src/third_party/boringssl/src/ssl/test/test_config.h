@@ -24,6 +24,7 @@ struct TestConfig {
   bool is_server = false;
   bool is_dtls = false;
   int resume_count = 0;
+  std::string write_settings;
   bool fallback_scsv = false;
   std::string digest_prefs;
   std::vector<int> signing_prefs;
@@ -68,6 +69,7 @@ struct TestConfig {
   std::string expected_signed_cert_timestamps;
   int min_version = 0;
   int max_version = 0;
+  int expect_version = 0;
   int mtu = 0;
   bool implicit_handshake = false;
   bool use_early_callback = false;
@@ -91,6 +93,7 @@ struct TestConfig {
   bool use_ticket_callback = false;
   bool renew_ticket = false;
   bool enable_early_data = false;
+  int tls13_variant = 0;
   bool enable_client_custom_extension = false;
   bool enable_server_custom_extension = false;
   bool custom_extension_skip = false;
@@ -100,6 +103,7 @@ struct TestConfig {
   bool shim_shuts_down = false;
   bool verify_fail = false;
   bool verify_peer = false;
+  bool verify_peer_if_no_obc = false;
   bool expect_verify_result = false;
   std::string signed_cert_timestamps;
   int expect_total_renegotiations = 0;
@@ -140,6 +144,7 @@ struct TestConfig {
   bool handshake_twice = false;
   bool allow_unknown_alpn_protos = false;
   bool enable_ed25519 = false;
+  bool use_custom_verify_callback = false;
 };
 
 bool ParseConfig(int argc, char **argv, TestConfig *out_initial,

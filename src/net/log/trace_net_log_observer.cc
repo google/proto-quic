@@ -101,12 +101,12 @@ void TraceNetLogObserver::StopWatchForTraceStart() {
   // Should only stop if is currently watching.
   DCHECK(net_log_to_watch_);
   base::trace_event::TraceLog::GetInstance()->RemoveEnabledStateObserver(this);
-  // net_log() != nullptr iff NetLog::DeprecatedAddObserver() has been called.
+  // net_log() != nullptr iff NetLog::AddObserver() has been called.
   // This implies that if the netlog category wasn't enabled, then
-  // NetLog::DeprecatedRemoveObserver() will not get called, and there won't be
-  // a crash in NetLog::DeprecatedRemoveObserver().
+  // NetLog::RemoveObserver() will not get called, and there won't be
+  // a crash in NetLog::RemoveObserver().
   if (net_log())
-    net_log()->DeprecatedRemoveObserver(this);
+    net_log()->RemoveObserver(this);
   net_log_to_watch_ = nullptr;
 }
 
@@ -116,12 +116,12 @@ void TraceNetLogObserver::OnTraceLogEnabled() {
   if (!enabled)
     return;
 
-  net_log_to_watch_->DeprecatedAddObserver(this, NetLogCaptureMode::Default());
+  net_log_to_watch_->AddObserver(this, NetLogCaptureMode::Default());
 }
 
 void TraceNetLogObserver::OnTraceLogDisabled() {
   if (net_log())
-    net_log()->DeprecatedRemoveObserver(this);
+    net_log()->RemoveObserver(this);
 }
 
 }  // namespace net

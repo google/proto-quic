@@ -11,11 +11,12 @@
 #       Path to .grd file.
 #
 #   source_is_generated (optional, defaults to false)
-#       Declares that the input is generated so that grit_info is not run
-#       on the file when compute_grit_inputs_for_analyze is set (because the
-#       file will not exist at analyze time). For "analyze" to be correct in
-#       this case, the inputs to the grit file must either be listed in the
-#       inputs variable or are listed as inputs to dependencies of this target.
+#       Declares that the input (or one of its dependencies) is generated so
+#       that grit_info is not run on the file when
+#       compute_grit_inputs_for_analyze is set (because the file will not
+#       exist at analyze time). For "analyze" to be correct in this case, the
+#       inputs to the grit file must either be listed in the inputs variable
+#       or are listed as inputs to dependencies of this target.
 #
 #   inputs  (optional)
 #       List of additional files, required for grit to process source file.

@@ -4,8 +4,6 @@
 
 #include "net/http2/hpack/decoder/hpack_whole_entry_listener.h"
 
-using base::StringPiece;
-
 namespace net {
 
 HpackWholeEntryListener::~HpackWholeEntryListener() {}
@@ -23,7 +21,7 @@ void HpackWholeEntryNoOpListener::OnLiteralNameAndValue(
     HpackDecoderStringBuffer* value_buffer) {}
 void HpackWholeEntryNoOpListener::OnDynamicTableSizeUpdate(size_t size) {}
 void HpackWholeEntryNoOpListener::OnHpackDecodeError(
-    StringPiece error_message) {}
+    Http2StringPiece error_message) {}
 
 // static
 HpackWholeEntryNoOpListener* HpackWholeEntryNoOpListener::NoOpListener() {

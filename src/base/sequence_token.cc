@@ -13,9 +13,9 @@ namespace base {
 
 namespace {
 
-base::StaticAtomicSequenceNumber g_sequence_token_generator;
+base::AtomicSequenceNumber g_sequence_token_generator;
 
-base::StaticAtomicSequenceNumber g_task_token_generator;
+base::AtomicSequenceNumber g_task_token_generator;
 
 LazyInstance<ThreadLocalPointer<const SequenceToken>>::Leaky
     tls_current_sequence_token = LAZY_INSTANCE_INITIALIZER;

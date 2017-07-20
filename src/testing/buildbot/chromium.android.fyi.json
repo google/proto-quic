@@ -675,12 +675,12 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "1",
               "device_os": "KTU84P",
               "device_type": "hammerhead"
             }
           ],
-          "hard_timeout": 600
+          "hard_timeout": 960
         }
       }
     ]

@@ -7,10 +7,8 @@
 // Tests of HpackHuffmanDecoder and HuffmanBitBuffer.
 
 #include <iostream>
-#include <string>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/tools/failure.h"
@@ -20,8 +18,6 @@
 
 using ::testing::AssertionResult;
 using ::testing::AssertionSuccess;
-using base::StringPiece;
-using std::string;
 
 namespace net {
 namespace test {
@@ -37,11 +33,11 @@ TEST(HuffmanBitBufferTest, Reset) {
 }
 
 TEST(HuffmanBitBufferTest, AppendBytesAligned) {
-  string s;
+  Http2String s;
   s.push_back('\x11');
   s.push_back('\x22');
   s.push_back('\x33');
-  StringPiece sp(s);
+  Http2StringPiece sp(s);
 
   HuffmanBitBuffer bb;
   sp.remove_prefix(bb.AppendBytes(sp));
@@ -86,11 +82,11 @@ TEST(HuffmanBitBufferTest, AppendBytesAligned) {
 }
 
 TEST(HuffmanBitBufferTest, ConsumeBits) {
-  string s;
+  Http2String s;
   s.push_back('\x11');
   s.push_back('\x22');
   s.push_back('\x33');
-  StringPiece sp(s);
+  Http2StringPiece sp(s);
 
   HuffmanBitBuffer bb;
   sp.remove_prefix(bb.AppendBytes(sp));
@@ -108,7 +104,7 @@ TEST(HuffmanBitBufferTest, ConsumeBits) {
 }
 
 TEST(HuffmanBitBufferTest, AppendBytesUnaligned) {
-  string s;
+  Http2String s;
   s.push_back('\x11');
   s.push_back('\x22');
   s.push_back('\x33');
@@ -122,7 +118,7 @@ TEST(HuffmanBitBufferTest, AppendBytesUnaligned) {
   s.push_back('\xbb');
   s.push_back('\xcc');
   s.push_back('\xdd');
-  StringPiece sp(s);
+  Http2StringPiece sp(s);
 
   HuffmanBitBuffer bb;
   sp.remove_prefix(bb.AppendBytes(sp));
@@ -170,10 +166,10 @@ class HpackHuffmanDecoderTest
 
   DecodeStatus ResumeDecoding(DecodeBuffer* b) override {
     input_bytes_seen_ += b->Remaining();
-    StringPiece sp(b->cursor(), b->Remaining());
+    Http2StringPiece sp(b->cursor(), b->Remaining());
     if (DecodeFragment(sp)) {
       b->AdvanceCursor(b->Remaining());
-      // Successfully decoded (or buffered) the bytes in StringPiece.
+      // Successfully decoded (or buffered) the bytes in Http2StringPiece.
       EXPECT_LE(input_bytes_seen_, input_bytes_expected_);
       // Have we reached the end of the encoded string?
       if (input_bytes_expected_ == input_bytes_seen_) {
@@ -188,7 +184,7 @@ class HpackHuffmanDecoderTest
     return DecodeStatus::kDecodeError;
   }
 
-  bool DecodeFragment(StringPiece sp) {
+  bool DecodeFragment(Http2StringPiece sp) {
     switch (GetParam()) {
       case DecoderChoice::IF_TREE:
         return decoder_.DecodeWithIfTreeAndStruct(sp, &output_buffer_);
@@ -201,8 +197,8 @@ class HpackHuffmanDecoderTest
   }
 
   AssertionResult HuffmanDecodeAndValidateSeveralWays(
-      StringPiece encoded,
-      StringPiece expected_plain) {
+      Http2StringPiece encoded,
+      Http2StringPiece expected_plain) {
     input_bytes_expected_ = encoded.size();
     NoArgValidator validator = [expected_plain, this]() -> AssertionResult {
       VERIFY_EQ(output_buffer_.size(), expected_plain.size());
@@ -216,7 +212,7 @@ class HpackHuffmanDecoderTest
   }
 
   HpackHuffmanDecoder decoder_;
-  string output_buffer_;
+  Http2String output_buffer_;
   size_t input_bytes_seen_;
   size_t input_bytes_expected_;
 };
@@ -227,7 +223,7 @@ INSTANTIATE_TEST_CASE_P(AllDecoders,
 
 TEST_P(HpackHuffmanDecoderTest, SpecRequestExamples) {
   HpackHuffmanDecoder decoder;
-  string test_table[] = {
+  Http2String test_table[] = {
       a2b_hex("f1e3c2e5f23a6ba0ab90f4ff"),
       "www.example.com",
       a2b_hex("a8eb10649cbf"),
@@ -238,9 +234,9 @@ TEST_P(HpackHuffmanDecoderTest, SpecRequestExamples) {
       "custom-value",
   };
   for (size_t i = 0; i != arraysize(test_table); i += 2) {
-    const string& huffman_encoded(test_table[i]);
-    const string& plain_string(test_table[i + 1]);
-    string buffer;
+    const Http2String& huffman_encoded(test_table[i]);
+    const Http2String& plain_string(test_table[i + 1]);
+    Http2String buffer;
     decoder.Reset();
     EXPECT_TRUE(decoder.Decode(huffman_encoded, &buffer)) << decoder;
     EXPECT_TRUE(decoder.InputProperlyTerminated()) << decoder;
@@ -251,7 +247,7 @@ TEST_P(HpackHuffmanDecoderTest, SpecRequestExamples) {
 TEST_P(HpackHuffmanDecoderTest, SpecResponseExamples) {
   HpackHuffmanDecoder decoder;
   // clang-format off
-  string test_table[] = {
+  Http2String test_table[] = {
     a2b_hex("6402"),
     "302",
     a2b_hex("aec3771a4b"),
@@ -269,9 +265,9 @@ TEST_P(HpackHuffmanDecoderTest, SpecResponseExamples) {
   };
   // clang-format on
   for (size_t i = 0; i != arraysize(test_table); i += 2) {
-    const string& huffman_encoded(test_table[i]);
-    const string& plain_string(test_table[i + 1]);
-    string buffer;
+    const Http2String& huffman_encoded(test_table[i]);
+    const Http2String& plain_string(test_table[i + 1]);
+    Http2String buffer;
     decoder.Reset();
     EXPECT_TRUE(decoder.Decode(huffman_encoded, &buffer)) << decoder;
     EXPECT_TRUE(decoder.InputProperlyTerminated()) << decoder;

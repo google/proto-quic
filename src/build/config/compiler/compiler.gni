@@ -72,20 +72,20 @@ if (is_mac || is_ios) {
   enable_frame_pointers = true
 } else if (is_win) {
   # 64-bit Windows ABI doesn't support frame pointers.
-  if (target_cpu == "x64") {
+  if (current_cpu == "x64") {
     enable_frame_pointers = false
   } else {
     enable_frame_pointers = true
   }
 } else if (is_chromeos) {
-  # ChromeOS requires frame pointers in x64 builds, to support CWP.
-  # TODO(711784): Building ARM Thumb without frame pointers can lead to code
-  # in ChromeOS which triggers some ARM A12/A17 errata. They can be disabled
-  # on non-x64 once that is resolved.
-  enable_frame_pointers = true
-} else if (current_cpu == "arm64") {
+  # ChromeOS generally prefers frame pointers, to support CWP.
+  # However, Clang does not currently generate usable frame pointers in ARM
+  # 32-bit builds (https://bugs.llvm.org/show_bug.cgi?id=18505) so disable them
+  # there to avoid the unnecessary overhead.
+  enable_frame_pointers = current_cpu != "arm"
+} else if (is_android) {
   # Ensure that stacks from arm64 crash dumps are usable (crbug.com/391706).
-  enable_frame_pointers = true
+  enable_frame_pointers = current_cpu == "arm64"
 } else {
   # Explicitly ask for frame pointers, otherwise:
   # * Stacks may be missing for sanitizer and profiling builds.
@@ -100,6 +100,7 @@ if (is_mac || is_ios) {
 can_unwind_with_frame_pointers = enable_frame_pointers
 if (current_cpu == "arm" && arm_use_thumb) {
   # We cannot currently unwind ARM Thumb frame pointers correctly.
+  # See https://bugs.llvm.org/show_bug.cgi?id=18505
   can_unwind_with_frame_pointers = false
 } else if (is_win) {
   # Windows 32-bit does provide frame pointers, but the compiler does not

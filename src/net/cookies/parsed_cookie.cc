@@ -413,11 +413,6 @@ void ParsedCookie::ParseTokenValuePairs(const std::string& cookie_line) {
       break;
     }
 
-    if (pair_num == 0) {
-      UMA_HISTOGRAM_BOOLEAN("Cookie.CookieLineCookieValueValidity",
-                            IsValidCookieValue(pair.second));
-    }
-
     pairs_.push_back(pair);
 
     // We've processed a token/value pair, we're either at the end of

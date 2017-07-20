@@ -12,7 +12,6 @@
 #include "net/cert/pem_tokenizer.h"
 #include "net/der/input.h"
 #include "net/der/parser.h"
-#include "net/test/test_data_directory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

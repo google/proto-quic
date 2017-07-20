@@ -4,7 +4,6 @@
 
 #include "net/cert/internal/cert_issuer_source_aia.h"
 
-#include "base/bind.h"
 #include "net/cert/cert_net_fetcher.h"
 #include "net/cert/internal/cert_errors.h"
 #include "net/cert/x509_util.h"

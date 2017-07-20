@@ -63,7 +63,7 @@ def SetConfigPath(options):
   return libdir
 
 
-def GetPkgConfigPrefixToStrip(args):
+def GetPkgConfigPrefixToStrip(options, args):
   """Returns the prefix from pkg-config where packages are installed.
 
   This returned prefix is the one that should be stripped from the beginning of
@@ -76,8 +76,8 @@ def GetPkgConfigPrefixToStrip(args):
   # instead of relative to /path/to/chroot/build/x86-generic (i.e prefix=/usr).
   # To support this correctly, it's necessary to extract the prefix to strip
   # from pkg-config's |prefix| variable.
-  prefix = subprocess.check_output(["pkg-config", "--variable=prefix"] + args,
-      env=os.environ)
+  prefix = subprocess.check_output([options.pkg_config,
+      "--variable=prefix"] + args, env=os.environ)
   if prefix[-4] == '/usr':
     return prefix[4:]
   return prefix
@@ -135,7 +135,7 @@ def main():
     libdir = SetConfigPath(options)
     if options.debug:
       sys.stderr.write('PKG_CONFIG_LIBDIR=%s\n' % libdir)
-    prefix = GetPkgConfigPrefixToStrip(args)
+    prefix = GetPkgConfigPrefixToStrip(options, args)
   else:
     prefix = ''
 

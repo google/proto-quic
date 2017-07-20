@@ -29,6 +29,10 @@ icu_use_data_file = false
 # to simplify deployment.
 v8_use_external_startup_data = false
 
+# Do not use bundled libc++ to ensure that everything works when Headless
+# Chromium is embedded.
+use_custom_libcxx = false
+
 enable_nacl = false
 enable_print_preview = false
 enable_remoting = false

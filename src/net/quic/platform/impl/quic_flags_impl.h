@@ -56,5 +56,4 @@ inline void SetQuicFlagImpl(std::string* f, const std::string& v) {
 }
 
 }  // namespace net
-
 #endif  // NET_QUIC_PLATFORM_IMPL_QUIC_FLAGS_IMPL_H_

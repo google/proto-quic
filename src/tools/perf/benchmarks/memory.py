@@ -27,7 +27,7 @@ class _MemoryInfra(perf_benchmark.PerfBenchmark):
   is part of chrome tracing, and extracts it using timeline-based measurements.
   """
 
-  def CreateTimelineBasedMeasurementOptions(self):
+  def CreateCoreTimelineBasedMeasurementOptions(self):
     # Enable only memory-infra, to get memory dumps, and blink.console, to get
     # the timeline markers used for mapping threads to tabs.
     trace_memory = chrome_trace_category_filter.ChromeTraceCategoryFilter(
@@ -161,7 +161,7 @@ class _MemoryV8Benchmark(_MemoryInfra):
       r'renderer_processes:'
       r'(reported_by_chrome:v8|reported_by_os:system_memory:[^:]+$)')
 
-  def CreateTimelineBasedMeasurementOptions(self):
+  def CreateCoreTimelineBasedMeasurementOptions(self):
     v8_categories = [
         'blink.console', 'renderer.scheduler', 'v8', 'webkit.console']
     memory_categories = ['blink.console', 'disabled-by-default-memory-infra']

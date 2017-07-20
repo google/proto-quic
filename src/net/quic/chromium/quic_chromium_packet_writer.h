@@ -42,7 +42,7 @@ class NET_EXPORT_PRIVATE QuicChromiumPacketWriter : public QuicPacketWriter {
 
   QuicChromiumPacketWriter();
   // |socket| must outlive writer.
-  explicit QuicChromiumPacketWriter(Socket* socket);
+  explicit QuicChromiumPacketWriter(DatagramClientSocket* socket);
   ~QuicChromiumPacketWriter() override;
 
   // |delegate| must outlive writer.
@@ -68,7 +68,7 @@ class NET_EXPORT_PRIVATE QuicChromiumPacketWriter : public QuicPacketWriter {
   void OnWriteComplete(int rv);
 
  private:
-  Socket* socket_;      // Unowned.
+  DatagramClientSocket* socket_;  // Unowned.
   Delegate* delegate_;  // Unowned.
   // When a write returns asynchronously, |packet_| stores the written
   // packet until OnWriteComplete is called.

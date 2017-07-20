@@ -131,8 +131,8 @@ bool NetLog::IsCapturing() const {
   return base::subtle::NoBarrier_Load(&is_capturing_) != 0;
 }
 
-void NetLog::DeprecatedAddObserver(NetLog::ThreadSafeObserver* observer,
-                                   NetLogCaptureMode capture_mode) {
+void NetLog::AddObserver(NetLog::ThreadSafeObserver* observer,
+                         NetLogCaptureMode capture_mode) {
   base::AutoLock lock(lock_);
 
   DCHECK(!observer->net_log_);
@@ -155,7 +155,7 @@ void NetLog::SetObserverCaptureMode(NetLog::ThreadSafeObserver* observer,
   observer->capture_mode_ = capture_mode;
 }
 
-void NetLog::DeprecatedRemoveObserver(NetLog::ThreadSafeObserver* observer) {
+void NetLog::RemoveObserver(NetLog::ThreadSafeObserver* observer) {
   base::AutoLock lock(lock_);
 
   DCHECK_EQ(this, observer->net_log_);

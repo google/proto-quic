@@ -18,6 +18,7 @@
 #include "base/single_thread_task_runner.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 #include "net/base/ip_address.h"
 #include "net/base/ip_endpoint.h"
 #include "net/dns/dns_hosts.h"
@@ -120,7 +121,8 @@ class DnsConfigWatcher {
 ConfigParsePosixResult ReadDnsConfig(DnsConfig* config) {
   ConfigParsePosixResult result;
   config->unhandled_options = false;
-#if defined(OS_OPENBSD)
+// TODO(fuchsia): Use res_ninit() when it's implemented on Fuchsia.
+#if defined(OS_OPENBSD) || defined(OS_FUCHSIA)
   // Note: res_ninit in glibc always returns 0 and sets RES_INIT.
   // res_init behaves the same way.
   memset(&_res, 0, sizeof(_res));

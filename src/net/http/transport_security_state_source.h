@@ -5,7 +5,15 @@
 #ifndef NET_HTTP_TRANSPORT_SECURITY_STATE_SOURCE_H_
 #define NET_HTTP_TRANSPORT_SECURITY_STATE_SOURCE_H_
 
+#include <stddef.h>
+#include <stdint.h>
+
+#include "net/base/net_export.h"
+
 namespace net {
+
+// kNoReportURI is a placeholder for when a pinset does not have a report URI.
+NET_EXPORT_PRIVATE extern const char kNoReportURI[];
 
 struct TransportSecurityStateSource {
   struct Pinset {

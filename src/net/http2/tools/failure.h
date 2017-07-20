@@ -14,9 +14,9 @@
 
 #include <iosfwd>
 #include <sstream>
-#include <string>
 
 #include "base/macros.h"
+#include "net/http2/platform/api/http2_string.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -39,21 +39,21 @@ class VerifyThatHelper {
 
   operator bool() const { return matches_; }
 
-  const std::string& printed_value() const { return printed_value_; }
-  const std::string& matcher_description() const {
+  const Http2String& printed_value() const { return printed_value_; }
+  const Http2String& matcher_description() const {
     return matcher_description_;
   }
 
  private:
   bool matches_;
-  std::string printed_value_;
-  std::string matcher_description_;
+  Http2String printed_value_;
+  Http2String matcher_description_;
 
   DISALLOW_COPY_AND_ASSIGN(VerifyThatHelper);
 };
 
 // Constructs a failure message for Boolean assertions such as VERIFY_TRUE.
-std::string GetBoolAssertionFailureMessage(
+Http2String GetBoolAssertionFailureMessage(
     const ::testing::AssertionResult& assertion_result,
     const char* expression_text,
     const char* actual_predicate_value,

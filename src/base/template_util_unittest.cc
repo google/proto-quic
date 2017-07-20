@@ -69,5 +69,26 @@ static_assert(
     internal::SupportsOstreamOperator<const StructWithOperator&>::value,
     "struct with operator<< should be printable by const ref");
 
+// base::is_trivially_copyable
+class TrivialCopy {
+ public:
+  TrivialCopy(int d) : data_(d) {}
+
+ protected:
+  int data_;
+};
+
+class TrivialCopyButWithDestructor : public TrivialCopy {
+ public:
+  TrivialCopyButWithDestructor(int d) : TrivialCopy(d) {}
+  ~TrivialCopyButWithDestructor() { data_ = 0; }
+};
+
+static_assert(base::is_trivially_copyable<TrivialCopy>::value,
+              "TrivialCopy should be detected as trivially copyable");
+static_assert(!base::is_trivially_copyable<TrivialCopyButWithDestructor>::value,
+              "TrivialCopyButWithDestructor should not be detected as "
+              "trivially copyable");
+
 }  // namespace
 }  // namespace base

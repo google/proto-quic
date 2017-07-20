@@ -43,24 +43,24 @@ struct TestParams {
   TestParams(QuicVersion version,
              bool version_serialization,
              QuicConnectionIdLength length,
-             bool delegate_saves_data)
+             bool framer_has_data_producer)
       : version(version),
         connection_id_length(length),
         version_serialization(version_serialization),
-        delegate_saves_data(delegate_saves_data) {}
+        framer_has_data_producer(framer_has_data_producer) {}
 
   friend std::ostream& operator<<(std::ostream& os, const TestParams& p) {
     os << "{ client_version: " << QuicVersionToString(p.version)
        << " connection id length: " << p.connection_id_length
        << " include version: " << p.version_serialization
-       << " delegate_saves_data: " << p.delegate_saves_data << " }";
+       << " framer_has_data_producer: " << p.framer_has_data_producer << " }";
     return os;
   }
 
   QuicVersion version;
   QuicConnectionIdLength connection_id_length;
   bool version_serialization;
-  bool delegate_saves_data;
+  bool framer_has_data_producer;
 };
 
 // Constructs various test permutations.
@@ -68,18 +68,18 @@ std::vector<TestParams> GetTestParams() {
   std::vector<TestParams> params;
   constexpr QuicConnectionIdLength kMax = PACKET_8BYTE_CONNECTION_ID;
   QuicVersionVector all_supported_versions = AllSupportedVersions();
-  for (bool delegate_saves_data : {true, false}) {
+  for (bool framer_has_data_producer : {true, false}) {
     for (size_t i = 0; i < all_supported_versions.size(); ++i) {
       params.push_back(TestParams(all_supported_versions[i], true, kMax,
-                                  delegate_saves_data));
+                                  framer_has_data_producer));
       params.push_back(TestParams(all_supported_versions[i], false, kMax,
-                                  delegate_saves_data));
+                                  framer_has_data_producer));
     }
     params.push_back(TestParams(all_supported_versions[0], true,
                                 PACKET_0BYTE_CONNECTION_ID,
-                                delegate_saves_data));
-    params.push_back(
-        TestParams(all_supported_versions[0], true, kMax, delegate_saves_data));
+                                framer_has_data_producer));
+    params.push_back(TestParams(all_supported_versions[0], true, kMax,
+                                framer_has_data_producer));
   }
   return params;
 }
@@ -132,8 +132,8 @@ class QuicPacketCreatorTest : public QuicTestWithParam<TestParams> {
                           new NullEncrypter(Perspective::IS_CLIENT));
     client_framer_.set_visitor(&framer_visitor_);
     server_framer_.set_visitor(&framer_visitor_);
-    if (GetParam().delegate_saves_data) {
-      creator_.set_delegate_saves_data(true);
+    if (GetParam().framer_has_data_producer) {
+      client_framer_.set_data_producer(&producer_);
     }
   }
 
@@ -164,12 +164,12 @@ class QuicPacketCreatorTest : public QuicTestWithParam<TestParams> {
     EXPECT_EQ(STREAM_FRAME, frame.type);
     ASSERT_TRUE(frame.stream_frame);
     EXPECT_EQ(stream_id, frame.stream_frame->stream_id);
-    if (GetParam().delegate_saves_data) {
+    if (client_framer_.HasDataProducer()) {
       char buf[kMaxPacketSize];
       QuicDataWriter writer(kMaxPacketSize, buf, Perspective::IS_CLIENT,
                             HOST_BYTE_ORDER);
       if (frame.stream_frame->data_length > 0) {
-        delegate_.WriteStreamData(stream_id, frame.stream_frame->offset,
+        producer_.WriteStreamData(stream_id, frame.stream_frame->offset,
                                   frame.stream_frame->data_length, &writer);
       }
       EXPECT_EQ(data, QuicStringPiece(buf, frame.stream_frame->data_length));
@@ -233,6 +233,7 @@ class QuicPacketCreatorTest : public QuicTestWithParam<TestParams> {
   SimpleBufferAllocator buffer_allocator_;
   QuicPacketCreator creator_;
   SerializedPacket serialized_packet_;
+  SimpleDataProducer producer_;
 };
 
 // Run all packet creator tests with all supported versions of QUIC, and with

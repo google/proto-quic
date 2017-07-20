@@ -39,9 +39,9 @@ class CookieMonsterTest : public testing::Test {
   std::unique_ptr<base::MessageLoop> message_loop_;
 };
 
-class BaseCallback {
+class CookieTestCallback {
  public:
-  BaseCallback() : has_run_(false) {}
+  CookieTestCallback() : has_run_(false) {}
 
  protected:
   void WaitForCallback() {
@@ -60,7 +60,7 @@ class BaseCallback {
   bool has_run_;
 };
 
-class SetCookieCallback : public BaseCallback {
+class SetCookieCallback : public CookieTestCallback {
  public:
   void SetCookie(CookieMonster* cm,
                  const GURL& gurl,
@@ -74,12 +74,12 @@ class SetCookieCallback : public BaseCallback {
  private:
   void Run(bool success) {
     EXPECT_TRUE(success);
-    BaseCallback::Run();
+    CookieTestCallback::Run();
   }
   CookieOptions options_;
 };
 
-class GetCookiesCallback : public BaseCallback {
+class GetCookiesCallback : public CookieTestCallback {
  public:
   const std::string& GetCookies(CookieMonster* cm, const GURL& gurl) {
     cm->GetCookiesWithOptionsAsync(
@@ -92,10 +92,27 @@ class GetCookiesCallback : public BaseCallback {
  private:
   void Run(const std::string& cookies) {
     cookies_ = cookies;
-    BaseCallback::Run();
+    CookieTestCallback::Run();
   }
   std::string cookies_;
   CookieOptions options_;
+};
+
+class GetAllCookiesCallback : public CookieTestCallback {
+ public:
+  CookieList GetAllCookies(CookieMonster* cm) {
+    cm->GetAllCookiesAsync(
+        base::Bind(&GetAllCookiesCallback::Run, base::Unretained(this)));
+    WaitForCallback();
+    return cookies_;
+  }
+
+ private:
+  void Run(const CookieList& cookies) {
+    cookies_ = cookies;
+    CookieTestCallback::Run();
+  }
+  CookieList cookies_;
 };
 
 }  // namespace
@@ -227,7 +244,9 @@ TEST_F(CookieMonsterTest, TestDomainTree) {
         base::StringPrintf(domain_cookie_format_tree, it->c_str());
     setCookieCallback.SetCookie(cm.get(), gurl, cookie);
   }
-  EXPECT_EQ(31u, cm->GetAllCookies().size());
+
+  GetAllCookiesCallback getAllCookiesCallback;
+  EXPECT_EQ(31u, getAllCookiesCallback.GetAllCookies(cm.get()).size());
 
   GURL probe_gurl("https://b.a.b.a.top.com/");
   std::string cookie_line = getCookiesCallback.GetCookies(cm.get(), probe_gurl);

@@ -262,6 +262,9 @@ char kTSanDefaultSuppressions[] =
     "race:base::i18n::IsRTL\n"
     "race:base::i18n::SetICUDefaultLocale\n"
 
+    //
+    "race:third_party/harfbuzz-ng/src/*\n"
+
     // End of suppressions.
     ;  // Please keep this semicolon.
 

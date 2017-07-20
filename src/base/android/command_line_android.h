@@ -17,9 +17,6 @@ void BASE_EXPORT InitNativeCommandLineFromJavaArray(
     JNIEnv* env,
     jobjectArray init_command_line);
 
-// JNI registration boilerplate.
-bool RegisterCommandLine(JNIEnv* env);
-
 }  // namespace android
 }  // namespace base
 

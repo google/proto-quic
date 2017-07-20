@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/android/path_service_android.h"
-
 #include "base/android/jni_android.h"
 #include "base/android/jni_string.h"
 #include "base/files/file_path.h"
@@ -19,10 +17,6 @@ void Override(JNIEnv* env,
               const JavaParamRef<jstring>& path) {
   FilePath file_path(ConvertJavaStringToUTF8(env, path));
   PathService::Override(what, file_path);
-}
-
-bool RegisterPathService(JNIEnv* env) {
-  return RegisterNativesImpl(env);
 }
 
 }  // namespace android

@@ -34,25 +34,31 @@ SendAlgorithmInterface* SendAlgorithmInterface::Create(
                            random);
     case kPCC:
       if (FLAGS_quic_reloadable_flag_quic_enable_pcc) {
-        QUIC_FLAG_COUNT(quic_reloadable_flag_quic_enable_pcc);
         return CreatePccSender(clock, rtt_stats, unacked_packets, random, stats,
                                initial_congestion_window,
                                max_congestion_window);
       }
     // Fall back to CUBIC if PCC is disabled.
-    // FALLTHROUGH_INTENDED
     case kCubic:
-      return new TcpCubicSenderPackets(
-          clock, rtt_stats, false /* don't use Reno */,
-          initial_congestion_window, max_congestion_window, stats);
+      if (!FLAGS_quic_reloadable_flag_quic_disable_packets_based_cc) {
+        return new TcpCubicSenderPackets(
+            clock, rtt_stats, false /* don't use Reno */,
+            initial_congestion_window, max_congestion_window, stats);
+      }
+      QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_disable_packets_based_cc, 1,
+                        2);
     case kCubicBytes:
       return new TcpCubicSenderBytes(
           clock, rtt_stats, false /* don't use Reno */,
           initial_congestion_window, max_congestion_window, stats);
     case kReno:
-      return new TcpCubicSenderPackets(clock, rtt_stats, true /* use Reno */,
-                                       initial_congestion_window,
-                                       max_congestion_window, stats);
+      if (!FLAGS_quic_reloadable_flag_quic_disable_packets_based_cc) {
+        return new TcpCubicSenderPackets(clock, rtt_stats, true /* use Reno */,
+                                         initial_congestion_window,
+                                         max_congestion_window, stats);
+      }
+      QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_disable_packets_based_cc, 2,
+                        2);
     case kRenoBytes:
       return new TcpCubicSenderBytes(clock, rtt_stats, true /* use Reno */,
                                      initial_congestion_window,

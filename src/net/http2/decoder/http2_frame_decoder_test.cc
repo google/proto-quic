@@ -6,13 +6,13 @@
 
 // Tests of Http2FrameDecoder.
 
-#include <memory>
-#include <string>
 #include <vector>
 
 #include "base/logging.h"
 #include "net/http2/http2_constants.h"
 #include "net/http2/platform/api/http2_reconstruct_object.h"
+#include "net/http2/platform/api/http2_string.h"
+#include "net/http2/platform/api/http2_string_piece.h"
 #include "net/http2/test_tools/frame_parts.h"
 #include "net/http2/test_tools/frame_parts_collector_listener.h"
 #include "net/http2/tools/failure.h"
@@ -20,8 +20,6 @@
 #include "net/http2/tools/random_decoder_test.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
-using std::string;
 using ::testing::AssertionResult;
 using ::testing::AssertionSuccess;
 
@@ -86,7 +84,7 @@ class Http2FrameDecoderTest : public RandomDecoderTest {
     // The decoder will discard the remaining bytes, but not go beyond that,
     // which these conditions verify.
     size_t extra = 10;
-    string junk(remaining + extra, '0');
+    Http2String junk(remaining + extra, '0');
     DecodeBuffer tmp(junk);
     EXPECT_EQ(DecodeStatus::kDecodeDone, decoder_.DecodeFrame(&tmp));
     EXPECT_EQ(remaining, tmp.Offset());
@@ -122,7 +120,7 @@ class Http2FrameDecoderTest : public RandomDecoderTest {
     VERIFY_AND_RETURN_SUCCESS(expected.VerifyEquals(*collector_.frame(0)));
   }
 
-  AssertionResult DecodePayloadAndValidateSeveralWays(StringPiece payload,
+  AssertionResult DecodePayloadAndValidateSeveralWays(Http2StringPiece payload,
                                                       Validator validator) {
     DecodeBuffer db(payload);
     bool start_decoding_requires_non_empty = false;
@@ -136,7 +134,7 @@ class Http2FrameDecoderTest : public RandomDecoderTest {
   // payload will be decoded several times with different partitionings
   // of the payload, and after each the validator will be called.
   AssertionResult DecodePayloadAndValidateSeveralWays(
-      StringPiece payload,
+      Http2StringPiece payload,
       const FrameParts& expected) {
     Validator validator = [&expected, this](
         const DecodeBuffer& input, DecodeStatus status) -> AssertionResult {
@@ -150,8 +148,8 @@ class Http2FrameDecoderTest : public RandomDecoderTest {
     VERIFY_GT(slow_decode_count_, 0u);
 
     // Repeat with more input; it should stop without reading that input.
-    string next_frame = Random().RandString(10);
-    string input(payload.data(), payload.size());
+    Http2String next_frame = Random().RandString(10);
+    Http2String input(payload.data(), payload.size());
     input += next_frame;
 
     ResetDecodeSpeedCounters();
@@ -167,14 +165,15 @@ class Http2FrameDecoderTest : public RandomDecoderTest {
   AssertionResult DecodePayloadAndValidateSeveralWays(
       const char (&buf)[N],
       const FrameParts& expected) {
-    return DecodePayloadAndValidateSeveralWays(StringPiece(buf, N), expected);
+    return DecodePayloadAndValidateSeveralWays(Http2StringPiece(buf, N),
+                                               expected);
   }
 
   template <size_t N>
   AssertionResult DecodePayloadAndValidateSeveralWays(
       const char (&buf)[N],
       const Http2FrameHeader& header) {
-    return DecodePayloadAndValidateSeveralWays(StringPiece(buf, N),
+    return DecodePayloadAndValidateSeveralWays(Http2StringPiece(buf, N),
                                                FrameParts(header));
   }
 

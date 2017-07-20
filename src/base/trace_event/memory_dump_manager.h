@@ -32,7 +32,6 @@ class Thread;
 
 namespace trace_event {
 
-class MemoryTracingObserver;
 class MemoryDumpProvider;
 class HeapProfilerSerializationState;
 
@@ -287,8 +286,6 @@ class BASE_EXPORT MemoryDumpManager {
   // Shared among all the PMDs to keep state scoped to the tracing session.
   scoped_refptr<HeapProfilerSerializationState>
       heap_profiler_serialization_state_;
-
-  std::unique_ptr<MemoryTracingObserver> tracing_observer_;
 
   // Function provided by the embedder to handle global dump requests.
   RequestGlobalDumpFunction request_dump_function_;

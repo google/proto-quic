@@ -17,6 +17,7 @@
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
+#include "third_party/icu/source/common/unicode/locid.h"
 #include "third_party/icu/source/i18n/unicode/usearch.h"
 
 namespace base {
@@ -465,6 +466,20 @@ TEST_F(RTLTest, UnadjustStringForLocaleDirection) {
   }
 
   EXPECT_EQ(was_rtl, IsRTL());
+}
+
+class SetICULocaleTest : public PlatformTest {};
+
+TEST_F(SetICULocaleTest, OverlongLocaleId) {
+  test::ScopedRestoreICUDefaultLocale restore_locale;
+  std::string id("fr-ca-x-foo");
+  while (id.length() < 152)
+    id.append("-x-foo");
+  SetICUDefaultLocale(id);
+  EXPECT_STRNE("en_US", icu::Locale::getDefault().getName());
+  id.append("zzz");
+  SetICUDefaultLocale(id);
+  EXPECT_STREQ("en_US", icu::Locale::getDefault().getName());
 }
 
 }  // namespace i18n

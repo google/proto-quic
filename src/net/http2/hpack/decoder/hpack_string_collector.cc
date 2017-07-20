@@ -8,13 +8,11 @@
 
 #include <iosfwd>
 #include <ostream>
-#include <string>
 
 #include "net/base/escape.h"
+#include "net/http2/platform/api/http2_string_utils.h"
 #include "net/http2/tools/failure.h"
 #include "testing/gtest/include/gtest/gtest.h"
-
-using base::StringPiece;
 
 namespace net {
 namespace test {
@@ -39,7 +37,7 @@ HpackStringCollector::HpackStringCollector() {
   Clear();
 }
 
-HpackStringCollector::HpackStringCollector(const std::string& str, bool huffman)
+HpackStringCollector::HpackStringCollector(const Http2String& str, bool huffman)
     : s(str), len(str.size()), huffman_encoded(huffman), state(kEnded) {}
 
 void HpackStringCollector::Clear() {
@@ -70,10 +68,10 @@ void HpackStringCollector::OnStringStart(bool huffman, size_t length) {
 }
 
 void HpackStringCollector::OnStringData(const char* data, size_t length) {
-  StringPiece sp(data, length);
+  Http2StringPiece sp(data, length);
   EXPECT_TRUE(IsInProgress()) << ToString();
   EXPECT_LE(sp.size(), len) << ToString();
-  sp.AppendToString(&s);
+  Http2StrAppend(&s, sp);
   EXPECT_LE(s.size(), len) << ToString();
 }
 
@@ -84,7 +82,7 @@ void HpackStringCollector::OnStringEnd() {
 }
 
 ::testing::AssertionResult HpackStringCollector::Collected(
-    StringPiece str,
+    Http2StringPiece str,
     bool is_huffman_encoded) const {
   VERIFY_TRUE(HasEnded());
   VERIFY_EQ(str.size(), len);
@@ -93,7 +91,7 @@ void HpackStringCollector::OnStringEnd() {
   return ::testing::AssertionSuccess();
 }
 
-std::string HpackStringCollector::ToString() const {
+Http2String HpackStringCollector::ToString() const {
   std::stringstream ss;
   ss << *this;
   return ss.str();

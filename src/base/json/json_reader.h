@@ -50,16 +50,10 @@ enum JSONParserOptions {
   // Allows commas to exist after the last element in structures.
   JSON_ALLOW_TRAILING_COMMAS = 1 << 0,
 
-  // The parser can perform optimizations by placing hidden data in the root of
-  // the JSON object, which speeds up certain operations on children. However,
-  // if the child is Remove()d from root, it would result in use-after-free
-  // unless it is DeepCopy()ed or this option is used.
-  JSON_DETACHABLE_CHILDREN = 1 << 1,
-
   // If set the parser replaces invalid characters with the Unicode replacement
   // character (U+FFFD). If not set, invalid characters trigger a hard error and
   // parsing fails.
-  JSON_REPLACE_INVALID_CHARACTERS = 1 << 2,
+  JSON_REPLACE_INVALID_CHARACTERS = 1 << 1,
 };
 
 class BASE_EXPORT JSONReader {

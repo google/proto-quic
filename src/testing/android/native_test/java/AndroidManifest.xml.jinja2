@@ -54,6 +54,8 @@ found in the LICENSE file.
         {% set num_test_client_services = 5 %}
         <meta-data android:name="org.chromium.native_test.NUM_TEST_CLIENT_SERVICES"
                    android:value="{{ num_test_client_services }}"/>
+        <meta-data android:name="org.chromium.native_test.TEST_CLIENT_SERVICE_NAME"
+                   android:value="org.chromium.base.MultiprocessTestClientService"/>
         {% for i in range(num_test_client_services) %}
         <service android:name="org.chromium.base.MultiprocessTestClientService{{ i }}"
                  android:process=":test_client_process{{ i }}"

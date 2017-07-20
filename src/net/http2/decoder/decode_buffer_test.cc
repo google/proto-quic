@@ -4,15 +4,9 @@
 
 #include "net/http2/decoder/decode_buffer.h"
 
-#include <string>
-
 #include "base/logging.h"
-#include "base/strings/string_piece.h"
 #include "net/http2/tools/http2_random.h"
 #include "testing/gtest/include/gtest/gtest.h"
-
-using base::StringPiece;
-using std::string;
 
 namespace net {
 namespace test {

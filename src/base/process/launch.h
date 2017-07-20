@@ -259,6 +259,13 @@ BASE_EXPORT bool GetAppOutput(const CommandLine& cl, std::string* output);
 BASE_EXPORT bool GetAppOutputAndError(const CommandLine& cl,
                                       std::string* output);
 
+// A version of |GetAppOutput()| which also returns the exit code of the
+// executed command. Returns true if the application runs and exits cleanly. If
+// this is the case the exit code of the application is available in
+// |*exit_code|.
+BASE_EXPORT bool GetAppOutputWithExitCode(const CommandLine& cl,
+                                          std::string* output, int* exit_code);
+
 #if defined(OS_WIN)
 // A Windows-specific version of GetAppOutput that takes a command line string
 // instead of a CommandLine object. Useful for situations where you need to
@@ -277,13 +284,6 @@ BASE_EXPORT bool GetAppOutput(const std::vector<std::string>& argv,
 // stderr.
 BASE_EXPORT bool GetAppOutputAndError(const std::vector<std::string>& argv,
                                       std::string* output);
-
-// A version of |GetAppOutput()| which also returns the exit code of the
-// executed command. Returns true if the application runs and exits cleanly. If
-// this is the case the exit code of the application is available in
-// |*exit_code|.
-BASE_EXPORT bool GetAppOutputWithExitCode(const CommandLine& cl,
-                                          std::string* output, int* exit_code);
 #endif  // defined(OS_POSIX)
 
 // If supported on the platform, and the user has sufficent rights, increase

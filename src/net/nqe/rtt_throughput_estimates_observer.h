@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_NQE_NETWORK_QUALITY_RTT_THROUGHPUT_ESTIMATES_OBSERVER_H_
-#define NET_NQE_NETWORK_QUALITY_RTT_THROUGHPUT_ESTIMATES_OBSERVER_H_
+#ifndef NET_NQE_RTT_THROUGHPUT_ESTIMATES_OBSERVER_H_
+#define NET_NQE_RTT_THROUGHPUT_ESTIMATES_OBSERVER_H_
 
 #include <stdint.h>
 
@@ -45,4 +45,4 @@ class NET_EXPORT RTTAndThroughputEstimatesObserver {
 
 }  // namespace net
 
-#endif  // NET_NQE_NETWORK_QUALITY_RTT_THROUGHPUT_ESTIMATES_OBSERVER_H_
+#endif  // NET_NQE_RTT_THROUGHPUT_ESTIMATES_OBSERVER_H_

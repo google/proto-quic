@@ -156,12 +156,14 @@ std::string ICULocaleName(const std::string& locale_string) {
 void SetICUDefaultLocale(const std::string& locale_string) {
   icu::Locale locale(ICULocaleName(locale_string).c_str());
   UErrorCode error_code = U_ZERO_ERROR;
-  icu::Locale::setDefault(locale, error_code);
-  // This return value is actually bogus because Locale object is
-  // an ID and setDefault seems to always succeed (regardless of the
-  // presence of actual locale data). However,
-  // it does not hurt to have it as a sanity check.
-  DCHECK(U_SUCCESS(error_code));
+  const char* lang = locale.getLanguage();
+  if (lang != nullptr && *lang != '\0') {
+    icu::Locale::setDefault(locale, error_code);
+  } else {
+    LOG(ERROR) << "Failed to set the ICU default locale to " << locale_string
+               << ". Falling back to en-US.";
+    icu::Locale::setDefault(icu::Locale::getUS(), error_code);
+  }
   g_icu_text_direction = UNKNOWN_DIRECTION;
 }
 

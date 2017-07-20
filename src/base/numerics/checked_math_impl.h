@@ -20,15 +20,6 @@
 namespace base {
 namespace internal {
 
-// Probe for builtin math overflow support on Clang and version check on GCC.
-#if defined(__has_builtin)
-#define USE_OVERFLOW_BUILTINS (__has_builtin(__builtin_add_overflow))
-#elif defined(__GNUC__)
-#define USE_OVERFLOW_BUILTINS (__GNUC__ >= 5)
-#else
-#define USE_OVERFLOW_BUILTINS (0)
-#endif
-
 template <typename T>
 bool CheckedAddImpl(T x, T y, T* result) {
   static_assert(std::is_integral<T>::value, "Type must be integral");
@@ -58,9 +49,10 @@ struct CheckedAddOp<T,
   using result_type = typename MaxExponentPromotion<T, U>::type;
   template <typename V>
   static bool Do(T x, U y, V* result) {
-#if USE_OVERFLOW_BUILTINS
-    return !__builtin_add_overflow(x, y, result);
-#else
+    // TODO(jschuh) Make this "constexpr if" once we're C++17.
+    if (CheckedAddFastOp<T, U>::is_supported)
+      return CheckedAddFastOp<T, U>::Do(x, y, result);
+
     using Promotion = typename BigEnoughPromotion<T, U>::type;
     Promotion presult;
     // Fail if either operand is out of range for the promoted type.
@@ -76,7 +68,6 @@ struct CheckedAddOp<T,
     }
     *result = static_cast<V>(presult);
     return is_valid && IsValueInRangeForNumericType<V>(presult);
-#endif
   }
 };
 
@@ -109,9 +100,10 @@ struct CheckedSubOp<T,
   using result_type = typename MaxExponentPromotion<T, U>::type;
   template <typename V>
   static bool Do(T x, U y, V* result) {
-#if USE_OVERFLOW_BUILTINS
-    return !__builtin_sub_overflow(x, y, result);
-#else
+    // TODO(jschuh) Make this "constexpr if" once we're C++17.
+    if (CheckedSubFastOp<T, U>::is_supported)
+      return CheckedSubFastOp<T, U>::Do(x, y, result);
+
     using Promotion = typename BigEnoughPromotion<T, U>::type;
     Promotion presult;
     // Fail if either operand is out of range for the promoted type.
@@ -127,7 +119,6 @@ struct CheckedSubOp<T,
     }
     *result = static_cast<V>(presult);
     return is_valid && IsValueInRangeForNumericType<V>(presult);
-#endif
   }
 };
 
@@ -162,25 +153,10 @@ struct CheckedMulOp<T,
   using result_type = typename MaxExponentPromotion<T, U>::type;
   template <typename V>
   static bool Do(T x, U y, V* result) {
-#if USE_OVERFLOW_BUILTINS
-#if defined(__clang__)
-    // TODO(jschuh): Get the Clang runtime library issues sorted out so we can
-    // support full-width, mixed-sign multiply builtins.
-    // https://crbug.com/613003
-    static const bool kUseMaxInt =
-        // Narrower type than uintptr_t is always safe.
-        std::numeric_limits<__typeof__(x * y)>::digits <
-            std::numeric_limits<intptr_t>::digits ||
-        // Safe for intptr_t and uintptr_t if the sign matches.
-        (IntegerBitsPlusSign<__typeof__(x * y)>::value ==
-             IntegerBitsPlusSign<intptr_t>::value &&
-         std::is_signed<T>::value == std::is_signed<U>::value);
-#else
-    static const bool kUseMaxInt = true;
-#endif
-    if (kUseMaxInt)
-      return !__builtin_mul_overflow(x, y, result);
-#endif
+    // TODO(jschuh) Make this "constexpr if" once we're C++17.
+    if (CheckedMulFastOp<T, U>::is_supported)
+      return CheckedMulFastOp<T, U>::Do(x, y, result);
+
     using Promotion = typename FastIntegerArithmeticPromotion<T, U>::type;
     // Verify the destination type can hold the result (always true for 0).
     if (!(IsValueInRangeForNumericType<Promotion>(x) &&
@@ -200,9 +176,6 @@ struct CheckedMulOp<T,
     return is_valid && IsValueInRangeForNumericType<V>(presult);
   }
 };
-
-// Avoid poluting the namespace once we're done with the macro.
-#undef USE_OVERFLOW_BUILTINS
 
 // Division just requires a check for a zero denominator or an invalid negation
 // on signed min/-1.

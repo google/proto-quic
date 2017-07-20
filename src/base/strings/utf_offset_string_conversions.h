@@ -34,7 +34,8 @@ class BASE_EXPORT OffsetAdjuster {
   typedef std::vector<Adjustment> Adjustments;
 
   // Adjusts all offsets in |offsets_for_adjustment| to reflect the adjustments
-  // recorded in |adjustments|.
+  // recorded in |adjustments|.  Adjusted offsets greater than |limit| will be
+  // set to string16::npos.
   //
   // Offsets represents insertion/selection points between characters: if |src|
   // is "abcd", then 0 is before 'a', 2 is between 'b' and 'c', and 4 is at the
@@ -44,12 +45,14 @@ class BASE_EXPORT OffsetAdjuster {
   // adjusted (e.g., because it points into the middle of a multibyte sequence),
   // it will be set to string16::npos.
   static void AdjustOffsets(const Adjustments& adjustments,
-                            std::vector<size_t>* offsets_for_adjustment);
+                            std::vector<size_t>* offsets_for_adjustment,
+                            size_t limit = string16::npos);
 
   // Adjusts the single |offset| to reflect the adjustments recorded in
   // |adjustments|.
   static void AdjustOffset(const Adjustments& adjustments,
-                           size_t* offset);
+                           size_t* offset,
+                           size_t limit = string16::npos);
 
   // Adjusts all offsets in |offsets_for_unadjustment| to reflect the reverse
   // of the adjustments recorded in |adjustments|.  In other words, the offsets
@@ -97,31 +100,14 @@ BASE_EXPORT string16 UTF8ToUTF16WithAdjustments(
     const base::StringPiece& utf8,
     base::OffsetAdjuster::Adjustments* adjustments);
 // As above, but instead internally examines the adjustments and applies them
-// to |offsets_for_adjustment|.  See comments by AdjustOffsets().
+// to |offsets_for_adjustment|.  Input offsets greater than the length of the
+// input string will be set to string16::npos.  See comments by AdjustOffsets().
 BASE_EXPORT string16 UTF8ToUTF16AndAdjustOffsets(
     const base::StringPiece& utf8,
     std::vector<size_t>* offsets_for_adjustment);
-
 BASE_EXPORT std::string UTF16ToUTF8AndAdjustOffsets(
     const base::StringPiece16& utf16,
     std::vector<size_t>* offsets_for_adjustment);
-
-// Limiting function callable by std::for_each which will replace any value
-// which is greater than |limit| with npos.  Typically this is called with a
-// string length to clamp offsets into the string to [0, length] (as opposed to
-// [0, length); see comments above).
-template <typename T>
-struct LimitOffset {
-  explicit LimitOffset(size_t limit)
-    : limit_(limit) {}
-
-  void operator()(size_t& offset) {
-    if (offset > limit_)
-      offset = T::npos;
-  }
-
-  size_t limit_;
-};
 
 }  // namespace base
 

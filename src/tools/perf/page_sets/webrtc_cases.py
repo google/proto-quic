@@ -117,11 +117,29 @@ class MultiplePeerConnections(WebrtcPage):
       action_runner.Wait(20)
 
 
+class PausePlayPeerConnections(WebrtcPage):
+  """Why: Ensures frequent pause and plays of peer connection streams work."""
+
+  def __init__(self, page_set, tags):
+    super(PausePlayPeerConnections, self).__init__(
+        url='file://webrtc_cases/pause-play.html',
+        name='pause_play_peerconnections',
+        page_set=page_set, tags=tags)
+
+  def RunPageInteractions(self, action_runner):
+    action_runner.ExecuteJavaScript(
+        'startTest({test_runtime_s}, {num_peerconnections},'
+        '{iteration_delay_ms}, "video");'.format(
+            test_runtime_s=20, num_peerconnections=10, iteration_delay_ms=20))
+    action_runner.Wait(20)
+
+
 class WebrtcPageSet(story.StorySet):
   def __init__(self):
     super(WebrtcPageSet, self).__init__(
         cloud_storage_bucket=story.PUBLIC_BUCKET)
 
+    self.AddStory(PausePlayPeerConnections(self, tags=['pauseplay']))
     self.AddStory(MultiplePeerConnections(self, tags=['stress']))
     self.AddStory(DataChannel(self, tags=['datachannel']))
     self.AddStory(GetUserMedia(self, tags=['getusermedia']))

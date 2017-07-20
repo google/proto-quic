@@ -69,9 +69,3 @@ fun:*re2*RegexpD*
 #############################################################################
 # Harmless float division by zero.
 fun:*RendererFrameManager*CullUnlockedFrames*
-
-#############################################################################
-# libc++ __tree and map are not UBSAN clean
-# https://llvm.org/bugs/show_bug.cgi?id=19302
-src:*/third_party/libc\+\+/trunk/include/__tree
-src:*/third_party/libc\+\+/trunk/include/map

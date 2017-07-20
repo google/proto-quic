@@ -151,7 +151,7 @@ TestMockTimeTaskRunner::TestMockTimeTaskRunner()
 
 TestMockTimeTaskRunner::TestMockTimeTaskRunner(Time start_time,
                                                TimeTicks start_ticks)
-    : now_(Time::UnixEpoch()), now_ticks_(start_ticks), next_task_ordinal_(0) {}
+    : now_(start_time), now_ticks_(start_ticks), next_task_ordinal_(0) {}
 
 TestMockTimeTaskRunner::~TestMockTimeTaskRunner() {
 }

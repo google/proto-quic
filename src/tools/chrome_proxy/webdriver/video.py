@@ -52,7 +52,7 @@ class Video(IntegrationTest):
   @Slow
   def testVideoMetrics(self):
     expected = {
-      'duration': 3.124,
+      'duration': 3.128,
       'webkitDecodedFrameCount': 54.0,
       'videoWidth': 1280.0,
       'videoHeight': 720.0
@@ -81,7 +81,7 @@ class Video(IntegrationTest):
           'document.querySelectorAll("video")[0].%s' % metric))
         self.assertAlmostEqual(expected[metric], actual, msg="Compressed video "
           "metric doesn't match expected! Metric=%s Expected=%f Actual=%f"
-          % (metric, expected[metric], actual), places=None, delta=0.001)
+          % (metric, expected[metric], actual), places=None, delta=0.01)
 
   # Check that the compressed video can be seeked. Use a slow network to ensure
   # the entire video isn't downloaded before we have a chance to seek.

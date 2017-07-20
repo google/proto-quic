@@ -20,8 +20,6 @@ static const char* const kNoRejectedPublicKeys[] = {
     NULL,
 };
 
-static const char kNoReportURI[] = "";
-
 [[ACCEPTABLE_CERTS]]
 
 static const struct net::TransportSecurityStateSource::Pinset kPinsets[] = [[PINSETS]];

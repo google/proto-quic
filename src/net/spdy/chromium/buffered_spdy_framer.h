@@ -73,10 +73,10 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramerVisitorInterface {
   virtual void OnSetting(SpdySettingsIds id, uint32_t value) = 0;
 
   // Called when a SETTINGS frame is received with the ACK flag set.
-  virtual void OnSettingsAck() {}
+  virtual void OnSettingsAck() = 0;
 
   // Called at the completion of parsing SETTINGS id and value tuples.
-  virtual void OnSettingsEnd() {}
+  virtual void OnSettingsEnd() = 0;
 
   // Called when a PING frame has been parsed.
   virtual void OnPing(SpdyPingId unique_id, bool is_ack) = 0;
@@ -152,8 +152,8 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
   void OnStreamPadding(SpdyStreamId stream_id, size_t len) override;
   SpdyHeadersHandlerInterface* OnHeaderFrameStart(
       SpdyStreamId stream_id) override;
-  void OnHeaderFrameEnd(SpdyStreamId stream_id, bool end_headers) override;
-  void OnSettings(bool clear_persisted) override;
+  void OnHeaderFrameEnd(SpdyStreamId stream_id) override;
+  void OnSettings() override;
   void OnSetting(SpdySettingsIds id, uint32_t value) override;
   void OnSettingsAck() override;
   void OnSettingsEnd() override;
@@ -179,6 +179,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
   // SpdyFramer methods.
   size_t ProcessInput(const char* data, size_t len);
   void UpdateHeaderDecoderTableSize(uint32_t value);
+  void set_max_decode_buffer_size_bytes(size_t max_decode_buffer_size_bytes);
   void Reset();
   SpdyFramer::SpdyFramerError spdy_framer_error() const;
   SpdyFramer::SpdyState state() const;

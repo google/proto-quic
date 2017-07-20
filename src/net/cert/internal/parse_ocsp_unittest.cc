@@ -4,12 +4,9 @@
 
 #include "net/cert/internal/parse_ocsp.h"
 
-#include "base/files/file_path.h"
 #include "base/logging.h"
 #include "net/cert/internal/test_helpers.h"
-#include "net/cert/x509_certificate.h"
 #include "net/der/encode_values.h"
-#include "net/test/test_data_directory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

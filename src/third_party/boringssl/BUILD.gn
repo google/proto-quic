@@ -194,33 +194,6 @@ test("boringssl_ssl_tests") {
 }
 
 if (build_with_chromium) {
-  create_tests("boringssl_tests") {
-    configs_exclude = [ "//build/config/compiler:chromium_code" ]
-    configs = [
-      ":internal_config",
-      "//build/config/compiler:no_chromium_code",
-    ]
-    deps = [
-      ":boringssl",
-      "//build/win:default_exe_manifest",
-    ]
-  }
-
-  if (!is_ios) {
-    test("boringssl_unittests") {
-      deps = [
-        ":boringssl_tests",
-        "//base",
-        "//base/test:run_all_unittests",
-        "//base/test:test_support",
-        "//testing/gtest",
-      ]
-      sources = [
-        "boringssl_unittest.cc",
-      ]
-    }
-  }
-
   config("fuzzer_config") {
     visibility = [ ":*" ]  # Only targets in this file can depend on this.
     defines = [

@@ -83,7 +83,10 @@ struct MockTransaction {
   int ssl_connection_status;
   // Value returned by MockNetworkTransaction::Start (potentially
   // asynchronously if |!(test_mode & TEST_MODE_SYNC_NET_START)|.)
-  Error return_code;
+  Error start_return_code;
+  // Value returned by MockNetworkTransaction::Read (potentially
+  // asynchronously if |!(test_mode & TEST_MODE_SYNC_NET_START)|.)
+  Error read_return_code;
 };
 
 extern const MockTransaction kSimpleGET_Transaction;
@@ -241,6 +244,7 @@ class MockNetworkTransaction
   CreateHelper* websocket_handshake_stream_create_helper() {
     return websocket_handshake_stream_create_helper_;
   }
+
   RequestPriority priority() const { return priority_; }
   const HttpRequestInfo* request() const { return request_; }
 

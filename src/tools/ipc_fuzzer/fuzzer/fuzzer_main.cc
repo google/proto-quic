@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <set>
+#include <utility>
 #include <vector>
 
 #include "base/command_line.h"
@@ -93,10 +94,9 @@ class FuzzerFactory {
   }
 };
 
-static IPC::Message* RewriteMessage(
-    IPC::Message* message,
-    Fuzzer* fuzzer,
-    FuzzerFunctionMap* map) {
+static std::unique_ptr<IPC::Message> RewriteMessage(IPC::Message* message,
+                                                    Fuzzer* fuzzer,
+                                                    FuzzerFunctionMap* map) {
   FuzzerFunctionMap::iterator it = map->find(message->type());
   if (it == map->end()) {
     // This usually indicates a missing message file in all_messages.h, or
@@ -128,8 +128,10 @@ int Generate(base::CommandLine* cmd, Fuzzer* fuzzer) {
   if (message_count < 0) {
     // Enumerate them all.
     for (size_t i = 0; i < g_function_vector.size(); ++i) {
-      if (IPC::Message* new_message = (*g_function_vector[i])(NULL, fuzzer))
-        message_vector.push_back(new_message);
+      std::unique_ptr<IPC::Message> new_message =
+          (*g_function_vector[i])(nullptr, fuzzer);
+      if (new_message)
+        message_vector.push_back(std::move(new_message));
       else
         bad_count += 1;
     }
@@ -137,8 +139,10 @@ int Generate(base::CommandLine* cmd, Fuzzer* fuzzer) {
     // Fuzz a random batch.
     for (int i = 0; i < message_count; ++i) {
       size_t index = RandInRange(g_function_vector.size());
-      if (IPC::Message* new_message = (*g_function_vector[index])(NULL, fuzzer))
-        message_vector.push_back(new_message);
+      std::unique_ptr<IPC::Message> new_message =
+          (*g_function_vector[index])(nullptr, fuzzer);
+      if (new_message)
+        message_vector.push_back(std::move(new_message));
       else
         bad_count += 1;
     }
@@ -177,19 +181,17 @@ int Mutate(base::CommandLine* cmd, Fuzzer* fuzzer) {
     return EXIT_FAILURE;
 
   for (size_t i = 0; i < message_vector.size(); ++i) {
-    IPC::Message* msg = message_vector[i];
+    IPC::Message* msg = message_vector[i].get();
     // If an explicit type set is specified, make sure we should be mutating
     // this message type on this run.
     if (!type_set.empty() && type_set.end() == std::find(
             type_set.begin(), type_set.end(), msg->type())) {
       continue;
     }
-    IPC::Message* new_message = RewriteMessage(msg, fuzzer, &fuzz_function_map);
-    if (new_message) {
-      IPC::Message* old_message = message_vector[i];
-      delete old_message;
-      message_vector[i] = new_message;
-    }
+    std::unique_ptr<IPC::Message> new_message =
+        RewriteMessage(msg, fuzzer, &fuzz_function_map);
+    if (new_message)
+      message_vector[i] = std::move(new_message);
   }
 
   if (permute) {

@@ -15,15 +15,15 @@
 
 #include <stddef.h>
 
-#include <string>
 #include <vector>
 
 #include "base/logging.h"
 #include "base/optional.h"
-#include "base/strings/string_piece.h"
 #include "net/http2/decoder/http2_frame_decoder_listener.h"
 #include "net/http2/http2_constants.h"
 #include "net/http2/http2_structures.h"
+#include "net/http2/platform/api/http2_string.h"
+#include "net/http2/platform/api/http2_string_piece.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
@@ -39,12 +39,12 @@ struct FrameParts : public Http2FrameDecoderListener {
   explicit FrameParts(const Http2FrameHeader& header);
 
   // For use in tests where the expected frame has a variable size payload.
-  FrameParts(const Http2FrameHeader& header, base::StringPiece payload);
+  FrameParts(const Http2FrameHeader& header, Http2StringPiece payload);
 
   // For use in tests where the expected frame has a variable size payload
   // and may be padded.
   FrameParts(const Http2FrameHeader& header,
-             base::StringPiece payload,
+             Http2StringPiece payload,
              size_t total_pad_length);
 
   // Copy constructor.
@@ -63,7 +63,7 @@ struct FrameParts : public Http2FrameDecoderListener {
   void SetTotalPadLength(size_t total_pad_length);
 
   // Set the origin and value expected in an ALTSVC frame.
-  void SetAltSvcExpected(base::StringPiece origin, base::StringPiece value);
+  void SetAltSvcExpected(Http2StringPiece origin, Http2StringPiece value);
 
   // Http2FrameDecoderListener methods:
   bool OnFrameHeader(const Http2FrameHeader& header) override;
@@ -117,10 +117,10 @@ struct FrameParts : public Http2FrameDecoderListener {
 
   const Http2FrameHeader frame_header;
 
-  std::string payload;
-  std::string padding;
-  std::string altsvc_origin;
-  std::string altsvc_value;
+  Http2String payload;
+  Http2String padding;
+  Http2String altsvc_origin;
+  Http2String altsvc_value;
 
   base::Optional<Http2PriorityFields> opt_priority;
   base::Optional<Http2ErrorCode> opt_rst_stream_error_code;
@@ -166,8 +166,8 @@ struct FrameParts : public Http2FrameDecoderListener {
   // Append source to target. If opt_length is not nullptr, then verifies that
   // the optional has a value (i.e. that the necessary On*Start method has been
   // called), and that target is not longer than opt_length->value().
-  ::testing::AssertionResult AppendString(base::StringPiece source,
-                                          std::string* target,
+  ::testing::AssertionResult AppendString(Http2StringPiece source,
+                                          Http2String* target,
                                           base::Optional<size_t>* opt_length);
 };
 

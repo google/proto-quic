@@ -7,9 +7,8 @@
 
 #include <stddef.h>
 
-#include <string>
-
-#include "base/strings/string_piece.h"
+#include "net/http2/platform/api/http2_string.h"
+#include "net/http2/platform/api/http2_string_piece.h"
 
 namespace net {
 namespace test {
@@ -18,20 +17,20 @@ class RandomBase;
 
 // Returns a random string of length |len|, each character drawn uniformly and
 // independently fom |alphabet|.
-std::string RandomString(RandomBase* rng, int len, base::StringPiece alphabet);
+Http2String RandomString(RandomBase* rng, int len, Http2StringPiece alphabet);
 
 // Returns a random integer in the range [lo, hi).
 size_t GenerateUniformInRange(size_t lo, size_t hi, RandomBase* rng);
 
 // Generate a string with the allowed character set for HTTP/2 / HPACK header
 // names.
-std::string GenerateHttp2HeaderName(size_t len, RandomBase* rng);
+Http2String GenerateHttp2HeaderName(size_t len, RandomBase* rng);
 
 // Generate a string with the web-safe string character set of specified len.
-std::string GenerateWebSafeString(size_t len, RandomBase* rng);
+Http2String GenerateWebSafeString(size_t len, RandomBase* rng);
 
 // Generate a string with the web-safe string character set of length [lo, hi).
-std::string GenerateWebSafeString(size_t lo, size_t hi, RandomBase* rng);
+Http2String GenerateWebSafeString(size_t lo, size_t hi, RandomBase* rng);
 
 // Returns a random integer in the range [0, max], with a bias towards producing
 // lower numbers.

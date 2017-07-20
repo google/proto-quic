@@ -10,6 +10,7 @@
 #include "base/files/memory_mapped_file.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/strings/string_piece.h"
 #include "ipc/ipc_message.h"
 #include "tools/ipc_fuzzer/message_lib/message_cracker.h"
@@ -127,8 +128,7 @@ bool Reader::ReadMessages() {
 
     // Copy is necessary to fix message type later.
     IPC::Message const_message(begin, msglen);
-    IPC::Message* message = new IPC::Message(const_message);
-    messages_->push_back(message);
+    messages_->push_back(base::MakeUnique<IPC::Message>(const_message));
     file_data_.remove_prefix(msglen);
   }
   return true;
@@ -195,13 +195,12 @@ bool Reader::RemoveUnknownMessages() {
 // increase the lifetime of message files. This is only a partial fix because
 // message arguments and structure layouts can change as well.
 void Reader::FixMessageTypes() {
-  for (MessageVector::iterator it = messages_->begin();
-       it != messages_->end(); ++it) {
-    uint32_t type = (*it)->type();
+  for (const auto& message : *messages_) {
+    uint32_t type = message->type();
     const std::string& name = name_map_.TypeToName(type);
     uint32_t correct_type = MessageNames::GetInstance()->NameToType(name);
     if (type != correct_type)
-      MessageCracker::SetMessageType(*it, correct_type);
+      MessageCracker::SetMessageType(message.get(), correct_type);
   }
 }
 

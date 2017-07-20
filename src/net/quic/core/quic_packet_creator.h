@@ -32,8 +32,7 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
  public:
   // A delegate interface for further processing serialized packet.
   class QUIC_EXPORT_PRIVATE DelegateInterface
-      : public QuicConnectionCloseDelegateInterface,
-        public QuicStreamFrameDataProducer {
+      : public QuicConnectionCloseDelegateInterface {
    public:
     ~DelegateInterface() override {}
     // Called when a packet is serialized. Delegate does not take the ownership
@@ -217,10 +216,6 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
 
   QuicByteCount pending_padding_bytes() const { return pending_padding_bytes_; }
 
-  void set_delegate_saves_data(bool delegate_saves_data) {
-    delegate_saves_data_ = delegate_saves_data;
-  }
-
  private:
   friend class test::QuicPacketCreatorPeer;
 
@@ -319,10 +314,6 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
   // packet size. Please note, full padding does not consume pending padding
   // bytes.
   bool needs_full_padding_;
-
-  // Indicates whether frame data is saved by delegate_. TODO(fayang): Remove
-  // this boolean when deprecating quic_reloadable_flag_quic_stream_owns_data.
-  bool delegate_saves_data_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicPacketCreator);
 };

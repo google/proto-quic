@@ -1,0 +1,59 @@
+#!/usr/bin/env python
+# Copyright 2017 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import os
+import sys
+
+import vr_config
+
+sys.path.insert(1, vr_config.TELEMETRY_DIR)
+sys.path.append(vr_config.PYLIB_DIR)
+
+from pylib.constants import host_paths
+
+if host_paths.DEVIL_PATH not in sys.path:
+  sys.path.append(host_paths.DEVIL_PATH)
+
+from devil.android import device_utils
+from pylib.utils import shared_preference_utils
+from telemetry import benchmark_runner
+
+
+def main():
+  attached_devices = device_utils.DeviceUtils.HealthyDevices()
+  if len(attached_devices) == 0:
+    raise ValueError('No healthy devices attached')
+  if len(attached_devices) > 1:
+    raise NotImplementedError('Only one device currently supported, multiple '
+                              'found')
+  dev = attached_devices[0]
+
+  # Reinstall VrCore
+  # TODO(bsheedy): Change this to work if VrCore is still installed as a system
+  # app
+  dev.Install(os.path.join(host_paths.DIR_SOURCE_ROOT, 'third_party',
+                           'gvr-android-sdk', 'test-apks', 'vr_services',
+                           'vr_services_current.apk'))
+
+  # Install the NFC simulator APK
+  # TODO(bsheedy): Find a better way to get path to generated APK
+  dev.Install(os.path.join(host_paths.DIR_SOURCE_ROOT, 'out', 'Release',
+                           'apks', 'VrNfcSimulator.apk'))
+
+  # Setup VrCore
+  # TODO(bsheedy): Support different files to allow tests to be run on both
+  # Daydream ready and non-Daydream-ready devices
+  preferences = shared_preference_utils.ExtractSettingsFromJson(os.path.join(
+      host_paths.DIR_SOURCE_ROOT, 'chrome', 'android',
+      'shared_preference_files', 'test', 'vr_ddview_skipdon_setupcomplete.json'
+  ))
+  shared_preference_utils.ApplySharedPreferenceSettings(dev, preferences)
+
+  # Start the benchmarks
+  return benchmark_runner.main(vr_config.Config(['benchmarks']))
+
+
+if __name__ == '__main__':
+  sys.exit(main())

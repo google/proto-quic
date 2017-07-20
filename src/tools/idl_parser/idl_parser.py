@@ -53,6 +53,7 @@ ERROR_REMAP = {
   'Unexpected ")" after ",".' : 'Missing argument.',
   'Unexpected "}" after ",".' : 'Trailing comma in block.',
   'Unexpected "}" after "{".' : 'Unexpected empty block.',
+  'Unexpected comment after "}".' : 'Unexpected trailing comment.',
   'Unexpected "{" after keyword "enum".' : 'Enum missing name.',
   'Unexpected "{" after keyword "struct".' : 'Struct missing name.',
   'Unexpected "{" after keyword "interface".' : 'Interface missing name.',
@@ -101,6 +102,8 @@ def TokenTypeName(t):
     return 'value %s' % t.value
   if t.type == 'string' :
     return 'string "%s"' % t.value
+  if t.type == 'SPECIAL_COMMENT':
+    return 'comment'
   if t.type == t.value:
     return '"%s"' % t.value
   if t.type == ',':
@@ -108,6 +111,28 @@ def TokenTypeName(t):
   if t.type == 'identifier':
     return 'identifier "%s"' % t.value
   return 'keyword "%s"' % t.value
+
+
+# TODO(bashi): Consider moving this out of idl_parser.
+def ExtractSpecialComment(comment):
+  if not comment.startswith('/**'):
+    raise ValueError('Special comment must start with /**')
+  if not comment.endswith('*/'):
+    raise ValueError('Special comment must end with */')
+
+  # Remove comment markers
+  lines = []
+  for line in comment[2:-2].split('\n'):
+    # Remove characters until start marker for this line '*' if found
+    # otherwise it will be blank.
+    offs = line.find('*')
+    if offs >= 0:
+      line = line[offs + 1:].rstrip()
+    else:
+      # TODO(bashi): We may want to keep |line| as is.
+      line = ''
+    lines.append(line)
+  return '\n'.join(lines)
 
 
 #
@@ -196,7 +221,7 @@ def TokenTypeName(t):
 class IDLParser(object):
   def p_Definitions(self, p):
     """Definitions : ExtendedAttributeList Definition Definitions
-           | """
+                   | """
     if len(p) > 1:
       p[2].AddChildren(p[1])
       p[0] = ListFromConcat(p[2], p[3])
@@ -689,12 +714,21 @@ class IDLParser(object):
     """SetlikeRest : SETLIKE '<' Type '>' ';'"""
     p[0] = self.BuildProduction('Setlike', p, 2, p[3])
 
+  # This rule has custom additions (i.e. SpecialComments).
   def p_ExtendedAttributeList(self, p):
-    """ExtendedAttributeList : '[' ExtendedAttribute ExtendedAttributes ']'
+    """ExtendedAttributeList : SpecialComments '[' ExtendedAttribute ExtendedAttributes ']'
+                             | '[' ExtendedAttribute ExtendedAttributes ']'
+                             | SpecialComments
                              | """
-    if len(p) > 3:
+    if len(p) > 5:
+      items = ListFromConcat(p[3], p[4])
+      attribs = self.BuildProduction('ExtAttributes', p, 2, items)
+      p[0] = ListFromConcat(p[1], attribs)
+    elif len(p) > 4:
       items = ListFromConcat(p[2], p[3])
       p[0] = self.BuildProduction('ExtAttributes', p, 1, items)
+    elif len(p) > 1:
+      p[0] = p[1]
 
   # Error recovery for ExtendedAttributeList
   def p_ExtendedAttributeListError(self, p):
@@ -1012,6 +1046,14 @@ class IDLParser(object):
     """RecordType : RECORD '<' error ',' Type '>'"""
     p[0] = self.BuildError(p, 'RecordType')
 
+  # Blink extension: Treat special comments (/** ... */) as AST nodes to
+  # annotate other nodes. Currently they are used for testing.
+  def p_SpecialComments(self, p):
+    """SpecialComments : SPECIAL_COMMENT SpecialComments
+                       | """
+    if len(p) > 1:
+      p[0] = ListFromConcat(self.BuildSpecialComment(p, 1), p[2])
+
 #
 # Parser Errors
 #
@@ -1100,6 +1142,11 @@ class IDLParser(object):
     childlist = ListFromConcat(childlist)
     childlist.append(self.BuildAttribute('NAME', p[index]))
     return self.BuildProduction(cls, p, index, childlist)
+
+  def BuildSpecialComment(self, p, index):
+    name = ExtractSpecialComment(p[index])
+    childlist = [self.BuildAttribute('NAME', name)]
+    return self.BuildProduction('SpecialComment', p, index, childlist)
 
 #
 # BuildError

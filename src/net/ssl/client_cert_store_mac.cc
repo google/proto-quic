@@ -13,6 +13,8 @@
 #include <algorithm>
 #include <string>
 
+#include "base/bind.h"
+#include "base/bind_helpers.h"
 #include "base/callback.h"
 #include "base/logging.h"
 #include "base/mac/mac_logging.h"
@@ -20,12 +22,14 @@
 #include "base/memory/ptr_util.h"
 #include "base/strings/sys_string_conversions.h"
 #include "base/synchronization/lock.h"
+#include "base/task_runner_util.h"
 #include "crypto/mac_security_services_lock.h"
 #include "net/base/host_port_pair.h"
 #include "net/cert/x509_util.h"
 #include "net/cert/x509_util_ios_and_mac.h"
 #include "net/cert/x509_util_mac.h"
 #include "net/ssl/client_cert_identity_mac.h"
+#include "net/ssl/ssl_platform_key_util.h"
 
 using base::ScopedCFTypeRef;
 
@@ -240,15 +244,8 @@ void GetClientCertsImpl(std::unique_ptr<ClientCertIdentity> preferred_identity,
   sort(sort_begin, sort_end, ClientCertIdentitySorter());
 }
 
-}  // namespace
-
-ClientCertStoreMac::ClientCertStoreMac() {}
-
-ClientCertStoreMac::~ClientCertStoreMac() {}
-
-void ClientCertStoreMac::GetClientCerts(
-    const SSLCertRequestInfo& request,
-    const ClientCertListCallback& callback) {
+ClientCertIdentityList GetClientCertsOnBackgroundThread(
+    const SSLCertRequestInfo& request) {
   std::string server_domain = request.host_and_port.host();
 
   ScopedCFTypeRef<SecIdentityRef> preferred_sec_identity;
@@ -280,10 +277,8 @@ void ClientCertStoreMac::GetClientCerts(
     base::AutoLock lock(crypto::GetMacSecurityServicesLock());
     err = SecIdentitySearchCreate(NULL, CSSM_KEYUSE_SIGN, &search);
   }
-  if (err) {
-    callback.Run(ClientCertIdentityList());
-    return;
-  }
+  if (err)
+    return ClientCertIdentityList();
   ScopedCFTypeRef<SecIdentitySearchRef> scoped_search(search);
   while (!err) {
     ScopedCFTypeRef<SecIdentityRef> sec_identity;
@@ -323,15 +318,37 @@ void ClientCertStoreMac::GetClientCerts(
 
   if (err != errSecItemNotFound) {
     OSSTATUS_LOG(ERROR, err) << "SecIdentitySearch error";
-    callback.Run(ClientCertIdentityList());
-    return;
+    return ClientCertIdentityList();
   }
 
   ClientCertIdentityList selected_identities;
   GetClientCertsImpl(std::move(preferred_identity),
                      std::move(regular_identities), request, true,
                      &selected_identities);
-  callback.Run(std::move(selected_identities));
+  return selected_identities;
+}
+
+}  // namespace
+
+ClientCertStoreMac::ClientCertStoreMac() {}
+
+ClientCertStoreMac::~ClientCertStoreMac() {}
+
+void ClientCertStoreMac::GetClientCerts(
+    const SSLCertRequestInfo& request,
+    const ClientCertListCallback& callback) {
+  if (base::PostTaskAndReplyWithResult(
+          GetSSLPlatformKeyTaskRunner().get(), FROM_HERE,
+          // Caller is responsible for keeping the |request| alive
+          // until the callback is run, so ConstRef is safe.
+          base::Bind(&GetClientCertsOnBackgroundThread,
+                     base::ConstRef(request)),
+          callback)) {
+    return;
+  }
+
+  // If the task could not be posted, behave as if there were no certificates.
+  callback.Run(ClientCertIdentityList());
 }
 
 bool ClientCertStoreMac::SelectClientCertsForTesting(

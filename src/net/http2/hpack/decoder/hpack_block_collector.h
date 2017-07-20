@@ -15,14 +15,14 @@
 
 #include <stddef.h>
 
-#include <string>
 #include <vector>
 
-#include "base/strings/string_piece.h"
 #include "net/http2/hpack/decoder/hpack_entry_collector.h"
 #include "net/http2/hpack/decoder/hpack_entry_decoder_listener.h"
 #include "net/http2/hpack/http2_hpack_constants.h"
 #include "net/http2/hpack/tools/hpack_block_builder.h"
+#include "net/http2/platform/api/http2_string.h"
+#include "net/http2/platform/api/http2_string_piece.h"
 
 namespace net {
 namespace test {
@@ -65,14 +65,14 @@ class HpackBlockCollector : public HpackEntryDecoderListener {
   void ExpectNameIndexAndLiteralValue(HpackEntryType type,
                                       size_t index,
                                       bool value_huffman,
-                                      const std::string& value);
+                                      const Http2String& value);
 
   // Add an HPACK entry for a header entry with a literal name and value.
   void ExpectLiteralNameAndValue(HpackEntryType type,
                                  bool name_huffman,
-                                 const std::string& name,
+                                 const Http2String& name,
                                  bool value_huffman,
-                                 const std::string& value);
+                                 const Http2String& value);
 
   // Shuffle the entries, in support of generating an HPACK block of entries
   // in some random order.
@@ -96,16 +96,16 @@ class HpackBlockCollector : public HpackEntryDecoderListener {
       HpackEntryType expected_type,
       size_t expected_index,
       bool expected_value_huffman,
-      base::StringPiece expected_value) const;
+      Http2StringPiece expected_value) const;
 
   // Return AssertionSuccess if there is just one entry, and it is a Header
   // with a literal name and literal value.
   ::testing::AssertionResult ValidateSoleLiteralNameValueHeader(
       HpackEntryType expected_type,
       bool expected_name_huffman,
-      base::StringPiece expected_name,
+      Http2StringPiece expected_name,
       bool expected_value_huffman,
-      base::StringPiece expected_value) const;
+      Http2StringPiece expected_value) const;
 
   bool IsNotPending() const { return pending_entry_.IsClear(); }
   bool IsClear() const { return IsNotPending() && entries_.empty(); }

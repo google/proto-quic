@@ -19,15 +19,15 @@
 // frame payload.
 
 #include <stddef.h>
-#include <string>
 
 #include "base/logging.h"
-#include "base/strings/string_piece.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/http2_constants.h"
 #include "net/http2/http2_structures_test_util.h"
 #include "net/http2/platform/api/http2_reconstruct_object.h"
+#include "net/http2/platform/api/http2_string.h"
+#include "net/http2/platform/api/http2_string_piece.h"
 #include "net/http2/tools/failure.h"
 #include "net/http2/tools/http2_frame_builder.h"
 #include "net/http2/tools/random_decoder_test.h"
@@ -36,8 +36,6 @@
 using ::testing::AssertionFailure;
 using ::testing::AssertionResult;
 using ::testing::AssertionSuccess;
-using base::StringPiece;
-using std::string;
 
 namespace net {
 namespace test {
@@ -94,7 +92,8 @@ class Http2StructureDecoderTest : public RandomDecoderTest {
 
   // Fully decodes the Structure at the start of data, and confirms it matches
   // *expected (if provided).
-  AssertionResult DecodeLeadingStructure(const S* expected, StringPiece data) {
+  AssertionResult DecodeLeadingStructure(const S* expected,
+                                         Http2StringPiece data) {
     VERIFY_LE(S::EncodedSize(), data.size());
     DecodeBuffer original(data);
 
@@ -146,7 +145,7 @@ class Http2StructureDecoderTest : public RandomDecoderTest {
   template <size_t N>
   AssertionResult DecodeLeadingStructure(const char (&data)[N]) {
     VERIFY_AND_RETURN_SUCCESS(
-        DecodeLeadingStructure(nullptr, StringPiece(data, N)));
+        DecodeLeadingStructure(nullptr, Http2StringPiece(data, N)));
   }
 
   template <size_t N>
@@ -158,7 +157,7 @@ class Http2StructureDecoderTest : public RandomDecoderTest {
   // Encode the structure |in_s| into bytes, then decode the bytes
   // and validate that the decoder produced the same field values.
   AssertionResult EncodeThenDecode(const S& in_s) {
-    string bytes = SerializeStructure(in_s);
+    Http2String bytes = SerializeStructure(in_s);
     VERIFY_EQ(S::EncodedSize(), bytes.size());
     VERIFY_AND_RETURN_SUCCESS(DecodeLeadingStructure(&in_s, bytes));
   }

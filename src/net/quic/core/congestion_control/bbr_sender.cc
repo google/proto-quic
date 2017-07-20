@@ -47,11 +47,6 @@ const QuicTime::Delta kProbeRttTime = QuicTime::Delta::FromMilliseconds(200);
 const float kStartupGrowthTarget = 1.25;
 const QuicRoundTripCount kRoundTripsWithoutGrowthBeforeExitingStartup = 3;
 
-// Maintain ack history for this fraction of the smoothed RTT.
-const float kRecentlyAckedRttFraction = 0.5f;
-// Minimum period over which ack history will be maintained.
-const QuicTime::Delta kMinAckHistory = QuicTime::Delta::FromMilliseconds(5);
-
 }  // namespace
 
 BbrSender::DebugState::DebugState(const BbrSender& sender)
@@ -104,10 +99,6 @@ BbrSender::BbrSender(const RttStats* rtt_stats,
       rtt_variance_weight_(
           static_cast<float>(FLAGS_quic_bbr_rtt_variation_weight)),
       num_startup_rtts_(kRoundTripsWithoutGrowthBeforeExitingStartup),
-      congestion_window_gain_for_slow_delivery_(
-          static_cast<float>(FLAGS_quic_bbr_slow_delivery_cwnd_gain)),
-      threshold_multiplier_for_slow_delivery_(static_cast<float>(
-          FLAGS_quic_bbr_slow_delivery_threshold_multiplier)),
       cycle_current_offset_(0),
       last_cycle_start_(QuicTime::Zero()),
       is_at_full_bandwidth_(false),
@@ -120,7 +111,6 @@ BbrSender::BbrSender(const RttStats* rtt_stats,
       recovery_state_(NOT_IN_RECOVERY),
       end_recovery_at_(0),
       recovery_window_(max_congestion_window_),
-      bytes_recently_acked_(0),
       rate_based_recovery_(false) {
   EnterStartupMode();
 }
@@ -147,43 +137,9 @@ bool BbrSender::OnPacketSent(QuicTime sent_time,
   return is_retransmittable == HAS_RETRANSMITTABLE_DATA;
 }
 
-bool BbrSender::SlowDeliveryAllowsSending(QuicTime now,
-                                          QuicByteCount bytes_in_flight) {
-  if (mode_ != BbrSender::PROBE_BW) {
-    return false;
-  }
-  UpdateRecentlyAcked(now, 0u);
-  // Set a (large) limit to how much we send into a blackhole.
-  if (bytes_in_flight >=
-      congestion_window_gain_for_slow_delivery_ * GetCongestionWindow()) {
-    return false;
-  }
-  // If no acks were recorded in the recent past, continue sending.
-  if (recently_acked_.empty()) {
-    return true;
-  }
-  // Compute the time period over which acks should have been recorded.
-  QuicTime::Delta ack_period =
-      std::max(now - recently_acked_.front().ack_time,
-               std::max(kMinAckHistory, kRecentlyAckedRttFraction *
-                                            rtt_stats_->smoothed_rtt()));
-  // If delivery rate is less than BW by a factor of threshold_multiplier_,
-  // ack rate has suddenly decreased substantially. Continue sending.
-  if (BandwidthEstimate() * ack_period >
-      threshold_multiplier_for_slow_delivery_ * bytes_recently_acked_) {
-    return true;
-  }
-  return false;
-}
-
-QuicTime::Delta BbrSender::TimeUntilSend(QuicTime now,
+QuicTime::Delta BbrSender::TimeUntilSend(QuicTime /* now */,
                                          QuicByteCount bytes_in_flight) {
   if (bytes_in_flight < GetCongestionWindow()) {
-    return QuicTime::Delta::Zero();
-  }
-  if (FLAGS_quic_reloadable_flag_quic_bbr_slow_recent_delivery &&
-      SlowDeliveryAllowsSending(now, bytes_in_flight)) {
-    QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_slow_recent_delivery, 2, 2);
     return QuicTime::Delta::Zero();
   }
   return QuicTime::Delta::Infinite();
@@ -279,21 +235,18 @@ void BbrSender::OnCongestionEvent(bool /*rtt_updated*/,
 
     const QuicByteCount bytes_acked =
         sampler_.total_bytes_acked() - total_bytes_acked_before;
-    if (FLAGS_quic_reloadable_flag_quic_bbr_slow_recent_delivery) {
-      QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_slow_recent_delivery, 1,
-                        2);
-      UpdateRecentlyAcked(event_time, bytes_acked);
-    }
 
-    if (FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes) {
-      QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_ack_aggregation_bytes, 1,
-                        2);
-      UpdateAckAggregationBytes(event_time, bytes_acked);
-    }
-    if (FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes2) {
-      QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_ack_aggregation_bytes2, 1,
-                        2);
-      UpdateAckAggregationBytes(event_time, bytes_acked);
+    UpdateAckAggregationBytes(event_time, bytes_acked);
+    if (FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes2 ||
+        FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes3) {
+      if (FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes2) {
+        QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_ack_aggregation_bytes2,
+                          1, 2);
+      }
+      if (FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes3) {
+        QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_ack_aggregation_bytes3,
+                          1, 2);
+      }
       if (unacked_packets_->bytes_in_flight() <=
           1.25 * GetTargetCongestionWindow(pacing_gain_)) {
         bytes_acked_since_queue_drained_ = 0;
@@ -550,13 +503,9 @@ void BbrSender::UpdateRecoveryState(QuicPacketNumber last_acked_packet,
       // Enter conservation on the first loss.
       if (has_losses) {
         recovery_state_ = CONSERVATION;
-        if (FLAGS_quic_reloadable_flag_quic_bbr_fix_conservation2) {
-          // This will cause the |recovery_window_| to be set to the correct
-          // value in CalculateRecoveryWindow().
-          recovery_window_ = 0;
-          QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_fix_conservation2, 1,
-                            3);
-        }
+        // This will cause the |recovery_window_| to be set to the correct
+        // value in CalculateRecoveryWindow().
+        recovery_window_ = 0;
         // Since the conservation phase is meant to be lasting for a whole
         // round, extend the current round as if it were started right now.
         current_round_trip_end_ = last_sent_packet_;
@@ -576,26 +525,6 @@ void BbrSender::UpdateRecoveryState(QuicPacketNumber last_acked_packet,
 
       break;
   }
-}
-
-void BbrSender::UpdateRecentlyAcked(QuicTime new_ack_time,
-                                    QuicByteCount newly_acked_bytes) {
-  // Discard information stored for acks received too far in the past.
-  QuicTime::Delta recent_period = std::max(
-      kMinAckHistory, kRecentlyAckedRttFraction * rtt_stats_->smoothed_rtt());
-  while (!recently_acked_.empty() &&
-         (recently_acked_.front().ack_time + recent_period < new_ack_time)) {
-    DCHECK_GE(bytes_recently_acked_, recently_acked_.front().acked_bytes);
-    bytes_recently_acked_ -= recently_acked_.front().acked_bytes;
-    recently_acked_.pop_front();
-  }
-  // Nothing to add to recently_acked_ if no new ack.
-  if (newly_acked_bytes == 0)
-    return;
-  // Add information for new ack
-  DataDelivered new_ack = {new_ack_time, newly_acked_bytes};
-  recently_acked_.push_back(new_ack);
-  bytes_recently_acked_ += newly_acked_bytes;
 }
 
 // TODO(ianswett): Move this logic into BandwidthSampler.
@@ -659,11 +588,6 @@ void BbrSender::CalculateCongestionWindow(QuicByteCount bytes_acked) {
   if (rtt_variance_weight_ > 0.f && !BandwidthEstimate().IsZero()) {
     target_window += rtt_variance_weight_ * rtt_stats_->mean_deviation() *
                      BandwidthEstimate();
-  } else if (FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes &&
-             is_at_full_bandwidth_) {
-    QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_ack_aggregation_bytes, 2,
-                      2);
-    target_window += max_ack_height_.GetBest();
   } else if (FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes2 &&
              is_at_full_bandwidth_) {
     QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_ack_aggregation_bytes2, 2,
@@ -672,7 +596,22 @@ void BbrSender::CalculateCongestionWindow(QuicByteCount bytes_acked) {
       target_window +=
           2 * max_ack_height_.GetBest() - bytes_acked_since_queue_drained_;
     }
+  } else if (FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes3 &&
+             is_at_full_bandwidth_) {
+    QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_ack_aggregation_bytes3, 2,
+                      2);
+    // Subtracting only half the bytes_acked_since_queue_drained ensures sending
+    // doesn't completely stop for a long period of time if the queue hasn't
+    // been drained recently.
+    if (1.5 * max_ack_height_.GetBest() >
+        bytes_acked_since_queue_drained_ / 2) {
+      target_window += 1.5 * max_ack_height_.GetBest() -
+                       bytes_acked_since_queue_drained_ / 2;
+    }
+  } else if (is_at_full_bandwidth_) {
+    target_window += max_ack_height_.GetBest();
   }
+
   if (FLAGS_quic_reloadable_flag_quic_bbr_add_tso_cwnd) {
     // QUIC doesn't have TSO, but it does have similarly quantized pacing, so
     // allow extra CWND to make QUIC's BBR CWND identical to TCP's.
@@ -712,51 +651,34 @@ void BbrSender::CalculateRecoveryWindow(QuicByteCount bytes_acked,
   if (rate_based_recovery_) {
     return;
   }
-  if (FLAGS_quic_reloadable_flag_quic_bbr_fix_conservation2) {
-    if (recovery_state_ == NOT_IN_RECOVERY) {
-      return;
-    }
 
-    // Set up the initial recovery window.
-    if (recovery_window_ == 0) {
-      QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_fix_conservation2, 2, 3);
-      recovery_window_ = unacked_packets_->bytes_in_flight() + bytes_acked;
-      recovery_window_ = std::max(kMinimumCongestionWindow, recovery_window_);
-      return;
-    }
+  if (recovery_state_ == NOT_IN_RECOVERY) {
+    return;
+  }
 
-    QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_bbr_fix_conservation2, 3, 3);
-
-    // Remove losses from the recovery window, while accounting for a potential
-    // integer underflow.
-    recovery_window_ = recovery_window_ >= bytes_lost
-                           ? recovery_window_ - bytes_lost
-                           : kMaxSegmentSize;
-
-    // In CONSERVATION mode, just subtracting losses is sufficient.  In GROWTH,
-    // release additional |bytes_acked| to achieve a slow-start-like behavior.
-    if (recovery_state_ == GROWTH) {
-      recovery_window_ += bytes_acked;
-    }
-
-    // Sanity checks.  Ensure that we always allow to send at least
-    // |bytes_acked| in response.
-    recovery_window_ = std::max(
-        recovery_window_, unacked_packets_->bytes_in_flight() + bytes_acked);
+  // Set up the initial recovery window.
+  if (recovery_window_ == 0) {
+    recovery_window_ = unacked_packets_->bytes_in_flight() + bytes_acked;
     recovery_window_ = std::max(kMinimumCongestionWindow, recovery_window_);
     return;
   }
 
-  switch (recovery_state_) {
-    case CONSERVATION:
-      recovery_window_ = unacked_packets_->bytes_in_flight() + bytes_acked;
-      break;
-    case GROWTH:
-      recovery_window_ = unacked_packets_->bytes_in_flight() + 2 * bytes_acked;
-      break;
-    default:
-      break;
+  // Remove losses from the recovery window, while accounting for a potential
+  // integer underflow.
+  recovery_window_ = recovery_window_ >= bytes_lost
+                         ? recovery_window_ - bytes_lost
+                         : kMaxSegmentSize;
+
+  // In CONSERVATION mode, just subtracting losses is sufficient.  In GROWTH,
+  // release additional |bytes_acked| to achieve a slow-start-like behavior.
+  if (recovery_state_ == GROWTH) {
+    recovery_window_ += bytes_acked;
   }
+
+  // Sanity checks.  Ensure that we always allow to send at least
+  // |bytes_acked| in response.
+  recovery_window_ = std::max(
+      recovery_window_, unacked_packets_->bytes_in_flight() + bytes_acked);
   recovery_window_ = std::max(kMinimumCongestionWindow, recovery_window_);
 }
 

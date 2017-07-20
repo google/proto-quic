@@ -30,14 +30,14 @@ symatics should exist.  This is an exact match.
 */
 
 
-/* TREE
+/** TREE
  *Typedef(MyLong)
  *  Type()
  *    PrimitiveType(long)
  */
 typedef long MyLong;
 
-/* TREE
+/** TREE
  *Typedef(MyLong)
  *  ExtAttributes()
  *    ExtAttribute(foo)
@@ -46,7 +46,7 @@ typedef long MyLong;
  */
 typedef [foo] long MyLong;
 
-/* TREE
+/** TREE
  *Typedef(MyLongArray)
  *  Type()
  *    PrimitiveType(long)
@@ -54,7 +54,7 @@ typedef [foo] long MyLong;
  */
 typedef long[] MyLongArray;
 
-/* TREE
+/** TREE
  *Typedef(MyLongSizedArray)
  *  Type()
  *    PrimitiveType(long)
@@ -62,7 +62,7 @@ typedef long[] MyLongArray;
  */
 typedef long[4] MyLongSizedArray;
 
-/* TREE
+/** TREE
  *Typedef(MyLongSizedArrayArray)
  *  Type()
  *    PrimitiveType(long)
@@ -71,7 +71,7 @@ typedef long[4] MyLongSizedArray;
  */
 typedef long[4][5] MyLongSizedArrayArray;
 
-/* TREE
+/** TREE
  *Typedef(MyLongArraySizedArray)
  *  Type()
  *    PrimitiveType(long)
@@ -80,7 +80,7 @@ typedef long[4][5] MyLongSizedArrayArray;
  */
 typedef long[][5] MyLongArraySizedArray;
 
-/* TREE
+/** TREE
  *Typedef(MyTypeFive)
  *  Type()
  *    Typeref(MyType)
@@ -88,7 +88,7 @@ typedef long[][5] MyLongArraySizedArray;
  */
 typedef MyType[5] MyTypeFive;
 
-/* TREE
+/** TREE
  *Typedef(MyTypeUnsizedFive)
  *  Type()
  *    Typeref(MyType)
@@ -97,98 +97,98 @@ typedef MyType[5] MyTypeFive;
  */
 typedef MyType[][5] MyTypeUnsizedFive;
 
-/* TREE
+/** TREE
  *Typedef(MyLongLong)
  *  Type()
  *    PrimitiveType(long long)
  */
 typedef long long MyLongLong;
 
-/* TREE
+/** TREE
  *Typedef(MyULong)
  *  Type()
  *    PrimitiveType(unsigned long)
  */
 typedef unsigned long MyULong;
 
-/* TREE
+/** TREE
  *Typedef(MyULongLong)
  *  Type()
  *    PrimitiveType(unsigned long long)
  */
 typedef unsigned long long MyULongLong;
 
-/* TREE
+/** TREE
  *Typedef(MyString)
  *  Type()
  *    StringType(DOMString)
  */
 typedef DOMString MyString;
 
-/* TREE
+/** TREE
  *Typedef(MyObject)
  *  Type()
  *    PrimitiveType(object)
  */
 typedef object MyObject;
 
-/* TREE
+/** TREE
  *Typedef(MyDate)
  *  Type()
  *    PrimitiveType(Date)
  */
 typedef Date MyDate;
 
-/* TREE
+/** TREE
  *Typedef(MyFloat)
  *  Type()
  *    PrimitiveType(float)
  */
 typedef float MyFloat;
 
-/* TREE
+/** TREE
  *Typedef(MyUFloat)
  *  Type()
  *    PrimitiveType(float)
  */
 typedef unrestricted float MyUFloat;
 
-/* TREE
+/** TREE
  *Typedef(MyDouble)
  *  Type()
  *    PrimitiveType(double)
  */
 typedef double MyDouble;
 
-/* TREE
+/** TREE
  *Typedef(MyUDouble)
  *  Type()
  *    PrimitiveType(double)
  */
 typedef unrestricted double MyUDouble;
 
-/* TREE
+/** TREE
  *Typedef(MyBool)
  *  Type()
  *    PrimitiveType(boolean)
  */
 typedef boolean MyBool;
 
-/* TREE
+/** TREE
  *Typedef(MyByte)
  *  Type()
  *    PrimitiveType(byte)
  */
 typedef byte MyByte;
 
-/* TREE
+/** TREE
  *Typedef(MyOctet)
  *  Type()
  *    PrimitiveType(octet)
  */
 typedef octet MyOctet;
 
-/* TREE
+/** TREE
  *Typedef(MyRecord)
  *  Type()
  *    Record()
@@ -198,7 +198,7 @@ typedef octet MyOctet;
  */
 typedef record<ByteString, int> MyRecord;
 
-/* TREE
+/** TREE
  *Typedef(MyInvalidRecord)
  *  Type()
  *    Error(Unexpected keyword "double" after "<".)

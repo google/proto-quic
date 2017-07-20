@@ -19,7 +19,7 @@ from telemetry.web_perf import timeline_based_measurement
 class _PageCyclerV2(perf_benchmark.PerfBenchmark):
   options = {'pageset_repeat': 2}
 
-  def CreateTimelineBasedMeasurementOptions(self):
+  def CreateCoreTimelineBasedMeasurementOptions(self):
     tbm_options = timeline_based_measurement.Options()
     loading_metrics_category.AugmentOptionsForLoadingMetrics(tbm_options)
     return tbm_options

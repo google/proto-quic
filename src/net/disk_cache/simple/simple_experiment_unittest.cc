@@ -49,6 +49,28 @@ class SimpleExperimentTest : public testing::Test {
     scoped_feature_list_.InitWithFeatureList(std::move(feature_list));
   }
 
+  void ConfigureEvictWithSizeTrial(bool enabled,
+                                   base::Optional<uint32_t> param) {
+    const std::string kTrialName = "EvictWithSizeTrial";
+    const std::string kGroupName = "GroupFoo";  // Value not used
+
+    scoped_refptr<base::FieldTrial> trial =
+        base::FieldTrialList::CreateFieldTrial(kTrialName, kGroupName);
+
+    if (param) {
+      std::map<std::string, std::string> params;
+      params[kSizeEvictionParam] = base::UintToString(param.value());
+      base::FieldTrialParamAssociator::GetInstance()->AssociateFieldTrialParams(
+          kTrialName, kGroupName, params);
+    }
+
+    std::unique_ptr<base::FeatureList> feature_list(new base::FeatureList);
+    feature_list->RegisterFieldTrialOverride(
+        kSimpleCacheEvictionWithSizeExperiment.name,
+        base::FeatureList::OVERRIDE_ENABLE_FEATURE, trial.get());
+    scoped_feature_list_.InitWithFeatureList(std::move(feature_list));
+  }
+
   std::unique_ptr<base::FieldTrialList> field_trial_list_;
   base::test::ScopedFeatureList scoped_feature_list_;
 };
@@ -82,6 +104,35 @@ TEST_F(SimpleExperimentTest, SizeTrialProperlyConfiguredWrongCacheType) {
   const uint32_t kParam = 125u;
   base::test::ScopedFeatureList scoped_feature_list;
   ConfigureSizeFieldTrial(true, base::Optional<uint32_t>(kParam));
+
+  SimpleExperiment experiment = GetSimpleExperiment(net::APP_CACHE);
+  EXPECT_EQ(SimpleExperimentType::NONE, experiment.type);
+  EXPECT_EQ(0u, experiment.param);
+}
+
+TEST_F(SimpleExperimentTest, EvictWithSizeMissingParam) {
+  base::test::ScopedFeatureList scoped_feature_list;
+  ConfigureEvictWithSizeTrial(true, base::Optional<uint32_t>());
+
+  SimpleExperiment experiment = GetSimpleExperiment(net::DISK_CACHE);
+  EXPECT_EQ(SimpleExperimentType::NONE, experiment.type);
+  EXPECT_EQ(0u, experiment.param);
+}
+
+TEST_F(SimpleExperimentTest, EvictWithSizeProperlyConfigured) {
+  const uint32_t kParam = 1u;
+  base::test::ScopedFeatureList scoped_feature_list;
+  ConfigureEvictWithSizeTrial(true, base::Optional<uint32_t>(kParam));
+
+  SimpleExperiment experiment = GetSimpleExperiment(net::DISK_CACHE);
+  EXPECT_EQ(SimpleExperimentType::EVICT_WITH_SIZE, experiment.type);
+  EXPECT_EQ(kParam, experiment.param);
+}
+
+TEST_F(SimpleExperimentTest, EvictWithSizeProperlyConfiguredWrongCacheType) {
+  const uint32_t kParam = 125u;
+  base::test::ScopedFeatureList scoped_feature_list;
+  ConfigureEvictWithSizeTrial(true, base::Optional<uint32_t>(kParam));
 
   SimpleExperiment experiment = GetSimpleExperiment(net::APP_CACHE);
   EXPECT_EQ(SimpleExperimentType::NONE, experiment.type);

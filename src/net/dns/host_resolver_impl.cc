@@ -1962,16 +1962,17 @@ int HostResolverImpl::Resolve(const RequestInfo& info,
   DCHECK_EQ(false, callback.is_null());
   DCHECK(out_req);
 
-  // Check that the caller supplied a valid hostname to resolve.
-  if (!IsValidDNSDomain(info.hostname()))
-    return ERR_NAME_NOT_RESOLVED;
-
-  LogStartRequest(source_net_log, info);
-
   IPAddress ip_address;
   IPAddress* ip_address_ptr = nullptr;
-  if (ip_address.AssignFromIPLiteral(info.hostname()))
+  if (ip_address.AssignFromIPLiteral(info.hostname())) {
     ip_address_ptr = &ip_address;
+  } else {
+    // Check that the caller supplied a valid hostname to resolve.
+    if (!IsValidDNSDomain(info.hostname()))
+      return ERR_NAME_NOT_RESOLVED;
+  }
+
+  LogStartRequest(source_net_log, info);
 
   // Build a key that identifies the request in the cache and in the
   // outstanding jobs map.
@@ -2059,7 +2060,7 @@ HostResolverImpl::HostResolverImpl(
   NetworkChangeNotifier::AddConnectionTypeObserver(this);
   NetworkChangeNotifier::AddDNSObserver(this);
 #if defined(OS_POSIX) && !defined(OS_MACOSX) && !defined(OS_OPENBSD) && \
-    !defined(OS_ANDROID)
+    !defined(OS_ANDROID) && !defined(OS_FUCHSIA)
   EnsureDnsReloaderInit();
 #endif
 

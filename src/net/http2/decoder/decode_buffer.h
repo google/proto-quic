@@ -19,8 +19,8 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/http2/platform/api/http2_export.h"
+#include "net/http2/platform/api/http2_string_piece.h"
 
 namespace net {
 class DecodeBufferSubset;
@@ -32,7 +32,7 @@ class HTTP2_EXPORT_PRIVATE DecodeBuffer {
     DCHECK(buffer != nullptr);
     DCHECK_LE(len, MaxDecodeBufferLength());
   }
-  explicit DecodeBuffer(base::StringPiece s)
+  explicit DecodeBuffer(Http2StringPiece s)
       : DecodeBuffer(s.data(), s.size()) {}
   // Constructor for character arrays, typically in tests. For example:
   //    const char input[] = { 0x11 };

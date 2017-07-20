@@ -12,13 +12,18 @@
 #include "base/files/scoped_temp_dir.h"
 #include "base/hash.h"
 #include "base/logging.h"
+#include "base/metrics/field_trial.h"
+#include "base/metrics/field_trial_param_associator.h"
 #include "base/pickle.h"
 #include "base/sha1.h"
 #include "base/strings/stringprintf.h"
 #include "base/task_runner.h"
+#include "base/test/mock_entropy_provider.h"
+#include "base/test/scoped_feature_list.h"
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
 #include "net/base/cache_type.h"
+#include "net/disk_cache/simple/simple_experiment.h"
 #include "net/disk_cache/simple/simple_index_delegate.h"
 #include "net/disk_cache/simple/simple_index_file.h"
 #include "net/disk_cache/simple/simple_test_util.h"
@@ -113,6 +118,29 @@ class SimpleIndexTest  : public testing::Test, public SimpleIndexDelegate {
     index_->Initialize(base::Time());
   }
 
+  void EnableEvictBySize() {
+    // Enable size-based eviction.
+    const std::string kTrialName = "EvictWithSizeTrial";
+    const std::string kGroupName = "GroupFoo";  // Value not used
+
+    field_trial_list_ = base::MakeUnique<base::FieldTrialList>(
+        base::MakeUnique<base::MockEntropyProvider>());
+
+    scoped_refptr<base::FieldTrial> trial =
+        base::FieldTrialList::CreateFieldTrial(kTrialName, kGroupName);
+
+    std::map<std::string, std::string> params;
+    params[kSizeEvictionParam] = "1";
+    base::FieldTrialParamAssociator::GetInstance()->AssociateFieldTrialParams(
+        kTrialName, kGroupName, params);
+
+    std::unique_ptr<base::FeatureList> feature_list(new base::FeatureList);
+    feature_list->RegisterFieldTrialOverride(
+        kSimpleCacheEvictionWithSizeExperiment.name,
+        base::FeatureList::OVERRIDE_ENABLE_FEATURE, trial.get());
+    scoped_feature_list_.InitWithFeatureList(std::move(feature_list));
+  }
+
   void WaitForTimeChange() {
     const base::Time initial_time = base::Time::Now();
     do {
@@ -164,6 +192,9 @@ class SimpleIndexTest  : public testing::Test, public SimpleIndexDelegate {
   const simple_util::ImmutableArray<uint64_t, 16> hashes_;
   std::unique_ptr<SimpleIndex> index_;
   base::WeakPtr<MockSimpleIndexFile> index_file_;
+
+  std::unique_ptr<base::FieldTrialList> field_trial_list_;
+  base::test::ScopedFeatureList scoped_feature_list_;
 
   std::vector<uint64_t> last_doom_entry_hashes_;
   int doom_entries_calls_;
@@ -560,6 +591,74 @@ TEST_F(SimpleIndexTest, BasicEviction) {
   // as to at exactly what point we trigger eviction. Not sure how to fix
   // that.
   index()->UpdateEntrySize(hashes_.at<3>(), 475u);
+  EXPECT_EQ(1, doom_entries_calls());
+  EXPECT_EQ(1, index()->GetEntryCount());
+  EXPECT_FALSE(index()->Has(hashes_.at<1>()));
+  EXPECT_FALSE(index()->Has(hashes_.at<2>()));
+  EXPECT_TRUE(index()->Has(hashes_.at<3>()));
+  ASSERT_EQ(2u, last_doom_entry_hashes().size());
+}
+
+TEST_F(SimpleIndexTest, EvictBySize) {
+  EnableEvictBySize();
+  // Enabled, now we can run the actual test.
+  base::Time now(base::Time::Now());
+  index()->SetMaxSize(50000);
+  InsertIntoIndexFileReturn(hashes_.at<1>(), now - base::TimeDelta::FromDays(2),
+                            475u);
+  InsertIntoIndexFileReturn(hashes_.at<2>(), now - base::TimeDelta::FromDays(1),
+                            40000u);
+  ReturnIndexFile();
+  WaitForTimeChange();
+
+  index()->Insert(hashes_.at<3>());
+  // Confirm index is as expected: No eviction, everything there.
+  EXPECT_EQ(3, index()->GetEntryCount());
+  EXPECT_EQ(0, doom_entries_calls());
+  EXPECT_TRUE(index()->Has(hashes_.at<1>()));
+  EXPECT_TRUE(index()->Has(hashes_.at<2>()));
+  EXPECT_TRUE(index()->Has(hashes_.at<3>()));
+
+  // Trigger an eviction, and make sure the right things are tossed.
+  // TODO(rdsmith): This is dependent on the innards of the implementation
+  // as to at exactly what point we trigger eviction. Not sure how to fix
+  // that.
+  index()->UpdateEntrySize(hashes_.at<3>(), 40000u);
+  EXPECT_EQ(1, doom_entries_calls());
+  EXPECT_EQ(2, index()->GetEntryCount());
+  EXPECT_TRUE(index()->Has(hashes_.at<1>()));
+  EXPECT_FALSE(index()->Has(hashes_.at<2>()));
+  EXPECT_TRUE(index()->Has(hashes_.at<3>()));
+  ASSERT_EQ(1u, last_doom_entry_hashes().size());
+}
+
+// Same as test above, but using much older entries to make sure that small
+// things eventually get evictied.
+TEST_F(SimpleIndexTest, EvictBySize2) {
+  EnableEvictBySize();
+  // Enabled, now we can run the actual test.
+  base::Time now(base::Time::Now());
+  index()->SetMaxSize(50000);
+  InsertIntoIndexFileReturn(hashes_.at<1>(),
+                            now - base::TimeDelta::FromDays(200), 475u);
+  InsertIntoIndexFileReturn(hashes_.at<2>(), now - base::TimeDelta::FromDays(1),
+                            40000u);
+  ReturnIndexFile();
+  WaitForTimeChange();
+
+  index()->Insert(hashes_.at<3>());
+  // Confirm index is as expected: No eviction, everything there.
+  EXPECT_EQ(3, index()->GetEntryCount());
+  EXPECT_EQ(0, doom_entries_calls());
+  EXPECT_TRUE(index()->Has(hashes_.at<1>()));
+  EXPECT_TRUE(index()->Has(hashes_.at<2>()));
+  EXPECT_TRUE(index()->Has(hashes_.at<3>()));
+
+  // Trigger an eviction, and make sure the right things are tossed.
+  // TODO(rdsmith): This is dependent on the innards of the implementation
+  // as to at exactly what point we trigger eviction. Not sure how to fix
+  // that.
+  index()->UpdateEntrySize(hashes_.at<3>(), 40000u);
   EXPECT_EQ(1, doom_entries_calls());
   EXPECT_EQ(1, index()->GetEntryCount());
   EXPECT_FALSE(index()->Has(hashes_.at<1>()));

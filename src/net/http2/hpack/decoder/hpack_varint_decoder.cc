@@ -4,14 +4,13 @@
 
 #include "net/http2/hpack/decoder/hpack_varint_decoder.h"
 
-#include <sstream>
+#include "net/http2/platform/api/http2_string_utils.h"
 
 namespace net {
 
-std::string HpackVarintDecoder::DebugString() const {
-  std::stringstream ss;
-  ss << "HpackVarintDecoder(value=" << value_ << ", offset=" << offset_ << ")";
-  return ss.str();
+Http2String HpackVarintDecoder::DebugString() const {
+  return Http2StrCat("HpackVarintDecoder(value=", value_, ", offset=", offset_,
+                     ")");
 }
 
 DecodeStatus HpackVarintDecoder::StartForTest(uint8_t prefix_value,

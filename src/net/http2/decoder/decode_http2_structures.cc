@@ -4,8 +4,6 @@
 
 #include "net/http2/decoder/decode_http2_structures.h"
 
-#include <string.h>
-
 #include "base/logging.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/http2_constants.h"

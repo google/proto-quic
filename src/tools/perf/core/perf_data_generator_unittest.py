@@ -148,6 +148,28 @@ class PerfDataGeneratorTest(unittest.TestCase):
         '--webview-embedder-apk=../../out/Release/apks/SystemWebViewShell.apk'])
     self.assertEquals(test['isolate_name'], 'telemetry_perf_webview_tests')
 
+  def testGenerateTelemetryTestsWithUploadToFlakinessDashboard(self):
+    swarming_dimensions = [{'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP'}]
+    test = perf_data_generator.generate_telemetry_test(
+        swarming_dimensions, 'system_health.common_desktop', 'release', True)
+    expected_generated_test = {
+        'override_compile_targets': ['telemetry_perf_tests'],
+        'args': ['system_health.common_desktop', '-v', '--upload-results',
+                 '--output-format=chartjson', '--browser=release',
+                 '--output-format=json-test-results'],
+        'swarming': {
+          'ignore_task_failure': False,
+          'dimension_sets': [{'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP'}],
+          'hard_timeout': 10800,
+          'can_use_on_swarming_builders': True,
+          'expiration': 36000,
+          'io_timeout': 3600,
+        },
+        'name': 'system_health.common_desktop',
+        'isolate_name': 'telemetry_perf_tests',
+      }
+    self.assertEquals(test, expected_generated_test)
+
   def testGenerateTelemetryTestsBlacklistedReferenceBuildTest(self):
     class BlacklistedBenchmark(benchmark.Benchmark):
       @classmethod

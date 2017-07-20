@@ -226,6 +226,54 @@ TEST_P(WaitableEventWatcherDeletionTest, SignalAndDelete) {
   }
 }
 
+// Tests deleting the WaitableEventWatcher between signaling the event and
+// when the callback should be run.
+TEST_P(WaitableEventWatcherDeletionTest, DeleteWatcherBeforeCallback) {
+  MessageLoop::Type message_loop_type;
+  bool delay_after_delete;
+  std::tie(message_loop_type, delay_after_delete) = GetParam();
+
+  MessageLoop message_loop(message_loop_type);
+  scoped_refptr<SingleThreadTaskRunner> task_runner =
+      message_loop.task_runner();
+
+  // Flag used to esnure that the |watcher_callback| never runs.
+  bool did_callback = false;
+
+  WaitableEvent event(WaitableEvent::ResetPolicy::AUTOMATIC,
+                      WaitableEvent::InitialState::NOT_SIGNALED);
+  auto watcher = MakeUnique<WaitableEventWatcher>();
+
+  // Queue up a series of tasks:
+  // 1. StartWatching the WaitableEvent
+  // 2. Signal the event (which will result in another task getting posted to
+  //    the |task_runner|)
+  // 3. Delete the WaitableEventWatcher
+  // 4. WaitableEventWatcher callback should run (from #2)
+
+  WaitableEventWatcher::EventCallback watcher_callback = BindOnce(
+      [](bool* did_callback, WaitableEvent*) {
+        *did_callback = true;
+      },
+      Unretained(&did_callback));
+
+  task_runner->PostTask(
+      FROM_HERE, BindOnce(IgnoreResult(&WaitableEventWatcher::StartWatching),
+                          Unretained(watcher.get()), Unretained(&event),
+                          std::move(watcher_callback)));
+  task_runner->PostTask(FROM_HERE,
+                        BindOnce(&WaitableEvent::Signal, Unretained(&event)));
+  task_runner->DeleteSoon(FROM_HERE, std::move(watcher));
+  if (delay_after_delete) {
+    task_runner->PostTask(FROM_HERE, BindOnce(&PlatformThread::Sleep,
+                                              TimeDelta::FromMilliseconds(30)));
+  }
+
+  RunLoop().RunUntilIdle();
+
+  EXPECT_FALSE(did_callback);
+}
+
 INSTANTIATE_TEST_CASE_P(,
                         WaitableEventWatcherTest,
                         testing::ValuesIn(testing_message_loops));

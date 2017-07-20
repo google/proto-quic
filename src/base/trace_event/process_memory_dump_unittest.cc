@@ -12,10 +12,16 @@
 #include "base/process/process_metrics.h"
 #include "base/trace_event/memory_allocator_dump_guid.h"
 #include "base/trace_event/memory_infra_background_whitelist.h"
-#include "base/trace_event/sharded_allocation_register.h"
 #include "base/trace_event/trace_event_argument.h"
 #include "base/unguessable_token.h"
+#include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
+
+#if defined(OS_WIN)
+#include "winbase.h"
+#elif defined(OS_POSIX)
+#include <sys/mman.h>
+#endif
 
 namespace base {
 namespace trace_event {
@@ -30,6 +36,28 @@ const char* const kTestDumpNameWhitelist[] = {
 TracedValue* GetHeapDump(const ProcessMemoryDump& pmd, const char* name) {
   auto it = pmd.heap_dumps().find(name);
   return it == pmd.heap_dumps().end() ? nullptr : it->second.get();
+}
+
+void* Map(size_t size) {
+#if defined(OS_WIN)
+  return ::VirtualAlloc(nullptr, size, MEM_RESERVE | MEM_COMMIT,
+                        PAGE_READWRITE);
+#elif defined(OS_POSIX)
+  return ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON,
+                0, 0);
+#else
+#error This architecture is not (yet) supported.
+#endif
+}
+
+void Unmap(void* addr, size_t size) {
+#if defined(OS_WIN)
+  ::VirtualFree(addr, 0, MEM_DECOMMIT);
+#elif defined(OS_POSIX)
+  ::munmap(addr, size);
+#else
+#error This architecture is not (yet) supported.
+#endif
 }
 
 }  // namespace
@@ -93,29 +121,31 @@ TEST(ProcessMemoryDumpTest, Clear) {
 
 TEST(ProcessMemoryDumpTest, TakeAllDumpsFrom) {
   std::unique_ptr<TracedValue> traced_value(new TracedValue);
-  ShardedAllocationRegister allocation_register;
-  allocation_register.SetEnabled();
-  allocation_register.Insert("", 100, AllocationContext());
+  std::unordered_map<AllocationContext, AllocationMetrics> metrics_by_context;
+  metrics_by_context[AllocationContext()] = {1, 1};
+  TraceEventMemoryOverhead overhead;
 
   scoped_refptr<HeapProfilerSerializationState>
       heap_profiler_serialization_state = new HeapProfilerSerializationState;
-  heap_profiler_serialization_state->CreateDeduplicators();
+  heap_profiler_serialization_state->SetStackFrameDeduplicator(
+      WrapUnique(new StackFrameDeduplicator));
+  heap_profiler_serialization_state->SetTypeNameDeduplicator(
+      WrapUnique(new TypeNameDeduplicator));
   std::unique_ptr<ProcessMemoryDump> pmd1(new ProcessMemoryDump(
       heap_profiler_serialization_state.get(), kDetailedDumpArgs));
-
   auto* mad1_1 = pmd1->CreateAllocatorDump("pmd1/mad1");
   auto* mad1_2 = pmd1->CreateAllocatorDump("pmd1/mad2");
   pmd1->AddOwnershipEdge(mad1_1->guid(), mad1_2->guid());
-  pmd1->DumpHeapUsage(allocation_register, "pmd1/heap_dump1");
-  pmd1->DumpHeapUsage(allocation_register, "pmd1/heap_dump2");
+  pmd1->DumpHeapUsage(metrics_by_context, overhead, "pmd1/heap_dump1");
+  pmd1->DumpHeapUsage(metrics_by_context, overhead, "pmd1/heap_dump2");
 
   std::unique_ptr<ProcessMemoryDump> pmd2(new ProcessMemoryDump(
       heap_profiler_serialization_state.get(), kDetailedDumpArgs));
   auto* mad2_1 = pmd2->CreateAllocatorDump("pmd2/mad1");
   auto* mad2_2 = pmd2->CreateAllocatorDump("pmd2/mad2");
   pmd2->AddOwnershipEdge(mad2_1->guid(), mad2_2->guid());
-  pmd2->DumpHeapUsage(allocation_register, "pmd2/heap_dump1");
-  pmd2->DumpHeapUsage(allocation_register, "pmd2/heap_dump2");
+  pmd2->DumpHeapUsage(metrics_by_context, overhead, "pmd2/heap_dump1");
+  pmd2->DumpHeapUsage(metrics_by_context, overhead, "pmd2/heap_dump2");
 
   MemoryAllocatorDumpGuid shared_mad_guid1(1);
   MemoryAllocatorDumpGuid shared_mad_guid2(2);
@@ -143,9 +173,7 @@ TEST(ProcessMemoryDumpTest, TakeAllDumpsFrom) {
   pmd2.reset();
 
   // Now check that |pmd1| has been effectively merged.
-  // Note that DumpHeapUsage() adds an implicit dump for AllocationRegister's
-  // memory overhead.
-  ASSERT_EQ(10u, pmd1->allocator_dumps().size());
+  ASSERT_EQ(6u, pmd1->allocator_dumps().size());
   ASSERT_EQ(1u, pmd1->allocator_dumps().count("pmd1/mad1"));
   ASSERT_EQ(1u, pmd1->allocator_dumps().count("pmd1/mad2"));
   ASSERT_EQ(1u, pmd1->allocator_dumps().count("pmd2/mad1"));
@@ -303,42 +331,11 @@ TEST(ProcessMemoryDumpTest, GlobalAllocatorDumpTest) {
   ASSERT_EQ(MemoryAllocatorDump::Flags::DEFAULT, shared_mad1->flags());
 }
 
-TEST(ProcessMemoryDumpTest, OldSharedMemoryOwnershipTest) {
+TEST(ProcessMemoryDumpTest, SharedMemoryOwnershipTest) {
   std::unique_ptr<ProcessMemoryDump> pmd(
       new ProcessMemoryDump(nullptr, kDetailedDumpArgs));
   const ProcessMemoryDump::AllocatorDumpEdgesMap& edges =
       pmd->allocator_dumps_edges_for_testing();
-
-  auto* shm_dump1 = pmd->CreateAllocatorDump("shared_mem/seg1");
-
-  auto* client_dump1 = pmd->CreateAllocatorDump("discardable/segment1");
-  MemoryAllocatorDumpGuid client_global_guid1(1);
-  auto shm_token1 = UnguessableToken::Create();
-  MemoryAllocatorDumpGuid shm_global_guid1 =
-      SharedMemoryTracker::GetGlobalDumpIdForTracing(shm_token1);
-  pmd->AddOverridableOwnershipEdge(shm_dump1->guid(), shm_global_guid1,
-                                   0 /* importance */);
-
-  pmd->CreateSharedMemoryOwnershipEdge(client_dump1->guid(),
-                                       client_global_guid1, shm_token1,
-                                       1 /* importance */);
-
-  EXPECT_EQ(2u, edges.size());
-  EXPECT_EQ(shm_global_guid1, edges.find(shm_dump1->guid())->second.target);
-  EXPECT_EQ(0, edges.find(shm_dump1->guid())->second.importance);
-  EXPECT_TRUE(edges.find(shm_dump1->guid())->second.overridable);
-  EXPECT_EQ(client_global_guid1,
-            edges.find(client_dump1->guid())->second.target);
-  EXPECT_EQ(1, edges.find(client_dump1->guid())->second.importance);
-  EXPECT_FALSE(edges.find(client_dump1->guid())->second.overridable);
-}
-
-TEST(ProcessMemoryDumpTest, NewSharedMemoryOwnershipTest) {
-  std::unique_ptr<ProcessMemoryDump> pmd(
-      new ProcessMemoryDump(nullptr, kDetailedDumpArgs));
-  const ProcessMemoryDump::AllocatorDumpEdgesMap& edges =
-      pmd->allocator_dumps_edges_for_testing();
-  MemoryAllocatorDumpGuid::SetUseSharedMemoryBasedGUIDsForTesting();
 
   auto* client_dump2 = pmd->CreateAllocatorDump("discardable/segment2");
   MemoryAllocatorDumpGuid client_global_guid2(2);
@@ -414,20 +411,20 @@ TEST(ProcessMemoryDumpTest, CountResidentBytes) {
 
   // Allocate few page of dirty memory and check if it is resident.
   const size_t size1 = 5 * page_size;
-  std::unique_ptr<char, base::AlignedFreeDeleter> memory1(
-      static_cast<char*>(base::AlignedAlloc(size1, page_size)));
-  memset(memory1.get(), 0, size1);
-  size_t res1 = ProcessMemoryDump::CountResidentBytes(memory1.get(), size1);
+  void* memory1 = Map(size1);
+  memset(memory1, 0, size1);
+  size_t res1 = ProcessMemoryDump::CountResidentBytes(memory1, size1);
   ASSERT_EQ(res1, size1);
+  Unmap(memory1, size1);
 
   // Allocate a large memory segment (> 8Mib).
   const size_t kVeryLargeMemorySize = 15 * 1024 * 1024;
-  std::unique_ptr<char, base::AlignedFreeDeleter> memory2(
-      static_cast<char*>(base::AlignedAlloc(kVeryLargeMemorySize, page_size)));
-  memset(memory2.get(), 0, kVeryLargeMemorySize);
-  size_t res2 = ProcessMemoryDump::CountResidentBytes(memory2.get(),
-                                                      kVeryLargeMemorySize);
+  void* memory2 = Map(kVeryLargeMemorySize);
+  memset(memory2, 0, kVeryLargeMemorySize);
+  size_t res2 =
+      ProcessMemoryDump::CountResidentBytes(memory2, kVeryLargeMemorySize);
   ASSERT_EQ(res2, kVeryLargeMemorySize);
+  Unmap(memory2, kVeryLargeMemorySize);
 }
 #endif  // defined(COUNT_RESIDENT_BYTES_SUPPORTED)
 

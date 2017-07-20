@@ -13,13 +13,13 @@
 #include <stddef.h>
 
 #include <iosfwd>
-#include <string>
 
-#include "base/strings/string_piece.h"
 #include "net/http2/hpack/decoder/hpack_entry_decoder_listener.h"
 #include "net/http2/hpack/decoder/hpack_string_collector.h"
 #include "net/http2/hpack/http2_hpack_constants.h"
 #include "net/http2/hpack/tools/hpack_block_builder.h"
+#include "net/http2/platform/api/http2_string.h"
+#include "net/http2/platform/api/http2_string_piece.h"
 
 namespace net {
 namespace test {
@@ -36,12 +36,12 @@ class HpackEntryCollector : public HpackEntryDecoderListener {
   HpackEntryCollector(HpackEntryType type,
                       size_t index,
                       bool value_huffman,
-                      const std::string& value);
+                      const Http2String& value);
   HpackEntryCollector(HpackEntryType type,
                       bool name_huffman,
-                      const std::string& name,
+                      const Http2String& name,
                       bool value_huffman,
-                      const std::string& value);
+                      const Http2String& value);
 
   ~HpackEntryCollector() override;
 
@@ -84,16 +84,16 @@ class HpackEntryCollector : public HpackEntryDecoderListener {
       HpackEntryType expected_type,
       size_t expected_index,
       bool expected_value_huffman,
-      base::StringPiece expected_value) const;
+      Http2StringPiece expected_value) const;
 
   // Returns success if collected a Header with an literal name and literal
   // value.
   ::testing::AssertionResult ValidateLiteralNameValueHeader(
       HpackEntryType expected_type,
       bool expected_name_huffman,
-      base::StringPiece expected_name,
+      Http2StringPiece expected_name,
       bool expected_value_huffman,
-      base::StringPiece expected_value) const;
+      Http2StringPiece expected_value) const;
 
   // Returns success if collected a Dynamic Table Size Update,
   // with the specified size.
@@ -121,7 +121,7 @@ class HpackEntryCollector : public HpackEntryDecoderListener {
   void AppendToHpackBlockBuilder(HpackBlockBuilder* hbb) const;
 
   // Returns a debug string.
-  std::string ToString() const;
+  Http2String ToString() const;
 
  private:
   void Init(HpackEntryType type, size_t maybe_index);

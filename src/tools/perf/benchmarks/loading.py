@@ -17,7 +17,7 @@ class _LoadingBase(perf_benchmark.PerfBenchmark):
 
   options = {'pageset_repeat': 2}
 
-  def CreateTimelineBasedMeasurementOptions(self):
+  def CreateCoreTimelineBasedMeasurementOptions(self):
     tbm_options = timeline_based_measurement.Options()
     loading_metrics_category.AugmentOptionsForLoadingMetrics(tbm_options)
     return tbm_options

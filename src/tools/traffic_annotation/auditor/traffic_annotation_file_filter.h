@@ -8,11 +8,9 @@
 #include <string>
 #include <vector>
 
-namespace base {
-class FilePath;
-}
+#include "base/files/file_path.h"
 
-// Provides the list of files that might be relevent to network traffic
+// Provides the list of files that might be relevant to network traffic
 // annotation by matching filename and searching for keywords in the file
 // content.
 // The file should end with either .cc or .mm and the content should include a
@@ -23,7 +21,7 @@ class TrafficAnnotationFileFilter {
   TrafficAnnotationFileFilter();
   ~TrafficAnnotationFileFilter();
 
-  // Returns the list of relevant files in the given |directory_name| into the
+  // Adds the list of relevant files in the given |directory_name| to the
   // |file_paths|. If |directory_name| is empty, all files are returned.
   // |source_path| should be the repository source directory, e.g. C:/src.
   // |ignore_list| provides a list of partial paths to ignore.
@@ -35,11 +33,21 @@ class TrafficAnnotationFileFilter {
   // Checks the name and content of a file and returns true if it is relevant.
   bool IsFileRelevant(const std::string& file_path);
 
- private:
-  // Gets the list of all files in the repository.
+  // Gets the list of all relevant files in the repository and stores them in
+  // |git_files|.
   void GetFilesFromGit(const base::FilePath& source_path);
 
+  // Sets the path to a file that would be used to mock the output of
+  // 'git ls-files' in tests.
+  void SetGitFileForTest(const base::FilePath& file_path) {
+    git_file_for_test_ = file_path;
+  }
+
+  const std::vector<std::string>& git_files() { return git_files_; }
+
+ private:
   std::vector<std::string> git_files_;
+  base::FilePath git_file_for_test_;
 };
 
 #endif  // TRAFFIC_ANNOTATION_FILE_FILTER_H_

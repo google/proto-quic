@@ -250,7 +250,7 @@ TEST_F(URLRequestQuicPerfTest, TestGetRequest) {
       base::trace_event::MemoryDumpLevelOfDetail::LIGHT};
   auto on_memory_dump_done =
       [](base::Closure quit_closure, bool success, uint64_t dump_guid,
-         const base::Optional<base::trace_event::MemoryDumpCallbackResult>&) {
+         const base::trace_event::ProcessMemoryDumpsMap&) {
         base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, quit_closure);
         ASSERT_TRUE(success);
       };

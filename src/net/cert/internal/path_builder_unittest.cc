@@ -16,7 +16,6 @@
 #include "net/cert/internal/verify_certificate_chain.h"
 #include "net/cert/pem_tokenizer.h"
 #include "net/der/input.h"
-#include "net/test/cert_test_util.h"
 #include "net/test/test_certificate_data.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"

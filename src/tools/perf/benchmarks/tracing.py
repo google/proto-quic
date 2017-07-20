@@ -20,7 +20,7 @@ class TracingWithDebugOverhead(perf_benchmark.PerfBenchmark):
 
   page_set = page_sets.Top10PageSet
 
-  def CreateTimelineBasedMeasurementOptions(self):
+  def CreateCoreTimelineBasedMeasurementOptions(self):
     options = timeline_based_measurement.Options(
         timeline_based_measurement.DEBUG_OVERHEAD_LEVEL)
     options.SetTimelineBasedMetrics(['tracingMetric'])
@@ -45,7 +45,7 @@ class TracingWithBackgroundMemoryInfra(perf_benchmark.PerfBenchmark):
   """Measures the overhead of background memory-infra dumps"""
   page_set = page_sets.Top10PageSet
 
-  def CreateTimelineBasedMeasurementOptions(self):
+  def CreateCoreTimelineBasedMeasurementOptions(self):
     # Enable only memory-infra category with periodic background mode dumps
     # every 200 milliseconds.
     trace_memory = chrome_trace_category_filter.ChromeTraceCategoryFilter(

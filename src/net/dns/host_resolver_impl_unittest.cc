@@ -1394,7 +1394,7 @@ TEST_F(HostResolverImplTest, ResolveFromCache) {
 
   HostResolver::RequestInfo info(HostPortPair("just.testing", 80));
 
-  // First hit will miss the cache.
+  // First query will miss the cache.
   EXPECT_EQ(ERR_DNS_CACHE_MISS,
             CreateRequest(info, DEFAULT_PRIORITY)->ResolveFromCache());
 
@@ -1409,13 +1409,35 @@ TEST_F(HostResolverImplTest, ResolveFromCache) {
   EXPECT_TRUE(requests_[2]->HasOneAddress("192.168.1.42", 80));
 }
 
+TEST_F(HostResolverImplTest, ResolveFromCacheInvalidName) {
+  proc_->AddRuleForAllFamilies("foo,bar.com", "192.168.1.42");
+  proc_->SignalMultiple(1u);  // Need only one.
+
+  HostResolver::RequestInfo info(HostPortPair("foo,bar.com", 80));
+
+  // First query will miss the cache.
+  EXPECT_EQ(ERR_DNS_CACHE_MISS,
+            CreateRequest(info, DEFAULT_PRIORITY)->ResolveFromCache());
+
+  // This time, we fetch normally.
+  EXPECT_THAT(CreateRequest(info, DEFAULT_PRIORITY)->Resolve(),
+              IsError(ERR_NAME_NOT_RESOLVED));
+  EXPECT_THAT(requests_[1]->WaitForResult(), IsError(ERR_NAME_NOT_RESOLVED));
+
+  // Expect a cache miss, since the query could not have succeeded the first
+  // time.
+  EXPECT_THAT(CreateRequest(info, DEFAULT_PRIORITY)->ResolveFromCache(),
+              IsError(ERR_DNS_CACHE_MISS));
+  EXPECT_FALSE(requests_[2]->HasOneAddress("192.168.1.42", 80));
+}
+
 TEST_F(HostResolverImplTest, ResolveStaleFromCache) {
   proc_->AddRuleForAllFamilies("just.testing", "192.168.1.42");
   proc_->SignalMultiple(1u);  // Need only one.
 
   HostResolver::RequestInfo info(HostPortPair("just.testing", 80));
 
-  // First hit will miss the cache.
+  // First query will miss the cache.
   EXPECT_EQ(ERR_DNS_CACHE_MISS,
             CreateRequest(info, DEFAULT_PRIORITY)->ResolveFromCache());
 

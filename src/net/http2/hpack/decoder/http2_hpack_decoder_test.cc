@@ -6,13 +6,11 @@
 
 // Tests of Http2HpackDecoder.
 
-#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
 
 #include "base/logging.h"
-#include "base/strings/string_piece.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/hpack/decoder/hpack_decoder_listener.h"
 #include "net/http2/hpack/decoder/hpack_decoder_state.h"
@@ -22,14 +20,13 @@
 #include "net/http2/hpack/tools/hpack_block_builder.h"
 #include "net/http2/hpack/tools/hpack_example.h"
 #include "net/http2/http2_constants.h"
+#include "net/http2/platform/api/http2_string.h"
 #include "net/http2/tools/failure.h"
 #include "net/http2/tools/http2_random.h"
 #include "net/http2/tools/random_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
-using std::string;
 using ::testing::AssertionFailure;
 using ::testing::AssertionResult;
 using ::testing::AssertionSuccess;
@@ -56,7 +53,7 @@ class Http2HpackDecoderPeer {
 
 namespace {
 
-typedef std::tuple<HpackEntryType, string, string> HpackHeaderEntry;
+typedef std::tuple<HpackEntryType, Http2String, Http2String> HpackHeaderEntry;
 typedef std::vector<HpackHeaderEntry> HpackHeaderEntries;
 
 // TODO(jamessynge): Create a ...test_utils.h file with the mock listener
@@ -69,7 +66,7 @@ class MockHpackDecoderListener : public HpackDecoderListener {
                     const HpackString& name,
                     const HpackString& value));
   MOCK_METHOD0(OnHeaderListEnd, void());
-  MOCK_METHOD1(OnHeaderErrorDetected, void(StringPiece error_message));
+  MOCK_METHOD1(OnHeaderErrorDetected, void(Http2StringPiece error_message));
 };
 
 class Http2HpackDecoderTest : public ::testing::TestWithParam<bool>,
@@ -118,7 +115,7 @@ class Http2HpackDecoderTest : public ::testing::TestWithParam<bool>,
 
   // OnHeaderErrorDetected is called if an error is detected while decoding.
   // error_message may be used in a GOAWAY frame as the Opaque Data.
-  void OnHeaderErrorDetected(StringPiece error_message) override {
+  void OnHeaderErrorDetected(Http2StringPiece error_message) override {
     ASSERT_TRUE(saw_start_);
     error_messages_.push_back(error_message.as_string());
     // No further callbacks should be made at this point, so replace 'this' as
@@ -127,7 +124,7 @@ class Http2HpackDecoderTest : public ::testing::TestWithParam<bool>,
     decoder_.set_listener(&mock_listener_);
   }
 
-  AssertionResult DecodeBlock(StringPiece block) {
+  AssertionResult DecodeBlock(Http2StringPiece block) {
     VLOG(1) << "Http2HpackDecoderTest::DecodeBlock";
 
     VERIFY_FALSE(decoder_.error_detected());
@@ -219,7 +216,7 @@ class Http2HpackDecoderTest : public ::testing::TestWithParam<bool>,
   Http2HpackDecoder decoder_;
   testing::StrictMock<MockHpackDecoderListener> mock_listener_;
   HpackHeaderEntries header_entries_;
-  std::vector<string> error_messages_;
+  std::vector<Http2String> error_messages_;
   bool fragment_the_hpack_block_;
   bool saw_start_ = false;
   bool saw_end_ = false;
@@ -232,7 +229,7 @@ INSTANTIATE_TEST_CASE_P(AllWays, Http2HpackDecoderTest, ::testing::Bool());
 // http://httpwg.org/specs/rfc7541.html#rfc.section.C.3
 TEST_P(Http2HpackDecoderTest, C3_RequestExamples) {
   // C.3.1 First Request
-  string hpack_block = HpackExampleToStringOrDie(R"(
+  Http2String hpack_block = HpackExampleToStringOrDie(R"(
       82                                      | == Indexed - Add ==
                                               |   idx = 2
                                               | -> :method: GET
@@ -367,7 +364,7 @@ TEST_P(Http2HpackDecoderTest, C3_RequestExamples) {
 // http://httpwg.org/specs/rfc7541.html#rfc.section.C.4
 TEST_P(Http2HpackDecoderTest, C4_RequestExamplesWithHuffmanEncoding) {
   // C.4.1 First Request
-  string hpack_block = HpackExampleToStringOrDie(R"(
+  Http2String hpack_block = HpackExampleToStringOrDie(R"(
       82                                      | == Indexed - Add ==
                                               |   idx = 2
                                               | -> :method: GET
@@ -526,7 +523,7 @@ TEST_P(Http2HpackDecoderTest, C5_ResponseExamples) {
   //   date: Mon, 21 Oct 2013 20:13:21 GMT
   //   location: https://www.example.com
 
-  string hpack_block = HpackExampleToStringOrDie(R"(
+  Http2String hpack_block = HpackExampleToStringOrDie(R"(
       48                                      | == Literal indexed ==
                                               |   Indexed name (idx = 8)
                                               |     :status
@@ -751,7 +748,7 @@ TEST_P(Http2HpackDecoderTest, C6_ResponseExamplesWithHuffmanEncoding) {
   //   cache-control: private
   //   date: Mon, 21 Oct 2013 20:13:21 GMT
   //   location: https://www.example.com
-  string hpack_block = HpackExampleToStringOrDie(R"(
+  Http2String hpack_block = HpackExampleToStringOrDie(R"(
       48                                      | == Literal indexed ==
                                               |   Indexed name (idx = 8)
                                               |     :status

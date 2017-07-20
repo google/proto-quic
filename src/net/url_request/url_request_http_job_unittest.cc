@@ -16,6 +16,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
 #include "base/run_loop.h"
+#include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "base/test/histogram_tester.h"
 #include "net/base/auth.h"
@@ -323,8 +324,9 @@ TEST_F(URLRequestHttpJobWithMockSocketsTest, TestSuccessfulHead) {
   socket_factory_.AddSocketDataProvider(&socket_data);
 
   TestDelegate delegate;
-  std::unique_ptr<URLRequest> request = context_->CreateRequest(
-      GURL("http://www.example.com"), DEFAULT_PRIORITY, &delegate);
+  std::unique_ptr<URLRequest> request =
+      context_->CreateRequest(GURL("http://www.example.com"), DEFAULT_PRIORITY,
+                              &delegate, TRAFFIC_ANNOTATION_FOR_TESTS);
 
   request->set_method("HEAD");
   request->Start();
@@ -356,8 +358,9 @@ TEST_F(URLRequestHttpJobWithMockSocketsTest, TestSuccessfulHeadWithContent) {
   socket_factory_.AddSocketDataProvider(&socket_data);
 
   TestDelegate delegate;
-  std::unique_ptr<URLRequest> request = context_->CreateRequest(
-      GURL("http://www.example.com"), DEFAULT_PRIORITY, &delegate);
+  std::unique_ptr<URLRequest> request =
+      context_->CreateRequest(GURL("http://www.example.com"), DEFAULT_PRIORITY,
+                              &delegate, TRAFFIC_ANNOTATION_FOR_TESTS);
 
   request->set_method("HEAD");
   request->Start();
@@ -390,7 +393,8 @@ TEST_F(URLRequestHttpJobWithMockSocketsTest, TestSuccessfulCachedHeadRequest) {
 
     TestDelegate delegate;
     std::unique_ptr<URLRequest> request = context_->CreateRequest(
-        GURL("http://www.example.com"), DEFAULT_PRIORITY, &delegate);
+        GURL("http://www.example.com"), DEFAULT_PRIORITY, &delegate,
+        TRAFFIC_ANNOTATION_FOR_TESTS);
 
     request->Start();
     ASSERT_TRUE(request->is_pending());
@@ -421,7 +425,8 @@ TEST_F(URLRequestHttpJobWithMockSocketsTest, TestSuccessfulCachedHeadRequest) {
 
     TestDelegate delegate;
     std::unique_ptr<URLRequest> request = context_->CreateRequest(
-        GURL("http://www.example.com"), DEFAULT_PRIORITY, &delegate);
+        GURL("http://www.example.com"), DEFAULT_PRIORITY, &delegate,
+        TRAFFIC_ANNOTATION_FOR_TESTS);
 
     // Use the cached version.
     request->SetLoadFlags(LOAD_SKIP_CACHE_VALIDATION);
@@ -811,6 +816,40 @@ TEST_F(URLRequestHttpJobWithMockSocketsTest,
 
   EXPECT_THAT(delegate.request_status(), IsError(ERR_ABORTED));
   histograms.ExpectTotalCount("Net.HttpTimeToFirstByte", 0);
+}
+
+TEST_F(URLRequestHttpJobWithMockSocketsTest,
+       TestHttpJobSuccessPriorityKeyedTotalTime) {
+  base::HistogramTester histograms;
+
+  for (int priority = 0; priority < net::NUM_PRIORITIES; ++priority) {
+    for (int request_index = 0; request_index <= priority; ++request_index) {
+      MockWrite writes[] = {MockWrite(kSimpleGetMockWrite)};
+      MockRead reads[] = {MockRead("HTTP/1.1 200 OK\r\n"
+                                   "Content-Length: 12\r\n\r\n"),
+                          MockRead("Test Content")};
+
+      StaticSocketDataProvider socket_data(reads, arraysize(reads), writes,
+                                           arraysize(writes));
+      socket_factory_.AddSocketDataProvider(&socket_data);
+
+      TestDelegate delegate;
+      std::unique_ptr<URLRequest> request =
+          context_->CreateRequest(GURL("http://www.example.com/"),
+                                  static_cast<net::RequestPriority>(priority),
+                                  &delegate, TRAFFIC_ANNOTATION_FOR_TESTS);
+
+      request->Start();
+      base::RunLoop().Run();
+      EXPECT_THAT(delegate.request_status(), IsOk());
+    }
+  }
+
+  for (int priority = 0; priority < net::NUM_PRIORITIES; ++priority) {
+    histograms.ExpectTotalCount(
+        "Net.HttpJob.TotalTimeSuccess.Priority" + base::IntToString(priority),
+        priority + 1);
+  }
 }
 
 TEST_F(URLRequestHttpJobTest, TestCancelWhileReadingCookies) {

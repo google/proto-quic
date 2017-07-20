@@ -170,6 +170,14 @@ clang_toolchain("clang_mipsel") {
   }
 }
 
+clang_toolchain("clang_mips64el") {
+  toolchain_args = {
+    current_cpu = "mips64el"
+    current_os = "linux"
+  }
+}
+
+
 gcc_toolchain("mipsel") {
   cc = "mipsel-linux-gnu-gcc"
   cxx = "mipsel-linux-gnu-g++"
@@ -186,6 +194,24 @@ gcc_toolchain("mipsel") {
     use_goma = false
   }
 }
+
+gcc_toolchain("mips64el") {
+  cc = "gcc"
+  cxx = "g++"
+  ar = "ar"
+  ld = cxx
+  readelf = "readelf"
+  nm = "nm"
+
+  toolchain_args = {
+    cc_wrapper = ""
+    current_cpu = "mips64el"
+    current_os = "linux"
+    is_clang = false
+    use_goma = false
+  }
+}
+
 
 gcc_toolchain("s390x") {
   cc = "gcc"

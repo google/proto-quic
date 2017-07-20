@@ -61,56 +61,6 @@ class RasterizeAndRecordMicroTop25(_RasterizeAndRecordMicro):
     return page_sets.Top25StoryExpectations()
 
 
-@benchmark.Disabled('all')  # http://crbug.com/531597
-class RasterizeAndRecordMicroKeyMobileSites(_RasterizeAndRecordMicro):
-  """Measures rasterize and record performance on the key mobile sites.
-
-  http://www.chromium.org/developers/design-documents/rendering-benchmarks"""
-  page_set = page_sets.KeyMobileSitesPageSet
-
-  @classmethod
-  def Name(cls):
-    return 'rasterize_and_record_micro.key_mobile_sites'
-
-  def GetExpectations(self):
-    return page_sets.KeyMobileSitesStoryExpectations()
-
-
-@benchmark.Disabled('all') # http://crbug.com/610424
-@benchmark.Owner(emails=['vmpstr@chromium.org'])
-class RasterizeAndRecordMicroKeySilkCases(_RasterizeAndRecordMicro):
-  """Measures rasterize and record performance on the silk sites.
-
-  http://www.chromium.org/developers/design-documents/rendering-benchmarks"""
-
-  @classmethod
-  def Name(cls):
-    return 'rasterize_and_record_micro.key_silk_cases'
-
-  def CreateStorySet(self, options):
-    return page_sets.KeySilkCasesPageSet(run_no_page_interactions=True)
-
-  def GetExpectations(self):
-    return page_sets.KeySilkCasesStoryExpectations()
-
-
-@benchmark.Disabled('all')  # http://crbug.com/709561
-class RasterizeAndRecordMicroPolymer(_RasterizeAndRecordMicro):
-  """Measures rasterize and record performance on the Polymer cases.
-
-  http://www.chromium.org/developers/design-documents/rendering-benchmarks"""
-
-  @classmethod
-  def Name(cls):
-    return 'rasterize_and_record_micro.polymer'
-
-  def CreateStorySet(self, options):
-    return page_sets.PolymerPageSet(run_no_page_interactions=True)
-
-  def GetExpectations(self):
-    return page_sets.PolymerRasterizeAndRecordStoryExpectations()
-
-
 # New benchmark only enabled on Linux until we've observed behavior for a
 # reasonable period of time.
 @benchmark.Disabled('mac', 'win', 'android')

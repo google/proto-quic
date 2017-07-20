@@ -39,6 +39,7 @@ OPENSSL_MSVC_PRAGMA(comment(lib, "Ws2_32.lib"))
 #include <assert.h>
 #include <inttypes.h>
 #include <string.h>
+#include <time.h>
 
 #include <openssl/aead.h>
 #include <openssl/bio.h>
@@ -62,6 +63,7 @@ OPENSSL_MSVC_PRAGMA(comment(lib, "Ws2_32.lib"))
 #include "../../crypto/internal.h"
 #include "../internal.h"
 #include "async_bio.h"
+#include "fuzzer.h"
 #include "packeted_bio.h"
 #include "test_config.h"
 
@@ -110,6 +112,7 @@ struct TestState {
   bool alpn_select_done = false;
   bool is_resume = false;
   bool early_callback_ready = false;
+  bool custom_verify_ready = false;
 };
 
 static void TestStateExFree(void *parent, void *ptr, CRYPTO_EX_DATA *ad,
@@ -682,27 +685,52 @@ static int CertCallback(SSL *ssl, void *arg) {
   return 1;
 }
 
-static int VerifySucceed(X509_STORE_CTX *store_ctx, void *arg) {
-  SSL* ssl = (SSL*)X509_STORE_CTX_get_ex_data(store_ctx,
-      SSL_get_ex_data_X509_STORE_CTX_idx());
+static bool CheckVerifyCallback(SSL *ssl) {
   const TestConfig *config = GetTestConfig(ssl);
-
   if (!config->expected_ocsp_response.empty()) {
     const uint8_t *data;
     size_t len;
     SSL_get0_ocsp_response(ssl, &data, &len);
     if (len == 0) {
       fprintf(stderr, "OCSP response not available in verify callback\n");
-      return 0;
+      return false;
     }
+  }
+
+  return true;
+}
+
+static int CertVerifyCallback(X509_STORE_CTX *store_ctx, void *arg) {
+  SSL* ssl = (SSL*)X509_STORE_CTX_get_ex_data(store_ctx,
+      SSL_get_ex_data_X509_STORE_CTX_idx());
+  const TestConfig *config = GetTestConfig(ssl);
+  if (!CheckVerifyCallback(ssl)) {
+    return 0;
+  }
+
+  if (config->verify_fail) {
+    store_ctx->error = X509_V_ERR_APPLICATION_VERIFICATION;
+    return 0;
   }
 
   return 1;
 }
 
-static int VerifyFail(X509_STORE_CTX *store_ctx, void *arg) {
-  store_ctx->error = X509_V_ERR_APPLICATION_VERIFICATION;
-  return 0;
+static ssl_verify_result_t CustomVerifyCallback(SSL *ssl, uint8_t *out_alert) {
+  const TestConfig *config = GetTestConfig(ssl);
+  if (!CheckVerifyCallback(ssl)) {
+    return ssl_verify_invalid;
+  }
+
+  if (config->async && !GetTestState(ssl)->custom_verify_ready) {
+    return ssl_verify_retry;
+  }
+
+  if (config->verify_fail) {
+    return ssl_verify_invalid;
+  }
+
+  return ssl_verify_ok;
 }
 
 static int NextProtosAdvertisedCallback(SSL *ssl, const uint8_t **out,
@@ -968,6 +996,7 @@ static int ServerNameCallback(SSL *ssl, int *out_alert, void *arg) {
 // Connect returns a new socket connected to localhost on |port| or -1 on
 // error.
 static int Connect(uint16_t port) {
+  time_t start_time = time(nullptr);
   for (int af : { AF_INET6, AF_INET }) {
     int sock = socket(af, SOCK_STREAM, 0);
     if (sock == -1) {
@@ -1012,6 +1041,13 @@ static int Connect(uint16_t port) {
     }
     closesocket(sock);
   }
+
+  PrintSocketError("connect");
+  // TODO(davidben): Remove this logging when https://crbug.com/boringssl/199 is
+  // resolved.
+  fprintf(stderr, "start_time = %lld, end_time = %lld\n",
+          static_cast<long long>(start_time),
+          static_cast<long long>(time(nullptr)));
   return -1;
 }
 
@@ -1129,10 +1165,8 @@ static bssl::UniquePtr<SSL_CTX> SetupCtx(SSL_CTX *old_ctx,
     return nullptr;
   }
 
-  if (config->verify_fail) {
-    SSL_CTX_set_cert_verify_callback(ssl_ctx.get(), VerifyFail, NULL);
-  } else {
-    SSL_CTX_set_cert_verify_callback(ssl_ctx.get(), VerifySucceed, NULL);
+  if (!config->use_custom_verify_callback) {
+    SSL_CTX_set_cert_verify_callback(ssl_ctx.get(), CertVerifyCallback, NULL);
   }
 
   if (!config->signed_cert_timestamps.empty() &&
@@ -1169,6 +1203,9 @@ static bssl::UniquePtr<SSL_CTX> SetupCtx(SSL_CTX *old_ctx,
   if (config->enable_early_data) {
     SSL_CTX_set_early_data_enabled(ssl_ctx.get(), 1);
   }
+
+  SSL_CTX_set_tls13_variant(
+      ssl_ctx.get(), static_cast<enum tls13_variant_t>(config->tls13_variant));
 
   if (config->allow_unknown_alpn_protos) {
     SSL_CTX_set_allow_unknown_alpn_protos(ssl_ctx.get(), 1);
@@ -1256,6 +1293,9 @@ static bool RetryAsync(SSL *ssl, int ret) {
       return true;
     case SSL_ERROR_WANT_PRIVATE_KEY_OPERATION:
       test_state->private_key_retries++;
+      return true;
+    case SSL_ERROR_WANT_CERTIFICATE_VERIFY:
+      test_state->custom_verify_ready = true;
       return true;
     default:
       return false;
@@ -1368,6 +1408,13 @@ static bool CheckHandshakeProperties(SSL *ssl, bool is_resume,
                                      const TestConfig *config) {
   if (SSL_get_current_cipher(ssl) == nullptr) {
     fprintf(stderr, "null cipher after handshake\n");
+    return false;
+  }
+
+  if (config->expect_version != 0 &&
+      SSL_version(ssl) != config->expect_version) {
+    fprintf(stderr, "want version %04x, got %04x\n", config->expect_version,
+            SSL_version(ssl));
     return false;
   }
 
@@ -1645,6 +1692,67 @@ static bool CheckHandshakeProperties(SSL *ssl, bool is_resume,
   return true;
 }
 
+static bool WriteSettings(int i, const TestConfig *config,
+                          const SSL_SESSION *session) {
+  if (config->write_settings.empty()) {
+    return true;
+  }
+
+  // Treat write_settings as a path prefix for each connection in the run.
+  char buf[DECIMAL_SIZE(int)];
+  snprintf(buf, sizeof(buf), "%d", i);
+  std::string path = config->write_settings + buf;
+
+  bssl::ScopedCBB cbb;
+  if (!CBB_init(cbb.get(), 64)) {
+    return false;
+  }
+
+  if (session != nullptr) {
+    uint8_t *data;
+    size_t len;
+    if (!SSL_SESSION_to_bytes(session, &data, &len)) {
+      return false;
+    }
+    bssl::UniquePtr<uint8_t> free_data(data);
+    CBB child;
+    if (!CBB_add_u16(cbb.get(), kSessionTag) ||
+        !CBB_add_u24_length_prefixed(cbb.get(), &child) ||
+        !CBB_add_bytes(&child, data, len) ||
+        !CBB_flush(cbb.get())) {
+      return false;
+    }
+  }
+
+  if (config->is_server &&
+      (config->require_any_client_certificate || config->verify_peer) &&
+      !CBB_add_u16(cbb.get(), kRequestClientCert)) {
+    return false;
+  }
+
+  if (config->tls13_variant != 0 &&
+      (!CBB_add_u16(cbb.get(), kTLS13Variant) ||
+       !CBB_add_u8(cbb.get(), static_cast<uint8_t>(config->tls13_variant)))) {
+    return false;
+  }
+
+  uint8_t *settings;
+  size_t settings_len;
+  if (!CBB_add_u16(cbb.get(), kDataTag) ||
+      !CBB_finish(cbb.get(), &settings, &settings_len)) {
+    return false;
+  }
+  bssl::UniquePtr<uint8_t> free_settings(settings);
+
+  using ScopedFILE = std::unique_ptr<FILE, decltype(&fclose)>;
+  ScopedFILE file(fopen(path.c_str(), "w"), fclose);
+  if (!file) {
+    return false;
+  }
+
+  return fwrite(settings, settings_len, 1, file.get()) == 1;
+}
+
 static bool DoExchange(bssl::UniquePtr<SSL_SESSION> *out_session, SSL *ssl,
                        const TestConfig *config, bool is_resume, bool is_retry);
 
@@ -1682,12 +1790,23 @@ static bool DoConnection(bssl::UniquePtr<SSL_SESSION> *out_session,
   if (!config->use_old_client_cert_callback) {
     SSL_set_cert_cb(ssl.get(), CertCallback, nullptr);
   }
+  int mode = SSL_VERIFY_NONE;
   if (config->require_any_client_certificate) {
-    SSL_set_verify(ssl.get(), SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-                   NULL);
+    mode = SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
   }
   if (config->verify_peer) {
-    SSL_set_verify(ssl.get(), SSL_VERIFY_PEER, NULL);
+    mode = SSL_VERIFY_PEER;
+  }
+  if (config->verify_peer_if_no_obc) {
+    // Set SSL_VERIFY_FAIL_IF_NO_PEER_CERT so testing whether client
+    // certificates were requested is easy.
+    mode = SSL_VERIFY_PEER | SSL_VERIFY_PEER_IF_NO_OBC |
+           SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+  }
+  if (config->use_custom_verify_callback) {
+    SSL_set_custom_verify(ssl.get(), mode, CustomVerifyCallback);
+  } else if (mode != SSL_VERIFY_NONE) {
+    SSL_set_verify(ssl.get(), mode, NULL);
   }
   if (config->false_start) {
     SSL_set_mode(ssl.get(), SSL_MODE_ENABLE_FALSE_START);
@@ -2227,6 +2346,10 @@ int main(int argc, char **argv) {
     }
 
     bssl::UniquePtr<SSL_SESSION> offer_session = std::move(session);
+    if (!WriteSettings(i, config, offer_session.get())) {
+      fprintf(stderr, "Error writing settings.\n");
+      return 1;
+    }
     if (!DoConnection(&session, ssl_ctx.get(), config, &retry_config, is_resume,
                       offer_session.get())) {
       fprintf(stderr, "Connection %d failed.\n", i + 1);

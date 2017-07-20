@@ -211,7 +211,7 @@ void* oom_killer_memalign_purgeable(struct _malloc_zone_t* zone,
 // === Core Foundation CFAllocators ===
 
 bool CanGetContextForCFAllocator() {
-  return !base::mac::IsOSLaterThan10_12_DontCallThis();
+  return !base::mac::IsOSLaterThan10_13_DontCallThis();
 }
 
 CFAllocatorContext* ContextForCFAllocator(CFAllocatorRef allocator) {

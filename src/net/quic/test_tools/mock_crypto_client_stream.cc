@@ -29,6 +29,7 @@ MockCryptoClientStream::MockCryptoClientStream(
                              verify_context,
                              crypto_config,
                              session),
+      QuicCryptoHandshaker(this, session),
       handshake_mode_(handshake_mode),
       encryption_established_(false),
       handshake_confirmed_(false),
@@ -124,6 +125,10 @@ bool MockCryptoClientStream::handshake_confirmed() const {
 const QuicCryptoNegotiatedParameters&
 MockCryptoClientStream::crypto_negotiated_params() const {
   return *crypto_negotiated_params_;
+}
+
+CryptoMessageParser* MockCryptoClientStream::crypto_message_parser() {
+  return &crypto_framer_;
 }
 
 void MockCryptoClientStream::SendOnCryptoHandshakeEvent(

@@ -11,9 +11,9 @@
 // https://http2.github.io/http2-spec/compression.html#rfc.section.6
 
 #include <ostream>
-#include <string>
 
 #include "net/http2/platform/api/http2_export.h"
+#include "net/http2/platform/api/http2_string.h"
 
 namespace net {
 
@@ -50,7 +50,7 @@ enum class HpackEntryType {
 };
 
 // Returns the name of the enum member.
-HTTP2_EXPORT_PRIVATE std::string HpackEntryTypeToString(HpackEntryType v);
+HTTP2_EXPORT_PRIVATE Http2String HpackEntryTypeToString(HpackEntryType v);
 
 // Inserts the name of the enum member into |out|.
 HTTP2_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,

@@ -166,6 +166,7 @@ class TrybotCommandTest(unittest.TestCase):
         'android_nexus4_perf_bisect': 'stuff',
         'mac_10_9_perf_bisect': 'otherstuff',
         'win_perf_bisect_builder': 'not a trybot',
+        'android_fyi_perf_bisect': 'not meant for actual perf testing'
     })
     expected_trybots_list = [
         'all',
@@ -207,6 +208,7 @@ class TrybotCommandTest(unittest.TestCase):
     self._MockTryserverJson({
         'android_nexus4_perf_bisect': 'stuff',
         'android_nexus5_perf_bisect': 'stuff2',
+        'android_webview_nexus6_aosp_perf_bisect': 'stuff3',
         'mac_10_9_perf_bisect': 'otherstuff',
         'mac_perf_bisect': 'otherstuff1',
         'win_perf_bisect': 'otherstuff2',
@@ -217,11 +219,14 @@ class TrybotCommandTest(unittest.TestCase):
     command = trybot_command.Trybot()
     command._InitializeBuilderNames('all')
     self.assertEquals(
-        ['android', 'linux', 'mac', 'win', 'win-x64'],
+        ['android', 'android-webview', 'linux', 'mac', 'win', 'win-x64'],
         sorted(command._builder_names))
     self.assertEquals(
         ['android_nexus4_perf_bisect', 'android_nexus5_perf_bisect'],
         sorted(command._builder_names.get('android')))
+    self.assertEquals(
+        ['android_webview_nexus6_aosp_perf_bisect'],
+        sorted(command._builder_names.get('android-webview')))
     self.assertEquals(
         ['mac_10_9_perf_bisect', 'mac_perf_bisect'],
         sorted(command._builder_names.get('mac')))
@@ -265,6 +270,7 @@ class TrybotCommandTest(unittest.TestCase):
     self._MockTryserverJson({
         'android_nexus4_perf_bisect': 'stuff',
         'android_nexus5_perf_bisect': 'stuff2',
+        'android_webview_nexus6_aosp_perf_bisect': 'stuff3',
         'win_8_perf_bisect': 'otherstuff',
         'win_perf_bisect': 'otherstuff2',
         'linux_perf_bisect': 'otherstuff3',
@@ -276,6 +282,9 @@ class TrybotCommandTest(unittest.TestCase):
     self.assertEquals(
         ['android_nexus4_perf_bisect', 'android_nexus5_perf_bisect'],
         sorted(command._builder_names.get('android')))
+    self.assertEquals(
+        ['android_webview_nexus6_aosp_perf_bisect'],
+        sorted(command._builder_names.get('android-webview')))
 
   def testConstructorTrybotAllMac(self):
     self._MockTryserverJson({
@@ -390,6 +399,18 @@ class TrybotCommandTest(unittest.TestCase):
     self.assertEquals(
         {'command': ('src/tools/perf/run_benchmark '
                      '--browser=android-chromium sunspider --verbose'),
+         'max_time_minutes': '120',
+         'repeat_count': '1',
+         'target_arch': 'ia32',
+         'truncate_percent': '0'
+        }, config)
+
+  def testConfigAndroidWebview(self):
+    config, _ = self._GetConfigForTrybot(
+        'android-webview-nexus6-aosp', 'android-webview')
+    self.assertEquals(
+        {'command': ('src/tools/perf/run_benchmark '
+                     '--browser=android-webview sunspider --verbose'),
          'max_time_minutes': '120',
          'repeat_count': '1',
          'target_arch': 'ia32',

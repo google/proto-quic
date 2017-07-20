@@ -12,4 +12,11 @@ export GYP_GENERATORS="ninja"
 
 tools/gyp/gyp --no-circular-check third_party/closure_compiler/compiled_resources2.gyp
 
-ninja -C out/Default -j `nproc` $@
+os_name=`uname -s`
+cores_count=1
+case "$os_name" in
+  "Darwin") cores_count=`sysctl -n hw.ncpu` ;;
+  "Linux") cores_count=`nproc` ;;
+esac
+
+ninja -C out/Default -j $cores_count $@

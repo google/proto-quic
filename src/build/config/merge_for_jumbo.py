@@ -83,7 +83,8 @@ def main():
   header_files = set([x for x in all_inputs if x.endswith(".h")])
   assert set(args.outputs) == written_output_set, "Did not fill all outputs"
   files_not_included = set(all_inputs) - written_input_set - header_files
-  assert not files_not_included, "Did not include files: " + files_not_included
+  assert not files_not_included, ("Jumbo build left out files: %s" %
+                                  files_not_included)
   if args.verbose:
     print("Generated %s (%d files) based on %s" % (
       str(args.outputs), len(written_input_set), args.file_list))

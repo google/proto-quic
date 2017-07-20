@@ -353,8 +353,4 @@ bool QuicPacketGenerator::HasRetransmittableFrames() const {
          packet_creator_.HasPendingRetransmittableFrames();
 }
 
-void QuicPacketGenerator::SetDelegateSavesData(bool delegate_saves_data) {
-  packet_creator_.set_delegate_saves_data(delegate_saves_data);
-}
-
 }  // namespace net

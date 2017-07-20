@@ -15,8 +15,6 @@
 using ::testing::AssertionFailure;
 using ::testing::AssertionResult;
 using ::testing::AssertionSuccess;
-using base::StringPiece;
-using std::string;
 
 namespace net {
 namespace test {
@@ -28,9 +26,9 @@ const char kStr1[] = "S1 - some string to be copied into yet another string.";
 class HpackStringTest : public ::testing::Test {
  protected:
   AssertionResult VerifyNotEqual(HpackString* actual,
-                                 const string& not_expected_str) {
+                                 const Http2String& not_expected_str) {
     const char* not_expected_ptr = not_expected_str.c_str();
-    StringPiece not_expected_sp(not_expected_str);
+    Http2StringPiece not_expected_sp(not_expected_str);
 
     VERIFY_NE(*actual, not_expected_ptr);
     VERIFY_NE(*actual, not_expected_sp);
@@ -53,11 +51,12 @@ class HpackStringTest : public ::testing::Test {
     return AssertionSuccess();
   }
 
-  AssertionResult VerifyEqual(HpackString* actual, const string& expected_str) {
+  AssertionResult VerifyEqual(HpackString* actual,
+                              const Http2String& expected_str) {
     VERIFY_EQ(actual->size(), expected_str.size());
 
     const char* expected_ptr = expected_str.c_str();
-    const StringPiece expected_sp(expected_str);
+    const Http2StringPiece expected_sp(expected_str);
 
     VERIFY_EQ(*actual, expected_ptr);
     VERIFY_EQ(*actual, expected_sp);
@@ -92,31 +91,31 @@ TEST_F(HpackStringTest, CharArrayConstructor) {
 }
 
 TEST_F(HpackStringTest, StringPieceConstructor) {
-  StringPiece sp0(kStr0);
+  Http2StringPiece sp0(kStr0);
   HpackString hs0(sp0);
   EXPECT_TRUE(VerifyEqual(&hs0, kStr0));
   EXPECT_TRUE(VerifyNotEqual(&hs0, kStr1));
 
-  StringPiece sp1(kStr1);
+  Http2StringPiece sp1(kStr1);
   HpackString hs1(sp1);
   EXPECT_TRUE(VerifyEqual(&hs1, kStr1));
   EXPECT_TRUE(VerifyNotEqual(&hs1, kStr0));
 }
 
 TEST_F(HpackStringTest, MoveStringConstructor) {
-  string str0(kStr0);
+  Http2String str0(kStr0);
   HpackString hs0(str0);
   EXPECT_TRUE(VerifyEqual(&hs0, kStr0));
   EXPECT_TRUE(VerifyNotEqual(&hs0, kStr1));
 
-  string str1(kStr1);
+  Http2String str1(kStr1);
   HpackString hs1(str1);
   EXPECT_TRUE(VerifyEqual(&hs1, kStr1));
   EXPECT_TRUE(VerifyNotEqual(&hs1, kStr0));
 }
 
 TEST_F(HpackStringTest, CopyConstructor) {
-  StringPiece sp0(kStr0);
+  Http2StringPiece sp0(kStr0);
   HpackString hs0(sp0);
   HpackString hs1(hs0);
   EXPECT_EQ(hs0, hs1);
@@ -129,7 +128,7 @@ TEST_F(HpackStringTest, CopyConstructor) {
 }
 
 TEST_F(HpackStringTest, MoveConstructor) {
-  StringPiece sp0(kStr0);
+  Http2StringPiece sp0(kStr0);
   HpackString hs0(sp0);
   EXPECT_TRUE(VerifyEqual(&hs0, kStr0));
   EXPECT_TRUE(VerifyNotEqual(&hs0, ""));

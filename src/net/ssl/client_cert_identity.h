@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SSL_SSL_CLIENT_CERT_IDENTITY_H_
-#define NET_SSL_SSL_CLIENT_CERT_IDENTITY_H_
+#ifndef NET_SSL_CLIENT_CERT_IDENTITY_H_
+#define NET_SSL_CLIENT_CERT_IDENTITY_H_
 
 #include "base/callback.h"
 #include "net/base/net_export.h"
@@ -87,4 +87,4 @@ using ClientCertIdentityList = std::vector<std::unique_ptr<ClientCertIdentity>>;
 
 }  // namespace net
 
-#endif  // NET_SSL_SSL_CLIENT_CERT_IDENTITY_H_
+#endif  // NET_SSL_CLIENT_CERT_IDENTITY_H_

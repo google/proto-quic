@@ -45,6 +45,7 @@ TEST_F(DNSUtilTest, DNSDomainFromDot) {
   EXPECT_FALSE(DNSDomainFromDot("", &out));
   EXPECT_FALSE(DNSDomainFromDot(".", &out));
   EXPECT_FALSE(DNSDomainFromDot("..", &out));
+  EXPECT_FALSE(DNSDomainFromDot("foo,bar.com", &out));
 
   EXPECT_TRUE(DNSDomainFromDot("com", &out));
   EXPECT_EQ(out, IncludeNUL("\003com"));

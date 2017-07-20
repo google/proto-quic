@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "base/macros.h"
+#include "base/synchronization/waitable_event.h"
 #include "base/threading/simple_thread.h"
 #include "net/quic/core/quic_config.h"
 #include "net/quic/platform/api/quic_mutex.h"

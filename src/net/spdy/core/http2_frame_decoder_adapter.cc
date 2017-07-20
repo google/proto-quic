@@ -375,7 +375,7 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
     if (IsOkToStartFrame(header) && HasRequiredStreamIdZero(header)) {
       frame_header_ = header;
       has_frame_header_ = true;
-      visitor()->OnSettings(0);
+      visitor()->OnSettings();
     }
   }
 
@@ -889,7 +889,7 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
           << frame_header();
       has_expected_frame_type_ = false;
       if (GetHpackDecoder()->HandleControlFrameHeadersComplete(nullptr)) {
-        visitor()->OnHeaderFrameEnd(stream_id(), true);
+        visitor()->OnHeaderFrameEnd(stream_id());
       } else {
         SetSpdyErrorAndNotify(SpdyFramerError::SPDY_DECOMPRESS_FAILURE);
         return;

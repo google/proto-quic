@@ -22,8 +22,8 @@ from devil.utils import file_utils
 from devil.utils import parallelizer
 from pylib import constants
 from pylib.base import environment
+from pylib.utils import instrumentation_tracing
 from py_trace_event import trace_event
-from tracing_build import trace2html
 
 
 def _DeviceCachePath(device):
@@ -97,6 +97,9 @@ class LocalDeviceEnvironment(environment.Environment):
     self._trace_output = None
     if hasattr(args, 'trace_output'):
       self._trace_output = args.trace_output
+    self._trace_all = None
+    if hasattr(args, 'trace_all'):
+      self._trace_all = args.trace_all
 
     devil_chromium.Initialize(
         output_directory=constants.GetOutDirectory(),
@@ -109,7 +112,12 @@ class LocalDeviceEnvironment(environment.Environment):
 
   #override
   def SetUp(self):
-    if self.trace_output:
+    if self.trace_output and self._trace_all:
+      to_include = [r"pylib\..*", r"devil\..*", "__main__"]
+      to_exclude = ["logging"]
+      instrumentation_tracing.start_instrumenting(self.trace_output, to_include,
+                                                  to_exclude)
+    elif self.trace_output:
       self.EnableTracing()
 
   def _InitDevices(self):
@@ -131,7 +139,7 @@ class LocalDeviceEnvironment(environment.Environment):
         self._blacklist, enable_device_files_cache=self._enable_device_cache,
         default_retries=self._max_tries - 1, device_arg=device_arg)
     if not self._devices:
-      raise device_errors.NoDevicesError
+      raise device_errors.NoDevicesError('No devices were available')
 
     if self._logcat_output_file:
       self._logcat_output_dir = tempfile.mkdtemp()
@@ -161,15 +169,6 @@ class LocalDeviceEnvironment(environment.Environment):
 
     self.parallel_devices.pMap(prepare_device)
 
-  @staticmethod
-  def _JsonToTrace(json_path, html_path, delete_json=True):
-    # First argument is call site.
-    cmd = [__file__, json_path, '--title', 'Android Test Runner Trace',
-           '--output', html_path]
-    trace2html.Main(cmd)
-    if delete_json:
-      os.remove(json_path)
-
   @property
   def blacklist(self):
     return self._blacklist
@@ -184,8 +183,6 @@ class LocalDeviceEnvironment(environment.Environment):
     # attached.
     if self._devices is None:
       self._InitDevices()
-    if not self._devices:
-      raise device_errors.NoDevicesError()
     return self._devices
 
   @property
@@ -213,8 +210,9 @@ class LocalDeviceEnvironment(environment.Environment):
     if self.trace_output:
       self.DisableTracing()
 
-    if self._devices is None:
+    if not self._devices:
       return
+
     @handle_shard_failures_with(on_failure=self.BlacklistDevice)
     def tear_down_device(d):
       # Write the cache even when not using it so that it will be ready the
@@ -263,17 +261,20 @@ class LocalDeviceEnvironment(environment.Environment):
       self._blacklist.Extend([device_serial], reason=reason)
     with self._devices_lock:
       self._devices = [d for d in self._devices if str(d) != device_serial]
+    logging.error('Device %s blacklisted: %s', device_serial, reason)
+    if not self._devices:
+      raise device_errors.NoDevicesError(
+          'All devices were blacklisted due to errors')
 
-  def DisableTracing(self):
+  @staticmethod
+  def DisableTracing():
     if not trace_event.trace_is_enabled():
       logging.warning('Tracing is not running.')
     else:
       trace_event.trace_disable()
-    self._JsonToTrace(self._trace_output + '.json',
-                      self._trace_output)
 
   def EnableTracing(self):
     if trace_event.trace_is_enabled():
       logging.warning('Tracing is already running.')
     else:
-      trace_event.trace_enable(self._trace_output + '.json')
+      trace_event.trace_enable(self._trace_output)

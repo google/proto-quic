@@ -12,8 +12,6 @@
 #include "net/http2/tools/failure.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
-using std::string;
 using ::testing::AssertionFailure;
 using ::testing::AssertionResult;
 using ::testing::AssertionSuccess;
@@ -52,14 +50,14 @@ FrameParts::FrameParts(const Http2FrameHeader& header) : frame_header(header) {
   VLOG(1) << "FrameParts, header: " << frame_header;
 }
 
-FrameParts::FrameParts(const Http2FrameHeader& header, StringPiece payload)
+FrameParts::FrameParts(const Http2FrameHeader& header, Http2StringPiece payload)
     : FrameParts(header) {
   VLOG(1) << "FrameParts with payload.size() = " << payload.size();
   this->payload.append(payload.data(), payload.size());
   opt_payload_length = payload.size();
 }
 FrameParts::FrameParts(const Http2FrameHeader& header,
-                       StringPiece payload,
+                       Http2StringPiece payload,
                        size_t total_pad_length)
     : FrameParts(header, payload) {
   VLOG(1) << "FrameParts with total_pad_length=" << total_pad_length;
@@ -117,7 +115,8 @@ void FrameParts::SetTotalPadLength(size_t total_pad_length) {
   }
 }
 
-void FrameParts::SetAltSvcExpected(StringPiece origin, StringPiece value) {
+void FrameParts::SetAltSvcExpected(Http2StringPiece origin,
+                                   Http2StringPiece value) {
   altsvc_origin.append(origin.data(), origin.size());
   altsvc_value.append(value.data(), value.size());
   opt_altsvc_origin_length = origin.size();
@@ -139,7 +138,7 @@ void FrameParts::OnDataPayload(const char* data, size_t len) {
   VLOG(1) << "OnDataPayload: len=" << len << "; frame_header: " << frame_header;
   ASSERT_TRUE(InFrameOfType(Http2FrameType::DATA)) << *this;
   ASSERT_TRUE(
-      AppendString(StringPiece(data, len), &payload, &opt_payload_length));
+      AppendString(Http2StringPiece(data, len), &payload, &opt_payload_length));
 }
 
 void FrameParts::OnDataEnd() {
@@ -171,7 +170,7 @@ void FrameParts::OnHpackFragment(const char* data, size_t len) {
   ASSERT_FALSE(got_end_callback);
   ASSERT_TRUE(FrameCanHaveHpackPayload(frame_header)) << *this;
   ASSERT_TRUE(
-      AppendString(StringPiece(data, len), &payload, &opt_payload_length));
+      AppendString(Http2StringPiece(data, len), &payload, &opt_payload_length));
 }
 
 void FrameParts::OnHeadersEnd() {
@@ -214,7 +213,7 @@ void FrameParts::OnPadding(const char* pad, size_t skipped_length) {
   VLOG(1) << "OnPadding: skipped_length=" << skipped_length;
   ASSERT_TRUE(InPaddedFrame()) << *this;
   ASSERT_TRUE(opt_pad_length);
-  ASSERT_TRUE(AppendString(StringPiece(pad, skipped_length), &padding,
+  ASSERT_TRUE(AppendString(Http2StringPiece(pad, skipped_length), &padding,
                            &opt_pad_length));
 }
 
@@ -310,7 +309,7 @@ void FrameParts::OnGoAwayOpaqueData(const char* data, size_t len) {
   VLOG(1) << "OnGoAwayOpaqueData: len=" << len;
   ASSERT_TRUE(InFrameOfType(Http2FrameType::GOAWAY)) << *this;
   ASSERT_TRUE(
-      AppendString(StringPiece(data, len), &payload, &opt_payload_length));
+      AppendString(Http2StringPiece(data, len), &payload, &opt_payload_length));
 }
 
 void FrameParts::OnGoAwayEnd() {
@@ -344,14 +343,14 @@ void FrameParts::OnAltSvcStart(const Http2FrameHeader& header,
 void FrameParts::OnAltSvcOriginData(const char* data, size_t len) {
   VLOG(1) << "OnAltSvcOriginData: len=" << len;
   ASSERT_TRUE(InFrameOfType(Http2FrameType::ALTSVC)) << *this;
-  ASSERT_TRUE(AppendString(StringPiece(data, len), &altsvc_origin,
+  ASSERT_TRUE(AppendString(Http2StringPiece(data, len), &altsvc_origin,
                            &opt_altsvc_origin_length));
 }
 
 void FrameParts::OnAltSvcValueData(const char* data, size_t len) {
   VLOG(1) << "OnAltSvcValueData: len=" << len;
   ASSERT_TRUE(InFrameOfType(Http2FrameType::ALTSVC)) << *this;
-  ASSERT_TRUE(AppendString(StringPiece(data, len), &altsvc_value,
+  ASSERT_TRUE(AppendString(Http2StringPiece(data, len), &altsvc_value,
                            &opt_altsvc_value_length));
 }
 
@@ -375,7 +374,7 @@ void FrameParts::OnUnknownPayload(const char* data, size_t len) {
   ASSERT_TRUE(got_start_callback);
   ASSERT_FALSE(got_end_callback);
   ASSERT_TRUE(
-      AppendString(StringPiece(data, len), &payload, &opt_payload_length));
+      AppendString(Http2StringPiece(data, len), &payload, &opt_payload_length));
 }
 
 void FrameParts::OnUnknownEnd() {
@@ -504,8 +503,8 @@ AssertionResult FrameParts::InPaddedFrame() {
   return AssertionSuccess();
 }
 
-AssertionResult FrameParts::AppendString(StringPiece source,
-                                         string* target,
+AssertionResult FrameParts::AppendString(Http2StringPiece source,
+                                         Http2String* target,
                                          base::Optional<size_t>* opt_length) {
   target->append(source.data(), source.size());
   if (opt_length != nullptr) {

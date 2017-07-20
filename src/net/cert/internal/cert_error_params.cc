@@ -4,6 +4,7 @@
 
 #include "net/cert/internal/cert_error_params.h"
 
+#include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "net/der/input.h"

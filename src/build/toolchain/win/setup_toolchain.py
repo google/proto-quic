@@ -139,10 +139,9 @@ def _LoadToolchainEnv(cpu, sdk_dir):
         raise Exception('%s is missing - make sure VC++ tools are installed.' %
                         script_path)
       script_path = other_path
-    # Chromium requires the 10.0.14393.0 SDK. Previous versions don't have all
-    # of the required declarations, and 10.0.15063.0 is buggy.
-    args = [script_path, 'amd64_x86' if cpu == 'x86' else 'amd64',
-            '10.0.14393.0']
+    # Chromium requires the 10.0.14393.0 SDK or higher - previous versions don't
+    # have all of the required declarations.
+    args = [script_path, 'amd64_x86' if cpu == 'x86' else 'amd64']
     variables = _LoadEnvFromBat(args)
   return _ExtractImportantEnvironment(variables)
 

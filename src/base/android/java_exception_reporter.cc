@@ -51,9 +51,5 @@ void ReportJavaStackTrace(JNIEnv* env,
   base::android::BuildInfo::GetInstance()->ClearJavaExceptionInfo();
 }
 
-bool RegisterJavaExceptionReporterJni(JNIEnv* env) {
-  return RegisterNativesImpl(env);
-}
-
 }  // namespace android
 }  // namespace base

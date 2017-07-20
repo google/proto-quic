@@ -165,6 +165,10 @@ BASE_EXPORT bool ReadFileToStringWithMaxSize(const FilePath& path,
 // Returns true iff |bytes| bytes have been successfully read from |fd|.
 BASE_EXPORT bool ReadFromFD(int fd, char* buffer, size_t bytes);
 
+// The following functions use POSIX functionality that isn't supported by
+// Fuchsia.
+#if !defined(OS_FUCHSIA)
+
 // Creates a symbolic link at |symlink| pointing to |target|.  Returns
 // false on failure.
 BASE_EXPORT bool CreateSymbolicLink(const FilePath& target,
@@ -205,6 +209,7 @@ BASE_EXPORT bool SetPosixFilePermissions(const FilePath& path, int mode);
 BASE_EXPORT bool ExecutableExistsInPath(Environment* env,
                                         const FilePath::StringType& executable);
 
+#endif  // !OS_FUCHSIA
 #endif  // OS_POSIX
 
 // Returns true if the given directory is empty

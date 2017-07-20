@@ -893,7 +893,7 @@ class PinterestMobileStory(_InfiniteScrollStory):
 class TumblrStory(_InfiniteScrollStory):
   NAME = 'browse:social:tumblr_infinite_scroll'
   URL = 'http://techcrunch.tumblr.com/'  # This page doesn't support HTTPS.
-  TAGS = [story_tags.INFINITE_SCROLL]
+  TAGS = [story_tags.INFINITE_SCROLL, story_tags.JAVASCRIPT_HEAVY]
 
 
 class TwitterScrollDesktopStory(_InfiniteScrollStory):

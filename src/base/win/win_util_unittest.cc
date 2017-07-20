@@ -8,7 +8,6 @@
 #include "base/macros.h"
 #include "base/scoped_native_library.h"
 #include "base/win/win_util.h"
-#include "base/win/windows_version.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -31,14 +30,10 @@ class ThreadLocaleSaver {
 
 }  // namespace
 
-// The test is somewhat silly, because the Vista bots some have UAC enabled
-// and some have it disabled. At least we check that it does not crash.
+// The test is somewhat silly, because some bots some have UAC enabled and some
+// have it disabled. At least we check that it does not crash.
 TEST(BaseWinUtilTest, TestIsUACEnabled) {
-  if (GetVersion() >= base::win::VERSION_VISTA) {
-    UserAccountControlIsEnabled();
-  } else {
-    EXPECT_TRUE(UserAccountControlIsEnabled());
-  }
+  UserAccountControlIsEnabled();
 }
 
 TEST(BaseWinUtilTest, TestGetUserSidString) {

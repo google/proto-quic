@@ -7,6 +7,7 @@
 #include "base/files/file_util.h"
 #include "base/logging.h"
 #include "base/process/launch.h"
+#include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
@@ -160,9 +161,19 @@ std::string AuditorResult::ToText() const {
       error_text.pop_back();
       error_text.pop_back();
       error_text += ".";
-
       return error_text;
     }
+
+    case AuditorResult::ResultType::ERROR_UNIQUE_ID_INVALID_CHARACTER:
+      DCHECK(details_.size());
+      return base::StringPrintf(
+          "Unique id '%s' in '%s:%i' contains an invalid character.",
+          details_[0].c_str(), file_path_.c_str(), line_);
+
+    case AuditorResult::ResultType::ERROR_MISSING_ANNOTATION:
+      DCHECK(details_.size());
+      return base::StringPrintf("Function '%s' in '%s:%i' requires annotation.",
+                                details_[0].c_str(), file_path_.c_str(), line_);
 
     default:
       return std::string();
@@ -386,6 +397,11 @@ bool TrafficAnnotationAuditor::IsWhitelisted(
     if (!strncmp(file_path.c_str(), ignore_path.c_str(), ignore_path.length()))
       return true;
   }
+
+  // If the given filepath did not match the rules with the specified type,
+  // check it with rules of type 'ALL' as well.
+  if (whitelist_type != AuditorException::ExceptionType::ALL)
+    return IsWhitelisted(file_path, AuditorException::ExceptionType::ALL);
   return false;
 }
 
@@ -501,6 +517,7 @@ bool TrafficAnnotationAuditor::LoadWhiteList() {
   return false;
 }
 
+// static
 const std::map<int, std::string>&
 TrafficAnnotationAuditor::GetReservedUniqueIDs() {
   return kReservedAnnotations;
@@ -514,7 +531,7 @@ void TrafficAnnotationAuditor::CheckDuplicateHashes() {
     AnnotationInstance& instance = extracted_annotations_[index];
 
     // If unique id's hash code is similar to a reserved id, add an error.
-    if (reserved_ids.find(instance.unique_id_hash_code) != reserved_ids.end()) {
+    if (base::ContainsKey(reserved_ids, instance.unique_id_hash_code)) {
       errors_.push_back(AuditorResult(
           AuditorResult::ResultType::ERROR_RESERVED_UNIQUE_ID_HASH_CODE,
           instance.proto.unique_id(), instance.proto.source().file(),
@@ -523,7 +540,7 @@ void TrafficAnnotationAuditor::CheckDuplicateHashes() {
     }
 
     // Find unique ids with similar hash codes.
-    if (unique_ids.find(instance.unique_id_hash_code) == unique_ids.end()) {
+    if (!base::ContainsKey(unique_ids, instance.unique_id_hash_code)) {
       std::vector<unsigned> empty_list;
       unique_ids.insert(
           std::make_pair(instance.unique_id_hash_code, empty_list));
@@ -548,6 +565,84 @@ void TrafficAnnotationAuditor::CheckDuplicateHashes() {
   }
 }
 
+void TrafficAnnotationAuditor::CheckUniqueIDsFormat() {
+  for (const AnnotationInstance& instance : extracted_annotations_) {
+    if (!base::ContainsOnlyChars(base::ToLowerASCII(instance.proto.unique_id()),
+                                 "0123456789_abcdefghijklmnopqrstuvwxyz")) {
+      errors_.push_back(AuditorResult(
+          AuditorResult::ResultType::ERROR_UNIQUE_ID_INVALID_CHARACTER,
+          instance.proto.unique_id(), instance.proto.source().file(),
+          instance.proto.source().line()));
+    }
+  }
+}
+
+void TrafficAnnotationAuditor::CheckAllRequiredFunctionsAreAnnotated() {
+  for (const CallInstance& call : extracted_calls_) {
+    if (!call.is_annotated && !CheckIfCallCanBeUnannotated(call)) {
+      errors_.push_back(
+          AuditorResult(AuditorResult::ResultType::ERROR_MISSING_ANNOTATION,
+                        call.function_name, call.file_path, call.line_number));
+    }
+  }
+}
+
+bool TrafficAnnotationAuditor::CheckIfCallCanBeUnannotated(
+    const CallInstance& call) {
+  // At this stage we do not enforce annotation on native network requests,
+  // hence all calls except those to 'net::URLRequestContext::CreateRequest' and
+  // 'net::URLFetcher::Create' are ignored.
+  if (call.function_name != "net::URLFetcher::Create" &&
+      call.function_name != "net::URLRequestContext::CreateRequest") {
+    return true;
+  }
+
+  // Is in whitelist?
+  if (IsWhitelisted(call.file_path, AuditorException::ExceptionType::MISSING))
+    return true;
+
+  // Already checked?
+  if (base::ContainsKey(checked_dependencies_, call.file_path))
+    return checked_dependencies_[call.file_path];
+
+  std::string gn_output;
+  if (gn_file_for_test_.empty()) {
+    // Check if the file including this function is part of Chrome build.
+    const base::CommandLine::CharType* args[] = {FILE_PATH_LITERAL("gn"),
+                                                 FILE_PATH_LITERAL("refs"),
+                                                 FILE_PATH_LITERAL("--all")};
+
+    base::CommandLine cmdline(3, args);
+    cmdline.AppendArgPath(build_path_);
+    cmdline.AppendArg(call.file_path);
+
+    base::FilePath original_path;
+    base::GetCurrentDirectory(&original_path);
+    base::SetCurrentDirectory(source_path_);
+
+    if (!base::GetAppOutput(cmdline, &gn_output)) {
+      LOG(ERROR) << "Could not run gn to get dependencies.";
+      gn_output.clear();
+    }
+
+    base::SetCurrentDirectory(original_path);
+  } else {
+    if (!base::ReadFileToString(gn_file_for_test_, &gn_output)) {
+      LOG(ERROR) << "Could not load mock gn output file from "
+                 << gn_file_for_test_.MaybeAsASCII().c_str();
+      gn_output.clear();
+    }
+  }
+
+  checked_dependencies_[call.file_path] =
+      gn_output.length() &&
+      gn_output.find("//chrome:chrome") == std::string::npos;
+
+  return checked_dependencies_[call.file_path];
+}
+
 void TrafficAnnotationAuditor::RunAllChecks() {
   CheckDuplicateHashes();
+  CheckUniqueIDsFormat();
+  CheckAllRequiredFunctionsAreAnnotated();
 }

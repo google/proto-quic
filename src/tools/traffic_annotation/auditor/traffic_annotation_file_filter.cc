@@ -15,6 +15,7 @@
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
+#include "build/build_config.h"
 
 namespace {
 
@@ -54,29 +55,38 @@ TrafficAnnotationFileFilter::~TrafficAnnotationFileFilter() {}
 
 void TrafficAnnotationFileFilter::GetFilesFromGit(
     const base::FilePath& source_path) {
-  const base::CommandLine::CharType* args[] =
-#if defined(OS_WIN)
-      {FILE_PATH_LITERAL("git.bat"), FILE_PATH_LITERAL("ls-files")};
-#else
-      {"git", "ls-files"};
-#endif
-  base::CommandLine cmdline(2, args);
-
-  // Change directory to source path to access git.
+  // Change directory to source path to access git and check files.
   base::FilePath original_path;
   base::GetCurrentDirectory(&original_path);
   base::SetCurrentDirectory(source_path);
 
-  // Get list of files from git.
-  std::string results;
-  if (!base::GetAppOutput(cmdline, &results)) {
-    LOG(ERROR) << "Could not get files from git.";
-  } else {
-    for (const std::string file_path : base::SplitString(
-             results, "\n", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL)) {
-      if (IsFileRelevant(file_path))
-        git_files_.push_back(file_path);
+  std::string git_list;
+  if (git_file_for_test_.empty()) {
+    const base::CommandLine::CharType* args[] =
+#if defined(OS_WIN)
+        {FILE_PATH_LITERAL("git.bat"), FILE_PATH_LITERAL("ls-files")};
+#else
+        {"git", "ls-files"};
+#endif
+    base::CommandLine cmdline(2, args);
+
+    // Get list of files from git.
+    if (!base::GetAppOutput(cmdline, &git_list)) {
+      LOG(ERROR) << "Could not get files from git.";
+      git_list.clear();
     }
+  } else {
+    if (!base::ReadFileToString(git_file_for_test_, &git_list)) {
+      LOG(ERROR) << "Could not load mock git list file from "
+                 << git_file_for_test_.MaybeAsASCII().c_str();
+      git_list.clear();
+    }
+  }
+
+  for (const std::string file_path : base::SplitString(
+           git_list, "\n", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL)) {
+    if (IsFileRelevant(file_path))
+      git_files_.push_back(file_path);
   }
 
   base::SetCurrentDirectory(original_path);

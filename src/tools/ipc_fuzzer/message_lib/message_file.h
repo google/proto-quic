@@ -5,14 +5,16 @@
 #ifndef TOOLS_IPC_FUZZER_MESSAGE_LIB_MESSAGE_FILE_H_
 #define TOOLS_IPC_FUZZER_MESSAGE_LIB_MESSAGE_FILE_H_
 
+#include <memory>
+#include <vector>
+
 #include "base/files/file_path.h"
 #include "base/macros.h"
-#include "base/memory/scoped_vector.h"
 #include "ipc/ipc_message.h"
 
 namespace ipc_fuzzer {
 
-typedef ScopedVector<IPC::Message> MessageVector;
+using MessageVector = std::vector<std::unique_ptr<IPC::Message>>;
 
 class MessageFile {
  public:

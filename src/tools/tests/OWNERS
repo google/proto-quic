@@ -1,1 +1,3 @@
-per-file licenses_test.py=file://tools/copyright_scanner/OWNERS
+per-file licenses_test.py=phajdan.jr@chromium.org
+per-file licenses_test.py=sgurun@chromium.org
+per-file licenses_test.py=torne@chromium.org

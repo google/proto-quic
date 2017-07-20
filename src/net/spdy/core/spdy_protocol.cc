@@ -15,13 +15,25 @@ const char* const kHttp2ConnectionHeaderPrefix =
 
 namespace size_utils {
 
+// Size, in bytes, of the control frame header.
+size_t GetFrameHeaderSize() {
+  return kFrameHeaderSize;
+}
+
 size_t GetDataFrameMinimumSize() {
   return kDataFrameMinimumSize;
 }
 
-// Size, in bytes, of the control frame header.
-size_t GetFrameHeaderSize() {
-  return kFrameHeaderSize;
+size_t GetHeadersMinimumSize() {
+  // Size, in bytes, of a HEADERS frame not including the variable-length
+  // header block.
+  return GetFrameHeaderSize();
+}
+
+size_t GetPrioritySize() {
+  // Size, in bytes, of a PRIORITY frame.
+  return GetFrameHeaderSize() + kPriorityDependencyPayloadSize +
+         kPriorityWeightPayloadSize;
 }
 
 size_t GetRstStreamSize() {
@@ -37,6 +49,12 @@ size_t GetSettingsMinimumSize() {
   return GetFrameHeaderSize();
 }
 
+size_t GetPushPromiseMinimumSize() {
+  // Size, in bytes, of a PUSH_PROMISE frame, sans the embedded header block.
+  // Calculated as frame prefix + 4 (promised stream id)
+  return GetFrameHeaderSize() + 4;
+}
+
 size_t GetPingSize() {
   // Size, in bytes, of this PING frame.
   // Calculated as:
@@ -50,22 +68,10 @@ size_t GetGoAwayMinimumSize() {
   return GetFrameHeaderSize() + 8;
 }
 
-size_t GetHeadersMinimumSize() {
-  // Size, in bytes, of a HEADERS frame not including the variable-length
-  // header block.
-  return GetFrameHeaderSize();
-}
-
 size_t GetWindowUpdateSize() {
   // Size, in bytes, of a WINDOW_UPDATE frame.
   // Calculated as:
   // frame prefix + 4 (delta)
-  return GetFrameHeaderSize() + 4;
-}
-
-size_t GetPushPromiseMinimumSize() {
-  // Size, in bytes, of a PUSH_PROMISE frame, sans the embedded header block.
-  // Calculated as frame prefix + 4 (promised stream id)
   return GetFrameHeaderSize() + 4;
 }
 
@@ -84,10 +90,36 @@ size_t GetAltSvcMinimumSize() {
   return GetFrameHeaderSize() + 2;
 }
 
-size_t GetPrioritySize() {
-  // Size, in bytes, of a PRIORITY frame.
-  return GetFrameHeaderSize() + kPriorityDependencyPayloadSize +
-         kPriorityWeightPayloadSize;
+size_t GetMinimumSizeOfFrame(SpdyFrameType frame_type) {
+  switch (frame_type) {
+    case SpdyFrameType::DATA:
+      return GetDataFrameMinimumSize();
+    case SpdyFrameType::HEADERS:
+      return GetHeadersMinimumSize();
+    case SpdyFrameType::PRIORITY:
+      return GetPrioritySize();
+    case SpdyFrameType::RST_STREAM:
+      return GetRstStreamSize();
+    case SpdyFrameType::SETTINGS:
+      return GetSettingsMinimumSize();
+    case SpdyFrameType::PUSH_PROMISE:
+      return GetPushPromiseMinimumSize();
+    case SpdyFrameType::PING:
+      return GetPingSize();
+    case SpdyFrameType::GOAWAY:
+      return GetGoAwayMinimumSize();
+    case SpdyFrameType::WINDOW_UPDATE:
+      return GetWindowUpdateSize();
+    case SpdyFrameType::CONTINUATION:
+      return GetContinuationMinimumSize();
+    case SpdyFrameType::ALTSVC:
+      return GetAltSvcMinimumSize();
+    case SpdyFrameType::EXTENSION:
+      return GetFrameMinimumSize();
+    default:
+      SPDY_BUG << "Undefined frame type.";
+      return 0;
+  }
 }
 
 size_t GetFrameMinimumSize() {

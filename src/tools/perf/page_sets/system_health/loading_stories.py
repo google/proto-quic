@@ -79,15 +79,13 @@ class LoadEbayStory(_LoadingStory):
 ################################################################################
 
 
-class LoadFacebookStory(_LoadingStory):
-  # Using Facebook login often causes "404 Not Found" with WPR.
-  NAME = 'load:social:facebook'
-  URL = 'https://www.facebook.com/rihanna'
-
-
 class LoadTwitterStory(_LoadingStory):
   NAME = 'load:social:twitter'
   URL = 'https://www.twitter.com/nasa'
+
+  # Desktop version is already covered by
+  # 'browse:social:twitter_infinite_scroll'
+  SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
 
 
 class LoadVkStory(_LoadingStory):
@@ -111,13 +109,9 @@ class LoadPinterestStory(_LoadingStory):
   NAME = 'load:social:pinterest'
   URL = 'https://uk.pinterest.com/categories/popular/'
   TAGS = [story_tags.JAVASCRIPT_HEAVY]
-
-
-class LoadTumblrStory(_LoadingStory):
-  NAME = 'load:social:tumblr'
-  # Redirects to the "http://" version.
-  URL = 'https://50thousand.tumblr.com/'
-  TAGS = [story_tags.JAVASCRIPT_HEAVY]
+  # Mobile story is already covered by
+  # 'browse:social:pinterest_infinite_scroll'.
+  SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
 
 
 ################################################################################
@@ -250,19 +244,6 @@ class Load9GagDesktopStory(_LoadingStory):
   NAME = 'load:media:9gag'
   URL = 'https://www.9gag.com/'
   SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
-
-
-class LoadFlickrDesktopStory(_LoadingStory):
-  NAME = 'load:media:flickr'
-  URL = 'https://www.flickr.com/photos/tags/farm'
-  SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
-
-  def _DidLoadDocument(self, action_runner):
-    # Wait until the 'Recently tagged' view loads.
-    action_runner.WaitForJavaScriptCondition('''
-        document.querySelector(
-            '.search-photos-everyone-trending-view .photo-list-view')
-                !== null''')
 
 
 class LoadImgurStory(_LoadingStory):

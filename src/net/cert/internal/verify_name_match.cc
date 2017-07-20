@@ -7,8 +7,8 @@
 #include <algorithm>
 #include <vector>
 
+#include "base/logging.h"
 #include "base/strings/string_util.h"
-#include "base/tuple.h"
 #include "net/cert/internal/parse_name.h"
 #include "net/der/input.h"
 #include "net/der/parser.h"

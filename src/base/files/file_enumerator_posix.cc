@@ -125,7 +125,9 @@ FilePath FileEnumerator::Next() {
     FileInfo dotdot;
     dotdot.stat_.st_mode = S_IFDIR;
     dotdot.filename_ = FilePath("..");
-    directory_entries_.push_back(dotdot);
+    if (!ShouldSkip(dotdot.filename_)) {
+      directory_entries_.push_back(std::move(dotdot));
+    }
 #endif  // OS_FUCHSIA
 
     current_directory_entry_ = 0;

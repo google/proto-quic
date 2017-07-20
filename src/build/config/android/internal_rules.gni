@@ -1631,7 +1631,17 @@ if (enable_java_templates) {
     }
 
     template("package_resources_helper") {
-      action(target_name) {
+      _resource_packaged_apk_path = invoker.resource_packaged_apk_path
+      _package_resources_target = target_name
+      _post_process = defined(invoker.post_process_package_resources_script)
+      if (_post_process) {
+        _package_resources_target = "${_package_resources_target}__intermediate"
+        _post_processed_resource_packaged_apk_path = _resource_packaged_apk_path
+        _resource_packaged_apk_path =
+            "${_resource_packaged_apk_path}__intermediate.ap_"
+      }
+
+      action(_package_resources_target) {
         deps = invoker.deps
 
         script = "//build/android/gyp/package_resources.py"
@@ -1643,7 +1653,7 @@ if (enable_java_templates) {
           inputs += [ _resources_zip ]
         }
         outputs = [
-          invoker.resource_packaged_apk_path,
+          _resource_packaged_apk_path,
         ]
 
         if (defined(invoker.android_aapt_path)) {
@@ -1674,7 +1684,7 @@ if (enable_java_templates) {
           "--version-name",
           _version_name,
           "--apk-path",
-          rebase_path(invoker.resource_packaged_apk_path, root_build_dir),
+          rebase_path(_resource_packaged_apk_path, root_build_dir),
         ]
 
         if (defined(_resources_zip)) {
@@ -1727,6 +1737,31 @@ if (enable_java_templates) {
           }
         }
       }
+
+      if (_post_process) {
+        action(target_name) {
+          depfile = "${target_gen_dir}/${target_name}.d"
+          script = invoker.post_process_package_resources_script
+          args = [
+            "--depfile",
+            rebase_path(depfile, root_build_dir),
+            "--apk-path",
+            rebase_path(_resource_packaged_apk_path, root_build_dir),
+            "--output",
+            rebase_path(_post_processed_resource_packaged_apk_path,
+                        root_build_dir),
+          ]
+          inputs = [
+            _resource_packaged_apk_path,
+          ]
+          outputs = [
+            _post_processed_resource_packaged_apk_path,
+          ]
+          deps = [
+            ":${_package_resources_target}",
+          ]
+        }
+      }
     }
 
     _package_resources_target_name = "${target_name}__package_resources"
@@ -1736,9 +1771,10 @@ if (enable_java_templates) {
                                "aapt_locale_whitelist",
                                "alternative_android_sdk_jar",
                                "android_aapt_path",
-                               "png_to_webp",
                                "exclude_xxxhdpi",
                                "extensions_to_not_compress",
+                               "png_to_webp",
+                               "post_process_package_resources_script",
                                "xxxhdpi_whitelist",
                              ])
       deps = _deps
@@ -1788,9 +1824,10 @@ if (enable_java_templates) {
                                "aapt_locale_whitelist",
                                "alternative_android_sdk_jar",
                                "android_aapt_path",
-                               "png_to_webp",
                                "exclude_xxxhdpi",
                                "extensions_to_not_compress",
+                               "png_to_webp",
+                               "post_process_package_resources_script",
                                "xxxhdpi_whitelist",
                              ])
       deps =

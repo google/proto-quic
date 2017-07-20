@@ -14,4 +14,4 @@ extern const base::Feature NET_EXPORT kReporting;
 
 }  // namespace features
 
-#endif
+#endif  // NET_REPORTING_REPORTING_FEATURE_H_

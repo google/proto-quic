@@ -129,12 +129,18 @@ class CheckedNumeric {
   CheckedNumeric& operator^=(const Src rhs);
 
   constexpr CheckedNumeric operator-() const {
-    return CheckedNumeric<T>(
-        NegateWrapper(state_.value()),
-        IsValid() &&
-            (!std::is_signed<T>::value || std::is_floating_point<T>::value ||
-             NegateWrapper(state_.value()) !=
-                 std::numeric_limits<T>::lowest()));
+    // The negation of two's complement int min is int min, so we simply
+    // check for that in the constexpr case.
+    // We use an optimized code path for a known run-time variable.
+    return MustTreatAsConstexpr(state_.value()) || !std::is_signed<T>::value ||
+                   std::is_floating_point<T>::value
+               ? CheckedNumeric<T>(
+                     NegateWrapper(state_.value()),
+                     IsValid() && (!std::is_signed<T>::value ||
+                                   std::is_floating_point<T>::value ||
+                                   NegateWrapper(state_.value()) !=
+                                       std::numeric_limits<T>::lowest()))
+               : FastRuntimeNegate();
   }
 
   constexpr CheckedNumeric operator~() const {
@@ -143,11 +149,7 @@ class CheckedNumeric {
   }
 
   constexpr CheckedNumeric Abs() const {
-    return CheckedNumeric<T>(
-        AbsWrapper(state_.value()),
-        IsValid() &&
-            (!std::is_signed<T>::value || std::is_floating_point<T>::value ||
-             AbsWrapper(state_.value()) != std::numeric_limits<T>::lowest()));
+    return !IsValueNegative(state_.value()) ? *this : -*this;
   }
 
   template <typename U>
@@ -238,6 +240,12 @@ class CheckedNumeric {
 
  private:
   CheckedNumericState<T> state_;
+
+  CheckedNumeric FastRuntimeNegate() const {
+    T result;
+    bool success = CheckedSubOp<T, T>::Do(T(0), state_.value(), &result);
+    return CheckedNumeric<T>(result, IsValid() && success);
+  }
 
   template <typename Src>
   constexpr CheckedNumeric(Src value, bool is_valid)

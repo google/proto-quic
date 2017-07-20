@@ -223,7 +223,7 @@ class QuicStreamFactoryTestBase {
         packet_reader_yield_after_duration_milliseconds_,
         migrate_sessions_on_network_change_, migrate_sessions_early_,
         allow_server_migration_, force_hol_blocking_, race_cert_verification_,
-        /*do_not_fragment*/ true, estimate_initial_rtt_, QuicTagVector(),
+        estimate_initial_rtt_, QuicTagVector(),
         /*enable_token_binding*/ false));
     factory_->set_require_confirmation(false);
   }

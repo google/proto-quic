@@ -23,6 +23,7 @@ compiled_action("generate_transport_security_state") {
 compiled_action_foreach("transport_security_state_unittest_data") {
   tool = "//net/tools/transport_security_state_generator"
   sources = [
+    "transport_security_state_static_unittest0.json",
     "transport_security_state_static_unittest1.json",
     "transport_security_state_static_unittest2.json",
     "transport_security_state_static_unittest3.json",

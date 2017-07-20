@@ -49,10 +49,11 @@ namespace {
 
 const SpdyPriority kHighestPriority = kV3HighestPriority;
 
-class TestCryptoStream : public QuicCryptoStream {
+class TestCryptoStream : public QuicCryptoStream, public QuicCryptoHandshaker {
  public:
   explicit TestCryptoStream(QuicSession* session)
       : QuicCryptoStream(session),
+        QuicCryptoHandshaker(this, session),
         encryption_established_(false),
         handshake_confirmed_(false),
         params_(new QuicCryptoNegotiatedParameters) {}
@@ -89,10 +90,15 @@ class TestCryptoStream : public QuicCryptoStream {
       const override {
     return *params_;
   }
+  CryptoMessageParser* crypto_message_parser() override {
+    return QuicCryptoHandshaker::crypto_message_parser();
+  }
 
   MOCK_METHOD0(OnCanWrite, void());
 
  private:
+  using QuicCryptoStream::session;
+
   bool encryption_established_;
   bool handshake_confirmed_;
   QuicReferenceCountedPointer<QuicCryptoNegotiatedParameters> params_;

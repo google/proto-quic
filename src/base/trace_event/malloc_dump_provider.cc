@@ -11,12 +11,10 @@
 #include "base/allocator/allocator_extension.h"
 #include "base/allocator/allocator_shim.h"
 #include "base/allocator/features.h"
-#include "base/bind.h"
 #include "base/debug/profiler.h"
 #include "base/trace_event/heap_profiler_allocation_context.h"
 #include "base/trace_event/heap_profiler_allocation_context_tracker.h"
-#include "base/trace_event/heap_profiler_allocation_register.h"
-#include "base/trace_event/heap_profiler_event_writer.h"
+#include "base/trace_event/heap_profiler_heap_dump_writer.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "base/trace_event/trace_event_argument.h"
 #include "build/build_config.h"
@@ -300,19 +298,11 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
   // Enclosing all the temporary data structures in a scope, so that the heap
   // profiler does not see unbalanced malloc/free calls from these containers.
   {
+    TraceEventMemoryOverhead overhead;
+    std::unordered_map<AllocationContext, AllocationMetrics> metrics_by_context;
     if (args.level_of_detail == MemoryDumpLevelOfDetail::DETAILED) {
-      struct ShimMetrics {
-        size_t size;
-        size_t count;
-      };
-      ShimMetrics shim_metrics = {0};
-      auto visit_allocation = [](ShimMetrics* metrics,
-                                 const AllocationRegister::Allocation& alloc) {
-        metrics->size += alloc.size;
-        metrics->count += 1;
-      };
-      allocation_register_.VisitAllocations(base::BindRepeating(
-          visit_allocation, base::Unretained(&shim_metrics)));
+      ShardedAllocationRegister::OutputMetrics shim_metrics =
+          allocation_register_.UpdateAndReturnsMetrics(metrics_by_context);
 
       // Aggregate data for objects allocated through the shim.
       inner_dump->AddScalar("shim_allocated_objects_size",
@@ -322,8 +312,9 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
                             MemoryAllocatorDump::kUnitsObjects,
                             shim_metrics.count);
     }
+    allocation_register_.EstimateTraceMemoryOverhead(&overhead);
 
-    pmd->DumpHeapUsage(allocation_register_, "malloc");
+    pmd->DumpHeapUsage(metrics_by_context, overhead, "malloc");
   }
   tid_dumping_heap_ = kInvalidThreadId;
 

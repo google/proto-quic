@@ -366,7 +366,10 @@
   __interceptor_waitid;
   __interceptor_waitpid;
   __interceptor_wcrtomb;
+  __interceptor_wcscat;
   __interceptor_wcslen;
+  __interceptor_wcsncat;
+  __interceptor_wcsnlen;
   __interceptor_wcsnrtombs;
   __interceptor_wcsrtombs;
   __interceptor_wcstombs;
@@ -1460,7 +1463,10 @@
   waitid;
   waitpid;
   wcrtomb;
+  wcscat;
   wcslen;
+  wcsncat;
+  wcsnlen;
   wcsnrtombs;
   wcsrtombs;
   wcstombs;

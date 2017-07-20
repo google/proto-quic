@@ -7,9 +7,9 @@
 #include <stdint.h>
 
 #include <sstream>
-#include <string>
 
 #include "base/logging.h"
+#include "net/http2/platform/api/http2_string_utils.h"
 
 namespace net {
 
@@ -50,12 +50,11 @@ DecodeStatus HpackBlockDecoder::Decode(DecodeBuffer* db) {
   return DecodeStatus::kDecodeDone;
 }
 
-std::string HpackBlockDecoder::DebugString() const {
-  std::stringstream ss;
-  ss << "HpackBlockDecoder(" << entry_decoder_.DebugString() << ", listener@"
-     << std::hex << reinterpret_cast<intptr_t>(listener_)
-     << (before_entry_ ? ", between entries)" : ", in an entry)");
-  return ss.str();
+Http2String HpackBlockDecoder::DebugString() const {
+  return Http2StrCat("HpackBlockDecoder(", entry_decoder_.DebugString(),
+                     ", listener@", std::hex,
+                     reinterpret_cast<intptr_t>(listener_),
+                     (before_entry_ ? ", between entries)" : ", in an entry)"));
 }
 
 std::ostream& operator<<(std::ostream& out, const HpackBlockDecoder& v) {

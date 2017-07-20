@@ -12,7 +12,6 @@ import org.junit.Rule;
 import org.chromium.base.BaseChromiumApplication;
 import org.chromium.base.CommandLine;
 import org.chromium.base.test.BaseTestResult.PreTestHook;
-import org.chromium.base.test.util.parameter.BaseParameter;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -167,37 +166,5 @@ public final class CommandLineFlags {
             }
 
         };
-    }
-
-    /**
-     * Instructs the test runner to execute the test with modified command-line flags.
-     * Flags to add are specified using 'stringArray' of argument named 'add',
-     * and flags to remove -- in the argument named 'remove'. A parameter without arguments
-     * instructs to run the test with default command-line flags.
-     *
-     * Example:
-     *
-     * @ParameterizedTest.Set(tests = {
-     * @ParameterizedTest(parameters = {
-     * @Parameter( tag = CommandLineFlags.Parameter.PARAMETER_TAG)}),
-     * @ParameterizedTest(parameters = {
-     * @Parameter( tag = CommandLineFlags.Parameter.PARAMETER_TAG,
-     * arguments = {
-     * @Parameter.Argument( name = CommandLineFlags.Parameter.ADD_ARG,
-     * stringArray = {'arg1', 'arg2'})
-     * })})})
-     *
-     * Note that because the entire instrumentation test process needs to be restarted to apply
-     * modified command-line arguments, this annotation is handled by test_runner.py, not by
-     * BaseTestResult class.
-     */
-    public static class Parameter extends BaseParameter {
-        public static final String PARAMETER_TAG = "cmdlinearg-parameter";
-        public static final String ADD_ARG = "add";
-        public static final String REMOVE_ARG = "remove";
-
-        public Parameter(org.chromium.base.test.util.parameter.Parameter.Reader parameterReader) {
-            super(PARAMETER_TAG, parameterReader);
-        }
     }
 }

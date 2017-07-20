@@ -10,4 +10,14 @@ declare_args() {
   # library.
   use_custom_libcxx = (is_linux && !is_chromeos &&
                        (!is_chromecast || is_cast_desktop_build)) || is_msan
+
+  # ASan, MSan and TSan builds need to override operator new, operator delete,
+  # and some exception handling symbols, so libc++ must be a shared library to
+  # prevent duplicate symbol errors when linking.
+  # Additionally, -fsanitize=vptr requires libc++ to be a shared library
+  # because the ubsan runtime library that implements -fsanitize=vptr calls
+  # dynamic_cast with the ABI type info classes, which won't return the right
+  # answer if each DSO has its own copy of the ABI classes.
+  libcpp_is_static = !is_component_build && !is_asan && !is_msan && !is_tsan &&
+                     !is_ubsan && !is_ubsan_security && !is_ubsan_vptr
 }

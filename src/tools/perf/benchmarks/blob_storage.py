@@ -21,7 +21,7 @@ class BlobStorage(perf_benchmark.PerfBenchmark):
 
   page_set = page_sets.BlobWorkshopPageSet
 
-  def CreateTimelineBasedMeasurementOptions(self):
+  def CreateCoreTimelineBasedMeasurementOptions(self):
     cat_filter = chrome_trace_category_filter.ChromeTraceCategoryFilter()
     cat_filter.AddIncludedCategory(BLOB_CATEGORY)
     cat_filter.AddIncludedCategory(TIMELINE_REQUIRED_CATEGORY)

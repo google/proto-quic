@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/android/trace_event_binding.h"
-
 #include <jni.h>
 
 #include <set>
@@ -147,10 +145,6 @@ static void FinishAsync(JNIEnv* env,
                         jlong jid) {
   TraceEventDataConverter converter(env, jname, nullptr);
   TRACE_EVENT_COPY_ASYNC_END0(kJavaCategory, converter.name(), jid);
-}
-
-bool RegisterTraceEvent(JNIEnv* env) {
-  return RegisterNativesImpl(env);
 }
 
 }  // namespace android

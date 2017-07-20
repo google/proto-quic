@@ -4,29 +4,27 @@
 
 package org.chromium.base;
 
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.os.IBinder;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.util.SparseArray;
 
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
-import org.chromium.base.process_launcher.ChildProcessConstants;
+import org.chromium.base.process_launcher.ChildConnectionAllocator;
+import org.chromium.base.process_launcher.ChildProcessConnection;
+import org.chromium.base.process_launcher.ChildProcessLauncher;
 import org.chromium.base.process_launcher.FileDescriptorInfo;
-import org.chromium.base.process_launcher.ICallbackInt;
 import org.chromium.base.process_launcher.IChildProcessService;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -40,220 +38,158 @@ import javax.annotation.concurrent.GuardedBy;
 public final class MultiprocessTestClientLauncher {
     private static final String TAG = "cr_MProcTCLauncher";
 
-    private static final ConnectionAllocator sConnectionAllocator = new ConnectionAllocator();
+    private static final int CONNECTION_TIMEOUT_MS = 10 * 1000;
+
+    private static final SparseArray<MultiprocessTestClientLauncher> sPidToLauncher =
+            new SparseArray<>();
 
     private static final SparseArray<Integer> sPidToMainResult = new SparseArray<>();
 
-    // Not supposed to be instantiated.
-    private MultiprocessTestClientLauncher() {}
+    private static final Object sLauncherHandlerInitLock = new Object();
+    private static Handler sLauncherHandler;
 
-    private static class ConnectionAllocator {
-        // Services are identified by a slot number, which is used in the service name to
-        // differentiate them (MultiprocessTestClientService0, MultiprocessTestClientService1, ...).
-        // They are stored in a FIFO queue in order to minimize the risk of the framework reusing a
-        // service without restarting its associated process (which can cause all kind of problems
-        // with static native variables already being initialized).
-        private static final int MAX_SUBPROCESS_COUNT = 5;
+    private static ChildConnectionAllocator sConnectionAllocator;
 
-        private final Object mLock = new Object();
-
-        @GuardedBy("mLock")
-        private final Queue<Integer> mFreeServiceSlot = new LinkedList<>();
-        @GuardedBy("mLock")
-        private final List<ClientServiceConnection> mConnections = new ArrayList<>();
-
-        public ConnectionAllocator() {
-            synchronized (mLock) {
-                for (int i = 0; i < MAX_SUBPROCESS_COUNT; i++) {
-                    mFreeServiceSlot.add(i);
-                }
+    private final ITestCallback.Stub mCallback = new ITestCallback.Stub() {
+        @Override
+        public void childConnected(ITestController controller) {
+            mTestController = controller;
+            // This method can be called before onServiceConnected below has set the PID.
+            // Wait for mPid to be set before notifying.
+            try {
+                mPidReceived.await();
+            } catch (InterruptedException ie) {
+                Log.e(TAG, "Interrupted while waiting for connection PID.");
+                return;
+            }
+            // Now we are fully initialized, notify clients.
+            mConnectedLock.lock();
+            try {
+                mConnected = true;
+                mConnectedCondition.signal();
+            } finally {
+                mConnectedLock.unlock();
             }
         }
 
-        public ClientServiceConnection allocateConnection(
-                String[] commandLine, FileDescriptorInfo[] filesToMap) {
-            synchronized (mLock) {
-                while (mFreeServiceSlot.isEmpty()) {
-                    try {
-                        mLock.wait();
-                    } catch (InterruptedException ie) {
-                        Log.e(TAG, "Interrupted while waiting for a free connection.");
-                    }
-                }
-
-                int slot = mFreeServiceSlot.remove();
-                ClientServiceConnection connection =
-                        new ClientServiceConnection(slot, commandLine, filesToMap);
-                mConnections.add(connection);
-                return connection;
-            }
-        }
-
-        public void freeConnection(ClientServiceConnection connection) {
-            synchronized (mLock) {
-                mFreeServiceSlot.add(connection.getSlot());
-                mConnections.remove(connection);
-            }
-        }
-
-        public ClientServiceConnection getConnectionByPid(int pid) {
-            synchronized (mLock) {
-                // List of connections is short, iterating is OK.
-                for (ClientServiceConnection connection : mConnections) {
-                    if (connection.getPid() == pid) {
-                        return connection;
-                    }
-                }
-            }
-            return null;
-        }
-    }
-
-    private static class ClientServiceConnection implements ServiceConnection {
-        private final Bundle mSetupBundle;
-        private final Object mConnectedLock = new Object();
-        private final CountDownLatch mPidReceived = new CountDownLatch(1);
-        private final int mSlot;
-        private IChildProcessService mService = null;
-
-        @GuardedBy("mConnectedLock")
-        private boolean mConnected;
-
-        private int mPid;
-        private ITestController mTestController;
-
-        private final ReentrantLock mMainReturnCodeLock = new ReentrantLock();
-        private final Condition mMainReturnCodeCondition = mMainReturnCodeLock.newCondition();
-        // The return code returned by the service's main method.
-        // null if the service has not sent it yet.
-        @GuardedBy("mMainReturnCodeLock")
-        private Integer mMainReturnCode;
-
-        private final ITestCallback.Stub mCallback = new ITestCallback.Stub() {
-            @Override
-            public void childConnected(ITestController controller) {
-                mTestController = controller;
-                // This method can be called before onServiceConnected below has set the PID.
-                // Wait for mPid to be set before notifying.
-                try {
-                    mPidReceived.await();
-                } catch (InterruptedException ie) {
-                    Log.e(TAG, "Interrupted while waiting for connection PID.");
-                    return;
-                }
-                // Now we are fully initialized, notify clients.
-                synchronized (mConnectedLock) {
-                    mConnected = true;
-                    mConnectedLock.notifyAll();
-                }
-            }
-
-            @Override
-            public void mainReturned(int returnCode) {
-                mMainReturnCodeLock.lock();
-                try {
-                    mMainReturnCode = returnCode;
-                    mMainReturnCodeCondition.signal();
-                } finally {
-                    mMainReturnCodeLock.unlock();
-                }
-
-                // Also store the return code in a map as the connection might get disconnected
-                // before waitForMainToReturn is called and then we would not have a way to retrieve
-                // the connection.
-                sPidToMainResult.put(mPid, returnCode);
-            }
-        };
-
-        ClientServiceConnection(int slot, String[] commandLine, FileDescriptorInfo[] filesToMap) {
-            mSlot = slot;
-            mSetupBundle = new Bundle();
-            mSetupBundle.putStringArray(ChildProcessConstants.EXTRA_COMMAND_LINE, commandLine);
-            mSetupBundle.putParcelableArray(ChildProcessConstants.EXTRA_FILES, filesToMap);
-        }
-
-        public void waitForConnection() {
-            synchronized (mConnectedLock) {
-                while (!mConnected) {
-                    try {
-                        mConnectedLock.wait();
-                    } catch (InterruptedException ie) {
-                        Log.e(TAG, "Interrupted while waiting for connection.");
-                    }
-                }
-            }
-        }
-
-        public Integer getMainReturnCode(long timeoutMs) {
-            long timeoutNs = TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        @Override
+        public void mainReturned(int returnCode) {
             mMainReturnCodeLock.lock();
             try {
-                while (mMainReturnCode == null) {
-                    if (timeoutNs <= 0L) {
-                        return null;
-                    }
-                    try {
-                        timeoutNs = mMainReturnCodeCondition.awaitNanos(timeoutNs);
-                    } catch (InterruptedException ie) {
-                        Log.e(TAG, "Interrupted while waiting for main return code.");
-                    }
-                }
-                return mMainReturnCode;
+                mMainReturnCode = returnCode;
+                mMainReturnCodeCondition.signal();
             } finally {
                 mMainReturnCodeLock.unlock();
             }
-        }
 
-        @Override
-        public void onServiceConnected(ComponentName className, IBinder service) {
-            try {
-                mService = IChildProcessService.Stub.asInterface(service);
-                ICallbackInt pidCallback = new ICallbackInt.Stub() {
-                    @Override
-                    public void call(int pid) {
-                        mPid = pid;
-                        mPidReceived.countDown();
-                    }
-                };
-                mService.setupConnection(mSetupBundle, pidCallback, mCallback);
-            } catch (RemoteException e) {
-                Log.e(TAG, "Connect failed");
+            // Also store the return code in a map as the connection might get disconnected
+            // before waitForMainToReturn is called and then we would not have a way to retrieve
+            // the connection.
+            sPidToMainResult.put(mPid, returnCode);
+        }
+    };
+
+    private final ChildProcessLauncher.Delegate mLauncherDelegate =
+            new ChildProcessLauncher.Delegate() {
+                @Override
+                public void onBeforeConnectionAllocated(Bundle serviceBundle) {}
+
+                @Override
+                public void onBeforeConnectionSetup(Bundle connectionBundle) {}
+
+                @Override
+                public void onConnectionEstablished(ChildProcessConnection connection) {
+                    assert isRunningOnLauncherThread();
+                    int pid = connection.getPid();
+                    sPidToLauncher.put(pid, MultiprocessTestClientLauncher.this);
+                    mPid = pid;
+                    mPidReceived.countDown();
+                }
+
+                @Override
+                public void onConnectionLost(ChildProcessConnection connection) {
+                    assert isRunningOnLauncherThread();
+                    assert sPidToLauncher.get(connection.getPid())
+                            == MultiprocessTestClientLauncher.this;
+                    sPidToLauncher.remove(connection.getPid());
+                }
+            };
+
+    private final CountDownLatch mPidReceived = new CountDownLatch(1);
+
+    private final ChildProcessLauncher mLauncher;
+
+    private final ReentrantLock mConnectedLock = new ReentrantLock();
+    private final Condition mConnectedCondition = mConnectedLock.newCondition();
+    @GuardedBy("mConnectedLock")
+    private boolean mConnected;
+
+    private IChildProcessService mService = null;
+    private int mPid;
+    private ITestController mTestController;
+
+    private final ReentrantLock mMainReturnCodeLock = new ReentrantLock();
+    private final Condition mMainReturnCodeCondition = mMainReturnCodeLock.newCondition();
+    // The return code returned by the service's main method.
+    // null if the service has not sent it yet.
+    @GuardedBy("mMainReturnCodeLock")
+    private Integer mMainReturnCode;
+
+    private MultiprocessTestClientLauncher(String[] commandLine, FileDescriptorInfo[] filesToMap) {
+        assert isRunningOnLauncherThread();
+
+        if (sConnectionAllocator == null) {
+            sConnectionAllocator = ChildConnectionAllocator.create(
+                    ContextUtils.getApplicationContext(), sLauncherHandler,
+                    "org.chromium.native_test", "org.chromium.native_test.TEST_CLIENT_SERVICE_NAME",
+                    "org.chromium.native_test.NUM_TEST_CLIENT_SERVICES", false /* bindToCaller */,
+                    false /* bindAsExternalService */, false /* useStrongBinding */);
+        }
+        mLauncher = ChildProcessLauncher.createWithConnectionAllocator(sLauncherHandler,
+                mLauncherDelegate, commandLine, filesToMap, sConnectionAllocator, mCallback);
+    }
+
+    private boolean waitForConnection(long timeoutMs) {
+        assert !isRunningOnLauncherThread();
+
+        long timeoutNs = TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        mConnectedLock.lock();
+        try {
+            while (!mConnected) {
+                if (timeoutNs <= 0L) {
+                    return false;
+                }
+                try {
+                    mConnectedCondition.awaitNanos(timeoutNs);
+                } catch (InterruptedException ie) {
+                    Log.e(TAG, "Interrupted while waiting for connection.");
+                }
             }
+        } finally {
+            mConnectedLock.unlock();
         }
+        return true;
+    }
 
-        @Override
-        public void onServiceDisconnected(ComponentName className) {
-            if (mPid == 0) {
-                Log.e(TAG, "Early ClientServiceConnection disconnection.");
-                return;
+    private Integer getMainReturnCode(long timeoutMs) {
+        assert isRunningOnLauncherThread();
+
+        long timeoutNs = TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        mMainReturnCodeLock.lock();
+        try {
+            while (mMainReturnCode == null) {
+                if (timeoutNs <= 0L) {
+                    return null;
+                }
+                try {
+                    timeoutNs = mMainReturnCodeCondition.awaitNanos(timeoutNs);
+                } catch (InterruptedException ie) {
+                    Log.e(TAG, "Interrupted while waiting for main return code.");
+                }
             }
-            sConnectionAllocator.freeConnection(this);
-        }
-
-        public ITestController getTestController() {
-            return mTestController;
-        }
-
-        public String getServiceClassName() {
-            // In order to use different processes, we have to declare multiple services in the
-            // AndroidManifest.xml file, each service associated with its own process. The various
-            // services are functionnaly identical but need to each have their own class.
-            // We differentiate them by their class name having a trailing number.
-            return MultiprocessTestClientService.class.getName() + mSlot;
-        }
-
-        public boolean isConnected() {
-            synchronized (mConnectedLock) {
-                return mConnected;
-            }
-        }
-
-        public int getSlot() {
-            return mSlot;
-        }
-
-        public int getPid() {
-            return mPid;
+            return mMainReturnCode;
+        } finally {
+            mMainReturnCodeLock.unlock();
         }
     }
 
@@ -267,29 +203,46 @@ public final class MultiprocessTestClientLauncher {
     @CalledByNative
     private static int launchClient(
             final String[] commandLine, final FileDescriptorInfo[] filesToMap) {
-        if (ThreadUtils.runningOnUiThread()) {
-            // This can't be called on the main thread as the native side will block until
-            // onServiceConnected above is called, which cannot happen if the main thread is
-            // blocked.
-            throw new RuntimeException("launchClient cannot be called on the main thread");
-        }
+        initLauncherThread();
 
-        ClientServiceConnection connection =
-                sConnectionAllocator.allocateConnection(commandLine, filesToMap);
-        Intent intent = new Intent();
-        String className = connection.getServiceClassName();
-        String packageName = ContextUtils.getApplicationContext().getPackageName();
-        intent.setComponent(new ComponentName(packageName, className));
-        if (!ContextUtils.getApplicationContext().bindService(
-                    intent, connection, Context.BIND_AUTO_CREATE | Context.BIND_IMPORTANT)) {
-            Log.e(TAG, "Failed to bind service: " + packageName + "." + className);
-            sConnectionAllocator.freeConnection(connection);
+        final MultiprocessTestClientLauncher launcher =
+                runOnLauncherAndGetResult(new Callable<MultiprocessTestClientLauncher>() {
+                    @Override
+                    public MultiprocessTestClientLauncher call() {
+                        return createAndStartLauncherOnLauncherThread(commandLine, filesToMap);
+                    }
+                });
+        if (launcher == null) {
             return 0;
         }
 
-        connection.waitForConnection();
+        if (!launcher.waitForConnection(CONNECTION_TIMEOUT_MS)) {
+            return 0; // Timed-out.
+        }
 
-        return connection.getPid();
+        return runOnLauncherAndGetResult(new Callable<Integer>() {
+            @Override
+            public Integer call() {
+                int pid = launcher.mLauncher.getPid();
+                assert pid > 0;
+                sPidToLauncher.put(pid, launcher);
+                return pid;
+            }
+        });
+    }
+
+    private static MultiprocessTestClientLauncher createAndStartLauncherOnLauncherThread(
+            String[] commandLine, FileDescriptorInfo[] filesToMap) {
+        assert isRunningOnLauncherThread();
+
+        MultiprocessTestClientLauncher launcher =
+                new MultiprocessTestClientLauncher(commandLine, filesToMap);
+        if (!launcher.mLauncher.start(
+                    true /* setupConnection */, true /* queueIfNoFreeConnection */)) {
+            return null;
+        }
+
+        return launcher;
     }
 
     /**
@@ -302,16 +255,26 @@ public final class MultiprocessTestClientLauncher {
      * @return the return code returned by the main method or whether it timed-out.
      */
     @CalledByNative
-    private static MainReturnCodeResult waitForMainToReturn(int pid, int timeoutMs) {
-        ClientServiceConnection connection = sConnectionAllocator.getConnectionByPid(pid);
-        if (connection != null) {
-            try {
-                Integer mainResult = connection.getMainReturnCode(timeoutMs);
-                return mainResult == null ? MainReturnCodeResult.createTimeoutMainResult()
-                                          : MainReturnCodeResult.createMainResult(mainResult);
-            } finally {
-                freeConnection(connection);
+    private static MainReturnCodeResult waitForMainToReturn(final int pid, final int timeoutMs) {
+        return runOnLauncherAndGetResult(new Callable<MainReturnCodeResult>() {
+            @Override
+            public MainReturnCodeResult call() {
+                return waitForMainToReturnOnLauncherThread(pid, timeoutMs);
             }
+        });
+    }
+
+    private static MainReturnCodeResult waitForMainToReturnOnLauncherThread(
+            int pid, int timeoutMs) {
+        assert isRunningOnLauncherThread();
+
+        MultiprocessTestClientLauncher launcher = sPidToLauncher.get(pid);
+        // The launcher can be null if it got cleaned-up (because the connection was lost) before
+        // this gets called.
+        if (launcher != null) {
+            Integer mainResult = launcher.getMainReturnCode(timeoutMs);
+            return mainResult == null ? MainReturnCodeResult.createTimeoutMainResult()
+                                      : MainReturnCodeResult.createMainResult(mainResult);
         }
 
         Integer mainResult = sPidToMainResult.get(pid);
@@ -324,30 +287,44 @@ public final class MultiprocessTestClientLauncher {
     }
 
     @CalledByNative
-    private static boolean terminate(int pid, int exitCode, boolean wait) {
-        ClientServiceConnection connection = sConnectionAllocator.getConnectionByPid(pid);
-        if (connection == null) {
-            Log.e(TAG, "terminate called on unknown connection for pid " + pid);
+    private static boolean terminate(final int pid, final int exitCode, final boolean wait) {
+        return runOnLauncherAndGetResult(new Callable<Boolean>() {
+            @Override
+            public Boolean call() {
+                return terminateOnLauncherThread(pid, exitCode, wait);
+            }
+        });
+    }
+
+    private static boolean terminateOnLauncherThread(int pid, int exitCode, boolean wait) {
+        assert isRunningOnLauncherThread();
+
+        MultiprocessTestClientLauncher launcher = sPidToLauncher.get(pid);
+        if (launcher == null) {
+            Log.e(TAG, "terminate called on unknown launcher for pid " + pid);
             return false;
         }
         try {
             if (wait) {
-                connection.getTestController().forceStopSynchronous(exitCode);
+                launcher.mTestController.forceStopSynchronous(exitCode);
             } else {
-                connection.getTestController().forceStop(exitCode);
+                launcher.mTestController.forceStop(exitCode);
             }
         } catch (RemoteException e) {
             // We expect this failure, since the forceStop's service implementation calls
             // System.exit().
-        } finally {
-            freeConnection(connection);
         }
         return true;
     }
 
-    private static void freeConnection(ClientServiceConnection connection) {
-        ContextUtils.getApplicationContext().unbindService(connection);
-        sConnectionAllocator.freeConnection(connection);
+    private static void initLauncherThread() {
+        synchronized (sLauncherHandlerInitLock) {
+            if (sLauncherHandler != null) return;
+
+            HandlerThread launcherThread = new HandlerThread("LauncherThread");
+            launcherThread.start();
+            sLauncherHandler = new Handler(launcherThread.getLooper());
+        }
     }
 
     /** Does not take ownership of of fds. */
@@ -374,5 +351,39 @@ public final class MultiprocessTestClientLauncher {
             return null;
         }
         return new FileDescriptorInfo(id, parcelableFd, 0 /* offset */, 0 /* size */);
+    }
+
+    private static boolean isRunningOnLauncherThread() {
+        return sLauncherHandler.getLooper() == Looper.myLooper();
+    }
+
+    private static void runOnLauncherThreadBlocking(final Runnable runnable) {
+        assert !isRunningOnLauncherThread();
+        final Semaphore done = new Semaphore(0);
+        sLauncherHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                runnable.run();
+                done.release();
+            }
+        });
+        done.acquireUninterruptibly();
+    }
+
+    private static <R> R runOnLauncherAndGetResult(Callable<R> callable) {
+        if (isRunningOnLauncherThread()) {
+            try {
+                return callable.call();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        try {
+            FutureTask<R> task = new FutureTask<R>(callable);
+            sLauncherHandler.post(task);
+            return task.get();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

@@ -1112,9 +1112,6 @@ void ClientSocketPoolBaseHelper::HandOutSocket(
         NetLogEventType::SOCKET_POOL_REUSED_AN_EXISTING_SOCKET,
         NetLog::IntCallback("idle_ms",
                             static_cast<int>(idle_time.InMilliseconds())));
-
-    UMA_HISTOGRAM_COUNTS_1000("Net.Socket.IdleSocketReuseTime",
-                              idle_time.InSeconds());
   }
 
   if (reuse_type != ClientSocketHandle::UNUSED) {

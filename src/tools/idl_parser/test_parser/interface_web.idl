@@ -30,26 +30,26 @@ symatics should exist.  This is an exact match.
 */
 
 
-/* TREE
+/** TREE
  *Interface(MyIFace)
  */
 interface MyIFace { };
 
-/* TREE
+/** TREE
  *Interface(MyIFaceInherit)
  *  Inherit(Foo)
  */
 interface MyIFaceInherit : Foo {};
 
-/* TREE
+/** TREE
  *Interface(MyIFacePartial)
  */
 partial interface MyIFacePartial { };
 
-/* ERROR Unexpected ":" after identifier "MyIFaceInherit". */
+/** ERROR Unexpected ":" after identifier "MyIFaceInherit". */
 partial interface MyIFaceInherit : Foo {};
 
-/* TREE
+/** TREE
  *Interface(MyIFaceMissingArgument)
  *  Operation(foo)
  *    Arguments()
@@ -64,14 +64,14 @@ interface MyIFaceMissingArgument {
   void foo(DOMString arg, );
 };
 
-/* TREE
+/** TREE
  *Error(Unexpected keyword "double" after keyword "readonly".)
  */
 interface MyIFaceMissingAttribute {
   readonly double foo;
 };
 
-/* TREE
+/** TREE
  *Interface(MyIFaceContainsUnresolvedConflictDiff)
  *  Operation(foo)
  *    Arguments()
@@ -88,7 +88,7 @@ interface MyIFaceContainsUnresolvedConflictDiff {
 >>>>>> theirs
 };
 
-/* TREE
+/** TREE
  *Interface(MyIFaceWrongRecordKeyType)
  *  Operation(foo)
  *    Arguments()
@@ -102,7 +102,7 @@ interface MyIFaceWrongRecordKeyType {
   void foo(record<int, ByteString> arg);
 };
 
-/* TREE
+/** TREE
  *Interface(MyIFaceBig)
  *  Const(setString)
  *    StringType(DOMString)
@@ -112,7 +112,7 @@ interface MyIFaceBig {
   const DOMString? setString = null;
 };
 
-/* TREE
+/** TREE
  *Interface(MyIfaceEmptySequenceDefalutValue)
  *  Operation(foo)
  *    Arguments()
@@ -129,7 +129,7 @@ interface MyIfaceEmptySequenceDefalutValue {
   void foo(optional sequence<DOMString> arg = []);
 };
 
-/* TREE
+/** TREE
  *Interface(MyIfaceWithRecords)
  *  Operation(foo)
  *    Arguments()
@@ -160,7 +160,7 @@ interface MyIfaceWithRecords {
   double bar(int arg1, record<ByteString, float> arg2);
 };
 
-/* TREE
+/** TREE
  *Interface(MyIFaceBig2)
  *  Const(nullValue)
  *    StringType(DOMString)
@@ -207,7 +207,7 @@ interface MyIFaceBig2 {
 };
 
 
-/* TREE
+/** TREE
  *Interface(MyIFaceSpecials)
  *  Operation(set)
  *    Arguments()
@@ -239,7 +239,7 @@ interface MyIFaceSpecials {
   long long [5][6] GetFiveSix(SomeType arg);
 };
 
-/* TREE
+/** TREE
  *Interface(MyIFaceStringifiers)
  *  Stringifier()
  *  Stringifier()
@@ -264,7 +264,7 @@ interface MyIFaceStringifiers {
   stringifier attribute DOMString stringValue;
 };
 
-/* TREE
+/** TREE
  *Interface(MyExtendedAttributeInterface)
  *  Operation(method)
  *    Arguments()
@@ -283,7 +283,7 @@ interface MyExtendedAttributeInterface {
   [Attr, MethodIdentList=(Foo, Bar)] void method();
 };
 
-/* TREE
+/** TREE
  *Interface(MyIfacePromise)
  *  Operation(method1)
  *    Arguments()
@@ -317,7 +317,7 @@ interface MyIfacePromise {
   Promise method4();
 };
 
-/* TREE
+/** TREE
  *Interface(MyIfaceIterable)
  *  Iterable()
  *    Type()
@@ -333,7 +333,7 @@ interface MyIfaceIterable {
   iterable<double, DOMString>;
 };
 
-/* TREE
+/** TREE
  *Interface(MyIfaceMaplike)
  *  Maplike()
  *    Type()
@@ -351,7 +351,7 @@ interface MyIfaceMaplike {
   maplike<double, boolean>;
 };
 
-/* TREE
+/** TREE
  *Interface(MyIfaceSetlike)
  *  Setlike()
  *    Type()
@@ -365,7 +365,7 @@ interface MyIfaceSetlike {
   setlike<double>;
 };
 
-/* TREE
+/** TREE
  *Interface(MyIfaceSerializer)
  *  Serializer()
  *  Serializer()
@@ -411,7 +411,7 @@ interface MyIfaceSerializer {
   serializer = [name1, name2];
 };
 
-/* TREE
+/** TREE
  *Interface(MyIfaceFrozenArray)
  *  Attribute(foo)
  *    Type()
@@ -423,7 +423,7 @@ interface MyIfaceFrozenArray {
   readonly attribute FrozenArray<DOMString> foo;
 };
 
-/* TREE
+/** TREE
  *Interface(MyIfaceUnion)
  *  Attribute(foo)
  *    Type()

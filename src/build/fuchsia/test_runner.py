@@ -9,6 +9,7 @@ dependencies of a test binary, and then uses QEMU from the Fuchsia SDK to run
 it. Does not yet implement running on real hardware."""
 
 import argparse
+import multiprocessing
 import os
 import re
 import subprocess
@@ -100,8 +101,8 @@ def AddToManifest(manifest_file, target_name, source, mapper):
     raise Exception('%s does not exist' % source)
 
 
-def BuildBootfs(output_directory, runtime_deps_path, test_name, gtest_filter,
-                gtest_repeat, test_launcher_filter_file, dry_run):
+def BuildBootfs(output_directory, runtime_deps_path, test_name, child_args,
+                test_launcher_filter_file, dry_run):
   with open(runtime_deps_path) as f:
     lines = f.readlines()
 
@@ -127,30 +128,25 @@ def BuildBootfs(output_directory, runtime_deps_path, test_name, gtest_filter,
     target_source_pairs.append(
         ('lib/' + lib, os.path.join(sysroot_lib_path, lib)))
 
-  # Generate a little script that runs the test binaries and then shuts down
-  # QEMU.
-  autorun_file = tempfile.NamedTemporaryFile()
-  autorun_file.write('#!/bin/sh\n')
-  autorun_file.write('/system/' + os.path.basename(test_name))
-  autorun_file.write(' --test-launcher-retry-limit=0')
-  if int(os.environ.get('CHROME_HEADLESS', 0)) != 0:
-    # When running on bots (without KVM) execution is quite slow. The test
-    # launcher times out a subprocess after 45s which can be too short. Make the
-    # timeout twice as long.
-    autorun_file.write(' --test-launcher-timeout=90000')
   if test_launcher_filter_file:
     test_launcher_filter_file = os.path.normpath(
             os.path.join(output_directory, test_launcher_filter_file))
     filter_file_on_device = MakeTargetImageName(
           common_prefix, output_directory, test_launcher_filter_file)
-    autorun_file.write(' --test-launcher-filter-file=/system/' +
+    child_args.append('--test-launcher-filter-file=/system/' +
                        filter_file_on_device)
     target_source_pairs.append(
         [filter_file_on_device, test_launcher_filter_file])
-  if gtest_filter:
-    autorun_file.write(' --gtest_filter=' + gtest_filter)
-  if gtest_repeat:
-    autorun_file.write(' --gtest_repeat=' + gtest_repeat)
+
+  # Generate a little script that runs the test binaries and then shuts down
+  # QEMU.
+  autorun_file = tempfile.NamedTemporaryFile()
+  autorun_file.write('#!/bin/sh\n')
+  autorun_file.write('/system/' + os.path.basename(test_name))
+
+  for arg in child_args:
+    autorun_file.write(' "%s"' % arg);
+
   autorun_file.write('\n')
   # If shutdown happens too soon after the test completion, log statements from
   # the end of the run will be lost, so sleep for a bit before shutting down.
@@ -195,6 +191,22 @@ def BuildBootfs(output_directory, runtime_deps_path, test_name, gtest_filter,
   return bootfs_name
 
 
+def SymbolizeEntry(entry):
+  addr2line_output = subprocess.check_output(
+      ['addr2line', '-Cipf', '--exe=' + entry[1], entry[2]])
+  prefix = '#%s: ' % entry[0]
+  # addr2line outputs a second line for inlining information, offset
+  # that to align it properly after the frame index.
+  addr2line_filtered = addr2line_output.strip().replace(
+      '(inlined', ' ' * len(prefix) + '(inlined')
+  return '#%s: %s' % (prefix, addr2line_filtered)
+
+
+def ParallelSymbolizeBacktrace(backtrace):
+  p = multiprocessing.Pool(multiprocessing.cpu_count())
+  return p.imap(SymbolizeEntry, backtrace)
+
+
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('--dry-run', '-n', action='store_true', default=False,
@@ -210,17 +222,56 @@ def main():
                       type=os.path.realpath,
                       help='Name of the the test')
   parser.add_argument('--gtest_filter',
-                      help='GTest filter to use in place of any default')
+                      help='GTest filter to use in place of any default.')
   parser.add_argument('--gtest_repeat',
-                      help='GTest repeat value to use')
+                      help='GTest repeat value to use.')
+  parser.add_argument('--single-process-tests', action='store_true',
+                      default=False,
+                      help='Runs the tests and the launcher in the same '
+                      'process. Useful for debugging.')
+  parser.add_argument('--test-launcher-batch-limit',
+                      type=int,
+                      help='Sets the limit of test batch to run in a single '
+                      'process.')
+  # --test-launcher-filter-file is specified relative to --output-directory,
+  # so specifying type=os.path.* will break it.
   parser.add_argument('--test-launcher-filter-file',
-                      help='Pass filter file through to target process')
+                      help='Pass filter file through to target process.')
+  parser.add_argument('--test-launcher-jobs',
+                      type=int,
+                      help='Sets the number of parallel test jobs.')
   parser.add_argument('--test_launcher_summary_output',
                       help='Currently ignored for 2-sided roll.')
+  parser.add_argument('child_args', nargs='*',
+                      help='Arguments for the test process.')
   args = parser.parse_args()
 
+  child_args = ['--test-launcher-retry-limit=0']
+
+  if int(os.environ.get('CHROME_HEADLESS', 0)) != 0:
+    # When running on bots (without KVM) execution is quite slow. The test
+    # launcher times out a subprocess after 45s which can be too short. Make the
+    # timeout twice as long.
+    child_args.append('--test-launcher-timeout=90000')
+
+  if args.single_process_tests:
+    child_args.append('--single-process-tests')
+
+  if args.test_launcher_batch_limit:
+    child_args.append('--test-launcher-batch-limit=%d' %
+                       args.test_launcher_batch_limit)
+  if args.test_launcher_jobs:
+    child_args.append('--test-launcher-jobs=%d' %
+                       args.test_launcher_jobs)
+  if args.gtest_filter:
+    child_args.append('--gtest_filter=' + args.gtest_filter)
+  if args.gtest_repeat:
+    child_args.append('--gtest_repeat=' + args.gtest_repeat)
+  if args.child_args:
+    child_args.extend(args.child_args)
+
   bootfs = BuildBootfs(args.output_directory, args.runtime_deps_path,
-                       args.test_name, args.gtest_filter, args.gtest_repeat,
+                       args.test_name, child_args,
                        args.test_launcher_filter_file, args.dry_run)
 
   qemu_path = os.path.join(SDK_ROOT, 'qemu', 'bin', 'qemu-system-x86_64')
@@ -233,7 +284,15 @@ def main():
        '-machine', 'q35',
        '-kernel', os.path.join(SDK_ROOT, 'kernel', 'magenta.bin'),
        '-initrd', bootfs,
-       '-append', 'TERM=xterm-256color kernel.halt_on_panic=true']
+
+       # Use stdio for the guest OS only; don't attach the QEMU interactive
+       # monitor.
+       '-serial', 'stdio',
+       '-monitor', 'none',
+
+       # TERM=dumb tells the guest OS to not emit ANSI commands that trigger
+       # noisy ANSI spew from the user's terminal emulator.
+       '-append', 'TERM=dumb kernel.halt_on_panic=true']
   if int(os.environ.get('CHROME_HEADLESS', 0)) == 0:
     qemu_command += ['-enable-kvm', '-cpu', 'host,migratable=no']
   else:
@@ -246,8 +305,21 @@ def main():
     bt_with_offset_re = re.compile(prefix +
         'bt#(\d+): pc 0x[0-9a-f]+ sp (0x[0-9a-f]+) \((\S+),(0x[0-9a-f]+)\)$')
     bt_end_re = re.compile(prefix + 'bt#(\d+): end')
-    qemu_popen = subprocess.Popen(qemu_command, stdout=subprocess.PIPE)
-    processed_lines = []
+
+    # We pass a separate stdin stream to qemu. Sharing stdin across processes
+    # leads to flakiness due to the OS prematurely killing the stream and the
+    # Python script panicking and aborting.
+    # The precise root cause is still nebulous, but this fix works.
+    # See crbug.com/741194 .
+    qemu_popen = subprocess.Popen(
+        qemu_command, stdout=subprocess.PIPE, stdin=open(os.devnull))
+
+    # A buffer of backtrace entries awaiting symbolization, stored as tuples.
+    # Element #0: backtrace frame number (starting at 0).
+    # Element #1: path to executable code corresponding to the current frame.
+    # Element #2: memory offset within the executable.
+    bt_entries = []
+
     success = False
     while True:
       line = qemu_popen.stdout.readline()
@@ -257,24 +329,18 @@ def main():
       if 'SUCCESS: all tests passed.' in line:
         success = True
       if bt_end_re.match(line.strip()):
-        if processed_lines:
+        if bt_entries:
           print '----- start symbolized stack'
-          for processed in processed_lines:
+          for processed in ParallelSymbolizeBacktrace(bt_entries):
             print processed
           print '----- end symbolized stack'
-        processed_lines = []
+        bt_entries = []
       else:
         m = bt_with_offset_re.match(line.strip())
         if m:
-          addr2line_output = subprocess.check_output(
-              ['addr2line', '-Cipf', '--exe=' + args.test_name, m.group(4)])
-          prefix = '#%s: ' % m.group(1)
-          # addr2line outputs a second line for inlining information, offset
-          # that to align it properly after the frame index.
-          addr2line_filtered = addr2line_output.strip().replace(
-              '(inlined', ' ' * len(prefix) + '(inlined')
-          processed_lines.append('%s%s' % (prefix, addr2line_filtered))
+          bt_entries.append((m.group(1), args.test_name, m.group(4)))
     qemu_popen.wait()
+
     return 0 if success else 1
 
   return 0

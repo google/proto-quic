@@ -278,67 +278,103 @@ be describing additional metrics about the same event.
     Ranker.  These metrics are recorded each time the user triggers the
     Contextual Search UI via a tap gesture (when enabled).
   </summary>
-  <metric name="DURATION_AFTER_SCROLL_MS">
+  <metric name="DidOptIn">
+    <summary>
+      Emits a 1 or 0 to indicate whether the user has Opted-in to the privacy
+      conditions for Contextual Search or not.
+    </summary>
+  </metric>
+  <metric name="DurationAfterScrollMs">
     <summary>
       Duration in MS between showing the UI and a subsequent scroll event, or
       not recorded if there was no subsequent scroll.
     </summary>
   </metric>
-  <metric name="DURATION_BEFORE_SCROLL_MS">
+  <metric name="IsEntity">
     <summary>
-      Duration in MS between showing the most recent scroll event and showing
-      the UI, or 0 if no previous scroll event occurred.
+      Emits a 1 or 0 to indicate whether the word tapped appears to be part of
+      an entity, given simple English language rules that check capitalization
+      and punctuation.
     </summary>
   </metric>
-  <metric name="OUTCOME_WAS_PANEL_OPENED">
+  <metric name="IsLongWord">
     <summary>
-      Whether the user opened the overlay panel.  This is the primary outcome
-      metric.
+      Emits a 1 or 0 to indicate whether the word tapped was considered long (at
+      least 10 chars in length).
     </summary>
   </metric>
-  <metric name="OUTCOME_WAS_QUICK_ACTION_CLICKED">
+  <metric name="IsShortWord">
     <summary>
-      Whether the user clicked within the overlay panel when a Quick-Action was
-      shown.  This is a secondary outcome metric.
+      Emits a 1 or 0 to indicate whether the word tapped was considered short
+      (less than 4 characters in length).
     </summary>
   </metric>
-  <metric name="OUTCOME_WAS_QUICK_ANSWER_SEEN">
+  <metric name="IsWordEdge">
     <summary>
-      Whether the user could see a Quick-Answer caption within the overlay
-      panel.  This is a tertiary outcome metric.
+      Emits a 1 or 0 to indicate whether the tap gesture was on the edge of a
+      word, rather than in the middle 50% of the word.
     </summary>
   </metric>
-  <metric name="PREVIOUS_28DAY_CTR_PERCENT">
+  <metric name="OutcomeWasCardsDataShown">
+    <summary>
+      Emits a 1 or 0 to indicate whether any Contextual Cards data was shown in
+      the Contextual Search Bar.
+    </summary>
+  </metric>
+  <metric name="OutcomeWasPanelOpened">
+    <summary>
+      Emits a 1 or 0 to indicate whether the user opened the overlay panel. This
+      is the primary outcome metric.
+    </summary>
+  </metric>
+  <metric name="OutcomeWasQuickActionClicked">
+    <summary>
+      Emits a 1 or 0 to indicate whether the user clicked within the overlay
+      panel when a Quick-Action was shown.  This is a secondary outcome metric.
+    </summary>
+  </metric>
+  <metric name="OutcomeWasQuickAnswerSeen">
+    <summary>
+      Emits a 1 or 0 to indicate whether the user could see a Quick-Answer
+      caption within the overlay panel.  This is a tertiary outcome metric.
+    </summary>
+  </metric>
+  <metric name="Previous28DayCtrPercent">
     <summary>
       The CTR of the overlay panel for this user, aggregated over a previous 28
       day period, expressed as an integer between 0-99.
     </summary>
   </metric>
-  <metric name="PREVIOUS_28DAY_IMPRESSIONS_COUNT">
+  <metric name="Previous28DayImpressionsCount">
     <summary>
       The count of views of the overlay panel for this user, aggregated over a
       previous 28 day period.
     </summary>
   </metric>
-  <metric name="PREVIOUS_WEEK_CTR_PERCENT">
+  <metric name="PreviousWeekCtrPercent">
     <summary>
       The CTR of the overlay panel for this user, aggregated over the previous
       week, expressed as an integer between 0-99.
     </summary>
   </metric>
-  <metric name="PREVIOUS_WEEK_IMPRESSIONS_COUNT">
+  <metric name="PreviousWeekImpressionsCount">
     <summary>
       The count of views of the overlay panel for this user, aggregated over the
       previous week.
     </summary>
   </metric>
-  <metric name="SCREEN_TOP_DPS">
+  <metric name="ScreenTopDps">
     <summary>
       The location of the tap relative to the top of the screen, expressed in
       DPs.
     </summary>
   </metric>
-  <metric name="WAS_SCREEN_BOTTOM">
+  <metric name="TapDuration">
+    <summary>
+      The duration of the tap gesture expressed in milliseconds.
+    </summary>
+  </metric>
+  <metric name="WasScreenBottom">
     <summary>
       The location of the tap relative to the bottom of the screen, expressed as
       an integer with 0 meaning not at the bottom and 1 meaning at the bottom.
@@ -395,6 +431,34 @@ be describing additional metrics about the same event.
   </metric>
 </event>
 
+<event name="Intervention.DocumentWrite.ScriptBlock" singular="True">
+  <owner>bmcquade@chromium.org</owner>
+  <summary>
+    Recorded for page loads where the document.write script block intervention
+    could apply.
+  </summary>
+  <metric name="Disabled.Reload">
+    <summary>
+      Records '1' if the document.write script block intervention could have
+      applied, but was disabled due to the page being reloaded.
+    </summary>
+  </metric>
+  <metric name="ParseTiming.ParseBlockedOnScriptExecutionFromDocumentWrite">
+    <summary>
+      Measures the time in milliseconds that the HTML parser spent blocked on
+      the execution of scripts inserted from document.write, for main frame
+      documents that finished parsing.
+    </summary>
+  </metric>
+  <metric name="ParseTiming.ParseBlockedOnScriptLoadFromDocumentWrite">
+    <summary>
+      Measures the time in milliseconds that the HTML parser spent blocked on
+      the load of scripts inserted from document.write, for main frame documents
+      that finished parsing.
+    </summary>
+  </metric>
+</event>
+
 <event name="LocalNetworkRequests">
   <owner>uthakore@chromium.org</owner>
   <summary>
@@ -439,6 +503,24 @@ be describing additional metrics about the same event.
       routers, and 16 for localhost resources.
     </summary>
   </metric>
+</event>
+
+<event name="Media.Engagement.SessionFinished">
+  <owner>beccahughes@chromium.org</owner>
+  <owner>media-dev@chromium.org</owner>
+  <summary>
+    The Media Engagement index stores the number of significant media playbacks
+    per origin and the number of visits. From that we calculate a Media
+    Engagement Score.
+
+    To tweak the scoring function we are logging the total number of significant
+    media playbacks, the total number of visits, the calculated engagement score
+    and the new number of significant media playbacks that occured this visit.
+  </summary>
+  <metric name="Engagement.Score"/>
+  <metric name="Playbacks.Delta"/>
+  <metric name="Playbacks.Total"/>
+  <metric name="Visits.Total"/>
 </event>
 
 <event name="Media.WatchTime">
@@ -650,6 +732,22 @@ be describing additional metrics about the same event.
   </metric>
 </event>
 
+<event name="PageLoad.FromGoogleSearch" singular="True">
+  <owner>bmcquade@chromium.org</owner>
+  <owner>mushan@chromium.org</owner>
+  <summary>
+    Recorded for page loads that were navigated to via Google Search.
+  </summary>
+</event>
+
+<event name="PageLoad.ServiceWorkerControlled" singular="True">
+  <owner>bmcquade@chromium.org</owner>
+  <owner>falken@chromium.org</owner>
+  <summary>
+    Recorded for page loads controlled by a service worker.
+  </summary>
+</event>
+
 <event name="PasswordForm">
   <owner>battre@chromium.org</owner>
   <summary>
@@ -657,6 +755,35 @@ be describing additional metrics about the same event.
     them. A separate event is generated for each password form discovered on a
     site.
   </summary>
+  <metric name="ManagerFill.Action">
+    <summary>
+      Records for each password form (and HTTP auth), whether the password
+      manager has filled/provided credentials. Recorded values correspond to the
+      enum ManagerAutofillEvent.
+    </summary>
+  </metric>
+  <metric name="Saving.Prompt.Interaction">
+    <summary>
+      Records how the user interacted with a saving prompt. Recorded values
+      correspond to the enum PasswordFormMetricsRecorder::BubbleDismissalReason.
+    </summary>
+  </metric>
+  <metric name="Saving.Prompt.Shown">
+    <summary>
+      Records, for each password form seen by the password manager, whether the
+      user was shown a prompt that asked for permission to save new credentials.
+      In case a store() via the Credential Management API, a virtual password
+      form is created, for which this metric is recorded. Recorded values are 0
+      and 1 for false and true.
+    </summary>
+  </metric>
+  <metric name="Saving.Prompt.Trigger">
+    <summary>
+      Records the trigger of each password save bubble that was shown to the
+      user to ask for permission to save new credentials. Recorded values
+      correspond to the enum PasswordFormMetricsRecorder::BubbleTrigger.
+    </summary>
+  </metric>
   <metric name="Submission.Observed">
     <summary>
       Records whether a submission of a password form has been observered. The
@@ -757,6 +884,41 @@ be describing additional metrics about the same event.
       enum SuppressedAccountExistence.
     </summary>
   </metric>
+  <metric name="Updating.Prompt.Interaction">
+    <summary>
+      Records how the user interacted with an updating prompt. Recorded values
+      correspond to the enum PasswordFormMetricsRecorder::BubbleDismissalReason.
+    </summary>
+  </metric>
+  <metric name="Updating.Prompt.Shown">
+    <summary>
+      Records, for each password form seen by the password manager, whether the
+      user was shown a prompt that asked for permission to update existing
+      credentials. Recorded values are 0 and 1 for false and true.
+    </summary>
+  </metric>
+  <metric name="Updating.Prompt.Trigger">
+    <summary>
+      Records the trigger of each password update bubble that was shown to the
+      user to ask for permission to update existing credentials. Recorded values
+      correspond to the enum PasswordFormMetricsRecorder::BubbleTrigger.
+    </summary>
+  </metric>
+  <metric name="User.Action">
+    <summary>
+      Records what the user does with all UI entry points of the password
+      manager UI, like bubbles, context menus, forms, form fields, etc. in
+      relation to a given form. Recorded values correspond to the enum
+      PasswordFormMetricsRecorder::DetailedUserAction. In contrast to
+      User.ActionSimplified, this metric is intended to be extended over time.
+    </summary>
+  </metric>
+  <metric name="User.ActionSimplified">
+    <summary>
+      Records what the user does with a form. Recorded values correspond to the
+      enum password_manager::UserAction.
+    </summary>
+  </metric>
 </event>
 
 <event name="PageWithPassword">
@@ -766,6 +928,13 @@ be describing additional metrics about the same event.
     interactions with them. No events are created for pages that don't contain
     password forms.
   </summary>
+  <metric name="ProvisionalSaveFailure">
+    <summary>
+      Records a provisional save failure in case the password manager cannot
+      offer to save a credential. Recorded values correspond to the enum
+      PasswordManagerMetricsRecorder::ProvisionalSaveFailure.
+    </summary>
+  </metric>
   <metric name="UserModifiedPasswordField">
     <summary>
       Records a 1 for every page on which a user has modified a password text
@@ -777,7 +946,7 @@ be describing additional metrics about the same event.
 
 <event name="PaymentRequest.CheckoutEvents">
   <owner>sebsg@chromium.org</owner>
-  <metric name="CompletionsStatus">
+  <metric name="CompletionStatus">
     <summary>
       How the Payment Request ended. Values defined in the CompletionStatus enum
       of components/payments/core/journey_logger.h.
@@ -797,6 +966,59 @@ be describing additional metrics about the same event.
   <summary>
     Recorded when a Flash object instance is created.
   </summary>
+</event>
+
+<event name="Previews" singular="True">
+  <owner>ryansturm@chromium.org</owner>
+  <summary>
+    Previews related metrics associated with a page load. See
+    //componenets/previews/.
+  </summary>
+  <metric name="client_lofi">
+    <summary>
+      Set to 1 when a user is shown a client lo-fi image in a page load.
+    </summary>
+  </metric>
+  <metric name="lite_page">
+    <summary>
+      Set to 1 when a user is shown a lite page in page load.
+    </summary>
+  </metric>
+  <metric name="opt_out">
+    <summary>
+      Set to 1 when a user clicks &quot;Show Original&quot; on a preview page
+      load.
+    </summary>
+  </metric>
+  <metric name="server_lofi">
+    <summary>
+      Set to 1 when a user is shown a server lo-fi image in a page load.
+    </summary>
+  </metric>
+</event>
+
+<event name="SubresourceFilter" singular="True">
+  <owner>bmcquade@chromium.org</owner>
+  <owner>csharrison@chromium.org</owner>
+  <summary>
+    Recorded for page loads where subresource filtering policy was evaluated.
+  </summary>
+  <metric name="ActivationDecision">
+    <summary>
+      Enum that records the policy decision to activate subresource filtering
+      for a page load. 0 = Unknown, 1 = Activated, 2 = Disabled, 3 = Unsupported
+      scheme, 4 = URL whitelisted, 5 = Activation conditions not met.
+      'Activated' indicates that subresource filtering was activated. All other
+      reasons indicate that subresource filtering was not activated.
+    </summary>
+  </metric>
+  <metric name="DryRun">
+    <summary>
+      Records '1' if subresource filtering was activated in dry run mode. In dry
+      run mode, subresource filtering policy is evaluated against resources
+      loaded on the page, but subresource filtering is not actually applied.
+    </summary>
+  </metric>
 </event>
 
 <event name="Translate">

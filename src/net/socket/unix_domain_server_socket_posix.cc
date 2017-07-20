@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "base/logging.h"
+#include "build/build_config.h"
 #include "net/base/net_errors.h"
 #include "net/base/sockaddr_storage.h"
 #include "net/socket/socket_posix.h"
@@ -47,7 +48,7 @@ UnixDomainServerSocket::~UnixDomainServerSocket() {
 // static
 bool UnixDomainServerSocket::GetPeerCredentials(SocketDescriptor socket,
                                                 Credentials* credentials) {
-#if defined(OS_LINUX) || defined(OS_ANDROID)
+#if defined(OS_LINUX) || defined(OS_ANDROID) || defined(OS_FUCHSIA)
   struct ucred user_cred;
   socklen_t len = sizeof(user_cred);
   if (getsockopt(socket, SOL_SOCKET, SO_PEERCRED, &user_cred, &len) < 0)

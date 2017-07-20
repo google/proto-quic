@@ -34,6 +34,7 @@
 #include "base/memory/manual_constructor.h"
 #include "base/strings/string16.h"
 #include "base/strings/string_piece.h"
+#include "base/value_iterators.h"
 
 namespace base {
 
@@ -136,6 +137,59 @@ class BASE_EXPORT Value {
 
   ListStorage& GetList();
   const ListStorage& GetList() const;
+
+  using dict_iterator = detail::dict_iterator;
+  using const_dict_iterator = detail::const_dict_iterator;
+  using dict_iterator_proxy = detail::dict_iterator_proxy;
+  using const_dict_iterator_proxy = detail::const_dict_iterator_proxy;
+
+  // TODO(crbug.com/646113): Replace the following const char* and const
+  // std::string& overloads with a single base::StringPiece overload when
+  // base::less becomes available.
+
+  // |FindKey| looks up |key| in the underlying dictionary. If found, it returns
+  // an iterator to the element. Otherwise the end iterator of the dictionary is
+  // returned. Callers are expected to compare the returned iterator against
+  // |DictEnd()| in order to determine whether |key| was present.
+  // Note: This fatally asserts if type() is not Type::DICTIONARY.
+  dict_iterator FindKey(const char* key);
+  dict_iterator FindKey(const std::string& key);
+  const_dict_iterator FindKey(const char* key) const;
+  const_dict_iterator FindKey(const std::string& key) const;
+
+  // |FindKeyOfType| is similar to |FindKey|, but it also requires the found
+  // value to have type |type|. If no type is found, or the found value is of a
+  // different type the end iterator of the dictionary is returned.
+  // Callers are expected to compare the returned iterator against |DictEnd()|
+  // in order to determine whether |key| was present and of the correct |type|.
+  // Note: This fatally asserts if type() is not Type::DICTIONARY.
+  dict_iterator FindKeyOfType(const char* key, Type type);
+  dict_iterator FindKeyOfType(const std::string& key, Type type);
+  const_dict_iterator FindKeyOfType(const char* key, Type type) const;
+  const_dict_iterator FindKeyOfType(const std::string& key, Type type) const;
+
+  // |SetKey| looks up |key| in the underlying dictionary and sets the mapped
+  // value to |value|. If |key| could not be found, a new element is inserted.
+  // An iterator to the modifed item is returned.
+  // Note: This fatally asserts if type() is not Type::DICTIONARY.
+  dict_iterator SetKey(const char* key, Value value);
+  dict_iterator SetKey(const std::string& key, Value value);
+  dict_iterator SetKey(std::string&& key, Value value);
+
+  // |DictEnd| returns the end iterator of the underlying dictionary. It is
+  // intended to be used with |FindKey| in order to determine whether a given
+  // key is present in the dictionary.
+  // Note: This fatally asserts if type() is not Type::DICTIONARY.
+  dict_iterator DictEnd();
+  const_dict_iterator DictEnd() const;
+
+  // |DictItems| returns a proxy object that exposes iterators to the underlying
+  // dictionary. These are intended for iteration over all items in the
+  // dictionary and are compatible with for-each loops and standard library
+  // algorithms.
+  // Note: This fatally asserts if type() is not Type::DICTIONARY.
+  dict_iterator_proxy DictItems();
+  const_dict_iterator_proxy DictItems() const;
 
   // These methods allow the convenient retrieval of the contents of the Value.
   // If the current object can be converted into the given type, the value is

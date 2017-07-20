@@ -13,9 +13,6 @@
 
 using ::testing::AssertionResult;
 using ::testing::AssertionSuccess;
-using std::string;
-
-using base::StringPiece;
 
 namespace net {
 namespace test {
@@ -77,17 +74,18 @@ void HpackBlockCollector::ExpectDynamicTableSizeUpdate(size_t size) {
   entries_.push_back(
       HpackEntryCollector(HpackEntryType::kDynamicTableSizeUpdate, size));
 }
-void HpackBlockCollector::ExpectNameIndexAndLiteralValue(HpackEntryType type,
-                                                         size_t index,
-                                                         bool value_huffman,
-                                                         const string& value) {
+void HpackBlockCollector::ExpectNameIndexAndLiteralValue(
+    HpackEntryType type,
+    size_t index,
+    bool value_huffman,
+    const Http2String& value) {
   entries_.push_back(HpackEntryCollector(type, index, value_huffman, value));
 }
 void HpackBlockCollector::ExpectLiteralNameAndValue(HpackEntryType type,
                                                     bool name_huffman,
-                                                    const string& name,
+                                                    const Http2String& name,
                                                     bool value_huffman,
-                                                    const string& value) {
+                                                    const Http2String& value) {
   entries_.push_back(
       HpackEntryCollector(type, name_huffman, name, value_huffman, value));
 }
@@ -115,7 +113,7 @@ AssertionResult HpackBlockCollector::ValidateSoleLiteralValueHeader(
     HpackEntryType expected_type,
     size_t expected_index,
     bool expected_value_huffman,
-    StringPiece expected_value) const {
+    Http2StringPiece expected_value) const {
   VERIFY_TRUE(pending_entry_.IsClear());
   VERIFY_EQ(1u, entries_.size());
   VERIFY_TRUE(entries_.front().ValidateLiteralValueHeader(
@@ -125,9 +123,9 @@ AssertionResult HpackBlockCollector::ValidateSoleLiteralValueHeader(
 AssertionResult HpackBlockCollector::ValidateSoleLiteralNameValueHeader(
     HpackEntryType expected_type,
     bool expected_name_huffman,
-    StringPiece expected_name,
+    Http2StringPiece expected_name,
     bool expected_value_huffman,
-    StringPiece expected_value) const {
+    Http2StringPiece expected_value) const {
   VERIFY_TRUE(pending_entry_.IsClear());
   VERIFY_EQ(1u, entries_.size());
   VERIFY_TRUE(entries_.front().ValidateLiteralNameValueHeader(

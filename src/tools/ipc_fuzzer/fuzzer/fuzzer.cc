@@ -1136,8 +1136,8 @@ struct FuzzTraits<HWND> {
 #endif
 
 template <>
-struct FuzzTraits<IPC::Message> {
-  static bool Fuzz(IPC::Message* p, Fuzzer* fuzzer) {
+struct FuzzTraits<std::unique_ptr<IPC::Message>> {
+  static bool Fuzz(std::unique_ptr<IPC::Message>* p, Fuzzer* fuzzer) {
     // TODO(mbarbella): Support mutation.
     if (!fuzzer->ShouldGenerate())
       return true;
@@ -1145,10 +1145,11 @@ struct FuzzTraits<IPC::Message> {
     if (g_function_vector.empty())
       return false;
     size_t index = RandInRange(g_function_vector.size());
-    IPC::Message* ipc_message = (*g_function_vector[index])(NULL, fuzzer);
+    std::unique_ptr<IPC::Message> ipc_message =
+        (*g_function_vector[index])(nullptr, fuzzer);
     if (!ipc_message)
       return false;
-    p = ipc_message;
+    *p = std::move(ipc_message);
     return true;
   }
 };
@@ -1734,8 +1735,8 @@ template <typename Message>
 class MessageFactory<Message, IPC::MessageKind::CONTROL> {
  public:
   template <typename... Args>
-  static Message* New(const Args&... args) {
-    return new Message(args...);
+  static std::unique_ptr<Message> New(const Args&... args) {
+    return base::MakeUnique<Message>(args...);
   }
 };
 
@@ -1743,8 +1744,8 @@ template <typename Message>
 class MessageFactory<Message, IPC::MessageKind::ROUTED> {
  public:
   template <typename... Args>
-  static Message* New(const Args&... args) {
-    return new Message(RandInRange(MAX_FAKE_ROUTING_ID), args...);
+  static std::unique_ptr<Message> New(const Args&... args) {
+    return base::MakeUnique<Message>(RandInRange(MAX_FAKE_ROUTING_ID), args...);
   }
 };
 
@@ -1756,15 +1757,15 @@ class FuzzerHelper<IPC::MessageT<Meta, std::tuple<Ins...>, void>> {
  public:
   using Message = IPC::MessageT<Meta, std::tuple<Ins...>, void>;
 
-  static IPC::Message* Fuzz(IPC::Message* msg, Fuzzer* fuzzer) {
+  static std::unique_ptr<IPC::Message> Fuzz(IPC::Message* msg, Fuzzer* fuzzer) {
     return FuzzImpl(msg, fuzzer, base::MakeIndexSequence<sizeof...(Ins)>());
   }
 
  private:
   template <size_t... Ns>
-  static IPC::Message* FuzzImpl(IPC::Message* msg,
-                                Fuzzer* fuzzer,
-                                base::IndexSequence<Ns...>) {
+  static std::unique_ptr<IPC::Message> FuzzImpl(IPC::Message* msg,
+                                                Fuzzer* fuzzer,
+                                                base::IndexSequence<Ns...>) {
     typename Message::Param p;
     if (msg) {
       Message::Read(static_cast<Message*>(msg), &p);
@@ -1783,18 +1784,18 @@ class FuzzerHelper<
  public:
   using Message = IPC::MessageT<Meta, std::tuple<Ins...>, std::tuple<Outs...>>;
 
-  static IPC::Message* Fuzz(IPC::Message* msg, Fuzzer* fuzzer) {
+  static std::unique_ptr<IPC::Message> Fuzz(IPC::Message* msg, Fuzzer* fuzzer) {
     return FuzzImpl(msg, fuzzer, base::MakeIndexSequence<sizeof...(Ins)>());
   }
 
  private:
   template <size_t... Ns>
-  static IPC::Message* FuzzImpl(IPC::Message* msg,
-                                Fuzzer* fuzzer,
-                                base::IndexSequence<Ns...>) {
+  static std::unique_ptr<IPC::Message> FuzzImpl(IPC::Message* msg,
+                                                Fuzzer* fuzzer,
+                                                base::IndexSequence<Ns...>) {
     typename Message::SendParam p;
     Message* real_msg = static_cast<Message*>(msg);
-    Message* new_msg = nullptr;
+    std::unique_ptr<Message> new_msg;
     if (real_msg) {
       Message::ReadSendParam(real_msg, &p);
     }
@@ -1803,7 +1804,7 @@ class FuzzerHelper<
           std::get<Ns>(p)..., static_cast<Outs*>(nullptr)...);
     }
     if (real_msg && new_msg) {
-      MessageCracker::CopyMessageID(new_msg, real_msg);
+      MessageCracker::CopyMessageID(new_msg.get(), real_msg);
     } else if (!new_msg) {
       std::cerr << "Don't know how to handle " << Meta::kName << "\n";
     }

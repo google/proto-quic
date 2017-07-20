@@ -26,6 +26,7 @@ class IOBuffer;
 class NetLogWithSource;
 class SpdyHeaderBlock;
 struct BidirectionalStreamRequestInfo;
+struct NetErrorDetails;
 
 // Exposes an interface to do HTTP/2 bidirectional streaming.
 // Note that only one ReadData or SendData should be in flight until the
@@ -151,6 +152,11 @@ class NET_EXPORT_PRIVATE BidirectionalStreamImpl {
   // socket reuse info. Return true if LoadTimingInfo is obtained successfully
   // and false otherwise.
   virtual bool GetLoadTimingInfo(LoadTimingInfo* load_timing_info) const = 0;
+
+  // Get the network error details this stream is encountering.
+  // Fills in |details| if it is available; leaves |details| unchanged if it
+  // is unavailable.
+  virtual void PopulateNetErrorDetails(NetErrorDetails* details) = 0;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(BidirectionalStreamImpl);

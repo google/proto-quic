@@ -42,6 +42,8 @@
 #elif defined(OS_WIN)
 #include "base/win/windows_version.h"
 #include "net/cert/cert_verify_proc_win.h"
+#elif defined(OS_FUCHSIA)
+#include "net/cert/cert_verify_proc_builtin.h"
 #else
 #error Implement certificate verification.
 #endif
@@ -500,7 +502,7 @@ WARN_UNUSED_RESULT bool InspectSignatureAlgorithmsInChain(
 }  // namespace
 
 // static
-CertVerifyProc* CertVerifyProc::CreateDefault() {
+scoped_refptr<CertVerifyProc> CertVerifyProc::CreateDefault() {
 #if defined(USE_NSS_CERTS)
   return new CertVerifyProcNSS();
 #elif defined(OS_ANDROID)
@@ -511,6 +513,8 @@ CertVerifyProc* CertVerifyProc::CreateDefault() {
   return new CertVerifyProcMac();
 #elif defined(OS_WIN)
   return new CertVerifyProcWin();
+#elif defined(OS_FUCHSIA)
+  return CreateCertVerifyProcBuiltin();
 #else
 #error Unsupported platform
 #endif

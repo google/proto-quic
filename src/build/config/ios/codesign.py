@@ -58,6 +58,27 @@ class Bundle(object):
   def binary_path(self):
     return os.path.join(self._path, self._data['CFBundleExecutable'])
 
+  def Validate(self, expected_mappings):
+    """Checks that keys in the bundle have the expected value.
+
+    Args:
+      expected_mappings: a dictionary of string to object, each mapping will
+      be looked up in the bundle data to check it has the same value (missing
+      values will be ignored)
+
+    Returns:
+      A dictionary of the key with a different value between expected_mappings
+      and the content of the bundle (i.e. errors) so that caller can format the
+      error message. The dictionary will be empty if there are no errors.
+    """
+    errors = {}
+    for key, expected_value in expected_mappings.iteritems():
+      if key in self._data:
+        value = self._data[key]
+        if value != expected_value:
+          errors[key] = (value, expected_value)
+    return errors
+
 
 class ProvisioningProfile(object):
   """Wraps a mobile provisioning profile file."""
@@ -297,6 +318,34 @@ class CodeSignBundleAction(Action):
       args.identity = '-'
 
     bundle = Bundle(args.path)
+
+    # According to Apple documentation, the application binary must be the same
+    # as the bundle name without the .app suffix. See crbug.com/740476 for more
+    # information on what problem this can cause.
+    #
+    # To prevent this class of error, fail with an error if the binary name is
+    # incorrect in the Info.plist as it is not possible to update the value in
+    # Info.plist at this point (the file has been copied by a different target
+    # and ninja would consider the build dirty if it was updated).
+    #
+    # Also checks that the name of the bundle is correct too (does not cause the
+    # build to be considered dirty, but still terminate the script in case of an
+    # incorrect bundle name).
+    #
+    # Apple documentation is available at:
+    # https://developer.apple.com/library/content/documentation/CoreFoundation/Conceptual/CFBundles/BundleTypes/BundleTypes.html
+    bundle_name = os.path.splitext(os.path.basename(bundle.path))[0]
+    errors = bundle.Validate({
+        'CFBundleName': bundle_name,
+        'CFBundleExecutable': bundle_name,
+    })
+    if errors:
+      for key in sorted(errors):
+        value, expected_value = errors[key]
+        sys.stderr.write('%s: error: %s value incorrect: %s != %s\n' % (
+            bundle.path, key, value, expected_value))
+      sys.stderr.flush()
+      sys.exit(1)
 
     # Delete existing embedded mobile provisioning.
     embedded_provisioning_profile = os.path.join(

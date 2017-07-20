@@ -315,6 +315,12 @@ TEST_F(JSONParserTest, ErrorMessages) {
   EXPECT_EQ(JSONParser::FormatErrorMessage(1, 7, JSONReader::kInvalidEscape),
             error_message);
   EXPECT_EQ(JSONReader::JSON_INVALID_ESCAPE, error_code);
+
+  root = JSONReader::ReadAndReturnError(("[\"\\ufffe\"]"), JSON_PARSE_RFC,
+                                        &error_code, &error_message);
+  EXPECT_EQ(JSONParser::FormatErrorMessage(1, 7, JSONReader::kInvalidEscape),
+            error_message);
+  EXPECT_EQ(JSONReader::JSON_INVALID_ESCAPE, error_code);
 }
 
 TEST_F(JSONParserTest, Decode4ByteUtf8Char) {
@@ -335,6 +341,11 @@ TEST_F(JSONParserTest, DecodeUnicodeNonCharacter) {
   EXPECT_FALSE(JSONReader::Read("[\"\\ufdd0\"]"));
   EXPECT_FALSE(JSONReader::Read("[\"\\ufffe\"]"));
   EXPECT_FALSE(JSONReader::Read("[\"\\ud83f\\udffe\"]"));
+
+  EXPECT_TRUE(
+      JSONReader::Read("[\"\\ufdd0\"]", JSON_REPLACE_INVALID_CHARACTERS));
+  EXPECT_TRUE(
+      JSONReader::Read("[\"\\ufffe\"]", JSON_REPLACE_INVALID_CHARACTERS));
 }
 
 TEST_F(JSONParserTest, DecodeNegativeEscapeSequence) {
@@ -348,6 +359,17 @@ TEST_F(JSONParserTest, ReplaceInvalidCharacters) {
   const std::string quoted_bogus_char = "\"" + bogus_char + "\"";
   std::unique_ptr<JSONParser> parser(
       NewTestParser(quoted_bogus_char, JSON_REPLACE_INVALID_CHARACTERS));
+  std::unique_ptr<Value> value(parser->ConsumeString());
+  ASSERT_TRUE(value.get());
+  std::string str;
+  EXPECT_TRUE(value->GetAsString(&str));
+  EXPECT_EQ(kUnicodeReplacementString, str);
+}
+
+TEST_F(JSONParserTest, ReplaceInvalidUTF16EscapeSequence) {
+  const std::string invalid = "\"\\ufffe\"";
+  std::unique_ptr<JSONParser> parser(
+      NewTestParser(invalid, JSON_REPLACE_INVALID_CHARACTERS));
   std::unique_ptr<Value> value(parser->ConsumeString());
   ASSERT_TRUE(value.get());
   std::string str;

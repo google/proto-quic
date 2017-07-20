@@ -18,13 +18,6 @@ void QuicChromiumClientSessionPeer::SetMaxOpenStreams(
 }
 
 // static
-void QuicChromiumClientSessionPeer::SetChannelIDSent(
-    QuicChromiumClientSession* session,
-    bool channel_id_sent) {
-  session->crypto_stream_->channel_id_sent_ = channel_id_sent;
-}
-
-// static
 void QuicChromiumClientSessionPeer::SetHostname(
     QuicChromiumClientSession* session,
     const std::string& hostname) {

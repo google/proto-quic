@@ -90,8 +90,8 @@ b = "$a/foo.cc"  # b -> "mypath/foo.cc"
 c = "foo${a}bar.cc"  # c -> "foomypathbar.cc"
 ```
 
-You can encode 8-bit haracters using "$0xFF" syntax, so a string with newlines
-(hex 0A) would `"look$0x0Alike$0x0Athis"
+You can encode 8-bit characters using "$0xFF" syntax, so a string with newlines
+(hex 0A) would `"look$0x0Alike$0x0Athis"`.
 
 ### Lists
 
@@ -291,7 +291,7 @@ Chrome some of the more commonly-used templates are:
 
   * `component`: Either a source set or shared library, depending on the
     build type.
-  * `test`: A test executable. On mobile this will create the appropritate
+  * `test`: A test executable. On mobile this will create the appropriate
     native app type for tests.
   * `app`: Executable or Mac/iOS application.
   * `android_apk`: Make an APK. There are a _lot_ of other Android ones, see
@@ -514,8 +514,7 @@ get around this limitation without synchronously writing files. See
 
 Blaze is Google's internal build system, now publicly released as
 [Bazel](http://bazel.io/). It has inspired a number of other systems such as
-[Pants](https://github.com/twitter/commons/tree/master/src/python/twitter/pants)
-and [Buck](http://facebook.github.io/buck/).
+[Pants](http://www.pantsbuild.org/) and [Buck](http://facebook.github.io/buck/).
 
 In Google's homogeneous environment, the need for conditionals is very
 low and they can get by with a few hacks (`abi_deps`). Chrome uses

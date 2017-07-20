@@ -29,7 +29,7 @@ class NET_EXPORT CertVerifyProc
     : public base::RefCountedThreadSafe<CertVerifyProc> {
  public:
   // Creates and returns the default CertVerifyProc.
-  static CertVerifyProc* CreateDefault();
+  static scoped_refptr<CertVerifyProc> CreateDefault();
 
   // Verifies the certificate against the given hostname as an SSL server
   // certificate. Returns OK if successful or an error code upon failure.

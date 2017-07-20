@@ -147,6 +147,12 @@ DEFINE_IS_OS_FUNCS(12, TEST_DEPLOYMENT_TARGET)
 DEFINE_IS_OS_FUNCS(12, IGNORE_DEPLOYMENT_TARGET)
 #endif
 
+#ifdef MAC_OS_X_VERSION_10_13
+DEFINE_IS_OS_FUNCS(13, TEST_DEPLOYMENT_TARGET)
+#else
+DEFINE_IS_OS_FUNCS(13, IGNORE_DEPLOYMENT_TARGET)
+#endif
+
 #undef IGNORE_DEPLOYMENT_TARGET
 #undef TEST_DEPLOYMENT_TARGET
 #undef DEFINE_IS_OS_FUNCS
@@ -154,8 +160,8 @@ DEFINE_IS_OS_FUNCS(12, IGNORE_DEPLOYMENT_TARGET)
 // This should be infrequently used. It only makes sense to use this to avoid
 // codepaths that are very likely to break on future (unreleased, untested,
 // unborn) OS releases, or to log when the OS is newer than any known version.
-inline bool IsOSLaterThan10_12_DontCallThis() {
-  return !IsAtMostOS10_12();
+inline bool IsOSLaterThan10_13_DontCallThis() {
+  return !IsAtMostOS10_13();
 }
 
 // Retrieve the system's model identifier string from the IOKit registry:

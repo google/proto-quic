@@ -84,10 +84,5 @@ void JavaHandlerThread::StopMessageLoop() {
   static_cast<MessageLoopForUI*>(message_loop_.get())->QuitWhenIdle();
 }
 
-// static
-bool JavaHandlerThread::RegisterBindings(JNIEnv* env) {
-  return RegisterNativesImpl(env);
-}
-
 } // namespace android
 } // namespace base

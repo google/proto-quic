@@ -509,12 +509,15 @@ TEST(SmallMap, SubclassInitializationWithFunctionObject) {
   EXPECT_EQ(1u, m.count(-1));
 }
 
+namespace {
+
 // This class acts as a basic implementation of a move-only type. The canonical
 // example of such a type is scoped_ptr/unique_ptr.
+template <typename V>
 class MoveOnlyType {
  public:
   MoveOnlyType() : value_(0) {}
-  explicit MoveOnlyType(int value) : value_(value) {}
+  explicit MoveOnlyType(V value) : value_(value) {}
 
   MoveOnlyType(MoveOnlyType&& other) {
     *this = std::move(other);
@@ -529,26 +532,28 @@ class MoveOnlyType {
   MoveOnlyType(const MoveOnlyType&) = delete;
   MoveOnlyType& operator=(const MoveOnlyType&) = delete;
 
-  int value() const { return value_; }
+  V value() const { return value_; }
 
  private:
-  int value_;
+  V value_;
 };
 
-TEST(SmallMap, MoveOnlyValueType) {
-  small_map<std::map<int, MoveOnlyType>, 2> m;
+}  // namespace
 
-  m[0] = MoveOnlyType(1);
-  m[1] = MoveOnlyType(2);
+TEST(SmallMap, MoveOnlyValueType) {
+  small_map<std::map<int, MoveOnlyType<int>>, 2> m;
+
+  m[0] = MoveOnlyType<int>(1);
+  m[1] = MoveOnlyType<int>(2);
   m.erase(m.begin());
 
   // small_map will move m[1] to an earlier index in the internal array.
   EXPECT_EQ(m.size(), 1u);
   EXPECT_EQ(m[1].value(), 2);
 
-  m[0] = MoveOnlyType(1);
+  m[0] = MoveOnlyType<int>(1);
   // small_map must move the values from the array into the internal std::map.
-  m[2] = MoveOnlyType(3);
+  m[2] = MoveOnlyType<int>(3);
 
   EXPECT_EQ(m.size(), 3u);
   EXPECT_EQ(m[0].value(), 1);
@@ -561,6 +566,38 @@ TEST(SmallMap, MoveOnlyValueType) {
   EXPECT_EQ(m.size(), 2u);
   EXPECT_EQ(m[1].value(), 2);
   EXPECT_EQ(m[2].value(), 3);
+}
+
+TEST(SmallMap, Emplace) {
+  small_map<std::map<size_t, MoveOnlyType<size_t>>> sm;
+
+  // loop through the transition from small map to map.
+  for (size_t i = 1; i <= 10; ++i) {
+    // insert an element
+    auto ret = sm.emplace(i, MoveOnlyType<size_t>(100 * i));
+    EXPECT_TRUE(ret.second);
+    EXPECT_TRUE(ret.first == sm.find(i));
+    EXPECT_EQ(ret.first->first, i);
+    EXPECT_EQ(ret.first->second.value(), 100 * i);
+
+    // try to insert it again with different value, fails, but we still get an
+    // iterator back with the original value.
+    ret = sm.emplace(i, MoveOnlyType<size_t>(i));
+    EXPECT_FALSE(ret.second);
+    EXPECT_TRUE(ret.first == sm.find(i));
+    EXPECT_EQ(ret.first->first, i);
+    EXPECT_EQ(ret.first->second.value(), 100 * i);
+
+    // check the state of the map.
+    for (size_t j = 1; j <= i; ++j) {
+      const auto it = sm.find(j);
+      EXPECT_TRUE(it != sm.end());
+      EXPECT_EQ(it->first, j);
+      EXPECT_EQ(it->second.value(), j * 100);
+    }
+    EXPECT_EQ(sm.size(), i);
+    EXPECT_FALSE(sm.empty());
+  }
 }
 
 }  // namespace base

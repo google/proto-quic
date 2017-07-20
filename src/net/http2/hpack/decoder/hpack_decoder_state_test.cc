@@ -6,13 +6,13 @@
 
 // Tests of HpackDecoderState.
 
-#include <string>
 #include <utility>
 #include <vector>
 
 #include "base/logging.h"
 #include "net/http2/hpack/hpack_string.h"
 #include "net/http2/http2_constants.h"
+#include "net/http2/platform/api/http2_string.h"
 #include "net/http2/tools/failure.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock-matchers.h"
@@ -25,7 +25,6 @@ using ::testing::Eq;
 using ::testing::HasSubstr;
 using ::testing::Mock;
 using ::testing::StrictMock;
-using base::StringPiece;
 
 namespace net {
 namespace test {
@@ -38,11 +37,11 @@ class HpackDecoderStatePeer {
 
 namespace {
 
-// Define HasSubstr() for base::StringPiece arguments.
+// Define HasSubstr() for Http2StringPiece arguments.
 // This shadows ::testing::HasSubstr(), which only works on argument types
-// that can be implicilty converted to a std::string.
+// that can be implicilty converted to a Http2String.
 inline ::testing::PolymorphicMatcher<StringPieceHasSubstrMatcher> HasSubstr(
-    const std::string& substring) {
+    const Http2String& substring) {
   return ::testing::MakePolymorphicMatcher(
       StringPieceHasSubstrMatcher(substring));
 }
@@ -55,7 +54,7 @@ class MockHpackDecoderListener : public HpackDecoderListener {
                     const HpackString& name,
                     const HpackString& value));
   MOCK_METHOD0(OnHeaderListEnd, void());
-  MOCK_METHOD1(OnHeaderErrorDetected, void(StringPiece error_message));
+  MOCK_METHOD1(OnHeaderErrorDetected, void(Http2StringPiece error_message));
 };
 
 enum StringBacking { STATIC, UNBUFFERED, BUFFERED };
@@ -529,7 +528,7 @@ TEST_F(HpackDecoderStateTest, InvalidNameIndex) {
 TEST_F(HpackDecoderStateTest, ErrorsSuppressCallbacks) {
   SendStartAndVerifyCallback();
   EXPECT_CALL(listener_,
-              OnHeaderErrorDetected(StringPiece("Huffman decode error.")));
+              OnHeaderErrorDetected(Http2StringPiece("Huffman decode error.")));
   decoder_state_.OnHpackDecodeError("Huffman decode error.");
 
   // Further decoded entries are ignored.

@@ -5,17 +5,15 @@
 #include "net/http2/hpack/decoder/hpack_entry_collector.h"
 
 #include <sstream>
-#include <string>
 
 #include "base/logging.h"
 #include "net/http2/hpack/decoder/hpack_string_collector.h"
 #include "net/http2/hpack/http2_hpack_constants.h"
+#include "net/http2/platform/api/http2_string_utils.h"
 #include "net/http2/tools/failure.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using ::testing::AssertionResult;
-using std::string;
-using base::StringPiece;
 
 namespace net {
 namespace test {
@@ -44,7 +42,7 @@ HpackEntryCollector::HpackEntryCollector(HpackEntryType type,
 HpackEntryCollector::HpackEntryCollector(HpackEntryType type,
                                          size_t index,
                                          bool value_huffman,
-                                         const string& value)
+                                         const Http2String& value)
     : header_type_(type),
       index_(index),
       value_(value, value_huffman),
@@ -52,9 +50,9 @@ HpackEntryCollector::HpackEntryCollector(HpackEntryType type,
       ended_(true) {}
 HpackEntryCollector::HpackEntryCollector(HpackEntryType type,
                                          bool name_huffman,
-                                         const string& name,
+                                         const Http2String& name,
                                          bool value_huffman,
-                                         const string& value)
+                                         const Http2String& value)
     : header_type_(type),
       index_(0),
       name_(name, name_huffman),
@@ -175,7 +173,7 @@ AssertionResult HpackEntryCollector::ValidateLiteralValueHeader(
     HpackEntryType expected_type,
     size_t expected_index,
     bool expected_value_huffman,
-    StringPiece expected_value) const {
+    Http2StringPiece expected_value) const {
   VERIFY_TRUE(started_);
   VERIFY_TRUE(ended_);
   VERIFY_EQ(expected_type, header_type_);
@@ -188,9 +186,9 @@ AssertionResult HpackEntryCollector::ValidateLiteralValueHeader(
 AssertionResult HpackEntryCollector::ValidateLiteralNameValueHeader(
     HpackEntryType expected_type,
     bool expected_name_huffman,
-    StringPiece expected_name,
+    Http2StringPiece expected_name,
     bool expected_value_huffman,
-    StringPiece expected_value) const {
+    Http2StringPiece expected_value) const {
   VERIFY_TRUE(started_);
   VERIFY_TRUE(ended_);
   VERIFY_EQ(expected_type, header_type_);
@@ -241,8 +239,8 @@ void HpackEntryCollector::AppendToHpackBlockBuilder(
   }
 }
 
-string HpackEntryCollector::ToString() const {
-  string result("Type=");
+Http2String HpackEntryCollector::ToString() const {
+  Http2String result("Type=");
   switch (header_type_) {
     case HpackEntryType::kIndexedHeader:
       result += "IndexedHeader";
@@ -263,32 +261,25 @@ string HpackEntryCollector::ToString() const {
       if (header_type_ == kInvalidHeaderType) {
         result += "<unset>";
       } else {
-        std::stringstream ss;
-        ss << header_type_;
-        result.append(ss.str());
+        Http2StrAppend(&result, header_type_);
       }
   }
   if (index_ != 0) {
-    result.append(" Index=");
-    std::stringstream ss;
-    ss << index_;
-    result.append(ss.str());
+    Http2StrAppend(&result, " Index=", index_);
   }
   if (!name_.IsClear()) {
-    result.append(" Name");
-    result.append(name_.ToString());
+    Http2StrAppend(&result, " Name", name_.ToString());
   }
   if (!value_.IsClear()) {
-    result.append(" Value");
-    result.append(value_.ToString());
+    Http2StrAppend(&result, " Value", value_.ToString());
   }
   if (!started_) {
     EXPECT_FALSE(ended_);
-    result.append(" !started");
+    Http2StrAppend(&result, " !started");
   } else if (!ended_) {
-    result.append(" !ended");
+    Http2StrAppend(&result, " !ended");
   } else {
-    result.append(" Complete");
+    Http2StrAppend(&result, " Complete");
   }
   return result;
 }

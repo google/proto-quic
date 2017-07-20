@@ -9,9 +9,6 @@
 
 #include "base/logging.h"
 
-using base::StringPiece;
-using std::string;
-
 // Terminology:
 //
 // Symbol - a plain text (unencoded) character (uint8), or the End-of-String
@@ -359,7 +356,7 @@ void HuffmanBitBuffer::Reset() {
   count_ = 0;
 }
 
-size_t HuffmanBitBuffer::AppendBytes(StringPiece input) {
+size_t HuffmanBitBuffer::AppendBytes(Http2StringPiece input) {
   HuffmanAccumulatorBitCount free_cnt = free_count();
   size_t bytes_available = input.size();
   if (free_cnt < 8 || bytes_available == 0) {
@@ -406,7 +403,7 @@ bool HuffmanBitBuffer::InputProperlyTerminated() const {
   return false;
 }
 
-string HuffmanBitBuffer::DebugString() const {
+Http2String HuffmanBitBuffer::DebugString() const {
   std::stringstream ss;
   ss << "{accumulator: " << HuffmanAccumulatorBitSet(accumulator_)
      << "; count: " << count_ << "}";
@@ -417,15 +414,15 @@ HpackHuffmanDecoder::HpackHuffmanDecoder() {}
 
 HpackHuffmanDecoder::~HpackHuffmanDecoder() {}
 
-bool HpackHuffmanDecoder::Decode(StringPiece input, string* output) {
+bool HpackHuffmanDecoder::Decode(Http2StringPiece input, Http2String* output) {
   return DecodeShortCodesFirst(input, output);
 }
 
 // "Legacy" decoder, used until cl/129771019 submitted, which added
 // DecodeShortCodesFirst() as primary decoder method.
 // TODO(jamessynge): Remove this once satisfied that there is no going back.
-bool HpackHuffmanDecoder::DecodeWithIfTreeAndStruct(StringPiece input,
-                                                    string* output) {
+bool HpackHuffmanDecoder::DecodeWithIfTreeAndStruct(Http2StringPiece input,
+                                                    Http2String* output) {
   DVLOG(1) << "HpackHuffmanDecoder::DecodeWithIfTreeAndStruct";
 
   // Fill bit_buffer_ from input.
@@ -468,8 +465,8 @@ bool HpackHuffmanDecoder::DecodeWithIfTreeAndStruct(StringPiece input,
   }
 }
 
-bool HpackHuffmanDecoder::DecodeShortCodesFirst(StringPiece input,
-                                                string* output) {
+bool HpackHuffmanDecoder::DecodeShortCodesFirst(Http2StringPiece input,
+                                                Http2String* output) {
   DVLOG(1) << "HpackHuffmanDecoder::DecodeShortCodesFirst";
 
   // Fill bit_buffer_ from input.
@@ -535,7 +532,7 @@ bool HpackHuffmanDecoder::DecodeShortCodesFirst(StringPiece input,
   }
 }
 
-string HpackHuffmanDecoder::DebugString() const {
+Http2String HpackHuffmanDecoder::DebugString() const {
   return bit_buffer_.DebugString();
 }
 

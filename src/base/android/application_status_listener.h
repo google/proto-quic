@@ -68,9 +68,6 @@ class BASE_EXPORT ApplicationStatusListener {
       const ApplicationStateChangeCallback& callback);
   ~ApplicationStatusListener();
 
-  // Internal use: must be public to be called from base_jni_registrar.cc
-  static bool RegisterBindings(JNIEnv* env);
-
   // Internal use only: must be public to be called from JNI and unit tests.
   static void NotifyApplicationStateChange(ApplicationState state);
 

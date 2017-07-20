@@ -29,12 +29,13 @@ function draw() {
   context.rect(0, 0, canvas.clientWidth, canvas.clientHeight);
   var randomNumber = Math.random();
   var hue;
-  if (randomNumber < 0.33)
+  if (randomNumber < 0.33) {
     hue = 'red';
-  else if (randomNumber < 0.66)
+  } else if (randomNumber < 0.66) {
     hue = 'green';
-  else
+  } else {
     hue = 'blue';
+  }
   context.fillStyle = hue;
   context.fill();
 }

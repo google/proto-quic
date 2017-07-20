@@ -75,7 +75,7 @@ DecodeStatus PayloadDecoderBaseTest::ResumeDecoding(DecodeBuffer* db) {
 
 ::testing::AssertionResult
 PayloadDecoderBaseTest::DecodePayloadAndValidateSeveralWays(
-    base::StringPiece payload,
+    Http2StringPiece payload,
     Validator validator) {
   VERIFY_TRUE(frame_header_is_set_);
   // Cap the payload to be decoded at the declared payload length. This is
@@ -85,7 +85,7 @@ PayloadDecoderBaseTest::DecodePayloadAndValidateSeveralWays(
   // Note that it is OK if the payload is too short; the validator may be
   // designed to check for that.
   if (payload.size() > frame_header_.payload_length) {
-    payload = base::StringPiece(payload.data(), frame_header_.payload_length);
+    payload = Http2StringPiece(payload.data(), frame_header_.payload_length);
   }
   DecodeBuffer db(payload);
   ResetDecodeSpeedCounters();

@@ -140,7 +140,14 @@ function createPeerConnection() {
   timestampPrev = 0;
   localPeerConnection = new RTCPeerConnection(null);
   remotePeerConnection = new RTCPeerConnection(null);
-  localPeerConnection.addStream(localStream);
+  localStream.getTracks().forEach(
+    function(track) {
+      localPeerConnection.addTrack(
+        track,
+        localStream
+      );
+    }
+  );
   console.log('localPeerConnection creating offer');
   localPeerConnection.onnegotiationeeded = function() {
     console.log('Negotiation needed - localPeerConnection');
@@ -150,27 +157,25 @@ function createPeerConnection() {
   };
   localPeerConnection.onicecandidate = function(e) {
     console.log('Candidate localPeerConnection');
-    if (e.candidate) {
-      remotePeerConnection.addIceCandidate(e.candidate)
-      .then(
-        onAddIceCandidateSuccess,
-        onAddIceCandidateError
-      );
-    }
+    remotePeerConnection.addIceCandidate(e.candidate)
+    .then(
+      onAddIceCandidateSuccess,
+      onAddIceCandidateError
+    );
   };
   remotePeerConnection.onicecandidate = function(e) {
     console.log('Candidate remotePeerConnection');
-    if (e.candidate) {
-      localPeerConnection.addIceCandidate(e.candidate)
-      .then(
-        onAddIceCandidateSuccess,
-        onAddIceCandidateError
-      );
-    }
+    localPeerConnection.addIceCandidate(e.candidate)
+    .then(
+      onAddIceCandidateSuccess,
+      onAddIceCandidateError
+    );
   };
-  remotePeerConnection.onaddstream = function(e) {
-    console.log('remotePeerConnection got stream');
-    remoteVideo.srcObject = e.stream;
+  remotePeerConnection.ontrack = function(e) {
+    if (remoteVideo.srcObject !== e.streams[0]) {
+      console.log('remotePeerConnection got stream');
+      remoteVideo.srcObject = e.streams[0];
+    }
   };
   localPeerConnection.createOffer().then(
     function(desc) {
@@ -239,22 +244,35 @@ setInterval(function() {
       var activeCandidatePair = null;
       var remoteCandidate = null;
 
-      // search for the candidate pair
+      // Search for the candidate pair, spec-way first.
       results.forEach(function(report) {
-        if (report.type === 'candidatepair' && report.selected ||
-            report.type === 'googCandidatePair' &&
-            report.googActiveConnection === 'true') {
-          activeCandidatePair = report;
+        if (report.type === 'transport') {
+          activeCandidatePair = results.get(report.selectedCandidatePairId);
         }
       });
-      if (activeCandidatePair && activeCandidatePair.remoteCandidateId) {
-        remoteCandidate = results[activeCandidatePair.remoteCandidateId];
+      // Fallback for Firefox and Chrome legacy stats.
+      if (!activeCandidatePair) {
+        results.forEach(function(report) {
+          if (report.type === 'candidate-pair' && report.selected ||
+              report.type === 'googCandidatePair' &&
+              report.googActiveConnection === 'true') {
+            activeCandidatePair = report;
+          }
+        });
       }
-      if (remoteCandidate && remoteCandidate.ipAddress &&
-          remoteCandidate.portNumber) {
-        peerDiv.innerHTML = '<strong>Connected to:</strong> ' +
-            remoteCandidate.ipAddress +
-            ':' + remoteCandidate.portNumber;
+      if (activeCandidatePair && activeCandidatePair.remoteCandidateId) {
+        remoteCandidate = results.get(activeCandidatePair.remoteCandidateId);
+      }
+      if (remoteCandidate) {
+        if (remoteCandidate.ip && remoteCandidate.port) {
+          peerDiv.innerHTML = '<strong>Connected to:</strong> ' +
+              remoteCandidate.ip + ':' + remoteCandidate.port;
+        } else if (remoteCandidate.ipAddress && remoteCandidate.portNumber) {
+          // Fall back to old names.
+          peerDiv.innerHTML = '<strong>Connected to:</strong> ' +
+              remoteCandidate.ipAddress +
+              ':' + remoteCandidate.portNumber;
+        }
       }
     }, function(err) {
       console.log(err);

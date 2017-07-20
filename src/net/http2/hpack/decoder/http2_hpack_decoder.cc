@@ -8,8 +8,6 @@
 #include "base/trace_event/memory_usage_estimator.h"
 #include "net/http2/decoder/decode_status.h"
 
-using base::StringPiece;
-
 namespace net {
 
 Http2HpackDecoder::Http2HpackDecoder(HpackDecoderListener* listener,
@@ -121,7 +119,7 @@ size_t Http2HpackDecoder::EstimateMemoryUsage() const {
   return base::trace_event::EstimateMemoryUsage(entry_buffer_);
 }
 
-void Http2HpackDecoder::ReportError(StringPiece error_message) {
+void Http2HpackDecoder::ReportError(Http2StringPiece error_message) {
   DVLOG(3) << "Http2HpackDecoder::ReportError is new="
            << (!error_detected_ ? "true" : "false")
            << ", error_message: " << error_message;

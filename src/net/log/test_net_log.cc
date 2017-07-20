@@ -73,12 +73,12 @@ class TestNetLog::Observer : public NetLog::ThreadSafeObserver {
 };
 
 TestNetLog::TestNetLog() : observer_(new Observer()) {
-  DeprecatedAddObserver(observer_.get(),
-                        NetLogCaptureMode::IncludeCookiesAndCredentials());
+  AddObserver(observer_.get(),
+              NetLogCaptureMode::IncludeCookiesAndCredentials());
 }
 
 TestNetLog::~TestNetLog() {
-  DeprecatedRemoveObserver(observer_.get());
+  RemoveObserver(observer_.get());
 }
 
 void TestNetLog::SetCaptureMode(NetLogCaptureMode capture_mode) {

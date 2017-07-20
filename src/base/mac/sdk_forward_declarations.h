@@ -20,6 +20,7 @@
 #include <stdint.h>
 
 #include "base/base_export.h"
+#include "base/mac/availability.h"
 
 // ----------------------------------------------------------------------------
 // Define typedefs, enums, and protocols not available in the version of the
@@ -158,10 +159,6 @@ BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
 @property(readonly) NSInteger stage;
 @end
 
-@interface NSView (Yosemite_3_SDK)
-- (void)setPressureConfiguration:(NSPressureConfiguration*)aConfiguration;
-@end
-
 #endif  // MAC_OS_X_VERSION_10_10
 
 // ----------------------------------------------------------------------------
@@ -191,10 +188,16 @@ BASE_EXPORT extern NSString* const CIDetectorTypeText;
 @end
 
 @interface NSView (ElCapitanSDK)
-@property(readonly, strong) NSLayoutXAxisAnchor* leftAnchor;
-@property(readonly, strong) NSLayoutXAxisAnchor* rightAnchor;
-@property(readonly, strong) NSLayoutYAxisAnchor* bottomAnchor;
-@property(readonly, strong) NSLayoutDimension* widthAnchor;
+- (void)setPressureConfiguration:(NSPressureConfiguration*)aConfiguration
+    API_AVAILABLE(macos(10.11));
+@property(readonly, strong)
+    NSLayoutXAxisAnchor* leftAnchor API_AVAILABLE(macos(10.11));
+@property(readonly, strong)
+    NSLayoutXAxisAnchor* rightAnchor API_AVAILABLE(macos(10.11));
+@property(readonly, strong)
+    NSLayoutYAxisAnchor* bottomAnchor API_AVAILABLE(macos(10.11));
+@property(readonly, strong)
+    NSLayoutDimension* widthAnchor API_AVAILABLE(macos(10.11));
 @end
 
 @interface NSWindow (ElCapitanSDK)

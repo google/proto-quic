@@ -6,13 +6,10 @@
 
 #include <cstring>  // For std::memcmp
 #include <sstream>
-#include <string>
 
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
-
-using std::string;
-using base::StringPiece;
+#include "net/http2/platform/api/http2_string_utils.h"
 
 namespace net {
 
@@ -24,14 +21,13 @@ bool Http2FrameHeader::IsProbableHttpResponse() const {
           flags == '/');                     // "/"
 }
 
-string Http2FrameHeader::ToString() const {
-  std::stringstream ss;
-  ss << "length=" << payload_length << ", type=" << Http2FrameTypeToString(type)
-     << ", flags=" << FlagsToString() << ", stream=" << stream_id;
-  return ss.str();
+Http2String Http2FrameHeader::ToString() const {
+  return Http2StrCat("length=", payload_length,
+                     ", type=", Http2FrameTypeToString(type),
+                     ", flags=", FlagsToString(), ", stream=", stream_id);
 }
 
-string Http2FrameHeader::FlagsToString() const {
+Http2String Http2FrameHeader::FlagsToString() const {
   return Http2FrameFlagsToString(type, flags);
 }
 
@@ -50,7 +46,7 @@ bool operator==(const Http2PriorityFields& a, const Http2PriorityFields& b) {
   return a.stream_dependency == b.stream_dependency && a.weight == b.weight;
 }
 
-std::string Http2PriorityFields::ToString() const {
+Http2String Http2PriorityFields::ToString() const {
   std::stringstream ss;
   ss << "E=" << (is_exclusive ? "true" : "false")
      << ", stream=" << stream_dependency
@@ -101,7 +97,7 @@ bool operator==(const Http2PingFields& a, const Http2PingFields& b) {
 }
 
 std::ostream& operator<<(std::ostream& out, const Http2PingFields& v) {
-  string s = base::HexEncode(v.opaque_data, sizeof v.opaque_data);
+  Http2String s = base::HexEncode(v.opaque_data, sizeof v.opaque_data);
   base::CollapseWhitespaceASCII(s, /*trim_sequences_with_line_breaks=*/false);
   return out << "opaque_data=[" << s << "]";
 }

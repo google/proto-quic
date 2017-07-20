@@ -3,10 +3,6 @@
 -ActivityTrackerTest.CreateWithFileTest
 -ActivityTrackerTest.ProcessDeathTest
 -ActivityTrackerTest.ThreadDeathTest
--FileLockingTest.LockAndUnlock
--FileLockingTest.UnlockOnClose
--FileLockingTest.UnlockOnExit
--FileLockingTest.UnlockOnTerminate
 -FilePathWatcherTest.DeleteAndRecreate
 -FilePathWatcherTest.DeleteDuringNotify
 -FilePathWatcherTest.DeletedFile
@@ -27,17 +23,7 @@
 -FilePersistentMemoryAllocatorTest.ExtendTest
 -FileProxyTest.SetTimes
 -FileUtilProxyTest.Touch
--FileUtilTest.ChangeDirectoryPermissionsAndEnumerate
--FileUtilTest.ChangeFilePermissionsAndRead
--FileUtilTest.ChangeFilePermissionsAndWrite
--FileUtilTest.CopyDirectoryACL
--FileUtilTest.CopyFileACL
--FileUtilTest.CreateAndReadSymlinks
--FileUtilTest.DeleteSymlinkToExistentFile
--FileUtilTest.DeleteSymlinkToNonExistentFile
--FileUtilTest.ExecutableExistsInPath
 -FileUtilTest.FileToFILE
--FileUtilTest.NormalizeFilePathSymlinks
 -LoggingTest.CheckCausesDistinctBreakpoints
 -MemoryMappedFileTest.ExtendableFile
 -MemoryMappedFileTest.MapLargePartialRegionInTheMiddle
@@ -128,3 +114,6 @@
 
 # TaskScheduler is racy, causing bot instability: https://crbug.com/735701.
 -*TaskScheduler*
+
+# CancelableSyncSocket tests fail: http://crbug.com/741783
+-CancelableSyncSocket*

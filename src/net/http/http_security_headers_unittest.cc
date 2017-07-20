@@ -652,7 +652,13 @@ TEST_F(HttpSecurityHeadersTest, ValidPKPHeadersSHA256) {
   TestValidPKPHeaders(HASH_VALUE_SHA256);
 }
 
-TEST_F(HttpSecurityHeadersTest, UpdateDynamicPKPOnly) {
+#if !BUILDFLAG(INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST)
+#define MAYBE_UpdateDynamicPKPOnly DISABLED_UpdateDynamicPKPOnly
+#else
+#define MAYBE_UpdateDynamicPKPOnly UpdateDynamicPKPOnly
+#endif
+
+TEST_F(HttpSecurityHeadersTest, MAYBE_UpdateDynamicPKPOnly) {
   TransportSecurityState state;
   TransportSecurityState::STSState static_sts_state;
   TransportSecurityState::PKPState static_pkp_state;
@@ -721,7 +727,13 @@ TEST_F(HttpSecurityHeadersTest, UpdateDynamicPKPOnly) {
       base::ContainsValue(new_dynamic_pkp_state.spki_hashes, backup_hash));
 }
 
-TEST_F(HttpSecurityHeadersTest, UpdateDynamicPKPMaxAge0) {
+#if !BUILDFLAG(INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST)
+#define MAYBE_UpdateDynamicPKPMaxAge0 DISABLED_UpdateDynamicPKPMaxAge0
+#else
+#define MAYBE_UpdateDynamicPKPMaxAge0 UpdateDynamicPKPMaxAge0
+#endif
+
+TEST_F(HttpSecurityHeadersTest, MAYBE_UpdateDynamicPKPMaxAge0) {
   TransportSecurityState state;
   TransportSecurityState::STSState static_sts_state;
   TransportSecurityState::PKPState static_pkp_state;
@@ -799,7 +811,13 @@ TEST_F(HttpSecurityHeadersTest, UpdateDynamicPKPMaxAge0) {
 // Tests that when a static HSTS and a static HPKP entry are present, adding a
 // dynamic HSTS header does not clobber the static HPKP entry. Further, adding a
 // dynamic HPKP entry could not affect the HSTS entry for the site.
-TEST_F(HttpSecurityHeadersTest, NoClobberPins) {
+#if !BUILDFLAG(INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST)
+#define MAYBE_NoClobberPins DISABLED_NoClobberPins
+#else
+#define MAYBE_NoClobberPins NoClobberPins
+#endif
+
+TEST_F(HttpSecurityHeadersTest, MAYBE_NoClobberPins) {
   TransportSecurityState state;
   TransportSecurityState::STSState sts_state;
   TransportSecurityState::PKPState pkp_state;

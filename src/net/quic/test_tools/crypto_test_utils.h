@@ -139,6 +139,12 @@ void SetupCryptoServerConfigForTest(const QuicClock* clock,
                                     QuicCryptoServerConfig* crypto_config,
                                     const FakeServerOptions& options);
 
+// Sends the handshake message |message| to stream |stream| with the perspective
+// that the message is coming from |perspective|.
+void SendHandshakeMessageToStream(QuicCryptoStream* stream,
+                                  const CryptoHandshakeMessage& message,
+                                  Perspective perspective);
+
 // CommunicateHandshakeMessages moves messages from |client| to |server| and
 // back until |clients|'s handshake has completed.
 void CommunicateHandshakeMessages(PacketSavingConnection* client_conn,

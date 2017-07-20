@@ -124,11 +124,17 @@ class NET_EXPORT NetLog {
   // Adds an observer and sets its log capture mode.  The observer must not be
   // watching any NetLog, including this one, when this is called.
   //
-  // DEPRECATED: The ability to watch the netlog stream is being phased out
-  // (crbug.com/472693) as it can be misused in production code. Please consult
-  // with a net/log OWNER before introducing a new dependency on this.
-  void DeprecatedAddObserver(ThreadSafeObserver* observer,
-                             NetLogCaptureMode capture_mode);
+  // CAUTION: Think carefully before introducing a dependency on the
+  // NetLog. The order, format, and parameters in NetLog events are NOT
+  // guaranteed to be stable. As such, building a production feature that works
+  // by observing the NetLog is likely inappropriate. Just as you wouldn't build
+  // a feature by scraping the text output from LOG(INFO), you shouldn't do
+  // the same by scraping the logging data emitted to NetLog. Support for
+  // observers is an internal detail mainly used for testing and to write events
+  // to a file. Please consult a //net OWNER before using this outside of
+  // testing or serialization.
+  void AddObserver(ThreadSafeObserver* observer,
+                   NetLogCaptureMode capture_mode);
 
   // Sets the log capture mode of |observer| to |capture_mode|.  |observer| must
   // be watching |this|.  NetLog implementations must call
@@ -140,11 +146,7 @@ class NET_EXPORT NetLog {
   //
   // For thread safety reasons, it is recommended that this not be called in
   // an object's destructor.
-  //
-  // DEPRECATED: The ability to watch the netlog stream is being phased out
-  // (crbug.com/472693) as it can be misused in production code. Please consult
-  // with a net/log OWNER before introducing a new dependency on this.
-  void DeprecatedRemoveObserver(ThreadSafeObserver* observer);
+  void RemoveObserver(ThreadSafeObserver* observer);
 
   // Converts a time to the string format that the NetLog uses to represent
   // times.  Strings are used since integers may overflow.

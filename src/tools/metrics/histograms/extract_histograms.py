@@ -1,7 +1,6 @@
 # Copyright 2013 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Extract histogram names from the description XML file.
 
 For more information on the format of the XML file, which is self-documenting,
@@ -55,6 +54,7 @@ XML below will generate the following five histograms:
 """
 
 import bisect
+import datetime
 import copy
 import logging
 import xml.dom.minidom
@@ -66,6 +66,8 @@ MAX_HISTOGRAM_SUFFIX_DEPENDENCY_DEPTH = 5
 
 DEFAULT_BASE_HISTOGRAM_OBSOLETE_REASON = (
     'Base histogram. Use suffixes of this histogram instead.')
+
+EXPIRY_DATE_PATTERN = "%Y/%m/%d"
 
 
 class Error(Exception):
@@ -167,8 +169,8 @@ def _ExpandHistogramNameWithSuffixes(suffix_name, histogram_name,
     logging.error(
         'Prefix histogram_suffixes expansions require histogram names which '
         'include a dot separator. Histogram name is %s, histogram_suffixes is '
-        '%s, and placment is %d',
-        histogram_name, histogram_suffixes_node.getAttribute('name'), placement)
+        '%s, and placment is %d', histogram_name,
+        histogram_suffixes_node.getAttribute('name'), placement)
     raise Error()
 
   cluster = '.'.join(sections[0:placement]) + '.'
@@ -186,8 +188,8 @@ def _ExtractEnumsFromXmlTree(tree):
   for enum in tree.getElementsByTagName('enum'):
     name = enum.getAttribute('name')
     if last_name is not None and name.lower() < last_name.lower():
-      logging.error('Enums %s and %s are not in alphabetical order',
-                    last_name, name)
+      logging.error('Enums %s and %s are not in alphabetical order', last_name,
+                    name)
       have_errors = True
     last_name = name
 
@@ -226,8 +228,8 @@ def _ExtractEnumsFromXmlTree(tree):
         else:
           left_int_value = enum_int_values[left_item_index - 1]
           left_label = enum_dict['values'][left_int_value]['label']
-          logging.warning('Insert value %d after %d ("%s")',
-                          int_value, left_int_value, left_label)
+          logging.warning('Insert value %d after %d ("%s")', int_value,
+                          left_int_value, left_label)
       else:
         last_int_value = int_value
 
@@ -248,6 +250,17 @@ def _ExtractOwners(xml_node):
     if OWNER_FIELD_PLACEHOLDER not in owner_entry:
       owners.append(owner_entry)
   return owners
+
+
+def _GetDateFromString(date_str):
+  """Converts |date_str| to datetime.date object if the string matches
+  'YYYY/MM/DD' format. Otherwise returns None.
+  """
+  try:
+    date = datetime.datetime.strptime(date_str, EXPIRY_DATE_PATTERN).date()
+  except ValueError:
+    date = None
+  return date
 
 
 def _ProcessBaseHistogramAttribute(node, histogram_entry):
@@ -277,6 +290,18 @@ def _ExtractHistogramsFromXmlTree(tree, enums):
       have_errors = True
       continue
     histograms[name] = histogram_entry = {}
+
+    # Handle expiry dates.
+    if histogram.hasAttribute('expiry_date'):
+      expiry_date_str = histogram.getAttribute('expiry_date')
+      expiry_date = _GetDateFromString(expiry_date_str)
+      if expiry_date is None:
+        logging.error(
+            'Expiry date of histogram %s does not match expected format: "%s",'
+            ' found %s.',
+            name, EXPIRY_DATE_PATTERN, expiry_date_str)
+        have_errors = True
+      histograms[expiry_date] = expiry_date
 
     # Find <owner> tag.
     owners = _ExtractOwners(histogram)
@@ -366,6 +391,7 @@ def _UpdateHistogramsWithSuffixes(tree, histograms):
   # queue. histogram_suffixes whose dependencies have not yet been processed
   # will get relegated to the back of the queue to be processed later.
   reprocess_queue = []
+
   def GenerateHistogramSuffixes():
     for f in tree.getElementsByTagName(histogram_suffix_tag):
       yield 0, f
@@ -410,11 +436,11 @@ def _UpdateHistogramsWithSuffixes(tree, histograms):
     last_histogram_name = None
     for affected_histogram in affected_histograms:
       histogram_name = affected_histogram.getAttribute('name')
-      if (last_histogram_name is not None
-          and histogram_name.lower() < last_histogram_name.lower()):
+      if (last_histogram_name is not None and
+          histogram_name.lower() < last_histogram_name.lower()):
         logging.error('Affected histograms %s and %s of histogram_suffixes %s '
-                      'are not in alphabetical order',
-                      last_histogram_name, histogram_name, name)
+                      'are not in alphabetical order', last_histogram_name,
+                      histogram_name, name)
         have_errors = True
       last_histogram_name = histogram_name
       with_suffixes = affected_histogram.getElementsByTagName(with_tag)
@@ -435,8 +461,8 @@ def _UpdateHistogramsWithSuffixes(tree, histograms):
             # histograms.
             if new_histogram.get('base', False):
               del new_histogram['base']
-              if (new_histogram.get('obsolete', '') ==
-                  DEFAULT_BASE_HISTOGRAM_OBSOLETE_REASON):
+              if (new_histogram.get(
+                  'obsolete', '') == DEFAULT_BASE_HISTOGRAM_OBSOLETE_REASON):
                 del new_histogram['obsolete']
             histograms[new_histogram_name] = new_histogram
 

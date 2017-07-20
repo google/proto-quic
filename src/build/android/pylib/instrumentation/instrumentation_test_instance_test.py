@@ -708,6 +708,123 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
     self.assertEqual(1, len(results))
     self.assertEqual(base_test_result.ResultType.SKIP, results[0].GetType())
 
+  def testCommandLineParameterization(self):
+    o = self.createTestInstance()
+    raw_tests = [
+      {
+        'annotations': {'CommandLineParameter': {
+          'value': ['', 'enable-features=abc']}},
+        'class': 'org.chromium.test.SampleTest',
+        'superclass': 'java.lang.Object',
+        'methods': [
+          {
+            'annotations': {'SmallTest': None},
+            'method': 'testMethod1',
+          },
+          {
+            'annotations': {'MediumTest': None},
+            'method': 'testMethod2',
+          },
+        ],
+      }
+    ]
+
+    expected_tests = [
+        {
+          'annotations': {
+            'CommandLineParameter': {'value': ['', 'enable-features=abc']},
+            'SmallTest': None},
+          'class': 'org.chromium.test.SampleTest',
+          'flags': [''],
+          'is_junit4': True,
+          'method': 'testMethod1'},
+        {
+          'annotations': {
+            'CommandLineParameter': {'value': ['', 'enable-features=abc']},
+            'MediumTest': None},
+          'class': 'org.chromium.test.SampleTest',
+          'flags': [''],
+          'is_junit4': True,
+          'method': 'testMethod2'},
+        {
+          'annotations': {
+            'CommandLineParameter': {'value': ['', 'enable-features=abc']},
+            'SmallTest': None},
+          'class': 'org.chromium.test.SampleTest',
+          'flags': ['--enable-features=abc'],
+          'is_junit4': True,
+          'method': 'testMethod1'},
+        {
+          'annotations': {
+            'CommandLineParameter': {'value': ['', 'enable-features=abc']},
+             'MediumTest': None},
+          'class': 'org.chromium.test.SampleTest',
+          'flags': ['--enable-features=abc'],
+          'is_junit4': True,
+          'method': 'testMethod2'}]
+
+    o._test_jar = 'path/to/test.jar'
+    o._test_runner_junit4 = 'J4Runner'
+    with mock.patch(_INSTRUMENTATION_TEST_INSTANCE_PATH % '_GetTestsFromPickle',
+                    return_value=raw_tests):
+      actual_tests = o.GetTests()
+    self.assertEquals(actual_tests, expected_tests)
+
+  def testCommandLineParameterization_skipped(self):
+    o = self.createTestInstance()
+    raw_tests = [
+      {
+        'annotations': {'CommandLineParameter': {
+          'value': ['', 'enable-features=abc']}},
+        'class': 'org.chromium.test.SampleTest',
+        'superclass': 'java.lang.Object',
+        'methods': [
+          {
+            'annotations': {
+              'SmallTest': None,
+              'SkipCommandLineParameterization': None},
+            'method': 'testMethod1',
+          },
+          {
+            'annotations': {'MediumTest': None},
+            'method': 'testMethod2',
+          },
+        ],
+      }
+    ]
+
+    expected_tests = [
+        {
+          'annotations': {
+            'CommandLineParameter': {'value': ['', 'enable-features=abc']},
+            'SkipCommandLineParameterization': None,
+            'SmallTest': None},
+          'class': 'org.chromium.test.SampleTest',
+          'is_junit4': True,
+          'method': 'testMethod1'},
+        {
+          'annotations': {
+            'CommandLineParameter': {'value': ['', 'enable-features=abc']},
+            'MediumTest': None},
+          'class': 'org.chromium.test.SampleTest',
+          'flags': [''],
+          'is_junit4': True,
+          'method': 'testMethod2'},
+        {
+          'annotations': {
+            'CommandLineParameter': {'value': ['', 'enable-features=abc']},
+             'MediumTest': None},
+          'class': 'org.chromium.test.SampleTest',
+          'flags': ['--enable-features=abc'],
+          'is_junit4': True,
+          'method': 'testMethod2'}]
+
+    o._test_jar = 'path/to/test.jar'
+    o._test_runner_junit4 = 'J4Runner'
+    with mock.patch(_INSTRUMENTATION_TEST_INSTANCE_PATH % '_GetTestsFromPickle',
+                    return_value=raw_tests):
+      actual_tests = o.GetTests()
+    self.assertEquals(actual_tests, expected_tests)
 
 if __name__ == '__main__':
   unittest.main(verbosity=2)

@@ -17,9 +17,9 @@ namespace trace_event {
 
 TEST(TraceEventArgumentTest, FlatDictionary) {
   std::unique_ptr<TracedValue> value(new TracedValue());
-  value->SetInteger("int", 2014);
-  value->SetDouble("double", 0.0);
   value->SetBoolean("bool", true);
+  value->SetDouble("double", 0.0);
+  value->SetInteger("int", 2014);
   value->SetString("string", "string");
   std::string json = "PREFIX";
   value->AppendAsTraceFormat(&json);
@@ -30,9 +30,9 @@ TEST(TraceEventArgumentTest, FlatDictionary) {
 
 TEST(TraceEventArgumentTest, NoDotPathExpansion) {
   std::unique_ptr<TracedValue> value(new TracedValue());
-  value->SetInteger("in.t", 2014);
-  value->SetDouble("doub.le", 0.0);
   value->SetBoolean("bo.ol", true);
+  value->SetDouble("doub.le", 0.0);
+  value->SetInteger("in.t", 2014);
   value->SetString("str.ing", "str.ing");
   std::string json;
   value->AppendAsTraceFormat(&json);
@@ -43,16 +43,6 @@ TEST(TraceEventArgumentTest, NoDotPathExpansion) {
 
 TEST(TraceEventArgumentTest, Hierarchy) {
   std::unique_ptr<TracedValue> value(new TracedValue());
-  value->SetInteger("i0", 2014);
-  value->BeginDictionary("dict1");
-  value->SetInteger("i1", 2014);
-  value->BeginDictionary("dict2");
-  value->SetBoolean("b2", false);
-  value->EndDictionary();
-  value->SetString("s1", "foo");
-  value->EndDictionary();
-  value->SetDouble("d0", 0.0);
-  value->SetBoolean("b0", true);
   value->BeginArray("a1");
   value->AppendInteger(1);
   value->AppendBoolean(true);
@@ -60,6 +50,16 @@ TEST(TraceEventArgumentTest, Hierarchy) {
   value->SetInteger("i2", 3);
   value->EndDictionary();
   value->EndArray();
+  value->SetBoolean("b0", true);
+  value->SetDouble("d0", 0.0);
+  value->BeginDictionary("dict1");
+  value->BeginDictionary("dict2");
+  value->SetBoolean("b2", false);
+  value->EndDictionary();
+  value->SetInteger("i1", 2014);
+  value->SetString("s1", "foo");
+  value->EndDictionary();
+  value->SetInteger("i0", 2014);
   value->SetString("s0", "foo");
   std::string json;
   value->AppendAsTraceFormat(&json);

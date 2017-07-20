@@ -81,12 +81,12 @@ void SlowFunc(TimeDelta pause, int* quit_counter) {
 // This function records the time when Run was called in a Time object, which is
 // useful for building a variety of MessageLoop tests.
 // TODO(sky): remove?
-void RecordRunTimeFunc(Time* run_time, int* quit_counter) {
-  *run_time = Time::Now();
+void RecordRunTimeFunc(TimeTicks* run_time, int* quit_counter) {
+  *run_time = TimeTicks::Now();
 
-    // Cause our Run function to take some time to execute.  As a result we can
-    // count on subsequent RecordRunTimeFunc()s running at a future time,
-    // without worry about the resolution of our system clock being an issue.
+  // Cause our Run function to take some time to execute.  As a result we can
+  // count on subsequent RecordRunTimeFunc()s running at a future time,
+  // without worry about the resolution of our system clock being an issue.
   SlowFunc(TimeDelta::FromMilliseconds(10), quit_counter);
 }
 
@@ -131,14 +131,14 @@ void RunTest_PostDelayedTask_Basic(MessagePumpFactory factory) {
   const TimeDelta kDelay = TimeDelta::FromMilliseconds(100);
 
   int num_tasks = 1;
-  Time run_time;
+  TimeTicks run_time;
 
   loop.task_runner()->PostDelayedTask(
       FROM_HERE, BindOnce(&RecordRunTimeFunc, &run_time, &num_tasks), kDelay);
 
-  Time time_before_run = Time::Now();
+  TimeTicks time_before_run = TimeTicks::Now();
   RunLoop().Run();
-  Time time_after_run = Time::Now();
+  TimeTicks time_after_run = TimeTicks::Now();
 
   EXPECT_EQ(0, num_tasks);
   EXPECT_LT(kDelay, time_after_run - time_before_run);
@@ -150,7 +150,7 @@ void RunTest_PostDelayedTask_InDelayOrder(MessagePumpFactory factory) {
 
   // Test that two tasks with different delays run in the right order.
   int num_tasks = 2;
-  Time run_time1, run_time2;
+  TimeTicks run_time1, run_time2;
 
   loop.task_runner()->PostDelayedTask(
       FROM_HERE, BindOnce(&RecordRunTimeFunc, &run_time1, &num_tasks),
@@ -182,7 +182,7 @@ void RunTest_PostDelayedTask_InPostOrder(MessagePumpFactory factory) {
   const TimeDelta kDelay = TimeDelta::FromMilliseconds(100);
 
   int num_tasks = 2;
-  Time run_time1, run_time2;
+  TimeTicks run_time1, run_time2;
 
   loop.task_runner()->PostDelayedTask(
       FROM_HERE, BindOnce(&RecordRunTimeFunc, &run_time1, &num_tasks), kDelay);
@@ -205,7 +205,7 @@ void RunTest_PostDelayedTask_InPostOrder_2(MessagePumpFactory factory) {
   const TimeDelta kPause = TimeDelta::FromMilliseconds(50);
 
   int num_tasks = 2;
-  Time run_time;
+  TimeTicks run_time;
 
   loop.task_runner()->PostTask(FROM_HERE,
                                BindOnce(&SlowFunc, kPause, &num_tasks));
@@ -213,9 +213,9 @@ void RunTest_PostDelayedTask_InPostOrder_2(MessagePumpFactory factory) {
       FROM_HERE, BindOnce(&RecordRunTimeFunc, &run_time, &num_tasks),
       TimeDelta::FromMilliseconds(10));
 
-  Time time_before_run = Time::Now();
+  TimeTicks time_before_run = TimeTicks::Now();
   RunLoop().Run();
-  Time time_after_run = Time::Now();
+  TimeTicks time_after_run = TimeTicks::Now();
 
   EXPECT_EQ(0, num_tasks);
 
@@ -233,7 +233,7 @@ void RunTest_PostDelayedTask_InPostOrder_3(MessagePumpFactory factory) {
   // delayed task's delay has passed.
 
   int num_tasks = 11;
-  Time run_time1, run_time2;
+  TimeTicks run_time1, run_time2;
 
   // Clutter the ML with tasks.
   for (int i = 1; i < num_tasks; ++i)
@@ -260,7 +260,7 @@ void RunTest_PostDelayedTask_SharedTimer(MessagePumpFactory factory) {
   // By setting num_tasks to 1, we ensure that the first task to run causes the
   // run loop to exit.
   int num_tasks = 1;
-  Time run_time1, run_time2;
+  TimeTicks run_time1, run_time2;
 
   loop.task_runner()->PostDelayedTask(
       FROM_HERE, BindOnce(&RecordRunTimeFunc, &run_time1, &num_tasks),
@@ -269,13 +269,13 @@ void RunTest_PostDelayedTask_SharedTimer(MessagePumpFactory factory) {
       FROM_HERE, BindOnce(&RecordRunTimeFunc, &run_time2, &num_tasks),
       TimeDelta::FromMilliseconds(10));
 
-  Time start_time = Time::Now();
+  TimeTicks start_time = TimeTicks::Now();
 
   RunLoop().Run();
   EXPECT_EQ(0, num_tasks);
 
   // Ensure that we ran in far less time than the slower timer.
-  TimeDelta total_time = Time::Now() - start_time;
+  TimeDelta total_time = TimeTicks::Now() - start_time;
   EXPECT_GT(5000, total_time.InMilliseconds());
 
   // In case both timers somehow run at nearly the same time, sleep a little
@@ -368,7 +368,7 @@ void RunTest_Nesting(MessagePumpFactory factory) {
   std::unique_ptr<MessagePump> pump(factory());
   MessageLoop loop(std::move(pump));
 
-  int depth = 100;
+  int depth = 50;
   ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
                                           BindOnce(&NestingFunc, &depth));
   RunLoop().Run();
