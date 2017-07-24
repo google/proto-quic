@@ -16,6 +16,7 @@
 #include "base/callback.h"
 #include "base/files/file_path.h"
 #include "base/macros.h"
+#include "base/optional.h"
 #include "base/strings/string16.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/platform_thread.h"
@@ -215,13 +216,18 @@ class BASE_EXPORT StackSamplingProfiler {
   // are move-only. Other threads, including the UI thread, may block on
   // callback completion so this should run as quickly as possible.
   //
+  // After collection completion, the callback may instruct the profiler to do
+  // additional collection(s) by returning a SamplingParams object to indicate
+  // collection should be started again.
+  //
   // IMPORTANT NOTE: The callback is invoked on a thread the profiler
   // constructs, rather than on the thread used to construct the profiler and
   // set the callback, and thus the callback must be callable on any thread. For
   // threads with message loops that create StackSamplingProfilers, posting a
   // task to the message loop with the moved (i.e. std::move) profiles is the
   // thread-safe callback implementation.
-  using CompletedCallback = Callback<void(CallStackProfiles)>;
+  using CompletedCallback =
+      Callback<Optional<SamplingParams>(CallStackProfiles)>;
 
   // Creates a profiler for the CURRENT thread that sends completed profiles
   // to |callback|. An optional |test_delegate| can be supplied by tests.
@@ -299,9 +305,9 @@ class BASE_EXPORT StackSamplingProfiler {
   // and later passed to the sampling thread when profiling is started.
   std::unique_ptr<NativeStackSampler> native_sampler_;
 
-  // An ID uniquely identifying this collection to the sampling thread. This
+  // An ID uniquely identifying this profiler to the sampling thread. This
   // will be an internal "null" value when no collection has been started.
-  int collection_id_;
+  int profiler_id_;
 
   // Stored until it can be passed to the NativeStackSampler created in Start().
   NativeStackSamplerTestDelegate* const test_delegate_;

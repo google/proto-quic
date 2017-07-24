@@ -969,6 +969,14 @@ should be able to be added at any place in this file.
   <description>Toggles Spoken Feedback (ChromeVox)</description>
 </action>
 
+<action name="Accel_Toggle_System_Tray_Bubble">
+  <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
+  <description>
+    User invoked keyboard accelerator, such as Shift-Alt-S or Hamburger key, to
+    bring up or dismiss the system tray menu.
+  </description>
+</action>
+
 <action name="Accel_Toggle_Touchpad">
   <owner>afakhry@chromium.org</owner>
   <description>
@@ -5220,6 +5228,14 @@ should be able to be added at any place in this file.
   <description>The user dismissed the in-product help.</description>
 </action>
 
+<action name="InProductHelp.NotifyEvent.IPH_BadgedReadingList">
+  <owner>edchin@chromium.org</owner>
+  <owner>gchatz@chromium.org</owner>
+  <description>
+    An event related to the badged reading list in-product help experiment.
+  </description>
+</action>
+
 <action name="InProductHelp.NotifyEvent.IPH_DataSaverDetail">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
@@ -5258,10 +5274,32 @@ should be able to be added at any place in this file.
   <description>The user triggered an event in in-product help.</description>
 </action>
 
+<action name="InProductHelp.NotifyEvent.IPH_NewIncognitoTabTip">
+  <owner>edchin@chromium.org</owner>
+  <owner>gchatz@chromium.org</owner>
+  <description>
+    An event related to the new incognito tab tip in-product help experiment.
+  </description>
+</action>
+
 <action name="InProductHelp.NotifyEvent.IPH_NewTab">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
   <description>The user triggered an event in in-product help.</description>
+</action>
+
+<action name="InProductHelp.NotifyEvent.IPH_NewTabTip">
+  <owner>edchin@chromium.org</owner>
+  <owner>gchatz@chromium.org</owner>
+  <description>
+    An event related to the new tab tip in-product help experiment.
+  </description>
+</action>
+
+<action name="InProductHelp.NotifyUsedEvent.IPH_BadgedReadingList">
+  <owner>edchin@chromium.org</owner>
+  <owner>gchatz@chromium.org</owner>
+  <description>The user triggered a used event in in-product help.</description>
 </action>
 
 <action name="InProductHelp.NotifyUsedEvent.IPH_DataSaverDetail">
@@ -5300,10 +5338,31 @@ should be able to be added at any place in this file.
   <description>The user triggered a used event in in-product help.</description>
 </action>
 
+<action name="InProductHelp.NotifyUsedEvent.IPH_NewIncognitoTabTip">
+  <owner>edchin@chromium.org</owner>
+  <owner>gchatz@chromium.org</owner>
+  <description>The user triggered a used event in in-product help.</description>
+</action>
+
 <action name="InProductHelp.NotifyUsedEvent.IPH_NewTab">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
   <description>The user triggered a used event in in-product help.</description>
+</action>
+
+<action name="InProductHelp.NotifyUsedEvent.IPH_NewTabTip">
+  <owner>edchin@chromium.org</owner>
+  <owner>gchatz@chromium.org</owner>
+  <description>The user triggered a used event in in-product help.</description>
+</action>
+
+<action name="InProductHelp.ShouldTriggerHelpUI.IPH_BadgedReadingList">
+  <owner>edchin@chromium.org</owner>
+  <owner>gchatz@chromium.org</owner>
+  <description>
+    The feature engagement tracker tried to determine whether in-product help
+    should be shown to the user.
+  </description>
 </action>
 
 <action name="InProductHelp.ShouldTriggerHelpUI.IPH_DataSaverDetail">
@@ -5360,12 +5419,39 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="InProductHelp.ShouldTriggerHelpUI.IPH_NewIncognitoTabTip">
+  <owner>edchin@chromium.org</owner>
+  <owner>gchatz@chromium.org</owner>
+  <description>
+    The feature engagement tracker tried to determine whether in-product help
+    should be shown to the user.
+  </description>
+</action>
+
 <action name="InProductHelp.ShouldTriggerHelpUI.IPH_NewTab">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
   <description>
     The feature engagement tracker tried to determine whether in-product help
     should be shown to the user.
+  </description>
+</action>
+
+<action name="InProductHelp.ShouldTriggerHelpUI.IPH_NewTabTip">
+  <owner>edchin@chromium.org</owner>
+  <owner>gchatz@chromium.org</owner>
+  <description>
+    The feature engagement tracker tried to determine whether in-product help
+    should be shown to the user.
+  </description>
+</action>
+
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.NotTriggered.IPH_BadgedReadingList">
+  <owner>edchin@chromium.org</owner>
+  <owner>gchatz@chromium.org</owner>
+  <description>
+    A user action that could have triggered In-Product Help did not.
   </description>
 </action>
 
@@ -5423,12 +5509,37 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.NotTriggered.IPH_NewIncognitoTabTip">
+  <owner>edchin@chromium.org</owner>
+  <owner>gchatz@chromium.org</owner>
+  <description>
+    A user action that could have triggered In-Product Help did not.
+  </description>
+</action>
+
 <action name="InProductHelp.ShouldTriggerHelpUIResult.NotTriggered.IPH_NewTab">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
   <description>
     A user action that could have triggered In-Product Help did not.
   </description>
+</action>
+
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.NotTriggered.IPH_NewTabTip">
+  <owner>edchin@chromium.org</owner>
+  <owner>gchatz@chromium.org</owner>
+  <description>
+    A user action that could have triggered In-Product Help did not.
+  </description>
+</action>
+
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.Triggered.IPH_BadgedReadingList">
+  <owner>edchin@chromium.org</owner>
+  <owner>gchatz@chromium.org</owner>
+  <description>A user action triggered In-Product Help.</description>
 </action>
 
 <action
@@ -5473,9 +5584,22 @@ should be able to be added at any place in this file.
   <description>A user action triggered In-Product Help.</description>
 </action>
 
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.Triggered.IPH_NewIncognitoTabTip">
+  <owner>edchin@chromium.org</owner>
+  <owner>gchatz@chromium.org</owner>
+  <description>A user action triggered In-Product Help.</description>
+</action>
+
 <action name="InProductHelp.ShouldTriggerHelpUIResult.Triggered.IPH_NewTab">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
+  <description>A user action triggered In-Product Help.</description>
+</action>
+
+<action name="InProductHelp.ShouldTriggerHelpUIResult.Triggered.IPH_NewTabTip">
+  <owner>edchin@chromium.org</owner>
+  <owner>gchatz@chromium.org</owner>
   <description>A user action triggered In-Product Help.</description>
 </action>
 
@@ -10657,8 +10781,28 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="MobileOmniboxRefineSuggestion">
+  <obsolete>
+    Deprecated 07/2017. Replaced by MobileOmniboxRefineSuggestion.Query and
+    MobileOmniboxRefineSuggestion.Url.
+  </obsolete>
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="MobileOmniboxRefineSuggestion.Search">
+  <owner>jdonnelly@chromium.org</owner>
+  <description>
+    User used the refinement arrow in an omnibox search suggestion to copy the
+    text of the suggestion into the omnibox.
+  </description>
+</action>
+
+<action name="MobileOmniboxRefineSuggestion.Url">
+  <owner>jdonnelly@chromium.org</owner>
+  <description>
+    User used the refinement arrow in an omnibox URL suggestion to copy the text
+    of the suggestion into the omnibox.
+  </description>
 </action>
 
 <action name="MobileOmniboxSearch">
@@ -15335,6 +15479,15 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="Signin_Android_GmsUserRecoverableDialogShown"
+    not_user_triggered="true">
+  <owner>bsazonov@chromium.org</owner>
+  <description>
+    Recorded when dialog is shown to resolve Google Play services error (e.g.,
+    update request).
+  </description>
+</action>
+
 <action name="Signin_EnterpriseAccountPrompt_Cancel">
   <owner>gogerald@chromium.org</owner>
   <description>
@@ -15380,6 +15533,74 @@ should be able to be added at any place in this file.
   <description>
     Recorded when the user chooses to import data in the import data
     confirmation dialog of sign in.
+  </description>
+</action>
+
+<action name="Signin_ImpressionWithAccount_FromBookmarkManager">
+  <owner>jlebel@chromium.org</owner>
+  <description>
+    Recorded when starting sign-in using the promo view, with a default account,
+    from bookmarks manager
+    (signin_metrics::AccessPoint::ACCESS_POINT_BOOKMARK_MANAGER).
+  </description>
+</action>
+
+<action name="Signin_ImpressionWithAccount_FromRecentTabs">
+  <owner>jlebel@chromium.org</owner>
+  <description>
+    Recorded when starting sign-in using the promo view, with a default account,
+    from recent tabs (signin_metrics::AccessPoint::ACCESS_POINT_RECENT_TABS).
+  </description>
+</action>
+
+<action name="Signin_ImpressionWithAccount_FromSettings">
+  <owner>jlebel@chromium.org</owner>
+  <description>
+    Recorded when starting sign-in using the promo view, with a default account,
+    from settings (signin_metrics::AccessPoint::ACCESS_POINT_SETTINGS).
+  </description>
+</action>
+
+<action name="Signin_ImpressionWithAccount_FromTabSwitcher">
+  <owner>jlebel@chromium.org</owner>
+  <description>
+    Recorded when starting sign-in using the promo view, with a default account,
+    from tab switcher (signin_metrics::AccessPoint::ACCESS_POINT_TAB_SWITCHER).
+  </description>
+</action>
+
+<action name="Signin_ImpressionWithNoAccount_FromBookmarkManager">
+  <owner>jlebel@chromium.org</owner>
+  <description>
+    Recorded when starting sign-in using the promo view, with no default
+    account, from bookmarks manager
+    (signin_metrics::AccessPoint::ACCESS_POINT_BOOKMARK_MANAGER).
+  </description>
+</action>
+
+<action name="Signin_ImpressionWithNoAccount_FromRecentTabs">
+  <owner>jlebel@chromium.org</owner>
+  <description>
+    Recorded when starting sign-in using the promo view, with no default
+    account, from recent tabs
+    (signin_metrics::AccessPoint::ACCESS_POINT_RECENT_TABS).
+  </description>
+</action>
+
+<action name="Signin_ImpressionWithNoAccount_FromSettings">
+  <owner>jlebel@chromium.org</owner>
+  <description>
+    Recorded when starting sign-in using the promo view, with no default
+    account, from settings (signin_metrics::AccessPoint::ACCESS_POINT_SETTINGS).
+  </description>
+</action>
+
+<action name="Signin_ImpressionWithNoAccount_FromTabSwitcher">
+  <owner>jlebel@chromium.org</owner>
+  <description>
+    Recorded when starting sign-in using the promo view, with no default
+    account, from tab switcher
+    (signin_metrics::AccessPoint::ACCESS_POINT_TAB_SWITCHER).
   </description>
 </action>
 
@@ -15562,6 +15783,14 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="Signin_SigninNewAccount_FromTabSwitcher">
+  <owner>jlebel@chromium.org</owner>
+  <description>
+    Recorded on sign in start from access point
+    signin_metrics::AccessPoint::ACCESS_POINT_TAB_SWITCHER, with a new account.
+  </description>
+</action>
+
 <action name="Signin_SigninNotDefault_FromBookmarkManager">
   <owner>jlebel@chromium.org</owner>
   <description>
@@ -15586,6 +15815,15 @@ should be able to be added at any place in this file.
     Recorded on sign in start from access point
     signin_metrics::AccessPoint::ACCESS_POINT_SETTINGS, using another account
     than the default one.
+  </description>
+</action>
+
+<action name="Signin_SigninNotDefault_FromTabSwitcher">
+  <owner>jlebel@chromium.org</owner>
+  <description>
+    Recorded on sign in start from access point
+    signin_metrics::AccessPoint::ACCESS_POINT_TAB_SWITCHER, using another
+    account than the default one.
   </description>
 </action>
 
@@ -15622,6 +15860,15 @@ should be able to be added at any place in this file.
   <description>
     Recorded on sign in start from access point
     signin_metrics::AccessPoint::ACCESS_POINT_SETTINGS, using the default
+    account.
+  </description>
+</action>
+
+<action name="Signin_SigninWithDefault_FromTabSwitcher">
+  <owner>jlebel@chromium.org</owner>
+  <description>
+    Recorded on sign in start from access point
+    signin_metrics::AccessPoint::ACCESS_POINT_TAB_SWITCHER, using the default
     account.
   </description>
 </action>
@@ -17331,6 +17578,13 @@ should be able to be added at any place in this file.
   <description>
     User launched voice interaction session through long pressing app list
     button.
+  </description>
+</action>
+
+<action name="VoiceInteraction.Started.Assistant">
+  <owner>muyuanli@chromium.org</owner>
+  <description>
+    User launched voice interaction session through Assistant key.
   </description>
 </action>
 

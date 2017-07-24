@@ -29,24 +29,24 @@ This comment signals that a tree of nodes matching the BUILD comment
 symatics should exist.  This is an exact match.
 */
 
-/* BUILD Implements(A) */
-/* PROP REFERENCE=B */
+/** BUILD Implements(A) */
+/** PROP REFERENCE=B */
 A implements B;
 
-/* ERROR Unexpected ";" after keyword "implements". */
+/** ERROR Unexpected ";" after keyword "implements". */
 A implements;
 
-/* BUILD Implements(B) */
-/* PROP REFERENCE=C */
+/** BUILD Implements(B) */
+/** PROP REFERENCE=C */
 B implements C;
 
-/* ERROR Unexpected keyword "implements" after "]". */
+/** ERROR Unexpected keyword "implements" after "]". */
 [foo] implements B;
 
-/* BUILD Implements(D) */
-/* PROP REFERENCE=E */
+/** BUILD Implements(D) */
+/** PROP REFERENCE=E */
 D implements E;
 
-/* ERROR Unexpected keyword "implements" after comment. */
+/** ERROR Unexpected keyword "implements" after comment. */
 implements C;
 

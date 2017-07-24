@@ -20,45 +20,10 @@
 #include <mmintrin.h>
 #endif
 
+namespace base {
+namespace internal {
+
 using std::numeric_limits;
-using base::CheckedNumeric;
-using base::ClampedNumeric;
-using base::IsValidForType;
-using base::ValueOrDieForType;
-using base::ValueOrDefaultForType;
-using base::MakeCheckedNum;
-using base::MakeClampedNum;
-using base::CheckMax;
-using base::CheckMin;
-using base::CheckAdd;
-using base::CheckSub;
-using base::CheckMul;
-using base::CheckDiv;
-using base::CheckMod;
-using base::CheckLsh;
-using base::CheckRsh;
-using base::ClampMax;
-using base::ClampMin;
-using base::ClampAdd;
-using base::ClampSub;
-using base::ClampMul;
-using base::ClampDiv;
-using base::ClampMod;
-using base::ClampLsh;
-using base::ClampRsh;
-using base::as_unsigned;
-using base::checked_cast;
-using base::IsValueInRangeForNumericType;
-using base::IsValueNegative;
-using base::SaturationDefaultLimits;
-using base::SizeT;
-using base::StrictNumeric;
-using base::MakeStrictNum;
-using base::saturated_cast;
-using base::strict_cast;
-using base::internal::MaxExponent;
-using base::internal::IntegerBitsPlusSign;
-using base::internal::RangeCheck;
 
 // These tests deliberately cause arithmetic boundary errors. If the compiler is
 // aggressive enough, it can const detect these errors, so we disable warnings.
@@ -86,9 +51,6 @@ Dst GetMaxConvertibleToFloat() {
   }
   return static_cast<Dst>(max);
 }
-
-namespace base {
-namespace internal {
 
 // Test corner case promotions used
 static_assert(IsIntegerArithmeticSafe<int32_t, int8_t, int8_t>::value, "");
@@ -154,11 +116,6 @@ template <typename U>
 U GetNumericValueForTest(const U& src) {
   return src;
 }
-
-}  // namespace internal.
-}  // namespace base.
-
-using base::internal::GetNumericValueForTest;
 
 // Logs the ValueOrDie() failure instead of crashing.
 struct LogOnFailure {
@@ -691,6 +648,26 @@ static void TestArithmetic(const char* dst, int line) {
     TEST_EXPECTED_VALUE(1, -ClampedNumeric<Dst>(-1));
     TEST_EXPECTED_VALUE(static_cast<Dst>(DstLimits::max() * -1),
                         -ClampedNumeric<Dst>(DstLimits::max()));
+
+    // The runtime paths for saturated negation differ significantly from what
+    // gets evaluated at compile-time. Making this test volatile forces the
+    // compiler to generate code rather than fold constant expressions.
+    volatile Dst value = Dst(0);
+    TEST_EXPECTED_VALUE(0, -MakeClampedNum(value));
+    value = Dst(1);
+    TEST_EXPECTED_VALUE(-1, -MakeClampedNum(value));
+    value = Dst(2);
+    TEST_EXPECTED_VALUE(-2, -MakeClampedNum(value));
+    value = Dst(-1);
+    TEST_EXPECTED_VALUE(1, -MakeClampedNum(value));
+    value = Dst(-2);
+    TEST_EXPECTED_VALUE(2, -MakeClampedNum(value));
+    value = DstLimits::max();
+    TEST_EXPECTED_VALUE(Dst(DstLimits::max() * -1), -MakeClampedNum(value));
+    value = Dst(-1 * DstLimits::max());
+    TEST_EXPECTED_VALUE(DstLimits::max(), -MakeClampedNum(value));
+    value = DstLimits::lowest();
+    TEST_EXPECTED_VALUE(DstLimits::max(), -MakeClampedNum(value));
   }
 
   // Generic absolute value.
@@ -802,6 +779,7 @@ static void TestArithmetic(const char* dst, int line) {
 
 TEST(SafeNumerics, SignedIntegerMath) {
   TEST_ARITHMETIC(int8_t);
+  TEST_ARITHMETIC(int16_t);
   TEST_ARITHMETIC(int);
   TEST_ARITHMETIC(intptr_t);
   TEST_ARITHMETIC(intmax_t);
@@ -809,6 +787,7 @@ TEST(SafeNumerics, SignedIntegerMath) {
 
 TEST(SafeNumerics, UnsignedIntegerMath) {
   TEST_ARITHMETIC(uint8_t);
+  TEST_ARITHMETIC(uint16_t);
   TEST_ARITHMETIC(unsigned int);
   TEST_ARITHMETIC(uintptr_t);
   TEST_ARITHMETIC(uintmax_t);
@@ -849,8 +828,7 @@ constexpr RangeConstraint RangeCheckToEnum(const RangeCheck constraint) {
 // EXPECT_EQ wrappers providing specific detail on test failures.
 #define TEST_EXPECTED_RANGE(expected, actual)                               \
   EXPECT_EQ(expected,                                                       \
-            RangeCheckToEnum(                                               \
-                base::internal::DstRangeRelationToSrcRange<Dst>(actual)))   \
+            RangeCheckToEnum(DstRangeRelationToSrcRange<Dst>(actual)))      \
       << "Conversion test: " << src << " value " << actual << " to " << dst \
       << " on line " << line
 
@@ -919,6 +897,20 @@ void TestStrictComparison() {
   EXPECT_EQ(DstLimits::max(), CheckMax(MakeStrictNum(1), MakeCheckedNum(0),
                                        DstLimits::max(), SrcLimits::lowest())
                                   .ValueOrDie());
+
+  EXPECT_EQ(SrcLimits::max(),
+            MakeClampedNum(SrcLimits::max()).Max(DstLimits::lowest()));
+  EXPECT_EQ(DstLimits::max(),
+            MakeClampedNum(SrcLimits::lowest()).Max(DstLimits::max()));
+  EXPECT_EQ(DstLimits::lowest(),
+            MakeClampedNum(SrcLimits::max()).Min(DstLimits::lowest()));
+  EXPECT_EQ(SrcLimits::lowest(),
+            MakeClampedNum(SrcLimits::lowest()).Min(DstLimits::max()));
+  EXPECT_EQ(SrcLimits::lowest(),
+            ClampMin(MakeStrictNum(1), MakeClampedNum(0), DstLimits::max(),
+                     SrcLimits::lowest()));
+  EXPECT_EQ(DstLimits::max(), ClampMax(MakeStrictNum(1), MakeClampedNum(0),
+                                       DstLimits::max(), SrcLimits::lowest()));
 }
 
 template <typename Dst, typename Src>
@@ -1164,18 +1156,41 @@ TEST(SafeNumerics, IntMinOperations) {
   TEST_NUMERIC_CONVERSION(int8_t, int8_t, SIGN_PRESERVING_VALUE_PRESERVING);
   TEST_NUMERIC_CONVERSION(uint8_t, uint8_t, SIGN_PRESERVING_VALUE_PRESERVING);
 
+  TEST_NUMERIC_CONVERSION(int8_t, int16_t, SIGN_PRESERVING_NARROW);
   TEST_NUMERIC_CONVERSION(int8_t, int, SIGN_PRESERVING_NARROW);
+  TEST_NUMERIC_CONVERSION(uint8_t, uint16_t, SIGN_PRESERVING_NARROW);
   TEST_NUMERIC_CONVERSION(uint8_t, unsigned int, SIGN_PRESERVING_NARROW);
   TEST_NUMERIC_CONVERSION(int8_t, float, SIGN_PRESERVING_NARROW);
 
   TEST_NUMERIC_CONVERSION(uint8_t, int8_t, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL);
 
+  TEST_NUMERIC_CONVERSION(uint8_t, int16_t, SIGN_TO_UNSIGN_NARROW);
   TEST_NUMERIC_CONVERSION(uint8_t, int, SIGN_TO_UNSIGN_NARROW);
   TEST_NUMERIC_CONVERSION(uint8_t, intmax_t, SIGN_TO_UNSIGN_NARROW);
   TEST_NUMERIC_CONVERSION(uint8_t, float, SIGN_TO_UNSIGN_NARROW);
 
+  TEST_NUMERIC_CONVERSION(int8_t, uint16_t, UNSIGN_TO_SIGN_NARROW_OR_EQUAL);
   TEST_NUMERIC_CONVERSION(int8_t, unsigned int, UNSIGN_TO_SIGN_NARROW_OR_EQUAL);
   TEST_NUMERIC_CONVERSION(int8_t, uintmax_t, UNSIGN_TO_SIGN_NARROW_OR_EQUAL);
+}
+
+TEST(SafeNumerics, Int16Operations) {
+  TEST_NUMERIC_CONVERSION(int16_t, int16_t, SIGN_PRESERVING_VALUE_PRESERVING);
+  TEST_NUMERIC_CONVERSION(uint16_t, uint16_t, SIGN_PRESERVING_VALUE_PRESERVING);
+
+  TEST_NUMERIC_CONVERSION(int16_t, int, SIGN_PRESERVING_NARROW);
+  TEST_NUMERIC_CONVERSION(uint16_t, unsigned int, SIGN_PRESERVING_NARROW);
+  TEST_NUMERIC_CONVERSION(int16_t, float, SIGN_PRESERVING_NARROW);
+
+  TEST_NUMERIC_CONVERSION(uint16_t, int16_t, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL);
+
+  TEST_NUMERIC_CONVERSION(uint16_t, int, SIGN_TO_UNSIGN_NARROW);
+  TEST_NUMERIC_CONVERSION(uint16_t, intmax_t, SIGN_TO_UNSIGN_NARROW);
+  TEST_NUMERIC_CONVERSION(uint16_t, float, SIGN_TO_UNSIGN_NARROW);
+
+  TEST_NUMERIC_CONVERSION(int16_t, unsigned int,
+                          UNSIGN_TO_SIGN_NARROW_OR_EQUAL);
+  TEST_NUMERIC_CONVERSION(int16_t, uintmax_t, UNSIGN_TO_SIGN_NARROW_OR_EQUAL);
 }
 
 TEST(SafeNumerics, IntOperations) {
@@ -1561,3 +1576,6 @@ TEST(SafeNumerics, VariadicNumericOperations) {
     EXPECT_EQ(static_cast<decltype(h)::type>(1), h);
   }
 }
+
+}  // namespace internal
+}  // namespace base

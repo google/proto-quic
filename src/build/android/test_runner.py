@@ -100,7 +100,12 @@ def AddTracingOptions(parser):
   parser.add_argument(
       '--trace-output',
       metavar='FILENAME', type=os.path.realpath,
-      help='Path to save test_runner trace data to.')
+      help='Path to save test_runner trace json output to.')
+
+  parser.add_argument(
+      '--trace-all',
+      action='store_true',
+      help='Whether to trace all function calls.')
 
 
 def AddCommonOptions(parser):

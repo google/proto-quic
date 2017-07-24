@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/android/important_file_writer_android.h"
-
 #include <string>
 
 #include "base/android/jni_string.h"
@@ -32,10 +30,6 @@ static jboolean WriteFileAtomically(JNIEnv* env,
       path, native_data_string);
   env->ReleaseByteArrayElements(data, native_data, JNI_ABORT);
   return result;
-}
-
-bool RegisterImportantFileWriterAndroid(JNIEnv* env) {
-  return RegisterNativesImpl(env);
 }
 
 }  // namespace android

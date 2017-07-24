@@ -30,26 +30,26 @@ symatics should exist.  This is an exact match.
 */
 
 
-/* TREE
+/** TREE
  *Dictionary(MyDict)
  */
 dictionary MyDict { };
 
-/* TREE
+/** TREE
  *Dictionary(MyDictInherit)
  *  Inherit(Foo)
  */
 dictionary MyDictInherit : Foo {};
 
-/* TREE
+/** TREE
  *Dictionary(MyDictPartial)
  */
 partial dictionary MyDictPartial { };
 
-/* ERROR Unexpected ":" after identifier "MyDictInherit". */
+/** ERROR Unexpected ":" after identifier "MyDictInherit". */
 partial dictionary MyDictInherit : Foo {};
 
-/* TREE
+/** TREE
  *Dictionary(MyDictBig)
  *  Key(setString)
  *    Type()
@@ -69,7 +69,7 @@ dictionary MyDictBig {
   long unsetLong;
 };
 
-/* TREE
+/** TREE
  *Dictionary(MyDictRequired)
  *  Key(setLong)
  *    Type()
@@ -79,12 +79,12 @@ dictionary MyDictRequired {
   required long setLong;
 };
 
-/* ERROR Unexpected "{" after keyword "dictionary". */
+/** ERROR Unexpected "{" after keyword "dictionary". */
 dictionary {
   DOMString? setString = null;
 };
 
-/* TREE
+/** TREE
  *Dictionary(MyDictionaryInvalidOptional)
  *  Key(mandatory)
  *    Type()
@@ -96,12 +96,12 @@ dictionary MyDictionaryInvalidOptional {
   sequence<DOMString> optional;
 };
 
-/* ERROR Unexpected identifier "NoColon" after identifier "ForParent". */
+/** ERROR Unexpected identifier "NoColon" after identifier "ForParent". */
 dictionary ForParent NoColon {
   DOMString? setString = null;
 };
 
-/* TREE
+/** TREE
  *Dictionary(MyDictNull)
  *  Key(setString)
  *    Type()
@@ -112,7 +112,7 @@ dictionary MyDictNull {
   DOMString? setString = null;
 };
 
-/* ERROR Unexpected keyword "attribute" after "{". */
+/** ERROR Unexpected keyword "attribute" after "{". */
 dictionary MyDictUnexpectedAttribute {
   attribute DOMString foo = "";
 };

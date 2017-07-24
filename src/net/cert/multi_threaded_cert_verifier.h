@@ -31,7 +31,7 @@ class CertVerifyProc;
 // synchronous CertVerifier implementations on worker threads.
 class NET_EXPORT_PRIVATE MultiThreadedCertVerifier : public CertVerifier {
  public:
-  explicit MultiThreadedCertVerifier(CertVerifyProc* verify_proc);
+  explicit MultiThreadedCertVerifier(scoped_refptr<CertVerifyProc> verify_proc);
 
   // When the verifier is destroyed, all certificate verifications requests are
   // canceled, and their completion callbacks will not be called.

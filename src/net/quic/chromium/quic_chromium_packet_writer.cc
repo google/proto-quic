@@ -18,7 +18,7 @@ namespace net {
 
 QuicChromiumPacketWriter::QuicChromiumPacketWriter() : weak_factory_(this) {}
 
-QuicChromiumPacketWriter::QuicChromiumPacketWriter(Socket* socket)
+QuicChromiumPacketWriter::QuicChromiumPacketWriter(DatagramClientSocket* socket)
     : socket_(socket),
       delegate_(nullptr),
       packet_(nullptr),

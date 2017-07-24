@@ -319,7 +319,8 @@ class SSLClientSocketImpl::SSLContext {
     SSL_CTX_set_cert_cb(ssl_ctx_.get(), ClientCertRequestCallback, NULL);
 
     // The server certificate is verified after the handshake in DoVerifyCert.
-    SSL_CTX_i_promise_to_verify_certs_after_the_handshake(ssl_ctx_.get());
+    SSL_CTX_set_custom_verify(ssl_ctx_.get(), SSL_VERIFY_PEER,
+                              CertVerifyCallback);
 
     // Disable the internal session cache. Session caching is handled
     // externally (i.e. by SSLClientSessionCache).
@@ -381,6 +382,11 @@ class SSLClientSocketImpl::SSLContext {
     SSLClientSocketImpl* socket = GetInstance()->GetClientSocketFromSSL(ssl);
     DCHECK(socket);
     return socket->ClientCertRequestCallback(ssl);
+  }
+
+  static ssl_verify_result_t CertVerifyCallback(SSL* ssl, uint8_t* out_alert) {
+    // The certificate is verified after the handshake in DoVerifyCert.
+    return ssl_verify_ok;
   }
 
   static int NewSessionCallback(SSL* ssl, SSL_SESSION* session) {
@@ -919,6 +925,21 @@ int SSLClientSocketImpl::Init() {
   if (!SSL_set_min_proto_version(ssl_.get(), ssl_config_.version_min) ||
       !SSL_set_max_proto_version(ssl_.get(), ssl_config_.version_max)) {
     return ERR_UNEXPECTED;
+  }
+
+  switch (ssl_config_.tls13_variant) {
+    case kTLS13VariantDraft:
+      SSL_set_tls13_variant(ssl_.get(), tls13_default);
+      break;
+    case kTLS13VariantExperiment:
+      SSL_set_tls13_variant(ssl_.get(), tls13_experiment);
+      break;
+    case kTLS13VariantRecordTypeExperiment:
+      SSL_set_tls13_variant(ssl_.get(), tls13_record_type_experiment);
+      break;
+    case kTLS13VariantNoSessionIDExperiment:
+      SSL_set_tls13_variant(ssl_.get(), tls13_no_session_id_experiment);
+      break;
   }
 
   // OpenSSL defaults some options to on, others to off. To avoid ambiguity,

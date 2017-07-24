@@ -82,9 +82,8 @@ SpdyHeadersHandlerInterface* SpdyFramerVisitorAdapter::OnHeaderFrameStart(
   return visitor_->OnHeaderFrameStart(stream_id);
 }
 
-void SpdyFramerVisitorAdapter::OnHeaderFrameEnd(SpdyStreamId stream_id,
-                                                bool end_headers) {
-  visitor_->OnHeaderFrameEnd(stream_id, end_headers);
+void SpdyFramerVisitorAdapter::OnHeaderFrameEnd(SpdyStreamId stream_id) {
+  visitor_->OnHeaderFrameEnd(stream_id);
 }
 
 void SpdyFramerVisitorAdapter::OnRstStream(SpdyStreamId stream_id,
@@ -100,8 +99,8 @@ void SpdyFramerVisitorAdapter::OnPing(SpdyPingId unique_id, bool is_ack) {
   visitor_->OnPing(unique_id, is_ack);
 }
 
-void SpdyFramerVisitorAdapter::OnSettings(bool clear_persisted) {
-  visitor_->OnSettings(clear_persisted);
+void SpdyFramerVisitorAdapter::OnSettings() {
+  visitor_->OnSettings();
 }
 
 void SpdyFramerVisitorAdapter::OnSettingsAck() {

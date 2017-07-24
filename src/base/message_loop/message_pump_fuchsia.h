@@ -8,6 +8,7 @@
 #include "base/base_export.h"
 #include "base/location.h"
 #include "base/macros.h"
+#include "base/memory/weak_ptr.h"
 #include "base/message_loop/message_pump.h"
 
 #include <magenta/syscalls/port.h>
@@ -44,6 +45,8 @@ class BASE_EXPORT MessagePumpFuchsia : public MessagePump {
     }
 
    private:
+    friend class MessagePumpFuchsia;
+
     // Start watching the FD.
     bool WaitBegin();
 
@@ -51,15 +54,27 @@ class BASE_EXPORT MessagePumpFuchsia : public MessagePump {
     // in based on the observed bits from the underlying packet.
     uint32_t WaitEnd(uint32_t observed);
 
-    friend class MessagePumpFuchsia;
+    // Returns the key to use to uniquely identify this object's wait operation.
+    uint64_t wait_key() const {
+      return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(this));
+    }
 
     const tracked_objects::Location created_from_location_;
+
+    // Set directly from the inputs to WatchFileDescriptor.
     Watcher* watcher_ = nullptr;
-    mx_handle_t port_ = MX_HANDLE_INVALID;
-    mx_handle_t handle_ = MX_HANDLE_INVALID;
-    mxio_t* io_ = nullptr;
     int fd_ = -1;
     uint32_t desired_events_ = 0;
+
+    // Set by WatchFileDescriptor to hold a reference to the descriptor's mxio.
+    mxio_t* io_ = nullptr;
+
+    // Set to the mxio's waitable handle, while a wait is pending (i.e. between
+    // WaitBegin and WaitEnd calls), and MX_HANDLE_INVALID otherwise.
+    mx_handle_t handle_ = MX_HANDLE_INVALID;
+
+    // Used to safely access resources owned by the associated message pump.
+    WeakPtr<MessagePumpFuchsia> weak_pump_;
 
     // This bool is used during calling |Watcher| callbacks. This object's
     // lifetime is owned by the user of this class. If the message loop is woken
@@ -105,6 +120,8 @@ class BASE_EXPORT MessagePumpFuchsia : public MessagePump {
 
   // The time at which we should call DoDelayedWork.
   TimeTicks delayed_work_time_;
+
+  base::WeakPtrFactory<MessagePumpFuchsia> weak_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(MessagePumpFuchsia);
 };

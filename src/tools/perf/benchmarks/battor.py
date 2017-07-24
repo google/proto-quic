@@ -13,7 +13,7 @@ from telemetry import benchmark
 # are the primary means of benchmarking power.
 class _BattOrBenchmark(perf_benchmark.PerfBenchmark):
 
-  def CreateTimelineBasedMeasurementOptions(self):
+  def CreateCoreTimelineBasedMeasurementOptions(self):
     category_filter = chrome_trace_category_filter.ChromeTraceCategoryFilter(
         filter_string='toplevel')
     options = timeline_based_measurement.Options(category_filter)

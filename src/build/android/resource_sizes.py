@@ -562,12 +562,17 @@ def PrintPakAnalysis(apk_filename, min_pak_resource_size):
   # Calculate aggregate stats about resources across pak files.
   resource_count_map = collections.defaultdict(int)
   resource_size_map = collections.defaultdict(int)
+  seen_data_ids = set()
+  alias_overhead_bytes = 4
   resource_overhead_bytes = 6
   for pak in paks:
-    for r in pak.resources:
-      resource_count_map[r] += 1
-      resource_size_map[r] += len(pak.resources[r]) + resource_overhead_bytes
-
+    for k, v in pak.resources.iteritems():
+      resource_count_map[k] += 1
+      if id(v) not in seen_data_ids:
+        seen_data_ids.add(id(v))
+        resource_size_map[k] += resource_overhead_bytes + len(v)
+      else:
+        resource_size_map[k] += alias_overhead_bytes
   # Output the overall resource summary.
   total_resource_size = sum(resource_size_map.values())
   total_resource_count = len(resource_count_map)
@@ -771,11 +776,6 @@ def _VerifyLibBuildIdsMatch(tools_prefix, *so_files):
                     'Your output directory is likely stale.')
 
 
-def _ReadBuildVars(output_dir):
-  with open(os.path.join(output_dir, 'build_vars.txt')) as f:
-    return dict(l.replace('//', '').rstrip().split('=', 1) for l in f)
-
-
 def main():
   argparser = argparse.ArgumentParser(description='Print APK size metrics.')
   argparser.add_argument('--min-pak-resource-size', type=int, default=20*1024,
@@ -814,7 +814,7 @@ def main():
   if not args.no_output_dir:
     constants.CheckOutputDirectory()
     devil_chromium.Initialize()
-    build_vars = _ReadBuildVars(constants.GetOutDirectory())
+    build_vars = build_utils.ReadBuildVars()
     tools_prefix = os.path.join(constants.GetOutDirectory(),
                                 build_vars['android_tool_prefix'])
   else:

@@ -8,7 +8,8 @@
 #include <stdint.h>
 
 #include <limits>
-#include <string>
+
+#include "net/http2/platform/api/http2_string.h"
 
 namespace net {
 namespace test {
@@ -24,7 +25,7 @@ class RandomBase {
   virtual uint64_t Rand64() = 0;
   virtual int32_t Next() = 0;
   virtual int32_t Skewed(int max_log) = 0;
-  virtual std::string RandString(int length) = 0;
+  virtual Http2String RandString(int length) = 0;
 
   // STL UniformRandomNumberGenerator implementation.
   typedef uint32_t result_type;
@@ -48,7 +49,7 @@ class Http2Random : public RandomBase {
   uint64_t Rand64() override;
   int32_t Next() override;
   int32_t Skewed(int max_log) override;
-  std::string RandString(int length) override;
+  Http2String RandString(int length) override;
 };
 
 }  // namespace test

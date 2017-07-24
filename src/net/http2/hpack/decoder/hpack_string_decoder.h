@@ -12,7 +12,6 @@
 #include <stddef.h>
 
 #include <algorithm>
-#include <string>
 
 #include "base/logging.h"
 #include "base/macros.h"
@@ -20,6 +19,7 @@
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/hpack/decoder/hpack_varint_decoder.h"
 #include "net/http2/platform/api/http2_export.h"
+#include "net/http2/platform/api/http2_string.h"
 
 namespace net {
 
@@ -140,10 +140,10 @@ class HTTP2_EXPORT_PRIVATE HpackStringDecoder {
     }
   }
 
-  std::string DebugString() const;
+  Http2String DebugString() const;
 
  private:
-  static std::string StateToString(StringDecoderState v);
+  static Http2String StateToString(StringDecoderState v);
 
   // Returns true if the length is fully decoded and the listener wants the
   // decoding to continue, false otherwise; status is set to the status from

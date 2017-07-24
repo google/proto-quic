@@ -42,7 +42,17 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(C_CXX_FLAGS "${C_CXX_FLAGS} -Wno-free-nonheap-object")
   endif()
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${C_CXX_FLAGS} -Wmissing-prototypes -Wold-style-definition -Wstrict-prototypes")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ${C_CXX_FLAGS} -Wmissing-declarations")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ${C_CXX_FLAGS} -Wmissing-declarations -fno-exceptions")
+  # In GCC, -Wmissing-declarations is the C++ spelling of -Wmissing-prototypes
+  # and using the wrong one is an error. In Clang, -Wmissing-prototypes is the
+  # spelling for both and -Wmissing-declarations is some other warning.
+  #
+  # https://gcc.gnu.org/onlinedocs/gcc-7.1.0/gcc/Warning-Options.html#Warning-Options
+  # https://clang.llvm.org/docs/DiagnosticsReference.html#wmissing-prototypes
+  # https://clang.llvm.org/docs/DiagnosticsReference.html#wmissing-declarations
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wmissing-prototypes -Wimplicit-fallthrough")
+  endif()
 elseif(MSVC)
   set(MSVC_DISABLED_WARNINGS_LIST
       "C4061" # enumerator 'identifier' in switch of enum 'enumeration' is not
@@ -299,7 +309,7 @@ if(FUZZ)
     add_library(Fuzzer STATIC ${LIBFUZZER_SOURCES})
     # libFuzzer does not pass our aggressive warnings. It also must be built
     # without -fsanitize-coverage options or clang crashes.
-    set_target_properties(Fuzzer PROPERTIES COMPILE_FLAGS "-Wno-shadow -Wno-format-nonliteral -fsanitize-coverage=0")
+    set_target_properties(Fuzzer PROPERTIES COMPILE_FLAGS "-Wno-shadow -Wno-format-nonliteral -Wno-missing-prototypes -fsanitize-coverage=0")
   endif()
 
   add_subdirectory(fuzz)

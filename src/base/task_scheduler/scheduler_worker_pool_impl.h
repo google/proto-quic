@@ -138,22 +138,20 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // PriorityQueue from which all threads of this worker pool get work.
   PriorityQueue shared_priority_queue_;
 
-  // All workers owned by this worker pool. Initialized by Start() within the
-  // scope of |idle_workers_stack_lock_|. Never modified afterwards (i.e. can be
-  // read without synchronization once |workers_created_.IsSet()|).
-  std::vector<scoped_refptr<SchedulerWorker>> workers_;
-
   // Suggested reclaim time for workers. Initialized by Start(). Never modified
   // afterwards (i.e. can be read without synchronization once
   // |workers_created_.IsSet()|).
   TimeDelta suggested_reclaim_time_;
 
-  // Synchronizes access to |idle_workers_stack_|,
-  // |idle_workers_stack_cv_for_testing_| and |num_wake_ups_before_start_|. Has
-  // |shared_priority_queue_|'s lock as its predecessor so that a worker can be
-  // pushed to |idle_workers_stack_| within the scope of a Transaction (more
-  // details in GetWork()).
-  mutable SchedulerLock idle_workers_stack_lock_;
+  // Synchronizes accesses to |workers_|, |idle_workers_stack_|,
+  // |idle_workers_stack_cv_for_testing_| and
+  // |num_wake_ups_before_start_|. Has |shared_priority_queue_|'s lock as
+  // its predecessor so that a worker can be pushed to |idle_workers_stack_|
+  // within the scope of a Transaction (more details in GetWork()).
+  mutable SchedulerLock lock_;
+
+  // All workers owned by this worker pool.
+  std::vector<scoped_refptr<SchedulerWorker>> workers_;
 
   // Stack of idle workers. Initially, all workers are on this stack. A worker
   // is removed from the stack before its WakeUp() function is called and when

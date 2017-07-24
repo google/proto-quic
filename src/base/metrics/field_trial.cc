@@ -715,6 +715,7 @@ void FieldTrialList::GetActiveFieldTrialGroupsFromString(
 void FieldTrialList::GetInitiallyActiveFieldTrials(
     const base::CommandLine& command_line,
     FieldTrial::ActiveGroups* active_groups) {
+  DCHECK(global_);
   DCHECK(global_->create_trials_from_command_line_called_);
 
   if (!global_->field_trial_allocator_) {

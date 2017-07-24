@@ -9,14 +9,11 @@
 #include "base/logging.h"
 #include "net/spdy/core/spdy_test_utils.h"
 
-using base::StringPiece;
-using std::string;
-
 namespace net {
 namespace test {
 namespace {
 
-void HpackExampleToStringOrDie(StringPiece example, string* output) {
+void HpackExampleToStringOrDie(Http2StringPiece example, Http2String* output) {
   while (!example.empty()) {
     const char c0 = example[0];
     if (isxdigit(c0)) {
@@ -34,7 +31,7 @@ void HpackExampleToStringOrDie(StringPiece example, string* output) {
     if (example.starts_with("|")) {
       // Start of a comment. Skip to end of line or of input.
       auto pos = example.find('\n');
-      if (pos == StringPiece::npos) {
+      if (pos == Http2StringPiece::npos) {
         // End of input.
         break;
       }
@@ -51,8 +48,8 @@ void HpackExampleToStringOrDie(StringPiece example, string* output) {
 
 }  // namespace
 
-string HpackExampleToStringOrDie(StringPiece example) {
-  string output;
+Http2String HpackExampleToStringOrDie(Http2StringPiece example) {
+  Http2String output;
   HpackExampleToStringOrDie(example, &output);
   return output;
 }

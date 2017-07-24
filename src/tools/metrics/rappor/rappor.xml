@@ -1269,6 +1269,36 @@ components/rappor/rappor_parameters.h.
   </summary>
 </rappor-metric>
 
+<rappor-metric name="Media.OriginUrl.MSE.KeyframeTimeGreaterThanDependant"
+    type="ETLD_PLUS_ONE">
+  <owner>wolenetz@chromium.org</owner>
+  <summary>
+    The domain and registry of the URL that loads an HTML5 media player using
+    Media Source Extensions (MSE) and supplies media containing a track
+    resulting in a sequence emitted from the coded frame processing algorithm
+    where a nonkeyframe's presentation timestamp precedes the presentation
+    timestamp of the keyframe needed to decode it. This is reported up to once
+    per track, so multiple reports may come from a single playback. See
+    https://crbug.com/739931 for more context on why such sequences may be
+    problematic.
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="Media.OriginUrl.MSE.MuxedSequenceModeSourceBuffer"
+    type="ETLD_PLUS_ONE">
+  <owner>wolenetz@chromium.org</owner>
+  <summary>
+    The domain and registry of the URL that loads an HTML5 media player using
+    Media Source Extensions (MSE) and appends a media segment to a multitrack
+    SourceBuffer that is using 'sequence' AppendMode. This usage frequently
+    results in surprising and undesirable results, usually due to automatic
+    timestampOffset updates based on one track after a discontinuity are applied
+    to all tracks. This is reported up to once per SourceBuffer, so multiple
+    reports may come from a single playback. See https://crbug.com/737757 for
+    more context.
+  </summary>
+</rappor-metric>
+
 <rappor-metric name="Media.OriginUrl.MSE.PipelineError" type="ETLD_PLUS_ONE">
   <owner>xhwang@chromium.org</owner>
   <summary>

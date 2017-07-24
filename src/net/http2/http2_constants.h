@@ -11,9 +11,9 @@
 
 #include <iosfwd>
 #include <ostream>
-#include <string>
 
 #include "net/http2/platform/api/http2_export.h"
+#include "net/http2/platform/api/http2_string.h"
 
 namespace net {
 
@@ -57,8 +57,8 @@ inline bool IsSupportedHttp2FrameType(Http2FrameType v) {
 // each unsupported value. Since these are just used for debugging/error
 // messages, that isn't a cost to we need to worry about.
 // The same applies to the functions later in this file.
-HTTP2_EXPORT_PRIVATE std::string Http2FrameTypeToString(Http2FrameType v);
-HTTP2_EXPORT_PRIVATE std::string Http2FrameTypeToString(uint8_t v);
+HTTP2_EXPORT_PRIVATE Http2String Http2FrameTypeToString(Http2FrameType v);
+HTTP2_EXPORT_PRIVATE Http2String Http2FrameTypeToString(uint8_t v);
 HTTP2_EXPORT_PRIVATE inline std::ostream& operator<<(std::ostream& out,
                                                      Http2FrameType v) {
   return out << Http2FrameTypeToString(v);
@@ -78,9 +78,9 @@ enum Http2FrameFlag {
 
 // Formats zero or more flags for the specified type of frame. Returns an
 // empty string if flags==0.
-HTTP2_EXPORT_PRIVATE std::string Http2FrameFlagsToString(Http2FrameType type,
+HTTP2_EXPORT_PRIVATE Http2String Http2FrameFlagsToString(Http2FrameType type,
                                                          uint8_t flags);
-HTTP2_EXPORT_PRIVATE std::string Http2FrameFlagsToString(uint8_t type,
+HTTP2_EXPORT_PRIVATE Http2String Http2FrameFlagsToString(uint8_t type,
                                                          uint8_t flags);
 
 // Error codes for GOAWAY and RST_STREAM frames.
@@ -145,8 +145,8 @@ inline bool IsSupportedHttp2ErrorCode(Http2ErrorCode v) {
 }
 
 // Format the specified error code.
-HTTP2_EXPORT_PRIVATE std::string Http2ErrorCodeToString(uint32_t v);
-HTTP2_EXPORT_PRIVATE std::string Http2ErrorCodeToString(Http2ErrorCode v);
+HTTP2_EXPORT_PRIVATE Http2String Http2ErrorCodeToString(uint32_t v);
+HTTP2_EXPORT_PRIVATE Http2String Http2ErrorCodeToString(Http2ErrorCode v);
 HTTP2_EXPORT_PRIVATE inline std::ostream& operator<<(std::ostream& out,
                                                      Http2ErrorCode v) {
   return out << Http2ErrorCodeToString(v);
@@ -226,9 +226,9 @@ inline bool IsSupportedHttp2SettingsParameter(Http2SettingsParameter v) {
 }
 
 // Format the specified settings parameter.
-HTTP2_EXPORT_PRIVATE std::string Http2SettingsParameterToString(uint32_t v);
-HTTP2_EXPORT_PRIVATE std::string Http2SettingsParameterToString(
-    Http2SettingsParameter v);
+HTTP2_EXPORT_PRIVATE Http2String Http2SettingsParameterToString(uint32_t v);
+HTTP2_EXPORT_PRIVATE Http2String
+Http2SettingsParameterToString(Http2SettingsParameter v);
 inline std::ostream& operator<<(std::ostream& out, Http2SettingsParameter v) {
   return out << Http2SettingsParameterToString(v);
 }

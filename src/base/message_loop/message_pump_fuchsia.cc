@@ -4,6 +4,7 @@
 
 #include "base/message_loop/message_pump_fuchsia.h"
 
+#include <magenta/status.h>
 #include <magenta/syscalls.h>
 
 #include "base/logging.h"
@@ -16,7 +17,8 @@ MessagePumpFuchsia::FileDescriptorWatcher::FileDescriptorWatcher(
 }
 
 MessagePumpFuchsia::FileDescriptorWatcher::~FileDescriptorWatcher() {
-  StopWatchingFileDescriptor();
+  if (!StopWatchingFileDescriptor())
+    NOTREACHED();
   if (io_)
     __mxio_release(io_);
   if (was_destroyed_) {
@@ -26,19 +28,29 @@ MessagePumpFuchsia::FileDescriptorWatcher::~FileDescriptorWatcher() {
 }
 
 bool MessagePumpFuchsia::FileDescriptorWatcher::StopWatchingFileDescriptor() {
-  uint64_t this_as_key =
-      static_cast<uint64_t>(reinterpret_cast<uintptr_t>(this));
-  return mx_port_cancel(port_, handle_, this_as_key) == MX_OK;
+  // If our pump is gone, or we do not have a wait operation active, then there
+  // is nothing to do here.
+  if (!weak_pump_ || handle_ == MX_HANDLE_INVALID)
+    return true;
+
+  int result = mx_port_cancel(weak_pump_->port_, handle_, wait_key());
+  DLOG_IF(ERROR, result != MX_OK)
+      << "mx_port_cancel(handle=" << handle_
+      << ") failed: " << mx_status_get_string(result);
+  handle_ = MX_HANDLE_INVALID;
+
+  return result == MX_OK;
 }
 
-MessagePumpFuchsia::MessagePumpFuchsia() : keep_running_(true) {
-  CHECK(mx_port_create(0, &port_) == MX_OK);
+MessagePumpFuchsia::MessagePumpFuchsia()
+    : keep_running_(true), weak_factory_(this) {
+  CHECK_EQ(MX_OK, mx_port_create(0, &port_));
 }
 
 MessagePumpFuchsia::~MessagePumpFuchsia() {
   mx_status_t status = mx_handle_close(port_);
   if (status != MX_OK) {
-    DLOG(ERROR) << "mx_handle_close failed: " << status;
+    DLOG(ERROR) << "mx_handle_close failed: " << mx_status_get_string(status);
   }
 }
 
@@ -50,12 +62,12 @@ bool MessagePumpFuchsia::WatchFileDescriptor(int fd,
   DCHECK_GE(fd, 0);
   DCHECK(controller);
   DCHECK(delegate);
+
+  controller->fd_ = fd;
+  controller->persistent_ = persistent;
   controller->watcher_ = delegate;
-  controller->port_ = port_;
 
-  DCHECK(mode == WATCH_READ || mode == WATCH_WRITE || mode == WATCH_READ_WRITE);
-
-  uint32_t events;
+  uint32_t events = 0;
   switch (mode) {
     case WATCH_READ:
       events = MXIO_EVT_READABLE;
@@ -67,18 +79,18 @@ bool MessagePumpFuchsia::WatchFileDescriptor(int fd,
       events = MXIO_EVT_READABLE | MXIO_EVT_WRITABLE;
       break;
     default:
-      DLOG(ERROR) << "unexpected mode: " << mode;
+      NOTREACHED() << "unexpected mode: " << mode;
       return false;
   }
-
   controller->desired_events_ = events;
 
   controller->io_ = __mxio_fd_to_io(fd);
-  if (!controller->io_)
+  if (!controller->io_) {
+    DLOG(ERROR) << "Failed to get IO for FD";
     return false;
+  }
 
-  controller->fd_ = fd;
-  controller->persistent_ = persistent;
+  controller->weak_pump_ = weak_factory_.GetWeakPtr();
 
   return controller->WaitBegin();
 }
@@ -86,21 +98,27 @@ bool MessagePumpFuchsia::WatchFileDescriptor(int fd,
 bool MessagePumpFuchsia::FileDescriptorWatcher::WaitBegin() {
   uint32_t signals = 0u;
   __mxio_wait_begin(io_, desired_events_, &handle_, &signals);
-  if (handle_ == MX_HANDLE_INVALID)
+  if (handle_ == MX_HANDLE_INVALID) {
+    DLOG(ERROR) << "mxio_wait_begin failed";
     return false;
+  }
 
-  uint64_t this_as_key =
-      static_cast<uint64_t>(reinterpret_cast<uintptr_t>(this));
-  mx_status_t status = mx_object_wait_async(handle_, port_, this_as_key,
-                                            signals, MX_WAIT_ASYNC_ONCE);
+  mx_status_t status = mx_object_wait_async(
+      handle_, weak_pump_->port_, wait_key(), signals, MX_WAIT_ASYNC_ONCE);
   if (status != MX_OK) {
-    DLOG(ERROR) << "mx_object_wait_async failed: " << status;
+    DLOG(ERROR) << "mx_object_wait_async failed: "
+                << mx_status_get_string(status)
+                << " (port=" << weak_pump_->port_ << ")";
     return false;
   }
   return true;
 }
 
 uint32_t MessagePumpFuchsia::FileDescriptorWatcher::WaitEnd(uint32_t observed) {
+  // Clear |handle_| so that StopWatchingFileDescriptor() is correctly treated
+  // as a no-op. WaitBegin() will refresh |handle_| if the wait is persistent.
+  handle_ = MX_HANDLE_INVALID;
+
   uint32_t events;
   __mxio_wait_end(io_, observed, &events);
   // |observed| can include other spurious things, in particular, that the fd
@@ -136,23 +154,24 @@ void MessagePumpFuchsia::Run(Delegate* delegate) {
 
     mx_time_t deadline = delayed_work_time_.is_null()
                              ? MX_TIME_INFINITE
-                             : mx_time_get(MX_CLOCK_MONOTONIC) +
-                                   delayed_work_time_.ToInternalValue();
+                             : delayed_work_time_.ToMXTime();
     mx_port_packet_t packet;
+
     const mx_status_t wait_status = mx_port_wait(port_, deadline, &packet, 0);
     if (wait_status != MX_OK && wait_status != MX_ERR_TIMED_OUT) {
-      NOTREACHED() << "unexpected wait status: " << wait_status;
+      NOTREACHED() << "unexpected wait status: "
+                   << mx_status_get_string(wait_status);
       continue;
     }
 
     if (packet.type == MX_PKT_TYPE_SIGNAL_ONE) {
       // A watched fd caused the wakeup via mx_object_wait_async().
-      DCHECK(packet.status == MX_OK);
+      DCHECK_EQ(MX_OK, packet.status);
       FileDescriptorWatcher* controller =
           reinterpret_cast<FileDescriptorWatcher*>(
               static_cast<uintptr_t>(packet.key));
 
-      DCHECK(packet.signal.trigger & packet.signal.observed);
+      DCHECK_NE(0u, packet.signal.trigger & packet.signal.observed);
 
       uint32_t events = controller->WaitEnd(packet.signal.observed);
 
@@ -164,25 +183,18 @@ void MessagePumpFuchsia::Run(Delegate* delegate) {
       // pointer is now invalid.
       bool controller_was_destroyed = false;
       controller->was_destroyed_ = &controller_was_destroyed;
-      if ((events & (MXIO_EVT_READABLE | MXIO_EVT_WRITABLE)) ==
-          (MXIO_EVT_READABLE | MXIO_EVT_WRITABLE)) {
+      if (events & MXIO_EVT_WRITABLE)
         controller->watcher_->OnFileCanWriteWithoutBlocking(controller->fd_);
-        if (!controller_was_destroyed)
-          controller->watcher_->OnFileCanReadWithoutBlocking(controller->fd_);
-      } else if (events & MXIO_EVT_WRITABLE) {
-        controller->watcher_->OnFileCanWriteWithoutBlocking(controller->fd_);
-      } else if (events & MXIO_EVT_READABLE) {
+      if (!controller_was_destroyed && (events & MXIO_EVT_READABLE))
         controller->watcher_->OnFileCanReadWithoutBlocking(controller->fd_);
-      }
       if (!controller_was_destroyed) {
         controller->was_destroyed_ = nullptr;
-      }
-      if (!controller_was_destroyed && controller->persistent_) {
-        controller->WaitBegin();
+        if (controller->persistent_)
+          controller->WaitBegin();
       }
     } else {
       // Wakeup caused by ScheduleWork().
-      DCHECK(packet.type == MX_PKT_TYPE_USER);
+      DCHECK_EQ(MX_PKT_TYPE_USER, packet.type);
     }
   }
 
@@ -199,9 +211,8 @@ void MessagePumpFuchsia::ScheduleWork() {
   mx_port_packet_t packet = {};
   packet.type = MX_PKT_TYPE_USER;
   mx_status_t status = mx_port_queue(port_, &packet, 0);
-  if (status != MX_OK) {
-    DLOG(ERROR) << "mx_port_queue failed: " << status;
-  }
+  DLOG_IF(ERROR, status != MX_OK)
+      << "mx_port_queue failed: " << status << " (port=" << port_ << ")";
 }
 
 void MessagePumpFuchsia::ScheduleDelayedWork(

@@ -8,10 +8,10 @@
 #ifndef NET_HTTP2_HPACK_DECODER_HPACK_DECODER_LISTENER_H_
 #define NET_HTTP2_HPACK_DECODER_HPACK_DECODER_LISTENER_H_
 
-#include "base/strings/string_piece.h"
 #include "net/http2/hpack/hpack_string.h"
 #include "net/http2/hpack/http2_hpack_constants.h"
 #include "net/http2/platform/api/http2_export.h"
+#include "net/http2/platform/api/http2_string_piece.h"
 
 namespace net {
 
@@ -39,7 +39,7 @@ class HTTP2_EXPORT_PRIVATE HpackDecoderListener {
 
   // OnHeaderErrorDetected is called if an error is detected while decoding.
   // error_message may be used in a GOAWAY frame as the Opaque Data.
-  virtual void OnHeaderErrorDetected(base::StringPiece error_message) = 0;
+  virtual void OnHeaderErrorDetected(Http2StringPiece error_message) = 0;
 };
 
 // A no-op implementation of HpackDecoderListener, useful for ignoring
@@ -55,7 +55,7 @@ class HTTP2_EXPORT_PRIVATE HpackDecoderNoOpListener
                 const HpackString& name,
                 const HpackString& value) override;
   void OnHeaderListEnd() override;
-  void OnHeaderErrorDetected(base::StringPiece error_message) override;
+  void OnHeaderErrorDetected(Http2StringPiece error_message) override;
 
   // Returns a listener that ignores all the calls.
   static HpackDecoderNoOpListener* NoOpListener();

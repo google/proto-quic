@@ -7,12 +7,12 @@
 // Tests of HpackWholeEntryBuffer: does it buffer correctly, and does it
 // detect Huffman decoding errors and oversize string errors?
 
+#include "net/http2/platform/api/http2_string.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock-matchers.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using ::testing::AllOf;
 using ::testing::HasSubstr;
 using ::testing::InSequence;
@@ -26,11 +26,11 @@ namespace {
 
 constexpr size_t kMaxStringSize = 20;
 
-// Define HasSubstr() for base::StringPiece arguments.
+// Define HasSubstr() for Http2StringPiece arguments.
 // This shadows ::testing::HasSubstr(), which only works on argument types
-// that can be implicilty converted to a std::string.
+// that can be implicitly converted to a Http2String.
 inline ::testing::PolymorphicMatcher<StringPieceHasSubstrMatcher> HasSubstr(
-    const std::string& substring) {
+    const Http2String& substring) {
   return ::testing::MakePolymorphicMatcher(
       StringPieceHasSubstrMatcher(substring));
 }
@@ -49,7 +49,7 @@ class MockHpackWholeEntryListener : public HpackWholeEntryListener {
                     HpackDecoderStringBuffer* name_buffer,
                     HpackDecoderStringBuffer* value_buffer));
   MOCK_METHOD1(OnDynamicTableSizeUpdate, void(size_t size));
-  MOCK_METHOD1(OnHpackDecodeError, void(StringPiece error_message));
+  MOCK_METHOD1(OnHpackDecodeError, void(Http2StringPiece error_message));
 };
 
 class HpackWholeEntryBufferTest : public ::testing::Test {

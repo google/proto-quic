@@ -48,10 +48,10 @@ int32_t Http2Random::Skewed(int max_log) {
   return Rand32() & mask;
 }
 
-std::string Http2Random::RandString(int length) {
+Http2String Http2Random::RandString(int length) {
   std::unique_ptr<char[]> buffer(new char[length]);
   base::RandBytes(buffer.get(), length);
-  return std::string(buffer.get(), length);
+  return Http2String(buffer.get(), length);
 }
 
 }  // namespace test

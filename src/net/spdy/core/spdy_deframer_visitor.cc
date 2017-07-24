@@ -141,7 +141,7 @@ class SpdyTestDeframerImpl : public SpdyTestDeframer,
   void OnContinuation(SpdyStreamId stream_id, bool end) override;
   SpdyHeadersHandlerInterface* OnHeaderFrameStart(
       SpdyStreamId stream_id) override;
-  void OnHeaderFrameEnd(SpdyStreamId stream_id, bool end_headers) override;
+  void OnHeaderFrameEnd(SpdyStreamId stream_id) override;
   void OnDataFrameHeader(SpdyStreamId stream_id,
                          size_t length,
                          bool fin) override;
@@ -166,7 +166,7 @@ class SpdyTestDeframerImpl : public SpdyTestDeframer,
                      bool end) override;
   void OnRstStream(SpdyStreamId stream_id, SpdyErrorCode error_code) override;
   void OnSetting(SpdySettingsIds id, uint32_t value) override;
-  void OnSettings(bool clear_persisted) override;
+  void OnSettings() override;
   void OnSettingsAck() override;
   void OnSettingsEnd() override;
   void OnStreamFrameData(SpdyStreamId stream_id,
@@ -498,10 +498,8 @@ SpdyHeadersHandlerInterface* SpdyTestDeframerImpl::OnHeaderFrameStart(
   return this;
 }
 
-void SpdyTestDeframerImpl::OnHeaderFrameEnd(SpdyStreamId stream_id,
-                                            bool end_headers) {
-  DVLOG(1) << "OnHeaderFrameEnd stream_id: " << stream_id
-           << "    end_headers: " << (end_headers ? "true" : "false");
+void SpdyTestDeframerImpl::OnHeaderFrameEnd(SpdyStreamId stream_id) {
+  DVLOG(1) << "OnHeaderFrameEnd stream_id: " << stream_id;
 }
 
 // Received the fixed portion of a HEADERS frame. Called before the variable
@@ -618,8 +616,7 @@ void SpdyTestDeframerImpl::OnSetting(SpdySettingsIds id, uint32_t value) {
 // Called at the start of a SETTINGS frame with setting entries, but not the
 // (required) ACK of a SETTINGS frame. There is no stream_id because
 // the settings apply to the entire connection, not to an individual stream.
-// The |clear_persisted| flag is a pre-HTTP/2 remnant.
-void SpdyTestDeframerImpl::OnSettings(bool /*clear_persisted*/) {
+void SpdyTestDeframerImpl::OnSettings() {
   DVLOG(1) << "OnSettings";
   CHECK_EQ(frame_type_, UNSET) << "   frame_type_="
                                << Http2FrameTypeToString(frame_type_);

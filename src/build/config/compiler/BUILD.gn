@@ -1085,9 +1085,10 @@ config("default_warnings") {
   } else {
     if (is_mac && !is_nacl) {
       # When compiling Objective-C, warns if a method is used whose
-      # availability is newer than the deployment target. This is not
-      # required when compiling Chrome for iOS.
-      cflags += [ "-Wpartial-availability" ]
+      # availability is newer than the deployment target.
+      # TODO(thakis): Consider enabling this on iOS too,
+      # https://crbug.com/742498
+      cflags += [ "-Wunguarded-availability" ]
     }
 
     if (is_ios) {
@@ -1108,9 +1109,8 @@ config("default_warnings") {
         "-Wno-narrowing",
       ]
 
-      # Don't warn about the "typedef 'foo' locally defined but not used"
-      # for gcc 4.8.
-      # TODO: remove this flag once all builds work. See crbug.com/227506
+      # -Wunused-local-typedefs is broken in gcc,
+      # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=63872
       cflags += [ "-Wno-unused-local-typedefs" ]
 
       # Don't warn about "maybe" uninitialized. Clang doesn't include this
@@ -1344,7 +1344,7 @@ config("no_incompatible_pointer_warnings") {
   cflags = []
   if (is_clang) {
     cflags += [ "-Wno-incompatible-pointer-types" ]
-  } else if (current_cpu == "mipsel") {
+  } else if (current_cpu == "mipsel" || current_cpu == "mips64el") {
     cflags += [ "-w" ]
   } else if (is_chromeos && current_cpu == "arm") {
     cflags += [ "-w" ]
@@ -1747,9 +1747,11 @@ config("symbols") {
     # builds, currently get
     # "third_party/binutils/Linux_x64/Release/bin/ld.gold: warning:
     # /tmp/lto-llvm-0b5201.o: corrupt debug info in .debug_info"
+    # TODO(thakis): Re-enable on fuchsia once lld can process R_X86_64_DTPOFF64
+    # relocations, https://crbug.com/735101
     if (!is_mac && !is_ios && !is_nacl && target_cpu != "x86" &&
         (use_gold || use_lld) && !allow_posix_link_time_opt &&
-        !is_official_build) {
+        !is_official_build && !is_fuchsia) {
       ldflags += [ "-Wl,--gdb-index" ]
     }
   }

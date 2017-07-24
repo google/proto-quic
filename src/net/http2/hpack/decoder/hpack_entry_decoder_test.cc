@@ -14,7 +14,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using ::testing::AssertionResult;
-using std::string;
 
 namespace net {
 namespace test {
@@ -169,7 +168,7 @@ TEST_P(HpackLiteralEntryDecoderTest, RandNameIndexAndLiteralValue) {
   for (int n = 0; n < 10; n++) {
     const uint32_t ndx = 1 + Random().Rand8();
     const bool value_is_huffman_encoded = (n % 2) == 0;
-    const string value = Random().RandString(Random().Rand8());
+    const Http2String value = Random().RandString(Random().Rand8());
     HpackBlockBuilder hbb;
     hbb.AppendNameIndexAndLiteralValue(entry_type_, ndx,
                                        value_is_huffman_encoded, value);
@@ -188,10 +187,10 @@ TEST_P(HpackLiteralEntryDecoderTest, RandLiteralNameAndValue) {
   for (int n = 0; n < 10; n++) {
     const bool name_is_huffman_encoded = (n & 1) == 0;
     const int name_len = 1 + Random().Rand8();
-    const string name = Random().RandString(name_len);
+    const Http2String name = Random().RandString(name_len);
     const bool value_is_huffman_encoded = (n & 2) == 0;
     const int value_len = Random().Skewed(10);
-    const string value = Random().RandString(value_len);
+    const Http2String value = Random().RandString(value_len);
     HpackBlockBuilder hbb;
     hbb.AppendLiteralNameAndValue(entry_type_, name_is_huffman_encoded, name,
                                   value_is_huffman_encoded, value);

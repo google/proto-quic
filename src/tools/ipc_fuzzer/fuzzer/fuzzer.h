@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -67,16 +68,17 @@ class NoOpFuzzer : public Fuzzer {
   void FuzzBytes(void* data, int data_len) override {}
 };
 
-typedef IPC::Message* (*FuzzerFunction)(IPC::Message*, Fuzzer*);
+using FuzzerFunction = std::unique_ptr<IPC::Message> (*)(IPC::Message*,
+                                                         Fuzzer*);
 
 // Used for mutating messages. Once populated, the map associates a message ID
 // with a FuzzerFunction used for mutation of that message type.
-typedef base::hash_map<uint32_t, FuzzerFunction> FuzzerFunctionMap;
+using FuzzerFunctionMap = base::hash_map<uint32_t, FuzzerFunction>;
 void PopulateFuzzerFunctionMap(FuzzerFunctionMap* map);
 
 // Used for generating new messages. Once populated, the vector contains
 // FuzzerFunctions for all message types that we know how to generate.
-typedef std::vector<FuzzerFunction> FuzzerFunctionVector;
+using FuzzerFunctionVector = std::vector<FuzzerFunction>;
 void PopulateFuzzerFunctionVector(FuzzerFunctionVector* function_vector);
 
 // Since IPC::Message can be serialized, we also track a global function vector

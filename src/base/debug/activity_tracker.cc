@@ -49,7 +49,7 @@ const char kProcessPhaseDataKey[] = "process-phase";
 
 // An atomically incrementing number, used to check for recreations of objects
 // in the same memory space.
-StaticAtomicSequenceNumber g_next_id;
+AtomicSequenceNumber g_next_id;
 
 union ThreadRef {
   int64_t as_id;

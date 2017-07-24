@@ -104,6 +104,7 @@ struct NET_EXPORT AlternativeService {
            std::tie(other.protocol, other.host, other.port);
   }
 
+  // Output format: "protocol host:port", e.g. "h2 www.google.com:1234".
   std::string ToString() const;
 
   NextProto protocol;
@@ -114,6 +115,12 @@ struct NET_EXPORT AlternativeService {
 NET_EXPORT_PRIVATE std::ostream& operator<<(
     std::ostream& os,
     const AlternativeService& alternative_service);
+
+struct AlternativeServiceHash {
+  size_t operator()(const net::AlternativeService& entry) const {
+    return entry.protocol ^ std::hash<std::string>()(entry.host) ^ entry.port;
+  }
+};
 
 class NET_EXPORT_PRIVATE AlternativeServiceInfo {
  public:

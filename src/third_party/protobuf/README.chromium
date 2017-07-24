@@ -86,3 +86,7 @@ Description of the patches:
   removed in C++11 mode.
 
   Fixed in https://github.com/google/protobuf/pull/1549
+
+- 0012-add-map-include.patch
+
+  Workaround for gcc bug https://gcc.gnu.org/bugzilla/show_bug.cgi?id=81347

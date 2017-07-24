@@ -1777,11 +1777,11 @@ if (enable_java_templates) {
       }
       sources = []
     }
-    _android_manifest_deps = []
+    _android_root_manifest_deps = []
     if (defined(invoker.android_manifest_dep)) {
-      _android_manifest_deps = [ invoker.android_manifest_dep ]
+      _android_root_manifest_deps = [ invoker.android_manifest_dep ]
     }
-    _android_manifest = invoker.android_manifest
+    _android_root_manifest = invoker.android_manifest
 
     _rebased_build_config = rebase_path(_build_config, root_build_dir)
     _create_abi_split =
@@ -1820,14 +1820,15 @@ if (enable_java_templates) {
       incremental_install_script_path = _incremental_install_script_path
       resources_zip = resources_zip_path
       build_config = _build_config
-      android_manifest = _android_manifest
+      android_manifest = _android_root_manifest
 
       if (defined(_java_sources_file)) {
         java_sources_file = _java_sources_file
       }
 
-      deps = _android_manifest_deps
+      deps = _android_root_manifest_deps
 
+      possible_config_deps = []
       if (defined(invoker.deps)) {
         possible_config_deps = invoker.deps
       }
@@ -1854,6 +1855,34 @@ if (enable_java_templates) {
         secondary_abi_shared_libraries_runtime_deps_file =
             _secondary_abi_runtime_deps_file
       }
+    }
+
+    _android_manifest =
+        "$target_gen_dir/${_template_name}_manifest/AndroidManifest.xml"
+    android_manifest_target = "${_template_name}__merge_manifests"
+    action(android_manifest_target) {
+      script = "//build/android/gyp/merge_manifest.py"
+
+      sources = [
+        _android_root_manifest,
+      ]
+
+      outputs = [
+        _android_manifest,
+      ]
+
+      args = [
+        "--build-vars",
+        rebase_path(android_build_vars, root_build_dir),
+        "--root-manifest",
+        rebase_path(_android_root_manifest, root_build_dir),
+        "--output",
+        rebase_path(_android_manifest, root_build_dir),
+        "--extras",
+        "@FileArg($_rebased_build_config:extra_android_manifests)",
+      ]
+
+      deps = _android_root_manifest_deps + [ ":$build_config_target" ]
     }
 
     _final_deps = []
@@ -1886,7 +1915,10 @@ if (enable_java_templates) {
       }
 
       build_config = _build_config
-      deps = _android_manifest_deps + [ ":$build_config_target" ]
+      deps = [
+        ":$android_manifest_target",
+        ":$build_config_target",
+      ]
       if (defined(invoker.deps)) {
         deps += invoker.deps
       }
@@ -1992,7 +2024,10 @@ if (enable_java_templates) {
       supports_android = true
       requires_android = true
       override_build_config = _build_config
-      deps = _android_manifest_deps + [ ":$build_config_target" ]
+      deps = [
+        ":$android_manifest_target",
+        ":$build_config_target",
+      ]
 
       android_manifest = _android_manifest
       srcjar_deps = _srcjar_deps
@@ -2230,11 +2265,12 @@ if (enable_java_templates) {
                                "alternative_android_sdk_jar",
                                "android_aapt_path",
                                "app_as_shared_lib",
-                               "png_to_webp",
                                "deps",
                                "exclude_xxxhdpi",
                                "extensions_to_not_compress",
                                "language_splits",
+                               "png_to_webp",
+                               "post_process_package_resources_script",
                                "public_deps",
                                "secondary_native_libs",
                                "shared_resources",
@@ -2268,17 +2304,19 @@ if (enable_java_templates) {
       keystore_password = _keystore_password
 
       # Incremental apk does not use native libs nor final dex.
-      incremental_deps = deps + _android_manifest_deps + [
+      incremental_deps = deps + [
+                           ":$android_manifest_target",
                            ":$build_config_target",
                            ":$process_resources_target",
                          ]
 
       # This target generates the input file _all_resources_zip_path.
-      deps += _android_manifest_deps + [
-                ":$build_config_target",
-                ":$process_resources_target",
-                ":$final_dex_target_name",
-              ]
+      deps += [
+        ":$android_manifest_target",
+        ":$build_config_target",
+        ":$final_dex_target_name",
+        ":$process_resources_target",
+      ]
 
       if ((_native_libs_deps != [] ||
            _extra_native_libs_even_when_incremental != []) &&
@@ -2311,7 +2349,9 @@ if (enable_java_templates) {
         out_manifest =
             "$gen_dir/split-manifests/${android_app_abi}/AndroidManifest.xml"
         split_name = "abi_${android_app_abi}"
-        deps = _android_manifest_deps
+        deps = [
+          ":$android_manifest_target",
+        ]
       }
 
       _apk_rule = "${_template_name}__split_apk_abi_${android_app_abi}"
@@ -2405,11 +2445,55 @@ if (enable_java_templates) {
       }
     }
 
+    _apk_operations = []
+    _incremental_apk_operations = []
+
+    # Generate apk opeartion related script.
+    if (!defined(invoker.create_apk_script) || invoker.create_apk_script) {
+      _apk_operations_target_name = "${target_name}__apk_operations"
+      action(_apk_operations_target_name) {
+        _generated_script = "$root_build_dir/bin/${invoker.target_name}"
+        script = "//build/android/gyp/create_apk_operations_script.py"
+        outputs = [
+          _generated_script,
+        ]
+        args = [
+          "--script-output-path",
+          rebase_path(_generated_script, root_build_dir),
+        ]
+        if (defined(invoker.command_line_flags_file)) {
+          args += [
+            "--command-line-flags-file",
+            invoker.command_line_flags_file,
+          ]
+        }
+
+        if (_incremental_allowed) {
+          args += [
+            "--incremental-apk-path",
+            rebase_path("${_final_apk_path_no_ext}_incremental.apk",
+                        root_build_dir),
+            "--incremental-install-script",
+            rebase_path(_incremental_install_script_path, root_build_dir),
+          ]
+        }
+        if (!incremental_apk_by_default) {
+          args += [
+            "--apk-path",
+            rebase_path(_final_apk_path, root_build_dir),
+          ]
+        }
+      }
+      _apk_operations += [ ":$_apk_operations_target_name" ]
+      _incremental_apk_operations += [ ":$_apk_operations_target_name" ]
+    }
+
     group(target_name) {
       if (_incremental_allowed && incremental_apk_by_default) {
         deps = [
           ":${target_name}_incremental",
         ]
+        assert(_apk_operations != [] || true)  # Prevent "unused variable".
       } else {
         forward_variables_from(invoker,
                                [
@@ -2417,6 +2501,9 @@ if (enable_java_templates) {
                                  "data_deps",
                                ])
         public_deps = _final_deps
+
+        # Generate apk related operations at runtime.
+        public_deps += _apk_operations
 
         # Make the proguard .mapping file easy to find by putting it beside the .apk.
         if (_proguard_enabled) {
@@ -2450,6 +2537,9 @@ if (enable_java_templates) {
           ":${_template_name}__create_incremental",
           ":${java_target}",
         ]
+
+        # Generate incremental apk related operations at runtime.
+        public_deps += _incremental_apk_operations
       }
     }
   }
@@ -2577,6 +2667,7 @@ if (enable_java_templates) {
         run_findbugs_override =
             invoker.run_findbugs_override && defined(invoker.java_files)
       }
+      create_apk_script = false
     }
 
     group(target_name) {
@@ -2665,6 +2756,7 @@ if (enable_java_templates) {
       deps = []
       forward_variables_from(invoker, "*")
       testonly = true
+      create_apk_script = false
 
       assert(!defined(invoker.proguard_enabled) || !invoker.proguard_enabled ||
              invoker.proguard_configs != [])

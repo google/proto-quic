@@ -457,8 +457,6 @@ SchedulerSingleThreadTaskRunnerManager::CreateTaskRunnerWithTraitsImpl(
 }
 
 void SchedulerSingleThreadTaskRunnerManager::JoinForTesting() {
-  ReleaseSharedSchedulerWorkers();
-
   decltype(workers_) local_workers;
   {
     AutoSchedulerLock auto_lock(lock_);
@@ -474,6 +472,11 @@ void SchedulerSingleThreadTaskRunnerManager::JoinForTesting() {
         << "New worker(s) unexpectedly registered during join.";
     workers_ = std::move(local_workers);
   }
+
+  // Release shared SchedulerWorkers at the end so they get joined above. If
+  // this call happens before the joins, the SchedulerWorkers are effectively
+  // detached and may outlive the SchedulerSingleThreadTaskRunnerManager.
+  ReleaseSharedSchedulerWorkers();
 }
 
 template <>

@@ -10,14 +10,13 @@
 // The integer represents an index into static or dynamic table, which may be
 // zero, or is the new size limit of the dynamic table.
 
-#include <string>
-
 #include "base/logging.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/hpack/decoder/hpack_varint_decoder.h"
 #include "net/http2/hpack/http2_hpack_constants.h"
 #include "net/http2/platform/api/http2_export.h"
+#include "net/http2/platform/api/http2_string.h"
 
 namespace net {
 
@@ -39,7 +38,7 @@ class HTTP2_EXPORT_PRIVATE HpackEntryTypeDecoder {
   // preceding call to Start or Resume returned kDecodeDone.
   uint32_t varint() const { return varint_decoder_.value(); }
 
-  std::string DebugString() const;
+  Http2String DebugString() const;
 
  private:
   HpackVarintDecoder varint_decoder_;

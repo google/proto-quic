@@ -33,7 +33,7 @@ class _CommonSystemHealthBenchmark(perf_benchmark.PerfBenchmark):
   https://goo.gl/Jek2NL.
   """
 
-  def CreateTimelineBasedMeasurementOptions(self):
+  def CreateCoreTimelineBasedMeasurementOptions(self):
     options = timeline_based_measurement.Options(
         chrome_trace_category_filter.ChromeTraceCategoryFilter(
             filter_string='rail,toplevel'))
@@ -97,7 +97,7 @@ class _MemorySystemHealthBenchmark(perf_benchmark.PerfBenchmark):
   """
   options = {'pageset_repeat': 3}
 
-  def CreateTimelineBasedMeasurementOptions(self):
+  def CreateCoreTimelineBasedMeasurementOptions(self):
     options = timeline_based_measurement.Options(
         chrome_trace_category_filter.ChromeTraceCategoryFilter(
             '-*,disabled-by-default-memory-infra'))
@@ -178,7 +178,7 @@ class WebviewStartupSystemHealthBenchmark(perf_benchmark.PerfBenchmark):
   def GetExpectations(self):
     return page_sets.SystemHealthWebviewStartupExpectations()
 
-  def CreateTimelineBasedMeasurementOptions(self):
+  def CreateCoreTimelineBasedMeasurementOptions(self):
     options = timeline_based_measurement.Options()
     options.SetTimelineBasedMetrics(['webviewStartupMetric'])
     options.config.enable_atrace_trace = True

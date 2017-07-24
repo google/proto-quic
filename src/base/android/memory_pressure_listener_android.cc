@@ -21,10 +21,6 @@ static void OnMemoryPressure(JNIEnv* env,
 namespace base {
 namespace android {
 
-bool MemoryPressureListenerAndroid::Register(JNIEnv* env) {
-  return RegisterNativesImpl(env);
-}
-
 void MemoryPressureListenerAndroid::RegisterSystemCallback(JNIEnv* env) {
   Java_MemoryPressureListener_registerSystemCallback(env);
 }

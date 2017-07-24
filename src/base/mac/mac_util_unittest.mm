@@ -150,7 +150,10 @@ TEST_F(MacUtilTest, IsOSEllipsis) {
       EXPECT_FALSE(IsOS10_12());
       EXPECT_FALSE(IsAtLeastOS10_12());
       EXPECT_TRUE(IsAtMostOS10_12());
-      EXPECT_FALSE(IsOSLaterThan10_12_DontCallThis());
+      EXPECT_FALSE(IsOS10_13());
+      EXPECT_FALSE(IsAtLeastOS10_13());
+      EXPECT_TRUE(IsAtMostOS10_13());
+      EXPECT_FALSE(IsOSLaterThan10_13_DontCallThis());
     } else if (minor == 10) {
       EXPECT_FALSE(IsOS10_9());
       EXPECT_FALSE(IsAtMostOS10_9());
@@ -164,7 +167,10 @@ TEST_F(MacUtilTest, IsOSEllipsis) {
       EXPECT_FALSE(IsOS10_12());
       EXPECT_FALSE(IsAtLeastOS10_12());
       EXPECT_TRUE(IsAtMostOS10_12());
-      EXPECT_FALSE(IsOSLaterThan10_12_DontCallThis());
+      EXPECT_FALSE(IsOS10_13());
+      EXPECT_FALSE(IsAtLeastOS10_13());
+      EXPECT_TRUE(IsAtMostOS10_13());
+      EXPECT_FALSE(IsOSLaterThan10_13_DontCallThis());
     } else if (minor == 11) {
       EXPECT_FALSE(IsOS10_9());
       EXPECT_FALSE(IsAtMostOS10_9());
@@ -178,7 +184,10 @@ TEST_F(MacUtilTest, IsOSEllipsis) {
       EXPECT_FALSE(IsOS10_12());
       EXPECT_FALSE(IsAtLeastOS10_12());
       EXPECT_TRUE(IsAtMostOS10_12());
-      EXPECT_FALSE(IsOSLaterThan10_12_DontCallThis());
+      EXPECT_FALSE(IsOS10_13());
+      EXPECT_FALSE(IsAtLeastOS10_13());
+      EXPECT_TRUE(IsAtMostOS10_13());
+      EXPECT_FALSE(IsOSLaterThan10_13_DontCallThis());
     } else if (minor == 12) {
       EXPECT_FALSE(IsOS10_9());
       EXPECT_FALSE(IsAtMostOS10_9());
@@ -192,9 +201,29 @@ TEST_F(MacUtilTest, IsOSEllipsis) {
       EXPECT_TRUE(IsOS10_12());
       EXPECT_TRUE(IsAtMostOS10_12());
       EXPECT_TRUE(IsAtLeastOS10_12());
-      EXPECT_FALSE(IsOSLaterThan10_12_DontCallThis());
+      EXPECT_FALSE(IsOS10_13());
+      EXPECT_FALSE(IsAtLeastOS10_13());
+      EXPECT_TRUE(IsAtMostOS10_13());
+      EXPECT_FALSE(IsOSLaterThan10_13_DontCallThis());
+    } else if (minor == 13) {
+      EXPECT_FALSE(IsOS10_9());
+      EXPECT_FALSE(IsAtMostOS10_9());
+      EXPECT_TRUE(IsAtLeastOS10_9());
+      EXPECT_FALSE(IsOS10_10());
+      EXPECT_FALSE(IsAtMostOS10_10());
+      EXPECT_TRUE(IsAtLeastOS10_10());
+      EXPECT_FALSE(IsOS10_11());
+      EXPECT_FALSE(IsAtMostOS10_11());
+      EXPECT_TRUE(IsAtLeastOS10_11());
+      EXPECT_FALSE(IsOS10_12());
+      EXPECT_FALSE(IsAtMostOS10_12());
+      EXPECT_TRUE(IsAtLeastOS10_12());
+      EXPECT_TRUE(IsOS10_13());
+      EXPECT_TRUE(IsAtLeastOS10_13());
+      EXPECT_TRUE(IsAtMostOS10_13());
+      EXPECT_FALSE(IsOSLaterThan10_13_DontCallThis());
     } else {
-      // Not nine, ten, eleven, or twelve. Ah, ah, ah.
+      // Not nine, ten, eleven, twelve, or thirteen. Ah, ah, ah.
       EXPECT_TRUE(false);
     }
   } else {

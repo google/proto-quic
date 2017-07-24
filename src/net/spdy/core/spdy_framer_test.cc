@@ -97,13 +97,11 @@ class SpdyFramerTestUtil {
       return headers_handler_.get();
     }
 
-    void OnHeaderFrameEnd(SpdyStreamId stream_id, bool end_headers) override {
+    void OnHeaderFrameEnd(SpdyStreamId stream_id) override {
       CHECK(!finished_);
       frame_->set_header_block(headers_handler_->decoded_block().Clone());
       finished_ = true;
-      if (end_headers) {
-        headers_handler_.reset();
-      }
+      headers_handler_.reset();
     }
 
     void OnHeaders(SpdyStreamId stream_id,
@@ -459,13 +457,11 @@ class TestSpdyVisitor : public SpdyFramerVisitorInterface,
     return headers_handler_.get();
   }
 
-  void OnHeaderFrameEnd(SpdyStreamId stream_id, bool end_headers) override {
+  void OnHeaderFrameEnd(SpdyStreamId stream_id) override {
     CHECK(headers_handler_ != nullptr);
     headers_ = headers_handler_->decoded_block().Clone();
     header_bytes_received_ = headers_handler_->header_bytes_parsed();
-    if (end_headers) {
-      headers_handler_.reset();
-    }
+    headers_handler_.reset();
   }
 
   void OnRstStream(SpdyStreamId stream_id, SpdyErrorCode error_code) override {
@@ -744,35 +740,15 @@ SpdyStringPiece GetSerializedHeaders(const SpdySerializedFrame& frame,
                          frame.size() - framer.GetHeadersMinimumSize());
 }
 
-enum DecoderChoice { DECODER_SELF, DECODER_HTTP2 };
-enum HpackChoice { HPACK_DECODER_1, HPACK_DECODER_3 };
 enum Output { USE, NOT_USE };
 
-class SpdyFramerTest : public ::testing::TestWithParam<
-                           std::tuple<DecoderChoice, HpackChoice, Output>> {
+class SpdyFramerTest : public ::testing::TestWithParam<Output> {
  public:
   SpdyFramerTest() : output_(output_buffer, kSize) {}
 
  protected:
   void SetUp() override {
-    auto param = GetParam();
-    switch (std::get<0>(param)) {
-      case DECODER_SELF:
-        FLAGS_chromium_http2_flag_spdy_use_http2_frame_decoder_adapter = false;
-        break;
-      case DECODER_HTTP2:
-        FLAGS_chromium_http2_flag_spdy_use_http2_frame_decoder_adapter = true;
-        break;
-    }
-    switch (std::get<1>(param)) {
-      case HPACK_DECODER_1:
-        FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3 = false;
-        break;
-      case HPACK_DECODER_3:
-        FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3 = true;
-        break;
-    }
-    switch (std::get<2>(param)) {
+    switch (GetParam()) {
       case USE:
         use_output_ = true;
         break;
@@ -811,11 +787,7 @@ class SpdyFramerTest : public ::testing::TestWithParam<
 
 INSTANTIATE_TEST_CASE_P(SpdyFramerTests,
                         SpdyFramerTest,
-                        ::testing::Combine(::testing::Values(DECODER_SELF,
-                                                             DECODER_HTTP2),
-                                           ::testing::Values(HPACK_DECODER_1,
-                                                             HPACK_DECODER_3),
-                                           ::testing::Values(USE, NOT_USE)));
+                        ::testing::Values(USE, NOT_USE));
 
 // Test that we can encode and decode a SpdyHeaderBlock in serialized form.
 TEST_P(SpdyFramerTest, HeaderBlockInBuffer) {
@@ -4075,7 +4047,7 @@ TEST_P(SpdyFramerTest, SettingsFrameFlags) {
     if (flags & SETTINGS_FLAG_ACK) {
       EXPECT_CALL(visitor, OnError(_));
     } else {
-      EXPECT_CALL(visitor, OnSettings(flags & SETTINGS_FLAG_ACK));
+      EXPECT_CALL(visitor, OnSettings());
       EXPECT_CALL(visitor, OnSetting(SETTINGS_INITIAL_WINDOW_SIZE, 16));
       EXPECT_CALL(visitor, OnSettingsEnd());
     }
@@ -4165,7 +4137,7 @@ TEST_P(SpdyFramerTest, HeadersFrameFlags) {
                                    parent_stream_id, exclusive, fin, end));
     EXPECT_CALL(visitor, OnHeaderFrameStart(57)).Times(1);
     if (end) {
-      EXPECT_CALL(visitor, OnHeaderFrameEnd(57, _)).Times(1);
+      EXPECT_CALL(visitor, OnHeaderFrameEnd(57)).Times(1);
     }
     if (flags & DATA_FLAG_FIN && end) {
       EXPECT_CALL(visitor, OnStreamEnd(_));
@@ -4258,7 +4230,7 @@ TEST_P(SpdyFramerTest, PushPromiseFrameFlags) {
     EXPECT_CALL(visitor, OnPushPromise(client_id, promised_id, end));
     EXPECT_CALL(visitor, OnHeaderFrameStart(client_id)).Times(1);
     if (end) {
-      EXPECT_CALL(visitor, OnHeaderFrameEnd(client_id, _)).Times(1);
+      EXPECT_CALL(visitor, OnHeaderFrameEnd(client_id)).Times(1);
     }
 
     framer.ProcessInput(frame.data(), frame.size());
@@ -4318,7 +4290,7 @@ TEST_P(SpdyFramerTest, ContinuationFrameFlags) {
     EXPECT_CALL(visitor, OnContinuation(42, flags & HEADERS_FLAG_END_HEADERS));
     bool end = flags & HEADERS_FLAG_END_HEADERS;
     if (end) {
-      EXPECT_CALL(visitor, OnHeaderFrameEnd(42, _)).Times(1);
+      EXPECT_CALL(visitor, OnHeaderFrameEnd(42)).Times(1);
     }
 
     framer.ProcessInput(frame0.data(), frame0.size());

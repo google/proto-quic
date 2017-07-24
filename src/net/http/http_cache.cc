@@ -612,8 +612,7 @@ int HttpCache::DoomEntry(const std::string& key, Transaction* trans) {
   entry_ptr->disk_entry->Doom();
   entry_ptr->doomed = true;
 
-  DCHECK(entry_ptr->writer || !entry_ptr->readers.empty() ||
-         entry_ptr->headers_transaction ||
+  DCHECK(!entry_ptr->HasNoTransactions() ||
          entry_ptr->will_process_queued_transactions);
   return OK;
 }
@@ -915,6 +914,10 @@ void HttpCache::DoneWithEntry(ActiveEntry* entry,
       // Restart already validated transactions so that they are able to read
       // the truncated status of the entry.
       RestartHeadersPhaseTransactions(entry, transaction);
+      if (entry->HasNoTransactions() &&
+          !entry->will_process_queued_transactions) {
+        DestroyEntry(entry);
+      }
       return;
     }
     DoneWritingToEntry(entry, success && !did_truncate, transaction);

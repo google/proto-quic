@@ -672,6 +672,17 @@ public class ApiCompatibilityUtils {
     }
 
     /**
+     * @param activity The {@link Activity} to check.
+     * @return Whether or not {@code activity} is currently in Android N+ multi-window mode.
+     */
+    public static boolean isInMultiWindowMode(Activity activity) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            return false;
+        }
+        return activity.isInMultiWindowMode();
+    }
+
+    /**
      *  Null-safe equivalent of {@code a.equals(b)}.
      *
      *  @see Objects#equals(Object, Object)

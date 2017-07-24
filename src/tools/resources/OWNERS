@@ -1,2 +1,4 @@
 per-file generate_resource_whitelist.*=agrieve@chromium.org
 per-file generate_resource_whitelist.*=estevenson@chromium.org
+per-file filter_resource_whitelist.*=agrieve@chromium.org
+per-file filter_resource_whitelist.*=zpeng@chromium.org

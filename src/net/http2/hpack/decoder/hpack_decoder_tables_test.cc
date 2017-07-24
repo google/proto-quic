@@ -5,11 +5,11 @@
 #include "net/http2/hpack/decoder/hpack_decoder_tables.h"
 
 #include <algorithm>
-#include <string>
 #include <tuple>
 #include <vector>
 
 #include "base/logging.h"
+#include "net/http2/platform/api/http2_string.h"
 #include "net/http2/tools/failure.h"
 #include "net/http2/tools/http2_random.h"
 #include "net/http2/tools/random_util.h"
@@ -18,7 +18,6 @@
 
 using ::testing::AssertionResult;
 using ::testing::AssertionSuccess;
-using std::string;
 
 namespace net {
 namespace test {
@@ -95,7 +94,7 @@ TEST_F(HpackDecoderStaticTableTest, StaticTableContents) {
   EXPECT_TRUE(VerifyStaticTableContents());
 }
 
-size_t Size(const string& name, const string& value) {
+size_t Size(const Http2String& name, const Http2String& value) {
   return name.size() + value.size() + 32;
 }
 
@@ -104,11 +103,11 @@ size_t Size(const string& name, const string& value) {
 // dynamic table containing FakeHpackEntry instances. We can thus compare the
 // contents of the actual table with those in fake_dynamic_table_.
 
-typedef std::tuple<string, string, size_t> FakeHpackEntry;
-const string& Name(const FakeHpackEntry& entry) {
+typedef std::tuple<Http2String, Http2String, size_t> FakeHpackEntry;
+const Http2String& Name(const FakeHpackEntry& entry) {
   return std::get<0>(entry);
 }
-const string& Value(const FakeHpackEntry& entry) {
+const Http2String& Value(const FakeHpackEntry& entry) {
   return std::get<1>(entry);
 }
 size_t Size(const FakeHpackEntry& entry) {
@@ -132,7 +131,7 @@ class HpackDecoderTablesTest : public HpackDecoderStaticTableTest {
   }
 
   // Insert the name and value into fake_dynamic_table_.
-  void FakeInsert(const string& name, const string& value) {
+  void FakeInsert(const Http2String& name, const Http2String& value) {
     FakeHpackEntry entry(name, value, Size(name, value));
     fake_dynamic_table_.insert(fake_dynamic_table_.begin(), entry);
   }
@@ -203,7 +202,7 @@ class HpackDecoderTablesTest : public HpackDecoderStaticTableTest {
   // Insert an entry into the dynamic table, confirming that trimming of entries
   // occurs if the total size is greater than the limit, and that older entries
   // move up by 1 index.
-  AssertionResult Insert(const string& name, const string& value) {
+  AssertionResult Insert(const Http2String& name, const Http2String& value) {
     size_t old_count = num_dynamic_entries();
     if (tables_.Insert(HpackString(name), HpackString(value))) {
       VERIFY_GT(current_dynamic_size(), 0u);
@@ -250,9 +249,9 @@ TEST_F(HpackDecoderTablesTest, RandomDynamicTable) {
   for (size_t limit : table_sizes) {
     ASSERT_TRUE(DynamicTableSizeUpdate(limit));
     for (int insert_count = 0; insert_count < 100; ++insert_count) {
-      string name = GenerateHttp2HeaderName(
+      Http2String name = GenerateHttp2HeaderName(
           GenerateUniformInRange(2, 40, RandomPtr()), RandomPtr());
-      string value = GenerateWebSafeString(
+      Http2String value = GenerateWebSafeString(
           GenerateUniformInRange(2, 600, RandomPtr()), RandomPtr());
       ASSERT_TRUE(Insert(name, value));
     }

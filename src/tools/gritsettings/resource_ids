@@ -81,7 +81,7 @@
   # START chrome/browser section.
   "chrome/browser/browser_resources.grd": {
     "includes": [11000],
-    "structures": [11510],
+    "structures": [11520],
   },
   "chrome/browser/resources/component_extension_resources.grd": {
     "includes": [11610],
@@ -121,8 +121,11 @@
   "chrome/browser/resources/translate_internals_resources.grd": {
     "includes": [12620],
   },
-  "chrome/browser/resources/webapks_ui_resources.grd": {
+  "chrome/browser/resources/vr_shell_resources.grd": {
     "includes": [12630],
+  },
+  "chrome/browser/resources/webapks_ui_resources.grd": {
+    "includes": [12640],
   },
   # END chrome/browser section.
 

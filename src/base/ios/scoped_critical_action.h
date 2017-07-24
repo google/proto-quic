@@ -39,8 +39,12 @@ class ScopedCriticalAction {
    public:
     Core();
 
-    // Informs the OS that the background task has completed.
-    void EndBackgroundTask();
+    // Informs the OS that the background task has started. This is a
+    // static method to ensure that the instance has a non-zero refcount.
+    static void StartBackgroundTask(scoped_refptr<Core> core);
+    // Informs the OS that the background task has completed. This is a
+    // static method to ensure that the instance has a non-zero refcount.
+    static void EndBackgroundTask(scoped_refptr<Core> core);
 
    private:
     friend base::RefCountedThreadSafe<Core>;

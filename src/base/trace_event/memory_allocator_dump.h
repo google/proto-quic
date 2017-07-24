@@ -73,6 +73,11 @@ class BASE_EXPORT MemoryAllocatorDump {
   // Called at trace generation time to populate the TracedValue.
   void AsValueInto(TracedValue* value) const;
 
+  // Get the size for this dump.
+  // The size is the value set with AddScalar(kNameSize, kUnitsBytes, size);
+  // TODO(hjd): Transitional until we send the full PMD. See crbug.com/704203
+  uint64_t GetSizeInternal() const { return size_; };
+
   // Use enum Flags to set values.
   void set_flags(int flags) { flags_ |= flags; }
   void clear_flags(int flags) { flags_ &= ~flags; }
@@ -89,15 +94,6 @@ class BASE_EXPORT MemoryAllocatorDump {
   TracedValue* attributes_for_testing() const { return attributes_.get(); }
 
  private:
-  // TODO(hjd): Transitional until we send the full PMD. See crbug.com/704203
-  friend class MemoryDumpManager;
-  FRIEND_TEST_ALL_PREFIXES(MemoryAllocatorDumpTest, GetSize);
-
-  // Get the size for this dump.
-  // The size is the value set with AddScalar(kNameSize, kUnitsBytes, size);
-  // TODO(hjd): Transitional until we send the full PMD. See crbug.com/704203
-  uint64_t GetSize() const { return size_; };
-
   const std::string absolute_name_;
   ProcessMemoryDump* const process_memory_dump_;  // Not owned (PMD owns this).
   std::unique_ptr<TracedValue> attributes_;

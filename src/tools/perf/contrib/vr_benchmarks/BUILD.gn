@@ -1,0 +1,23 @@
+# Copyright 2017 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(is_android)
+
+group("vr_perf_tests") {
+  testonly = true
+  data = [
+    "./__init__.py",
+    "./run_benchmark",
+    "./vr_config.py",
+    "benchmarks/",
+    "//chrome/android/shared_preference_files/test/",
+    "//third_party/gvr-android-sdk/test-apks/vr_services/vr_services_current.apk",
+  ]
+  data_deps = [
+    "//chrome/android:vr_nfc_simulator_apk",
+  ]
+  deps = [
+    "//tools/perf:perf",
+  ]
+}

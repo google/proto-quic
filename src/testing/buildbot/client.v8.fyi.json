@@ -22,6 +22,7 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
+              "android_devices": "1",
               "device_os": "M",
               "device_type": "bullhead",
               "os": "Android"
@@ -47,6 +48,7 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
+              "android_devices": "1",
               "device_os": "M",
               "device_type": "bullhead",
               "os": "Android"
@@ -72,6 +74,7 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
+              "android_devices": "1",
               "device_os": "M",
               "device_type": "bullhead",
               "os": "Android"
@@ -97,6 +100,7 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
+              "android_devices": "1",
               "device_os": "M",
               "device_type": "bullhead",
               "os": "Android"
@@ -128,6 +132,7 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
+              "android_devices": "1",
               "device_os": "M",
               "device_type": "bullhead",
               "os": "Android"
@@ -167,6 +172,7 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
+              "android_devices": "1",
               "device_os": "M",
               "device_type": "bullhead",
               "os": "Android"
@@ -192,6 +198,7 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
+              "android_devices": "1",
               "device_os": "M",
               "device_type": "bullhead",
               "os": "Android"
@@ -217,6 +224,7 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
+              "android_devices": "1",
               "device_os": "M",
               "device_type": "bullhead",
               "os": "Android"
@@ -242,6 +250,7 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
+              "android_devices": "1",
               "device_os": "M",
               "device_type": "bullhead",
               "os": "Android"

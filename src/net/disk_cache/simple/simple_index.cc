@@ -25,6 +25,7 @@
 #include "base/trace_event/memory_usage_estimator.h"
 #include "net/base/net_errors.h"
 #include "net/disk_cache/simple/simple_entry_format.h"
+#include "net/disk_cache/simple/simple_experiment.h"
 #include "net/disk_cache/simple/simple_histogram_macros.h"
 #include "net/disk_cache/simple/simple_index_delegate.h"
 #include "net/disk_cache/simple/simple_index_file.h"
@@ -48,6 +49,13 @@ const int kWriteToDiskOnBackgroundDelayMSecs = 100;
 const uint32_t kEvictionMarginDivisor = 20;
 
 const uint32_t kBytesInKb = 1024;
+
+// This is added to the size of each entry before using the size
+// to determine which entries to evict first. It's basically an
+// estimate of the filesystem overhead, but it also serves to flatten
+// the curve so that 1-byte entries and 2-byte entries are basically
+// treated the same.
+static const int kEstimatedEntryOverhead = 512;
 
 }  // namespace
 
@@ -309,31 +317,37 @@ void SimpleIndex::StartEvictionIfNeeded() {
       static_cast<base::HistogramBase::Sample>(max_size_ / kBytesInKb));
 
   // Flatten for sorting.
-  std::vector<const std::pair<const uint64_t, EntryMetadata>*> entries;
+  std::vector<std::pair<uint64_t, const EntrySet::value_type*>> entries;
   entries.reserve(entries_set_.size());
+  uint32_t now = (base::Time::Now() - base::Time::UnixEpoch()).InSeconds();
+  bool use_size = false;
+  SimpleExperiment experiment = GetSimpleExperiment(cache_type_);
+  if (experiment.type == SimpleExperimentType::EVICT_WITH_SIZE &&
+      experiment.param) {
+    use_size = true;
+  }
   for (EntrySet::const_iterator i = entries_set_.begin();
        i != entries_set_.end(); ++i) {
-    entries.push_back(&*i);
+    uint64_t sort_value = now - i->second.RawTimeForSorting();
+    if (use_size) {
+      // Will not overflow since we're multiplying two 32-bit values and storing
+      // them in a 64-bit variable.
+      sort_value *= i->second.GetEntrySize() + kEstimatedEntryOverhead;
+    }
+    // Subtract so we don't need a custom comparator.
+    entries.emplace_back(std::numeric_limits<uint64_t>::max() - sort_value,
+                         &*i);
   }
 
-  std::sort(entries.begin(), entries.end(),
-            [](const std::pair<const uint64_t, EntryMetadata>* a,
-               const std::pair<const uint64_t, EntryMetadata>* b) -> bool {
-              return a->second.RawTimeForSorting() <
-                     b->second.RawTimeForSorting();
-            });
-
-  // Remove as many entries from the index to get below |low_watermark_|,
-  // collecting least recently used hashes into |entry_hashes|.
-  std::vector<uint64_t> entry_hashes;
-  std::vector<const std::pair<const uint64_t, EntryMetadata>*>::iterator it =
-      entries.begin();
   uint64_t evicted_so_far_size = 0;
-  while (evicted_so_far_size < cache_size_ - low_watermark_) {
-    DCHECK(it != entries.end());
-    entry_hashes.push_back((*it)->first);
-    evicted_so_far_size += (*it)->second.GetEntrySize();
-    ++it;
+  const uint64_t amount_to_evict = cache_size_ - low_watermark_;
+  std::vector<uint64_t> entry_hashes;
+  std::sort(entries.begin(), entries.end());
+  for (const auto& score_metadata_pair : entries) {
+    if (evicted_so_far_size >= amount_to_evict)
+      break;
+    evicted_so_far_size += score_metadata_pair.second->second.GetEntrySize();
+    entry_hashes.push_back(score_metadata_pair.second->first);
   }
 
   SIMPLE_CACHE_UMA(COUNTS_1M,

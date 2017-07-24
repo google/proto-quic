@@ -268,6 +268,13 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
                                 const char* name,
                                 TraceEventHandle handle);
 
+  void UpdateTraceEventDurationExplicit(
+      const unsigned char* category_group_enabled,
+      const char* name,
+      TraceEventHandle handle,
+      const TimeTicks& now,
+      const ThreadTicks& thread_now);
+
   void EndFilteredEvent(const unsigned char* category_group_enabled,
                         const char* name,
                         TraceEventHandle handle);

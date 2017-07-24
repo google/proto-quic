@@ -1,0 +1,6 @@
+# These tests write a temp pak file in /tmp and then open it. They fail
+# because Fuchsia doesn't support mmap on tmpfs yet.
+# TODO(fuchsia): Remove the filter once mmap() is implemented.
+# crbug.com/740608 .
+-*DataPackTest.*
+-ResourceBundleImageTest.*

@@ -48,8 +48,6 @@ class BASE_EXPORT JavaHandlerThread {
   virtual void StartMessageLoop();
   virtual void StopMessageLoop();
 
-  static bool RegisterBindings(JNIEnv* env);
-
  protected:
   std::unique_ptr<base::MessageLoop> message_loop_;
 

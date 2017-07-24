@@ -13,11 +13,12 @@
 
 #if defined(OS_WIN)
 #include "base/win/scoped_handle.h"
-#endif
-
-#if defined(OS_POSIX)
+#elif defined(OS_MACOSX)
+#include "base/files/scoped_file.h"
+#elif defined(OS_POSIX)
 #include <list>
 #include <utility>
+
 #include "base/memory/ref_counted.h"
 #include "base/synchronization/lock.h"
 #endif
@@ -154,6 +155,14 @@ class BASE_EXPORT WaitableEvent {
 
 #if defined(OS_WIN)
   win::ScopedHandle handle_;
+#elif defined(OS_MACOSX)
+  // The kqueue used to signal and wait on a custom user event.
+  ScopedFD kqueue_;
+
+  // Creates a kevent64_s, filling in the values using EV_SET64() with the
+  // specified flags and filter flags, and then submits it as a change to the
+  // |kqueue_|.
+  void PostEvent(uint16_t flags, uint32_t fflags);
 #else
   // On Windows, you must not close a HANDLE which is currently being waited on.
   // The MSDN documentation says that the resulting behaviour is 'undefined'.

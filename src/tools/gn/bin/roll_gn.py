@@ -155,7 +155,7 @@ class GNRoller(object):
 
     print('Uploading CL to build GN at {#%s} - %s' %
           (self.new_gn_version, self.new_gn_commitish))
-    ret, out, err = self.Call('git cl upload -f')
+    ret, out, err = self.Call('git cl upload --rietveld -f')
     if ret:
       print('git-cl upload failed: %s' % out + err)
       return 1
@@ -314,7 +314,8 @@ class GNRoller(object):
 
     results = self.CheckBuild()
     if (len(results) < 3 or
-        not all(r['state'] == 'success' for r in results.values())):
+        not all(r['state'] == 'success' for r in results.values()) or
+        not all(r['sha1'] != '-' for r in results.values())):
       print("Roll isn't done or didn't succeed, exiting:")
       return 1
 
@@ -335,7 +336,7 @@ class GNRoller(object):
       desc_file.close()
       self.Call('git commit -a -F %s' % desc_file.name,
                 cwd=self.buildtools_dir)
-      self.Call('git-cl upload -f --send-mail',
+      self.Call('git-cl upload --rietveld -f --send-mail',
                 cwd=self.buildtools_dir)
     finally:
       os.remove(desc_file.name)
@@ -400,7 +401,7 @@ class GNRoller(object):
       desc_file.write(desc)
       desc_file.close()
       self.Call('git commit -a -F %s' % desc_file.name)
-      self.Call('git-cl upload -f --send-mail --use-commit-queue')
+      self.Call('git-cl upload --rietveld -f --send-mail --use-commit-queue')
     finally:
       os.remove(desc_file.name)
 

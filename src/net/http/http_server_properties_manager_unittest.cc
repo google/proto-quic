@@ -84,11 +84,13 @@ class TestingHttpServerPropertiesManager : public HttpServerPropertiesManager {
   TestingHttpServerPropertiesManager(
       HttpServerPropertiesManager::PrefDelegate* pref_delegate,
       scoped_refptr<TestMockTimeTaskRunner> pref_task_runner,
-      scoped_refptr<TestMockTimeTaskRunner> net_task_runner)
+      scoped_refptr<TestMockTimeTaskRunner> net_task_runner,
+      base::TickClock* clock)
       : HttpServerPropertiesManager(pref_delegate,
                                     pref_task_runner,
                                     net_task_runner,
-                                    nullptr),
+                                    nullptr,
+                                    clock),
         pref_task_runner_(std::move(pref_task_runner)),
         net_task_runner_(std::move(net_task_runner)) {
     // This call must run in the context of |net_task_runner_|.
@@ -167,10 +169,11 @@ class HttpServerPropertiesManagerTest : public testing::TestWithParam<int> {
     one_day_from_now_ = base::Time::Now() + base::TimeDelta::FromDays(1);
     advertised_versions_ = HttpNetworkSession::Params().quic_supported_versions;
     pref_delegate_ = new MockPrefDelegate;
+    net_test_task_runner_clock_ = net_test_task_runner_->GetMockTickClock();
     http_server_props_manager_.reset(
         new StrictMock<TestingHttpServerPropertiesManager>(
             pref_delegate_, pref_test_task_runner_.task_runner(),
-            net_test_task_runner_));
+            net_test_task_runner_, net_test_task_runner_clock_.get()));
 
     EXPECT_FALSE(http_server_props_manager_->IsInitialized());
     ExpectCacheUpdate();
@@ -252,6 +255,8 @@ class HttpServerPropertiesManagerTest : public testing::TestWithParam<int> {
   // Mock the net task runner as well.
   scoped_refptr<TestMockTimeTaskRunner> net_test_task_runner_ =
       new TestMockTimeTaskRunner;
+
+  std::unique_ptr<base::TickClock> net_test_task_runner_clock_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(HttpServerPropertiesManagerTest);
@@ -1143,7 +1148,7 @@ TEST_P(HttpServerPropertiesManagerTest, BadSupportsQuic) {
 }
 
 TEST_P(HttpServerPropertiesManagerTest, UpdatePrefsWithCache) {
-  ExpectScheduleUpdatePrefsOnNetworkSequenceRepeatedly(5);
+  ExpectScheduleUpdatePrefsOnNetworkSequenceRepeatedly(7);
 
   const url::SchemeHostPort server_www("https", "www.google.com", 80);
   const url::SchemeHostPort server_mail("https", "mail.google.com", 80);
@@ -1173,52 +1178,123 @@ TEST_P(HttpServerPropertiesManagerTest, UpdatePrefsWithCache) {
   ASSERT_TRUE(http_server_props_manager_->SetHttp2AlternativeService(
       server_mail, mail_alternative_service, expiration3));
 
-  // #3: Set ServerNetworkStats.
+  // #3 & #4: Mark alternate protocol broken/recently broken.
+  {
+    base::TestMockTimeTaskRunner::ScopedContext net_test_task_runner_context(
+        net_test_task_runner_);
+
+    http_server_props_manager_->MarkAlternativeServiceBroken(
+        www_alternative_service2);
+    http_server_props_manager_->MarkAlternativeServiceRecentlyBroken(
+        mail_alternative_service);
+  }
+
+  // #5: Set ServerNetworkStats.
   ServerNetworkStats stats;
   stats.srtt = base::TimeDelta::FromInternalValue(42);
   http_server_props_manager_->SetServerNetworkStats(server_mail, stats);
 
-  // #4: Set quic_server_info string.
+  // #6: Set quic_server_info string.
   QuicServerId mail_quic_server_id("mail.google.com", 80);
   std::string quic_server_info1("quic_server_info1");
   http_server_props_manager_->SetQuicServerInfo(mail_quic_server_id,
                                                 quic_server_info1);
 
-  // #5: Set SupportsQuic.
+  // #7: Set SupportsQuic.
   IPAddress actual_address(127, 0, 0, 1);
   http_server_props_manager_->SetSupportsQuic(true, actual_address);
 
+  base::Time time_before_prefs_update = base::Time::Now();
+
   // Update Prefs.
+  // |net_test_task_runner_| has a remaining pending task to expire
+  // |www_alternative_service2| in 5 minutes. Fast forward enough such
+  // that the prefs update task is executed but not the task to expire
+  // |broken_alternative_service|.
   ExpectPrefsUpdate(1);
-  EXPECT_TRUE(net_test_task_runner_->HasPendingTask());
+  EXPECT_EQ(2u, net_test_task_runner_->GetPendingTaskCount());
   EXPECT_FALSE(pref_test_task_runner_->HasPendingTask());
-  net_test_task_runner_->FastForwardUntilNoTasksRemain();
+  net_test_task_runner_->FastForwardBy(
+      HttpServerPropertiesManager::GetUpdatePrefsDelayForTesting());
+  EXPECT_EQ(1u, net_test_task_runner_->GetPendingTaskCount());
   EXPECT_TRUE(pref_test_task_runner_->HasPendingTask());
   pref_test_task_runner_->FastForwardUntilNoTasksRemain();
-  EXPECT_FALSE(net_test_task_runner_->HasPendingTask());
+  EXPECT_EQ(1u, net_test_task_runner_->GetPendingTaskCount());
   EXPECT_FALSE(pref_test_task_runner_->HasPendingTask());
 
-  // Verify preferences.
+  base::Time time_after_prefs_update = base::Time::Now();
+
+  // Verify |pref_delegate_|'s server dict.
+  // In HttpServerPropertiesManager, broken alternative services' expiration
+  // times are converted from TimeTicks to Time before being written to JSON by
+  // using the difference between Time::Now() and TimeTicks::Now().
+  // To verify these expiration times, |time_before_prefs_update| and
+  // |time_after_prefs_update| provide lower and upper bounds for the
+  // Time::Now() value used by the manager for this conversion.
+  //
+  // A copy of |pref_delegate_|'s server dict will be created, and the broken
+  // alternative service's "broken_until" field is removed and verified
+  // separately. The rest of the server dict copy is verified afterwards.
+  base::Value server_value_copy(pref_delegate_->GetServerProperties());
+
+  // Extract and remove the "broken_until" string for "www.google.com:1234".
+  base::DictionaryValue* server_dict;
+  ASSERT_TRUE(server_value_copy.GetAsDictionary(&server_dict));
+  base::ListValue* broken_alt_svc_list;
+  ASSERT_TRUE(server_dict->GetList("broken_alternative_services",
+                                   &broken_alt_svc_list));
+  ASSERT_EQ(2u, broken_alt_svc_list->GetSize());
+  base::DictionaryValue* broken_alt_svcs_list_entry;
+  ASSERT_TRUE(
+      broken_alt_svc_list->GetDictionary(0, &broken_alt_svcs_list_entry));
+  ASSERT_TRUE(broken_alt_svcs_list_entry->HasKey("broken_until"));
+  std::string expiration_string;
+  ASSERT_TRUE(broken_alt_svcs_list_entry->GetStringWithoutPathExpansion(
+      "broken_until", &expiration_string));
+  broken_alt_svcs_list_entry->RemoveWithoutPathExpansion("broken_until",
+                                                         nullptr);
+
+  // Expiration time of "www.google.com:1234" should be 5 minutes minus the
+  // update-prefs-delay from when the prefs were written.
+  int64_t expiration_int64;
+  ASSERT_TRUE(base::StringToInt64(expiration_string, &expiration_int64));
+  base::TimeDelta expiration_delta =
+      base::TimeDelta::FromMinutes(5) -
+      HttpServerPropertiesManager::GetUpdatePrefsDelayForTesting();
+  time_t time_t_of_prefs_update = static_cast<time_t>(expiration_int64);
+  EXPECT_LE((time_before_prefs_update + expiration_delta).ToTimeT(),
+            time_t_of_prefs_update);
+  EXPECT_GE((time_after_prefs_update + expiration_delta).ToTimeT(),
+            time_t_of_prefs_update);
+
+  // Verify all other preferences.
   const char expected_json[] =
-      "{\"quic_servers\":{\"https://"
-      "mail.google.com:80\":{\"server_info\":\"quic_server_info1\"}},"
-      "\"servers\":[{\"https://www.google.com:80\":{"
-      "\"alternative_service\":[{\"advertised_versions\":[],\"expiration\":"
-      "\"13756212000000000\",\"port\":443,\"protocol_str\":\"h2\"},"
+      "{"
+      "\"broken_alternative_services\":"
+      "[{\"broken_count\":1,\"host\":\"www.google.com\",\"port\":1234,"
+      "\"protocol_str\":\"h2\"},"
+      "{\"broken_count\":1,\"host\":\"foo.google.com\",\"port\":444,"
+      "\"protocol_str\":\"h2\"}],"
+      "\"quic_servers\":"
+      "{\"https://mail.google.com:80\":"
+      "{\"server_info\":\"quic_server_info1\"}},"
+      "\"servers\":["
+      "{\"https://www.google.com:80\":{"
+      "\"alternative_service\":[{\"advertised_versions\":[],"
+      "\"expiration\":\"13756212000000000\",\"port\":443,"
+      "\"protocol_str\":\"h2\"},"
       "{\"advertised_versions\":[],\"expiration\":\"13758804000000000\","
       "\"host\":\"www.google.com\",\"port\":1234,\"protocol_str\":\"h2\"}]}},"
-      "{\"https://mail.google.com:80\":{\"alternative_service\":[{"
-      "\"advertised_versions\":[],\"expiration\":\"9223372036854775807\","
-      "\"host\":\"foo.google.com\",\"port\":444,\"protocol_str\":\"h2\"}],"
+      "{\"https://mail.google.com:80\":{"
+      "\"alternative_service\":[{\"advertised_versions\":[],"
+      "\"expiration\":\"9223372036854775807\",\"host\":\"foo.google.com\","
+      "\"port\":444,\"protocol_str\":\"h2\"}],"
       "\"network_stats\":{\"srtt\":42}}}],"
       "\"supports_quic\":{\"address\":\"127.0.0.1\",\"used_quic\":true},"
       "\"version\":5}";
 
-  const base::Value* http_server_properties =
-      &pref_delegate_->GetServerProperties();
   std::string preferences_json;
-  EXPECT_TRUE(
-      base::JSONWriter::Write(*http_server_properties, &preferences_json));
+  EXPECT_TRUE(base::JSONWriter::Write(server_value_copy, &preferences_json));
   EXPECT_EQ(expected_json, preferences_json);
 }
 
@@ -1328,9 +1404,8 @@ TEST_P(HttpServerPropertiesManagerTest, DoNotLoadAltSvcForInsecureOrigins) {
   EXPECT_EQ(alternative_service_map.end(), it);
 }
 
-// Do not persist expired or broken alternative service entries to disk.
-TEST_P(HttpServerPropertiesManagerTest,
-       DoNotPersistExpiredOrBrokenAlternativeService) {
+// Do not persist expired alternative service entries to disk.
+TEST_P(HttpServerPropertiesManagerTest, DoNotPersistExpiredAlternativeService) {
   ExpectScheduleUpdatePrefsOnNetworkSequenceRepeatedly(2);
 
   {
@@ -1376,9 +1451,10 @@ TEST_P(HttpServerPropertiesManagerTest,
   EXPECT_FALSE(pref_test_task_runner_->HasPendingTask());
 
   // |net_test_task_runner_| has a remaining pending task to expire
-  // |broken_alternative_service| |time_one_day_later| (and the impl uses
-  // TimeTicks::Now() without a mock clock so FastForwardUntilNoTasksRemain()
-  // would result in an infinite loop).
+  // |broken_alternative_service| at |time_one_day_later|. Fast forward enough
+  // such that the prefs update task is executed but not the task to expire
+  // |broken_alternative_service|.
+  EXPECT_EQ(2U, net_test_task_runner_->GetPendingTaskCount());
   net_test_task_runner_->FastForwardBy(
       HttpServerPropertiesManager::GetUpdatePrefsDelayForTesting());
   EXPECT_EQ(1U, net_test_task_runner_->GetPendingTaskCount());
@@ -1405,12 +1481,16 @@ TEST_P(HttpServerPropertiesManagerTest,
   const base::ListValue* altsvc_list;
   ASSERT_TRUE(example_pref_dict->GetList("alternative_service", &altsvc_list));
 
-  ASSERT_EQ(1u, altsvc_list->GetSize());
+  ASSERT_EQ(2u, altsvc_list->GetSize());
 
   const base::DictionaryValue* altsvc_entry;
-  ASSERT_TRUE(altsvc_list->GetDictionary(0, &altsvc_entry));
-
   std::string hostname;
+
+  ASSERT_TRUE(altsvc_list->GetDictionary(0, &altsvc_entry));
+  ASSERT_TRUE(altsvc_entry->GetString("host", &hostname));
+  EXPECT_EQ("broken.example.com", hostname);
+
+  ASSERT_TRUE(altsvc_list->GetDictionary(1, &altsvc_entry));
   ASSERT_TRUE(altsvc_entry->GetString("host", &hostname));
   EXPECT_EQ("valid.example.com", hostname);
 }
@@ -1790,6 +1870,289 @@ TEST_P(HttpServerPropertiesManagerTest,
   // No Prefs update.
   EXPECT_FALSE(net_test_task_runner_->HasPendingTask());
   EXPECT_FALSE(pref_test_task_runner_->HasPendingTask());
+}
+
+TEST_P(HttpServerPropertiesManagerTest, UpdateCacheWithPrefs) {
+  ExpectScheduleUpdatePrefsOnNetworkSequenceRepeatedly(3);
+
+  AlternativeService cached_broken_service(kProtoQUIC, "cached_broken", 443);
+  AlternativeService cached_broken_service2(kProtoQUIC, "cached_broken2", 443);
+  AlternativeService cached_recently_broken_service(kProtoQUIC,
+                                                    "cached_rbroken", 443);
+
+  {
+    TestMockTimeTaskRunner::ScopedContext scoped_context(net_test_task_runner_);
+
+    http_server_props_manager_->MarkAlternativeServiceBroken(
+        cached_broken_service);
+    http_server_props_manager_->MarkAlternativeServiceBroken(
+        cached_broken_service2);
+    http_server_props_manager_->MarkAlternativeServiceRecentlyBroken(
+        cached_recently_broken_service);
+  }
+  ExpectPrefsUpdate(1);
+  EXPECT_TRUE(net_test_task_runner_->HasPendingTask());
+  // Run the prefs update task but not the expiration task for
+  // |cached_broken_service|.
+  net_test_task_runner_->FastForwardBy(
+      HttpServerPropertiesManager::GetUpdatePrefsDelayForTesting());
+  EXPECT_TRUE(pref_test_task_runner_->HasPendingTask());
+  pref_test_task_runner_->FastForwardUntilNoTasksRemain();
+  EXPECT_FALSE(pref_test_task_runner_->HasPendingTask());
+
+  // Load the |pref_delegate_| with some JSON to verify updating the cache from
+  // prefs. For the broken alternative services "www.google.com:1234" and
+  // "cached_broken", the expiration time will be one day from now.
+
+  std::string expiration_str =
+      base::Int64ToString(static_cast<int64_t>(one_day_from_now_.ToTimeT()));
+
+  std::unique_ptr<base::Value> server_value = base::JSONReader::Read(
+      "{"
+      "\"broken_alternative_services\":["
+      "{\"broken_count\":1,\"broken_until\":\"" +
+      expiration_str +
+      "\","
+      "\"host\":\"www.google.com\",\"port\":1234,\"protocol_str\":\"h2\"},"
+      "{\"broken_count\":2,\"broken_until\":\"" +
+      expiration_str +
+      "\","
+      "\"host\":\"cached_broken\",\"port\":443,\"protocol_str\":\"quic\"},"
+      "{\"broken_count\":3,"
+      "\"host\":\"cached_rbroken\",\"port\":443,\"protocol_str\":\"quic\"}],"
+      "\"quic_servers\":{"
+      "\"https://mail.google.com:80\":{"
+      "\"server_info\":\"quic_server_info1\"}"
+      "},"
+      "\"servers\":["
+      "{\"https://www.google.com:80\":{"
+      "\"alternative_service\":["
+      "{\"expiration\":\"13756212000000000\",\"port\":443,"
+      "\"protocol_str\":\"h2\"},"
+      "{\"expiration\":\"13758804000000000\",\"host\":\"www.google.com\","
+      "\"port\":1234,\"protocol_str\":\"h2\"}"
+      "]"
+      "}},"
+      "{\"https://mail.google.com:80\":{"
+      "\"alternative_service\":["
+      "{\"expiration\":\"9223372036854775807\",\"host\":\"foo.google.com\","
+      "\"port\":444,\"protocol_str\":\"h2\"}"
+      "],"
+      "\"network_stats\":{\"srtt\":42}"
+      "}}"
+      "],"
+      "\"supports_quic\":"
+      "{\"address\":\"127.0.0.1\",\"used_quic\":true},"
+      "\"version\":5"
+      "}");
+  ASSERT_TRUE(server_value);
+  base::DictionaryValue* server_dict;
+  ASSERT_TRUE(server_value->GetAsDictionary(&server_dict));
+
+  pref_delegate_->SetPrefs(*server_dict);
+
+  ExpectCacheUpdate();
+  EXPECT_TRUE(pref_test_task_runner_->HasPendingTask());
+  pref_test_task_runner_->FastForwardUntilNoTasksRemain();
+  EXPECT_TRUE(net_test_task_runner_->HasPendingTask());
+  // Run the cache update task but not the expiration task for
+  // |cached_broken_service|.
+  net_test_task_runner_->FastForwardBy(
+      net_test_task_runner_->NextPendingTaskDelay());
+  EXPECT_TRUE(net_test_task_runner_->HasPendingTask());
+
+  //
+  // Verify alternative service info for https://www.google.com
+  //
+  AlternativeServiceInfoVector alternative_service_info_vector =
+      http_server_props_manager_->GetAlternativeServiceInfos(
+          url::SchemeHostPort("https", "www.google.com", 80));
+  ASSERT_EQ(2u, alternative_service_info_vector.size());
+
+  EXPECT_EQ(kProtoHTTP2,
+            alternative_service_info_vector[0].alternative_service().protocol);
+  EXPECT_EQ("www.google.com",
+            alternative_service_info_vector[0].alternative_service().host);
+  EXPECT_EQ(443, alternative_service_info_vector[0].alternative_service().port);
+  EXPECT_EQ(
+      "13756212000000000",
+      base::Int64ToString(
+          alternative_service_info_vector[0].expiration().ToInternalValue()));
+
+  EXPECT_EQ(kProtoHTTP2,
+            alternative_service_info_vector[1].alternative_service().protocol);
+  EXPECT_EQ("www.google.com",
+            alternative_service_info_vector[1].alternative_service().host);
+  EXPECT_EQ(1234,
+            alternative_service_info_vector[1].alternative_service().port);
+  EXPECT_EQ(
+      "13758804000000000",
+      base::Int64ToString(
+          alternative_service_info_vector[1].expiration().ToInternalValue()));
+
+  //
+  // Verify alternative service info for https://mail.google.com
+  //
+  alternative_service_info_vector =
+      http_server_props_manager_->GetAlternativeServiceInfos(
+          url::SchemeHostPort("https", "mail.google.com", 80));
+  ASSERT_EQ(1u, alternative_service_info_vector.size());
+
+  EXPECT_EQ(kProtoHTTP2,
+            alternative_service_info_vector[0].alternative_service().protocol);
+  EXPECT_EQ("foo.google.com",
+            alternative_service_info_vector[0].alternative_service().host);
+  EXPECT_EQ(444, alternative_service_info_vector[0].alternative_service().port);
+  EXPECT_EQ(
+      "9223372036854775807",
+      base::Int64ToString(
+          alternative_service_info_vector[0].expiration().ToInternalValue()));
+
+  //
+  // Verify broken alternative services.
+  //
+  AlternativeService prefs_broken_service(kProtoHTTP2, "www.google.com", 1234);
+  EXPECT_TRUE(http_server_props_manager_->IsAlternativeServiceBroken(
+      cached_broken_service));
+  EXPECT_TRUE(http_server_props_manager_->IsAlternativeServiceBroken(
+      cached_broken_service2));
+  EXPECT_TRUE(http_server_props_manager_->IsAlternativeServiceBroken(
+      prefs_broken_service));
+  // Verify brokenness expiration times.
+  // |cached_broken_service|'s expiration time should've been overwritten by the
+  // prefs to be approximately 1 day from now. |cached_broken_service2|'s
+  // expiration time should still be 5 minutes due to being marked broken.
+  // |prefs_broken_service|'s expiration time should be approximately 1 day from
+  // now which comes from the prefs.
+  net_test_task_runner_->FastForwardBy(base::TimeDelta::FromMinutes(4));
+  EXPECT_TRUE(http_server_props_manager_->IsAlternativeServiceBroken(
+      cached_broken_service));
+  EXPECT_FALSE(http_server_props_manager_->IsAlternativeServiceBroken(
+      cached_broken_service2));
+  EXPECT_TRUE(http_server_props_manager_->IsAlternativeServiceBroken(
+      prefs_broken_service));
+  net_test_task_runner_->FastForwardBy(base::TimeDelta::FromDays(1));
+  EXPECT_FALSE(http_server_props_manager_->IsAlternativeServiceBroken(
+      cached_broken_service));
+  EXPECT_FALSE(http_server_props_manager_->IsAlternativeServiceBroken(
+      cached_broken_service2));
+  EXPECT_FALSE(http_server_props_manager_->IsAlternativeServiceBroken(
+      prefs_broken_service));
+
+  // Now that |prefs_broken_service|'s brokenness has expired, it should've
+  // been removed from the alternative services info vectors of all servers.
+  alternative_service_info_vector =
+      http_server_props_manager_->GetAlternativeServiceInfos(
+          url::SchemeHostPort("https", "www.google.com", 80));
+  ASSERT_EQ(1u, alternative_service_info_vector.size());
+
+  //
+  // Verify recently broken alternative services.
+  //
+
+  // If an entry is already in cache, the broken count in the prefs should
+  // overwrite the one in the cache.
+  // |pref_broken_service| should have broken-count 1 from prefs.
+  // |cached_recently_broken_service| should have broken-count 3 from prefs.
+  // |cached_broken_service| should have broken-count 2 from prefs.
+  // |cached_broken_service2| should have broken-count 1 from being marked
+  // broken.
+  ExpectScheduleUpdatePrefsOnNetworkSequenceRepeatedly(4);
+  ExpectPrefsUpdate(4);
+
+  EXPECT_TRUE(http_server_props_manager_->WasAlternativeServiceRecentlyBroken(
+      prefs_broken_service));
+  EXPECT_TRUE(http_server_props_manager_->WasAlternativeServiceRecentlyBroken(
+      cached_recently_broken_service));
+  EXPECT_TRUE(http_server_props_manager_->WasAlternativeServiceRecentlyBroken(
+      cached_broken_service));
+  EXPECT_TRUE(http_server_props_manager_->WasAlternativeServiceRecentlyBroken(
+      cached_broken_service2));
+  // Make sure |pref_broken_service| has the right expiration delay when marked
+  // broken.
+  {
+    TestMockTimeTaskRunner::ScopedContext scoped_context(net_test_task_runner_);
+    http_server_props_manager_->MarkAlternativeServiceBroken(
+        prefs_broken_service);
+  }
+  EXPECT_TRUE(net_test_task_runner_->HasPendingTask());
+  net_test_task_runner_->FastForwardBy(base::TimeDelta::FromMinutes(10) -
+                                       base::TimeDelta::FromInternalValue(1));
+  EXPECT_TRUE(http_server_props_manager_->IsAlternativeServiceBroken(
+      prefs_broken_service));
+  net_test_task_runner_->FastForwardBy(base::TimeDelta::FromInternalValue(1));
+  EXPECT_FALSE(http_server_props_manager_->IsAlternativeServiceBroken(
+      prefs_broken_service));
+  // Make sure |cached_recently_broken_service| has the right expiration delay
+  // when marked broken.
+  {
+    TestMockTimeTaskRunner::ScopedContext scoped_context(net_test_task_runner_);
+    http_server_props_manager_->MarkAlternativeServiceBroken(
+        cached_recently_broken_service);
+  }
+  EXPECT_TRUE(net_test_task_runner_->HasPendingTask());
+  net_test_task_runner_->FastForwardBy(base::TimeDelta::FromMinutes(40) -
+                                       base::TimeDelta::FromInternalValue(1));
+  EXPECT_TRUE(http_server_props_manager_->IsAlternativeServiceBroken(
+      cached_recently_broken_service));
+  net_test_task_runner_->FastForwardBy(base::TimeDelta::FromInternalValue(1));
+  EXPECT_FALSE(http_server_props_manager_->IsAlternativeServiceBroken(
+      cached_recently_broken_service));
+  // Make sure |cached_broken_service| has the right expiration delay when
+  // marked broken.
+  {
+    TestMockTimeTaskRunner::ScopedContext scoped_context(net_test_task_runner_);
+    http_server_props_manager_->MarkAlternativeServiceBroken(
+        cached_broken_service);
+  }
+  EXPECT_TRUE(net_test_task_runner_->HasPendingTask());
+  net_test_task_runner_->FastForwardBy(base::TimeDelta::FromMinutes(20) -
+                                       base::TimeDelta::FromInternalValue(1));
+  EXPECT_TRUE(http_server_props_manager_->IsAlternativeServiceBroken(
+      cached_broken_service));
+  net_test_task_runner_->FastForwardBy(base::TimeDelta::FromInternalValue(1));
+  EXPECT_FALSE(http_server_props_manager_->IsAlternativeServiceBroken(
+      cached_broken_service));
+  // Make sure |cached_broken_service2| has the right expiration delay when
+  // marked broken.
+  {
+    TestMockTimeTaskRunner::ScopedContext scoped_context(net_test_task_runner_);
+    http_server_props_manager_->MarkAlternativeServiceBroken(
+        cached_broken_service2);
+  }
+  EXPECT_TRUE(net_test_task_runner_->HasPendingTask());
+  net_test_task_runner_->FastForwardBy(base::TimeDelta::FromMinutes(10) -
+                                       base::TimeDelta::FromInternalValue(1));
+  EXPECT_TRUE(http_server_props_manager_->IsAlternativeServiceBroken(
+      cached_broken_service2));
+  net_test_task_runner_->FastForwardBy(base::TimeDelta::FromInternalValue(1));
+  EXPECT_FALSE(http_server_props_manager_->IsAlternativeServiceBroken(
+      cached_broken_service2));
+
+  Mock::VerifyAndClearExpectations(http_server_props_manager_.get());
+
+  //
+  // Verify ServerNetworkStats.
+  //
+  const ServerNetworkStats* server_network_stats =
+      http_server_props_manager_->GetServerNetworkStats(
+          url::SchemeHostPort("https", "mail.google.com", 80));
+  EXPECT_TRUE(server_network_stats);
+  EXPECT_EQ(server_network_stats->srtt, base::TimeDelta::FromInternalValue(42));
+
+  //
+  // Verify QUIC server info.
+  //
+  const std::string* quic_server_info =
+      http_server_props_manager_->GetQuicServerInfo(
+          QuicServerId("mail.google.com", 80));
+  EXPECT_EQ("quic_server_info1", *quic_server_info);
+
+  //
+  // Verify supports QUIC.
+  //
+  IPAddress actual_address(127, 0, 0, 1);
+  EXPECT_TRUE(http_server_props_manager_->GetSupportsQuic(&actual_address));
 }
 
 }  // namespace net

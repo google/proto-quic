@@ -189,6 +189,8 @@ Still reading?
   <issue id="MissingVersion">
     <ignore path="AndroidManifest.xml"/>
   </issue>
+  <!-- TODO(crbug.com/739746): Remove once platform-tools is updated. -->
+  <issue id="NewApi" severity="ignore"/>
   <issue id="NewApi">
     <ignore regexp="Attribute `paddingStart` referenced here can result in a crash on some specific devices older than API 17"/>
     <ignore regexp="chrome/android/java/res/values-v17/styles.xml"/>
@@ -234,6 +236,7 @@ Still reading?
   </issue>
   <issue id="PackageManagerGetSignatures">
     <ignore regexp="chrome/android/webapk/libs/client/src/org/chromium/webapk/lib/client/WebApkValidator.java"/>
+    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/customtabs/OriginVerifier.java"/>
   </issue>
   <issue id="PluralsCandidate" severity="Error">
     <ignore regexp="chrome/android/chrome_strings_grd.resources.zip/values-en-rGB/android_chrome_strings.xml"/>
@@ -297,6 +300,9 @@ Still reading?
   <!-- TODO(crbug.com/635567): Fix this properly. -->
   <issue id="UnusedResources" severity="ignore"/>
   <issue id="UnusedResources">
+    <!-- The two dimens below will be changing soon so please leave them in -->
+    <ignore regexp="design_bottom_navigation_text_size"/>
+    <ignore regexp="design_bottom_navigation_active_text_size"/>
     <ignore regexp="PRODUCT_DIR/gen/remoting/android/remoting_android_raw_resources/res/raw/credits.html"/>
     <ignore regexp="PRODUCT_DIR/gen/remoting/android/remoting_android_raw_resources/res/raw/credits_css.css"/>
     <ignore regexp="PRODUCT_DIR/gen/remoting/android/remoting_android_raw_resources/res/raw/credits_js.js"/>
@@ -347,7 +353,6 @@ Still reading?
     <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_zoom_in.png"/>
     <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_zoom_out.png"/>
     <ignore regexp="remoting/android/java/res/layout/navigation_list_item.xml"/>
-    <ignore regexp="remoting/android/java/res/mipmap-hdpi/logo_remote_desktop_launcher.png"/>
     <ignore regexp="remoting/android/java/res/values-v17/styles.xml"/>
     <!-- Used by Android's policies system -->
     <ignore regexp="restriction_values.xml"/>
@@ -461,5 +466,9 @@ Still reading?
     <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/SSLClientCertificateRequest.java"/>
     <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/payments/ui/EditorDialog.java"/>
     <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/signin/SigninAndSyncView.java"/>
+  </issue>
+  <issue id="IconLauncherFormat" severity="ignore">
+    <!-- TODO(crbug.com/739746): Remove after lint version has been updated. -->
+    <ignore regexp="remoting/android/java/res/mipmap-anydpi-v26/ic_launcher.xml"/>
   </issue>
 </lint>

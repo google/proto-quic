@@ -2,6 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  # Controls whether the "imageset" template sets up the build to compile
+  # the asset catalogs (to generate an Assets.car file). If set to false,
+  # instead the assets will be copied verbatim to the generated bundle.
+  # As loading resources from the compiled asset catalog or unpacked is
+  # transparent to application code, this results in faster build but in
+  # a larger application.
+  #
+  # This requires that resources uses scale (like "@2x", "@3x") and idiom
+  # (like "~ipad", "~iphone") suffixes and use the same basename as the
+  # imageset directory in order for the correct resource to be loaded if
+  # ios_compile_asset_catalogs is set to false.
+  #
+  # Note: flipping this variable requires a clobber build (as there is no
+  # way to specify that unknown files are deleted as part of the build).
+  ios_compile_asset_catalogs = true
+}
+
 # This template declares a bundle_data target that references an .imageset
 # so that it is compiled to the asset catalog of the generated bundle.
 #
@@ -27,6 +45,11 @@
 # This template also ensures that the file are only copied once when the
 # build targets multiple architectures at the same time (aka "fat build").
 #
+# If ios_compile_asset_catalogs is set to false, the resources will instead
+# just be copied into the final bundles (they are still copied to a temporary
+# location in gen/ to avoid accidentally compiling them if they are located
+# in a .xcassets directory).
+#
 # Arguments
 #
 #     sources:
@@ -49,15 +72,37 @@ template("imageset") {
     _fake_target_name = target_name + "__fake"
     _data_target_name = target_name
 
+    _sources = invoker.sources
     foreach(_source, invoker.sources) {
       _dir = get_path_info(_source, "dir")
       assert(get_path_info(_dir, "extension") == "imageset",
              "$_source dirname must have .imageset extension")
+
+      # If the compilation of asset catalogs is disabled, the Contents.json
+      # file must not be copied.
+      if (!ios_compile_asset_catalogs) {
+        if (get_path_info(_source, "file") == "Contents.json") {
+          _sources -= [ _source ]
+        }
+      }
     }
 
-    _sources = invoker.sources
-    _imageset_dir = get_path_info(get_path_info(_sources[0], "dir"), "file")
-    _xcassets_dir = "$target_gen_dir/$target_name.xcassets"
+    # The compilation of resources into Assets.car is enabled automatically
+    # by the "create_bundle" target if any of the "bundle_data" sources's
+    # path matches *.xcassets/{Contents.json,*.imageset/{Contents.json,*}}.
+    #
+    # Copy the file to a directory that either matches that pattern if the
+    # compilation of asset catalogs is enabled or not. The detection will
+    # be performed by gn and the correct ninja rules generated. This is the
+    # main difference between the two variants for this template.
+    if (ios_compile_asset_catalogs) {
+      _xcassets_dir = "$target_gen_dir/${target_name}.xcassets"
+    } else {
+      _xcassets_dir = "$target_gen_dir/${target_name}_xcassets"
+    }
+
+    _imageset_dir = "$_xcassets_dir/" +
+                    get_path_info(get_path_info(_sources[0], "dir"), "file")
 
     copy(_copy_target_name) {
       # Forward "deps", "public_deps" and "testonly" in case some of the
@@ -72,7 +117,7 @@ template("imageset") {
       visibility = [ ":$_fake_target_name" ]
       sources = _sources
       outputs = [
-        "$_xcassets_dir/$_imageset_dir/{{source_file_part}}",
+        "$_imageset_dir/{{source_file_part}}",
       ]
     }
 

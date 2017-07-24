@@ -670,7 +670,6 @@ QuicStreamFactory::QuicStreamFactory(
     bool allow_server_migration,
     bool force_hol_blocking,
     bool race_cert_verification,
-    bool do_not_fragment,
     bool estimate_initial_rtt,
     const QuicTagVector& connection_options,
     bool enable_token_binding)
@@ -713,7 +712,6 @@ QuicStreamFactory::QuicStreamFactory(
       allow_server_migration_(allow_server_migration),
       force_hol_blocking_(force_hol_blocking),
       race_cert_verification_(race_cert_verification),
-      do_not_fragment_(do_not_fragment),
       estimate_initial_rtt(estimate_initial_rtt),
       check_persisted_supports_quic_(true),
       num_push_streams_created_(0),
@@ -1433,13 +1431,11 @@ int QuicStreamFactory::ConfigureSocket(DatagramClientSocket* socket,
     return rv;
   }
 
-  if (do_not_fragment_) {
-    rv = socket->SetDoNotFragment();
-    // SetDoNotFragment is not implemented on all platforms, so ignore errors.
-    if (rv != OK && rv != ERR_NOT_IMPLEMENTED) {
-      HistogramCreateSessionFailure(CREATION_ERROR_SETTING_DO_NOT_FRAGMENT);
-      return rv;
-    }
+  rv = socket->SetDoNotFragment();
+  // SetDoNotFragment is not implemented on all platforms, so ignore errors.
+  if (rv != OK && rv != ERR_NOT_IMPLEMENTED) {
+    HistogramCreateSessionFailure(CREATION_ERROR_SETTING_DO_NOT_FRAGMENT);
+    return rv;
   }
 
   // Set a buffer large enough to contain the initial CWND's worth of packet

@@ -26,6 +26,10 @@
 #include "net/http/broken_alternative_services.h"
 #include "net/http/http_server_properties.h"
 
+namespace base {
+class TickClock;
+}
+
 namespace net {
 
 // The implementation for setting/retrieving the HTTP server properties.
@@ -33,9 +37,14 @@ class NET_EXPORT HttpServerPropertiesImpl
     : public HttpServerProperties,
       public BrokenAlternativeServices::Delegate {
  public:
+  // |clock| is used for setting expiration times and scheduling the
+  // expiration of broken alternative services. If null, default clock will be
+  // used.
+  explicit HttpServerPropertiesImpl(base::TickClock* clock);
+
+  // Default clock will be used.
   HttpServerPropertiesImpl();
-  explicit HttpServerPropertiesImpl(
-      base::TickClock* broken_alternative_services_clock);
+
   ~HttpServerPropertiesImpl() override;
 
   // Sets |spdy_servers_map_| with the servers (host/port) from
@@ -57,6 +66,17 @@ class NET_EXPORT HttpServerPropertiesImpl
   // number of MRU servers that support SPDY that are to be returned.
   void GetSpdyServerList(std::vector<std::string>* spdy_servers,
                          size_t max_size) const;
+
+  void SetBrokenAndRecentlyBrokenAlternativeServices(
+      std::unique_ptr<BrokenAlternativeServiceList>
+          broken_alternative_service_list,
+      std::unique_ptr<RecentlyBrokenAlternativeServices>
+          recently_broken_alternative_services);
+
+  const BrokenAlternativeServiceList& broken_alternative_service_list() const;
+
+  const RecentlyBrokenAlternativeServices&
+  recently_broken_alternative_services() const;
 
   // Returns flattened string representation of the |host_port_pair|. Used by
   // unittests.
@@ -146,13 +166,14 @@ class NET_EXPORT HttpServerPropertiesImpl
   // Remove the cononical host for |server|.
   void RemoveCanonicalHost(const url::SchemeHostPort& server);
 
-  base::DefaultTickClock broken_alternative_services_clock_;
-  BrokenAlternativeServices broken_alternative_services_;
+  base::DefaultTickClock default_clock_;
 
   SpdyServersMap spdy_servers_map_;
   Http11ServerHostPortSet http11_servers_;
 
   AlternativeServiceMap alternative_service_map_;
+
+  BrokenAlternativeServices broken_alternative_services_;
 
   IPAddress last_quic_address_;
   ServerNetworkStatsMap server_network_stats_map_;

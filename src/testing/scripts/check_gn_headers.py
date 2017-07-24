@@ -44,4 +44,4 @@ if __name__ == '__main__':
     'run': main_run,
     'compile_targets': main_compile_targets,
   }
-  sys.exit(common.run_script(sys.argv[1:], funcs))
+  common.run_script(sys.argv[1:], funcs)

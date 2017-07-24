@@ -64,7 +64,7 @@ void PopulateCacheEntry(HttpCache* cache, const GURL& request_url) {
   if (rv == ERR_IO_PENDING)
     rv = callback.WaitForResult();
 
-  ASSERT_EQ(mock_trans->return_code, rv);
+  ASSERT_EQ(mock_trans->start_return_code, rv);
   if (OK != rv)
     return;
 

@@ -15,11 +15,13 @@
 #include "base/location.h"
 #include "base/macros.h"
 #include "base/metrics/field_trial.h"
+#include "base/metrics/histogram_functions.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/profiler/scoped_tracker.h"
 #include "base/rand_util.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_util.h"
+#include "base/strings/stringprintf.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
 #include "base/trace_event/trace_event.h"
@@ -1509,6 +1511,10 @@ void URLRequestHttpJob::RecordPerfHistograms(CompletionCause reason) {
   UMA_HISTOGRAM_TIMES("Net.HttpJob.TotalTime", total_time);
 
   if (reason == FINISHED) {
+    UmaHistogramTimes(
+        base::StringPrintf("Net.HttpJob.TotalTimeSuccess.Priority%d",
+                           request()->priority()),
+        total_time);
     UMA_HISTOGRAM_TIMES("Net.HttpJob.TotalTimeSuccess", total_time);
   } else {
     UMA_HISTOGRAM_TIMES("Net.HttpJob.TotalTimeCancel", total_time);

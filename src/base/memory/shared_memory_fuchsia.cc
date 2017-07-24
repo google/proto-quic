@@ -88,6 +88,7 @@ bool SharedMemory::MapAt(off_t offset, size_t bytes) {
   memory_ = reinterpret_cast<void*>(addr);
 
   mapped_size_ = bytes;
+  mapped_id_ = shm_.GetGUID();
   SharedMemoryTracker::GetInstance()->IncrementMemoryUsage(*this);
   return true;
 }
@@ -106,6 +107,7 @@ bool SharedMemory::Unmap() {
   }
 
   memory_ = nullptr;
+  mapped_id_ = UnguessableToken();
   return true;
 }
 

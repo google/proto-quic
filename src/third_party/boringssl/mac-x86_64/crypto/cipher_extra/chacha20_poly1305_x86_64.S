@@ -40,6 +40,7 @@ chacha20_poly1305_constants:
 .byte	0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x00,0x00,0x00
 .byte	0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x00,0x00
 .byte	0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x00
+.byte	0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff
 
 
 .p2align	6
@@ -2123,7 +2124,9 @@ _chacha20_poly1305_seal:
 
 	leaq	32(%rsp),%rbp
 	andq	$-32,%rbp
-	movq	%rdx,8+32(%rbp)
+	movq	56(%r9),%rbx
+	addq	%rdx,%rbx
+	movq	%rbx,8+32(%rbp)
 	movq	%r8,0+32(%rbp)
 	movq	%rdx,%rbx
 
@@ -3586,11 +3589,9 @@ seal_sse_128_seal:
 
 seal_sse_tail_16:
 	testq	%rbx,%rbx
-	jz	seal_sse_finalize
+	jz	process_blocks_of_extra_in
 
 	movq	%rbx,%r8
-	shlq	$4,%r8
-	leaq	.and_masks(%rip),%r13
 	movq	%rbx,%rcx
 	leaq	-1(%rsi,%rbx), %rsi
 	pxor	%xmm15,%xmm15
@@ -3614,7 +3615,72 @@ seal_sse_tail_16:
 	subq	$1,%rcx
 	jnz	2b
 
-	pand	-16(%r13,%r8), %xmm15
+
+
+
+
+
+
+
+	movq	288+32(%rsp),%r9
+	movq	56(%r9),%r14
+	movq	48(%r9),%r13
+	testq	%r14,%r14
+	jz	process_partial_block
+
+	movq	$16,%r15
+	subq	%rbx,%r15
+	cmpq	%r15,%r14
+
+	jge	load_extra_in
+	movq	%r14,%r15
+
+load_extra_in:
+
+
+	leaq	-1(%r13,%r15), %rsi
+
+
+	addq	%r15,%r13
+	subq	%r15,%r14
+	movq	%r13,48(%r9)
+	movq	%r14,56(%r9)
+
+
+
+	addq	%r15,%r8
+
+
+	pxor	%xmm11,%xmm11
+3:
+	pslldq	$1,%xmm11
+	pinsrb	$0,(%rsi),%xmm11
+	leaq	-1(%rsi),%rsi
+	subq	$1,%r15
+	jnz	3b
+
+
+
+
+	movq	%rbx,%r15
+
+4:
+	pslldq	$1,%xmm11
+	subq	$1,%r15
+	jnz	4b
+
+
+
+
+	leaq	.and_masks(%rip),%r15
+	shlq	$4,%rbx
+	pand	-16(%r15,%rbx), %xmm15
+
+
+	por	%xmm11,%xmm15
+
+
+
 .byte	102,77,15,126,253
 	pextrq	$1,%xmm15,%r14
 	addq	%r13,%r10
@@ -3659,7 +3725,127 @@ seal_sse_tail_16:
 	adcq	%r9,%r11
 	adcq	$0,%r12
 
-seal_sse_finalize:
+
+process_blocks_of_extra_in:
+
+	movq	288+32(%rsp),%r9
+	movq	48(%r9),%rsi
+	movq	56(%r9),%r8
+	movq	%r8,%rcx
+	shrq	$4,%r8
+
+5:
+	jz	process_extra_in_trailer
+	addq	0(%rsi),%r10
+	adcq	8+0(%rsi),%r11
+	adcq	$1,%r12
+	movq	0+0(%rbp),%rax
+	movq	%rax,%r15
+	mulq	%r10
+	movq	%rax,%r13
+	movq	%rdx,%r14
+	movq	0+0(%rbp),%rax
+	mulq	%r11
+	imulq	%r12,%r15
+	addq	%rax,%r14
+	adcq	%rdx,%r15
+	movq	8+0(%rbp),%rax
+	movq	%rax,%r9
+	mulq	%r10
+	addq	%rax,%r14
+	adcq	$0,%rdx
+	movq	%rdx,%r10
+	movq	8+0(%rbp),%rax
+	mulq	%r11
+	addq	%rax,%r15
+	adcq	$0,%rdx
+	imulq	%r12,%r9
+	addq	%r10,%r15
+	adcq	%rdx,%r9
+	movq	%r13,%r10
+	movq	%r14,%r11
+	movq	%r15,%r12
+	andq	$3,%r12
+	movq	%r15,%r13
+	andq	$-4,%r13
+	movq	%r9,%r14
+	shrdq	$2,%r9,%r15
+	shrq	$2,%r9
+	addq	%r13,%r10
+	adcq	%r14,%r11
+	adcq	$0,%r12
+	addq	%r15,%r10
+	adcq	%r9,%r11
+	adcq	$0,%r12
+
+	leaq	16(%rsi),%rsi
+	subq	$1,%r8
+	jmp	5b
+
+process_extra_in_trailer:
+	andq	$15,%rcx
+	movq	%rcx,%rbx
+	jz	do_length_block
+	leaq	-1(%rsi,%rcx), %rsi
+
+6:
+	pslldq	$1,%xmm15
+	pinsrb	$0,(%rsi),%xmm15
+	leaq	-1(%rsi),%rsi
+	subq	$1,%rcx
+	jnz	6b
+
+process_partial_block:
+
+	leaq	.and_masks(%rip),%r15
+	shlq	$4,%rbx
+	pand	-16(%r15,%rbx), %xmm15
+.byte	102,77,15,126,253
+	pextrq	$1,%xmm15,%r14
+	addq	%r13,%r10
+	adcq	%r14,%r11
+	adcq	$1,%r12
+	movq	0+0(%rbp),%rax
+	movq	%rax,%r15
+	mulq	%r10
+	movq	%rax,%r13
+	movq	%rdx,%r14
+	movq	0+0(%rbp),%rax
+	mulq	%r11
+	imulq	%r12,%r15
+	addq	%rax,%r14
+	adcq	%rdx,%r15
+	movq	8+0(%rbp),%rax
+	movq	%rax,%r9
+	mulq	%r10
+	addq	%rax,%r14
+	adcq	$0,%rdx
+	movq	%rdx,%r10
+	movq	8+0(%rbp),%rax
+	mulq	%r11
+	addq	%rax,%r15
+	adcq	$0,%rdx
+	imulq	%r12,%r9
+	addq	%r10,%r15
+	adcq	%rdx,%r9
+	movq	%r13,%r10
+	movq	%r14,%r11
+	movq	%r15,%r12
+	andq	$3,%r12
+	movq	%r15,%r13
+	andq	$-4,%r13
+	movq	%r9,%r14
+	shrdq	$2,%r9,%r15
+	shrq	$2,%r9
+	addq	%r13,%r10
+	adcq	%r14,%r11
+	adcq	$0,%r12
+	addq	%r15,%r10
+	adcq	%r9,%r11
+	adcq	$0,%r12
+
+
+do_length_block:
 	addq	32(%rbp),%r10
 	adcq	8+32(%rbp),%r11
 	adcq	$1,%r12

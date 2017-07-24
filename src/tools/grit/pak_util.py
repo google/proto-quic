@@ -33,6 +33,7 @@ def _ExtractMain(args):
 
 def _PrintMain(args):
   pak = data_pack.ReadDataPack(args.pak_file)
+  id_map = {id(v): k for k, v in sorted(pak.resources.items(), reverse=True)}
   encoding = 'binary'
   if pak.encoding == 1:
     encoding = 'utf-8'
@@ -57,9 +58,20 @@ def _PrintMain(args):
       except UnicodeDecodeError:
         pass
     sha1 = hashlib.sha1(data).hexdigest()[:10]
-    line = u'Entry(id={}, len={}, sha1={}): {}'.format(
-        resource_id, len(data), sha1, desc)
+    canonical_id = id_map[id(data)]
+    if resource_id == canonical_id:
+      line = u'Entry(id={}, len={}, sha1={}): {}'.format(
+          resource_id, len(data), sha1, desc)
+    else:
+      line = u'Entry(id={}, alias_of={}): {}'.format(
+          resource_id, canonical_id, desc)
     print line.encode('utf-8')
+
+
+def _ListMain(args):
+  resources, _ = data_pack.ReadDataPack(args.pak_file)
+  for resource_id in sorted(resources.keys()):
+    args.output.write('%d\n' % resource_id)
 
 
 def main():
@@ -88,6 +100,14 @@ def main():
       help='Prints all pak IDs and contents. Useful for diffing.')
   sub_parser.add_argument('pak_file')
   sub_parser.set_defaults(func=_PrintMain)
+  
+  sub_parser = sub_parsers.add_parser('list-id',
+      help='Outputs all resource IDs to a file.')
+  sub_parser.add_argument('pak_file')
+  sub_parser.add_argument('--output', type=argparse.FileType('w'),
+      default=sys.stdout,
+      help='The resource list path to write (default stdout)')
+  sub_parser.set_defaults(func=_ListMain)
 
   if len(sys.argv) == 1:
     parser.print_help()

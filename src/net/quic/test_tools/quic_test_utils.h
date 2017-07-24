@@ -296,19 +296,8 @@ class MockQuicConnectionVisitor : public QuicConnectionVisitorInterface {
   MOCK_METHOD0(OnConfigNegotiated, void());
   MOCK_METHOD0(PostProcessAfterData, void());
   MOCK_METHOD0(OnAckNeedsRetransmittableFrame, void());
-  void SaveStreamData(QuicStreamId id,
-                      QuicIOVector iov,
-                      size_t iov_offset,
-                      QuicStreamOffset offset,
-                      QuicByteCount data_length) override;
-  bool WriteStreamData(QuicStreamId id,
-                       QuicStreamOffset offset,
-                       QuicByteCount data_length,
-                       QuicDataWriter* writer) override;
 
  private:
-  SimpleDataProducer producer_;
-
   DISALLOW_COPY_AND_ASSIGN(MockQuicConnectionVisitor);
 };
 
@@ -548,9 +537,11 @@ class MockQuicCryptoStream : public QuicCryptoStream {
   bool handshake_confirmed() const override;
   const QuicCryptoNegotiatedParameters& crypto_negotiated_params()
       const override;
+  CryptoMessageParser* crypto_message_parser() override;
 
  private:
   QuicReferenceCountedPointer<QuicCryptoNegotiatedParameters> params_;
+  CryptoFramer crypto_framer_;
 };
 
 class MockQuicSpdySession : public QuicSpdySession {
@@ -958,19 +949,7 @@ class MockPacketCreatorDelegate : public QuicPacketCreator::DelegateInterface {
                     const std::string&,
                     ConnectionCloseSource source));
 
-  void SaveStreamData(QuicStreamId id,
-                      QuicIOVector iov,
-                      size_t iov_offset,
-                      QuicStreamOffset offset,
-                      QuicByteCount data_length) override;
-  bool WriteStreamData(QuicStreamId id,
-                       QuicStreamOffset offset,
-                       QuicByteCount data_length,
-                       QuicDataWriter* writer) override;
-
  private:
-  SimpleDataProducer producer_;
-
   DISALLOW_COPY_AND_ASSIGN(MockPacketCreatorDelegate);
 };
 

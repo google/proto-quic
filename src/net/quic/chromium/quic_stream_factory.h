@@ -214,7 +214,6 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       bool allow_server_migration,
       bool force_hol_blocking,
       bool race_cert_verification,
-      bool do_not_fragment,
       bool estimate_initial_rtt,
       const QuicTagVector& connection_options,
       bool enable_token_binding);
@@ -554,9 +553,6 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
 
   // Set if cert verification is to be raced with host resolution.
   bool race_cert_verification_;
-
-  // If set, configure QUIC sockets to not fragment packets.
-  bool do_not_fragment_;
 
   // If true, estimate the initial RTT based on network type.
   bool estimate_initial_rtt;

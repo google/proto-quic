@@ -25,7 +25,7 @@ namespace net {
 
 // static
 string SpdyUtils::SerializeUncompressedHeaders(const SpdyHeaderBlock& headers) {
-  size_t length = SpdyFramer::GetSerializedLength(&headers);
+  size_t length = SpdyFramer::GetUncompressedSerializedLength(headers);
   SpdyFrameBuilder builder(length);
   SpdyFramer framer(SpdyFramer::DISABLE_COMPRESSION);
   framer.SerializeHeaderBlockWithoutCompression(&builder, headers);

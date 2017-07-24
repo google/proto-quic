@@ -13,7 +13,7 @@ namespace base {
 namespace internal {
 
 namespace {
-StaticAtomicSequenceNumber g_sequence_local_storage_slot_generator;
+AtomicSequenceNumber g_sequence_local_storage_slot_generator;
 }  // namespace
 
 int GetNextSequenceLocalStorageSlotNumber() {

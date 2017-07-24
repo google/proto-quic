@@ -114,16 +114,6 @@ void BrokenAlternativeServices::ConfirmAlternativeService(
   }
 }
 
-const BrokenAlternativeServiceList&
-BrokenAlternativeServices::broken_alternative_service_list() const {
-  return broken_alternative_service_list_;
-}
-
-const RecentlyBrokenAlternativeServices&
-BrokenAlternativeServices::recently_broken_alternative_services() const {
-  return recently_broken_alternative_services_;
-}
-
 void BrokenAlternativeServices::SetBrokenAndRecentlyBrokenAlternativeServices(
     std::unique_ptr<BrokenAlternativeServiceList>
         broken_alternative_service_list,
@@ -177,13 +167,14 @@ void BrokenAlternativeServices::SetBrokenAndRecentlyBrokenAlternativeServices(
     }
   }
 
-  // Merge |broken_alternative_service_list| with
-  // |broken_alternative_service_list_|. Both should already be sorted by
-  // expiration time. std::list::merge() will not invalidate any iterators
-  // of either list, so all iterators in |broken_alternative_service_map_|
-  // remain valid.
-  broken_alternative_service_list_.merge(
-      *broken_alternative_service_list,
+  // Append |broken_alternative_service_list| to
+  // |broken_alternative_service_list_|, then sort the resulting list.
+  // Neither operations will invalidate any iterators of either list,
+  // so all iterators in |broken_alternative_service_map_| remain valid.
+  broken_alternative_service_list_.splice(
+      broken_alternative_service_list_.end(), *broken_alternative_service_list);
+
+  broken_alternative_service_list_.sort(
       [](const std::pair<AlternativeService, base::TimeTicks>& lhs,
          const std::pair<AlternativeService, base::TimeTicks>& rhs) -> bool {
         return lhs.second < rhs.second;
@@ -196,6 +187,16 @@ void BrokenAlternativeServices::SetBrokenAndRecentlyBrokenAlternativeServices(
 
   if (new_next_expiration != next_expiration)
     ScheduleBrokenAlternateProtocolMappingsExpiration();
+}
+
+const BrokenAlternativeServiceList&
+BrokenAlternativeServices::broken_alternative_service_list() const {
+  return broken_alternative_service_list_;
+}
+
+const RecentlyBrokenAlternativeServices&
+BrokenAlternativeServices::recently_broken_alternative_services() const {
+  return recently_broken_alternative_services_;
 }
 
 bool BrokenAlternativeServices::AddToBrokenAlternativeServiceListAndMap(

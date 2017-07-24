@@ -35,11 +35,21 @@ enum TokenBindingParam {
   TB_PARAM_ECDSAP256 = 2,
 };
 
+enum TLS13Variant {
+  kTLS13VariantDraft,
+  kTLS13VariantExperiment,
+  kTLS13VariantRecordTypeExperiment,
+  kTLS13VariantNoSessionIDExperiment,
+};
+
 // Default minimum protocol version.
 NET_EXPORT extern const uint16_t kDefaultSSLVersionMin;
 
 // Default maximum protocol version.
 NET_EXPORT extern const uint16_t kDefaultSSLVersionMax;
+
+// Default TLS 1.3 variant.
+NET_EXPORT extern const TLS13Variant kDefaultTLS13Variant;
 
 // A collection of SSL-related configuration settings.
 struct NET_EXPORT SSLConfig {
@@ -90,6 +100,10 @@ struct NET_EXPORT SSLConfig {
   // means no protocol versions are enabled.
   uint16_t version_min;
   uint16_t version_max;
+
+  // The TLS 1.3 variant that is enabled. This only takes affect if TLS 1.3 is
+  // also enabled via version_min and version_max.
+  TLS13Variant tls13_variant;
 
   // Presorted list of cipher suites which should be explicitly prevented from
   // being used in addition to those disabled by the net built-in policy.

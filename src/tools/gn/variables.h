@@ -191,6 +191,10 @@ extern const char kDeps[];
 extern const char kDeps_HelpShort[];
 extern const char kDeps_Help[];
 
+extern const char kXcodeExtraAttributes[];
+extern const char kXcodeExtraAttributes_HelpShort[];
+extern const char kXcodeExtraAttributes_Help[];
+
 extern const char kIncludeDirs[];
 extern const char kIncludeDirs_HelpShort[];
 extern const char kIncludeDirs_Help[];
@@ -274,6 +278,10 @@ extern const char kScript_Help[];
 extern const char kSources[];
 extern const char kSources_HelpShort[];
 extern const char kSources_Help[];
+
+extern const char kXcodeTestApplicationName[];
+extern const char kXcodeTestApplicationName_HelpShort[];
+extern const char kXcodeTestApplicationName_Help[];
 
 extern const char kTestonly[];
 extern const char kTestonly_HelpShort[];

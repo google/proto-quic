@@ -96,8 +96,7 @@ SpdyHeadersHandlerInterface* BufferedSpdyFramer::OnHeaderFrameStart(
   return coalescer_.get();
 }
 
-void BufferedSpdyFramer::OnHeaderFrameEnd(SpdyStreamId stream_id,
-                                          bool end_headers) {
+void BufferedSpdyFramer::OnHeaderFrameEnd(SpdyStreamId stream_id) {
   if (coalescer_->error_seen()) {
     visitor_->OnStreamError(stream_id,
                             "Could not parse Spdy Control Frame Header.");
@@ -127,7 +126,7 @@ void BufferedSpdyFramer::OnHeaderFrameEnd(SpdyStreamId stream_id,
   control_frame_fields_.reset(NULL);
 }
 
-void BufferedSpdyFramer::OnSettings(bool clear_persisted) {
+void BufferedSpdyFramer::OnSettings() {
   visitor_->OnSettings();
 }
 
@@ -214,6 +213,11 @@ size_t BufferedSpdyFramer::ProcessInput(const char* data, size_t len) {
 
 void BufferedSpdyFramer::UpdateHeaderDecoderTableSize(uint32_t value) {
   spdy_framer_.UpdateHeaderDecoderTableSize(value);
+}
+
+void BufferedSpdyFramer::set_max_decode_buffer_size_bytes(
+    size_t max_decode_buffer_size_bytes) {
+  spdy_framer_.set_max_decode_buffer_size_bytes(max_decode_buffer_size_bytes);
 }
 
 void BufferedSpdyFramer::Reset() {

@@ -5,7 +5,7 @@
 ## Running GN
 
 You just run `gn` from the command line. There is a script in
-depot\_tools (which is presumably on your path) with this name. The
+`depot_tools`, which is presumably in your PATH, with this name. The
 script will find the binary in the source tree containing the current
 directory and run it.
 
@@ -45,10 +45,9 @@ typing
 gn args --list out/my_build
 ```
 
-on the command line. See "Taking build arguments" below for information
-on how to use these in your code. (Note that you have to specify the
-build directory for this command because the available arguments can
-change according to what's set.
+on the command line. Note that you have to specify the build directory
+for this command because the available arguments can change according
+to what's set.
 
 Chrome developers can also read the [Chrome-specific build
 configuration](http://www.chromium.org/developers/gn-build-configuration)

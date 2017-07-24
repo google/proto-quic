@@ -5,8 +5,11 @@
 #include <limits.h>
 #include <stddef.h>
 #include <stdlib.h>
+
 #include <iostream>
+#include <iterator>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "base/command_line.h"
@@ -127,8 +130,8 @@ int main(int argc, char** argv) {
     if (!ipc_fuzzer::MessageFile::Read(base::FilePath(name), &message_vector))
       return EXIT_FAILURE;
     input_message_vector.insert(input_message_vector.end(),
-                                message_vector.begin(), message_vector.end());
-    message_vector.weak_clear();
+                                std::make_move_iterator(message_vector.begin()),
+                                std::make_move_iterator(message_vector.end()));
   }
 
   bool has_indices = cmd->HasSwitch(kInSwitch);
@@ -151,22 +154,21 @@ int main(int argc, char** argv) {
   for (size_t i = 0; i < input_message_vector.size(); ++i) {
     bool valid = (i >= start_index && i < end_index);
     if (valid && has_regexp) {
-      valid = MessageMatches(input_message_vector[i], filter_pattern);
+      valid = MessageMatches(input_message_vector[i].get(), filter_pattern);
     }
     if (valid && has_indices) {
       valid = indices[i];
     }
     if (valid != invert) {
-      output_message_vector.push_back(input_message_vector[i]);
+      output_message_vector.push_back(std::move(input_message_vector[i]));
       remap_vector.push_back(i);
-      input_message_vector[i] = NULL;
     }
   }
 
   if (perform_dump) {
     for (size_t i = 0; i < output_message_vector.size(); ++i) {
       std::cout << remap_vector[i] << ". "
-                << MessageName(output_message_vector[i]) << "\n";
+                << MessageName(output_message_vector[i].get()) << "\n";
     }
   } else {
     if (!ipc_fuzzer::MessageFile::Write(

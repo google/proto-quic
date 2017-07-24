@@ -6,10 +6,10 @@
 
 // Tests of HpackStringDecoder.
 
-#include "base/strings/string_piece.h"
 #include "net/http2/hpack/decoder/hpack_string_collector.h"
 #include "net/http2/hpack/decoder/hpack_string_decoder_listener.h"
 #include "net/http2/hpack/tools/hpack_block_builder.h"
+#include "net/http2/platform/api/http2_string_piece.h"
 #include "net/http2/tools/failure.h"
 #include "net/http2/tools/http2_random.h"
 #include "net/http2/tools/random_decoder_test.h"
@@ -17,8 +17,6 @@
 
 using ::testing::AssertionResult;
 using ::testing::AssertionSuccess;
-using base::StringPiece;
-using std::string;
 
 namespace net {
 namespace test {
@@ -67,16 +65,17 @@ class HpackStringDecoderTest
     return decoder_.Resume(b, &listener_);
   }
 
-  AssertionResult Collected(StringPiece s, bool huffman_encoded) {
+  AssertionResult Collected(Http2StringPiece s, bool huffman_encoded) {
     VLOG(1) << collector_;
     return collector_.Collected(s, huffman_encoded);
   }
 
-  // expected_str is a string rather than a const string& or StringPiece so that
-  // the lambda makes a copy of the string, and thus the string to be passed to
-  // Collected outlives the call to MakeValidator.
+  // expected_str is a Http2String rather than a const Http2String& or
+  // Http2StringPiece so that the lambda makes a copy of the string, and thus
+  // the string to be passed to Collected outlives the call to MakeValidator.
 
-  Validator MakeValidator(const string& expected_str, bool expected_huffman) {
+  Validator MakeValidator(const Http2String& expected_str,
+                          bool expected_huffman) {
     return
         [expected_str, expected_huffman, this](
             const DecodeBuffer& input, DecodeStatus status) -> AssertionResult {
@@ -136,7 +135,7 @@ TEST_P(HpackStringDecoderTest, DecodeShortString) {
   {
     Validator validator =
         ValidateDoneAndOffset(11, MakeValidator("start end.", kUncompressed));
-    StringPiece data("\x0astart end.");
+    Http2StringPiece data("\x0astart end.");
     DecodeBuffer b(data);
     EXPECT_TRUE(
         DecodeAndValidateSeveralWays(&b, kMayReturnZeroOnFirst, validator));
@@ -144,8 +143,8 @@ TEST_P(HpackStringDecoderTest, DecodeShortString) {
 }
 
 TEST_P(HpackStringDecoderTest, DecodeLongStrings) {
-  string name = Random().RandString(1024);
-  string value = Random().RandString(65536);
+  Http2String name = Random().RandString(1024);
+  Http2String value = Random().RandString(65536);
   HpackBlockBuilder hbb;
 
   hbb.AppendString(false, name);

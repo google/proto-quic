@@ -89,7 +89,7 @@ class MessageLoopTaskRunnerTest : public testing::Test {
 
   void BlockTaskThreadHelper() { thread_sync_.Wait(); }
 
-  static StaticAtomicSequenceNumber g_order;
+  static AtomicSequenceNumber g_order;
 
   std::unique_ptr<MessageLoop> current_loop_;
   Thread task_thread_;
@@ -98,7 +98,7 @@ class MessageLoopTaskRunnerTest : public testing::Test {
   base::WaitableEvent thread_sync_;
 };
 
-StaticAtomicSequenceNumber MessageLoopTaskRunnerTest::g_order;
+AtomicSequenceNumber MessageLoopTaskRunnerTest::g_order;
 
 TEST_F(MessageLoopTaskRunnerTest, PostTaskAndReply_Basic) {
   MessageLoop* task_run_on = NULL;

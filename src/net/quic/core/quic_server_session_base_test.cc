@@ -645,7 +645,8 @@ TEST_P(StreamMemberLifetimeTest, Basic) {
 
   // Feed the CHLO into the crypto stream, which will trigger a call to
   // ProofSource::GetProof
-  crypto_stream->OnHandshakeMessage(chlo);
+  crypto_test_utils::SendHandshakeMessageToStream(crypto_stream, chlo,
+                                                  Perspective::IS_CLIENT);
   ASSERT_EQ(GetFakeProofSource()->NumPendingCallbacks(), 1);
 
   // Destroy the stream

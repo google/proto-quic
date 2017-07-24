@@ -492,8 +492,7 @@ OPENSSL_EXPORT int SSL_get_error(const SSL *ssl, int ret_code);
 
 /* SSL_ERROR_PENDING_CERTIFICATE indicates the operation failed because the
  * early callback indicated certificate lookup was incomplete. The caller may
- * retry the operation when lookup has completed. Note: when the operation is
- * retried, the early callback will not be called a second time.
+ * retry the operation when lookup has completed.
  *
  * See also |SSL_CTX_set_select_certificate_cb|. */
 #define SSL_ERROR_PENDING_CERTIFICATE 12
@@ -517,6 +516,13 @@ OPENSSL_EXPORT int SSL_get_error(const SSL *ssl, int ret_code);
  * associated with the rejected early data. |SSL_reset_early_data_reject| may be
  * used to reuse the underlying connection for the retry. */
 #define SSL_ERROR_EARLY_DATA_REJECTED 15
+
+/* SSL_ERROR_WANT_CERTIFICATE_VERIFY indicates the operation failed because
+ * certificate verification was incomplete. The caller may retry the operation
+ * when certificate verification is complete.
+ *
+ * See also |SSL_CTX_set_custom_verify|. */
+#define SSL_ERROR_WANT_CERTIFICATE_VERIFY 16
 
 /* SSL_set_mtu sets the |ssl|'s MTU in DTLS to |mtu|. It returns one on success
  * and zero on failure. */
@@ -578,6 +584,8 @@ OPENSSL_EXPORT int DTLSv1_handle_timeout(SSL *ssl);
 #define DTLS1_2_VERSION 0xfefd
 
 #define TLS1_3_DRAFT_VERSION 0x7f12
+#define TLS1_3_EXPERIMENT_VERSION 0x7e01
+#define TLS1_3_RECORD_TYPE_EXPERIMENT_VERSION 0x7a12
 
 /* SSL_CTX_set_min_proto_version sets the minimum protocol version for |ctx| to
  * |version|. If |version| is zero, the default minimum version is used. It
@@ -1706,25 +1714,39 @@ OPENSSL_EXPORT int SSL_SESSION_set1_id_context(SSL_SESSION *session,
 
 /* Session caching.
  *
- * Session caching allows clients to reconnect to a server based on saved
- * parameters from a previous connection.
+ * Session caching allows connections to be established more efficiently based
+ * on saved parameters from a previous connection, called a session (see
+ * |SSL_SESSION|). The client offers a saved session, using an opaque identifier
+ * from a previous connection. The server may accept the session, if it has the
+ * parameters available. Otherwise, it will decline and continue with a full
+ * handshake.
+ *
+ * This requires both the client and the server to retain session state. A
+ * client does so with a stateful session cache. A server may do the same or, if
+ * supported by both sides, statelessly using session tickets. For more
+ * information on the latter, see the next section.
  *
  * For a server, the library implements a built-in internal session cache as an
- * in-memory hash table. One may also register callbacks to implement a custom
- * external session cache. An external cache may be used in addition to or
- * instead of the internal one. Use |SSL_CTX_set_session_cache_mode| to toggle
- * the internal cache.
+ * in-memory hash table. Servers may also use |SSL_CTX_sess_set_get_cb| and
+ * |SSL_CTX_sess_set_new_cb| to implement a custom external session cache. In
+ * particular, this may be used to share a session cache between multiple
+ * servers in a large deployment. An external cache may be used in addition to
+ * or instead of the internal one. Use |SSL_CTX_set_session_cache_mode| to
+ * toggle the internal cache.
  *
- * For a client, the only option is an external session cache. Prior to
- * handshaking, the consumer should look up a session externally (keyed, for
- * instance, by hostname) and use |SSL_set_session| to configure which session
- * to offer. The callbacks may be used to determine when new sessions are
- * available.
+ * For a client, the only option is an external session cache. Clients may use
+ * |SSL_CTX_sess_set_new_cb| to register a callback for when new sessions are
+ * available. These may be cached and, in subsequent compatible connections,
+ * configured with |SSL_set_session|.
  *
- * Note that offering or accepting a session short-circuits most parameter
- * negotiation. Resuming sessions across different configurations may result in
- * surprising behavior. So, for instance, a client implementing a version
- * fallback should shard its session cache by maximum protocol version. */
+ * Note that offering or accepting a session short-circuits certificate
+ * verification and most parameter negotiation. Resuming sessions across
+ * different contexts may result in security failures and surprising
+ * behavior. For a typical client, this means sessions for different hosts must
+ * be cached under different keys. A client that connects to the same host with,
+ * e.g., different cipher suite settings or client certificates should also use
+ * separate session caches between those contexts. Servers should also partition
+ * session caches between SNI hosts with |SSL_CTX_set_session_id_context|.  */
 
 /* SSL_SESS_CACHE_OFF disables all session caching. */
 #define SSL_SESS_CACHE_OFF 0x0000
@@ -1771,25 +1793,6 @@ OPENSSL_EXPORT int SSL_CTX_get_session_cache_mode(const SSL_CTX *ctx);
  * It is an error to call this function after the handshake has begun. */
 OPENSSL_EXPORT int SSL_set_session(SSL *ssl, SSL_SESSION *session);
 
-/* SSL_get_session returns a non-owning pointer to |ssl|'s session. For
- * historical reasons, which session it returns depends on |ssl|'s state.
- *
- * Prior to the start of the initial handshake, it returns the session the
- * caller set with |SSL_set_session|. After the initial handshake has finished
- * and if no additional handshakes are in progress, it returns the currently
- * active session. Its behavior is undefined while a handshake is in progress.
- *
- * Using this function to add new sessions to an external session cache is
- * deprecated. Use |SSL_CTX_sess_set_new_cb| instead. */
-OPENSSL_EXPORT SSL_SESSION *SSL_get_session(const SSL *ssl);
-
-/* SSL_get0_session is an alias for |SSL_get_session|. */
-#define SSL_get0_session SSL_get_session
-
-/* SSL_get1_session acts like |SSL_get_session| but returns a new reference to
- * the session. */
-OPENSSL_EXPORT SSL_SESSION *SSL_get1_session(SSL *ssl);
-
 /* SSL_DEFAULT_SESSION_TIMEOUT is the default lifetime, in seconds, of a
  * session in TLS 1.2 or earlier. This is how long we are willing to use the
  * secret to encrypt traffic without fresh key material. */
@@ -1824,11 +1827,7 @@ OPENSSL_EXPORT uint32_t SSL_CTX_get_timeout(const SSL_CTX *ctx);
  * connection without a matching session ID context.
  *
  * For a server, if |SSL_VERIFY_PEER| is enabled, it is an error to not set a
- * session ID context.
- *
- * TODO(davidben): Is that check needed? That seems a special case of taking
- * care not to cross-resume across configuration changes, and this is only
- * relevant if a server requires client auth. */
+ * session ID context. */
 OPENSSL_EXPORT int SSL_CTX_set_session_id_context(SSL_CTX *ctx,
                                                   const uint8_t *sid_ctx,
                                                   size_t sid_ctx_len);
@@ -1883,18 +1882,18 @@ OPENSSL_EXPORT void SSL_CTX_flush_sessions(SSL_CTX *ctx, uint64_t time);
  * unset), the callback is not called.
  *
  * The callback is passed a reference to |session|. It returns one if it takes
- * ownership and zero otherwise.
+ * ownership (and then calls |SSL_SESSION_free| when done) and zero otherwise. A
+ * consumer which places |session| into an in-memory cache will likely return
+ * one, with the cache calling |SSL_SESSION_free|. A consumer which serializes
+ * |session| with |SSL_SESSION_to_bytes| may not need to retain |session| and
+ * will likely return zero. Returning one is equivalent to calling
+ * |SSL_SESSION_up_ref| and then returning zero.
  *
  * Note: For a client, the callback may be called on abbreviated handshakes if a
  * ticket is renewed. Further, it may not be called until some time after
  * |SSL_do_handshake| or |SSL_connect| completes if False Start is enabled. Thus
- * it's recommended to use this callback over checking |SSL_session_reused| on
- * handshake completion.
- *
- * TODO(davidben): Conditioning callbacks on |SSL_SESS_CACHE_CLIENT| or
- * |SSL_SESS_CACHE_SERVER| doesn't make any sense when one could just as easily
- * not supply the callbacks. Removing that condition and the client internal
- * cache would simplify things. */
+ * it's recommended to use this callback over calling |SSL_get_session| on
+ * handshake completion. */
 OPENSSL_EXPORT void SSL_CTX_sess_set_new_cb(
     SSL_CTX *ctx, int (*new_session_cb)(SSL *ssl, SSL_SESSION *session));
 
@@ -1959,23 +1958,36 @@ OPENSSL_EXPORT SSL_SESSION *SSL_magic_pending_session_ptr(void);
 /* Session tickets.
  *
  * Session tickets, from RFC 5077, allow session resumption without server-side
- * state. Session tickets are supported in by default but may be disabled with
+ * state. The server maintains a secret ticket key and sends the client opaque
+ * encrypted session parameters, called a ticket. When offering the session, the
+ * client sends the ticket which the server decrypts to recover session state.
+ * Session tickets are enabled by default but may be disabled with
  * |SSL_OP_NO_TICKET|.
  *
  * On the client, ticket-based sessions use the same APIs as ID-based tickets.
  * Callers do not need to handle them differently.
  *
  * On the server, tickets are encrypted and authenticated with a secret key. By
- * default, an |SSL_CTX| generates a key on creation. Tickets are minted and
- * processed transparently. The following functions may be used to configure a
- * persistent key or implement more custom behavior. There are three levels of
- * customisation possible:
+ * default, an |SSL_CTX| generates a key on creation and uses it for the
+ * lifetime of the |SSL_CTX|. Tickets are minted and processed
+ * transparently. The following functions may be used to configure a persistent
+ * key or implement more custom behavior, including key rotation and sharing
+ * keys between multiple servers in a large deployment. There are three levels
+ * of customisation possible:
  *
  * 1) One can simply set the keys with |SSL_CTX_set_tlsext_ticket_keys|.
  * 2) One can configure an |EVP_CIPHER_CTX| and |HMAC_CTX| directly for
  *    encryption and authentication.
  * 3) One can configure an |SSL_TICKET_ENCRYPTION_METHOD| to have more control
- *    and the option of asynchronous decryption. */
+ *    and the option of asynchronous decryption.
+ *
+ * An attacker that compromises a server's session ticket key can impersonate
+ * the server and, prior to TLS 1.3, retroactively decrypt all application
+ * traffic from sessions using that ticket key. Thus ticket keys must be
+ * regularly rotated for forward secrecy. Note the default key is currently not
+ * rotated.
+ *
+ * TODO(davidben): This is silly. Rotate the default key automatically. */
 
 /* SSL_CTX_get_tlsext_ticket_keys writes |ctx|'s session ticket key material to
  * |len| bytes of |out|. It returns one on success and zero if |len| is not
@@ -2167,8 +2179,8 @@ OPENSSL_EXPORT const char *SSL_get_curve_name(uint16_t curve_id);
 #define SSL_VERIFY_PEER 0x01
 
 /* SSL_VERIFY_FAIL_IF_NO_PEER_CERT configures a server to reject connections if
- * the client declines to send a certificate. Otherwise |SSL_VERIFY_PEER| still
- * allows anonymous clients. */
+ * the client declines to send a certificate. This flag must be used together
+ * with |SSL_VERIFY_PEER|, otherwise it won't work. */
 #define SSL_VERIFY_FAIL_IF_NO_PEER_CERT 0x02
 
 /* SSL_VERIFY_PEER_IF_NO_OBC configures a server to request a client certificate
@@ -2195,6 +2207,39 @@ OPENSSL_EXPORT void SSL_CTX_set_verify(
 OPENSSL_EXPORT void SSL_set_verify(SSL *ssl, int mode,
                                    int (*callback)(int ok,
                                                    X509_STORE_CTX *store_ctx));
+
+enum ssl_verify_result_t {
+  ssl_verify_ok,
+  ssl_verify_invalid,
+  ssl_verify_retry,
+};
+
+/* SSL_CTX_set_custom_verify configures certificate verification. |mode| is one
+ * of the |SSL_VERIFY_*| values defined above. |callback| performs the
+ * certificate verification.
+ *
+ * The callback may call |SSL_get0_peer_certificates| for the certificate chain
+ * to validate. The callback should return |ssl_verify_ok| if the certificate is
+ * valid. If the certificate is invalid, the callback should return
+ * |ssl_verify_invalid| and optionally set |*out_alert| to an alert to send to
+ * the peer. Some useful alerts include |SSL_AD_CERTIFICATE_EXPIRED|,
+ * |SSL_AD_CERTIFICATE_REVOKED|, |SSL_AD_UNKNOWN_CA|, |SSL_AD_BAD_CERTIFICATE|,
+ * |SSL_AD_CERTIFICATE_UNKNOWN|, and |SSL_AD_INTERNAL_ERROR|. See RFC 5246
+ * section 7.2.2 for their precise meanings. If unspecified,
+ * |SSL_AD_CERTIFICATE_UNKNOWN| will be sent by default.
+ *
+ * To verify a certificate asynchronously, the callback may return
+ * |ssl_verify_retry|. The handshake will then pause with |SSL_get_error|
+ * returning |SSL_ERROR_WANT_CERTIFICATE_VERIFY|. */
+OPENSSL_EXPORT void SSL_CTX_set_custom_verify(
+    SSL_CTX *ctx, int mode,
+    enum ssl_verify_result_t (*callback)(SSL *ssl, uint8_t *out_alert));
+
+/* SSL_set_custom_verify behaves like |SSL_CTX_set_custom_verify| but configures
+ * an individual |SSL|. */
+OPENSSL_EXPORT void SSL_set_custom_verify(
+    SSL *ssl, int mode,
+    enum ssl_verify_result_t (*callback)(SSL *ssl, uint8_t *out_alert));
 
 /* SSL_CTX_get_verify_mode returns |ctx|'s verify mode, set by
  * |SSL_CTX_set_verify|. */
@@ -2315,13 +2360,6 @@ OPENSSL_EXPORT void SSL_CTX_set_cert_verify_callback(
     SSL_CTX *ctx, int (*callback)(X509_STORE_CTX *store_ctx, void *arg),
     void *arg);
 
-/* SSL_CTX_i_promise_to_verify_certs_after_the_handshake indicates that the
- * caller understands that the |CRYPTO_BUFFER|-based methods currently require
- * post-handshake verification of certificates and thus it's ok to accept any
- * certificates during the handshake. */
-OPENSSL_EXPORT void SSL_CTX_i_promise_to_verify_certs_after_the_handshake(
-    SSL_CTX *ctx);
-
 /* SSL_enable_signed_cert_timestamps causes |ssl| (which must be the client end
  * of a connection) to request SCTs from the server. See
  * https://tools.ietf.org/html/rfc6962.
@@ -2401,6 +2439,18 @@ OPENSSL_EXPORT void SSL_set_client_CA_list(SSL *ssl,
  * |name_list|. It takes ownership of |name_list|. */
 OPENSSL_EXPORT void SSL_CTX_set_client_CA_list(SSL_CTX *ctx,
                                                STACK_OF(X509_NAME) *name_list);
+
+/* SSL_set0_client_CAs sets |ssl|'s client certificate CA list to |name_list|,
+ * which should contain DER-encoded distinguished names (RFC 5280). It takes
+ * ownership of |name_list|. */
+OPENSSL_EXPORT void SSL_set0_client_CAs(SSL *ssl,
+                                        STACK_OF(CRYPTO_BUFFER) *name_list);
+
+/* SSL_CTX_set0_client_CAs sets |ctx|'s client certificate CA list to
+ * |name_list|, which should contain DER-encoded distinguished names (RFC 5280).
+ * It takes ownership of |name_list|. */
+OPENSSL_EXPORT void SSL_CTX_set0_client_CAs(SSL_CTX *ctx,
+                                            STACK_OF(CRYPTO_BUFFER) *name_list);
 
 /* SSL_get_client_CA_list returns |ssl|'s client certificate CA list. If |ssl|
  * has not been configured as a client, this is the list configured by
@@ -3132,6 +3182,25 @@ OPENSSL_EXPORT int SSL_renegotiate_pending(SSL *ssl);
  * performed by |ssl|. This includes the pending renegotiation, if any. */
 OPENSSL_EXPORT int SSL_total_renegotiations(const SSL *ssl);
 
+enum tls13_variant_t {
+  tls13_default = 0,
+  tls13_experiment = 1,
+  tls13_record_type_experiment = 2,
+  tls13_no_session_id_experiment = 3,
+};
+
+/* SSL_CTX_set_tls13_variant sets which variant of TLS 1.3 we negotiate. On the
+ * server, if |variant| is not |tls13_default|, all variants are enabled. On the
+ * client, only the configured variant is enabled. */
+OPENSSL_EXPORT void SSL_CTX_set_tls13_variant(SSL_CTX *ctx,
+                                              enum tls13_variant_t variant);
+
+/* SSL_set_tls13_variant sets which variant of TLS 1.3 we negotiate. On the
+ * server, if |variant| is not |tls13_default|, all variants are enabled. On the
+ * client, only the configured variant is enabled. */
+OPENSSL_EXPORT void SSL_set_tls13_variant(SSL *ssl,
+                                          enum tls13_variant_t variant);
+
 /* SSL_MAX_CERT_LIST_DEFAULT is the default maximum length, in bytes, of a peer
  * certificate chain. */
 #define SSL_MAX_CERT_LIST_DEFAULT (1024 * 100)
@@ -3725,6 +3794,7 @@ OPENSSL_EXPORT void SSL_CTX_set_client_cert_cb(
 #define SSL_PRIVATE_KEY_OPERATION 9
 #define SSL_PENDING_TICKET 10
 #define SSL_EARLY_DATA_REJECTED 11
+#define SSL_CERTIFICATE_VERIFY 12
 
 /* SSL_want returns one of the above values to determine what the most recent
  * operation on |ssl| was blocked on. Use |SSL_get_error| instead. */
@@ -3883,6 +3953,29 @@ OPENSSL_EXPORT long BIO_set_ssl(BIO *bio, SSL *ssl, int take_owership);
 
 /* SSL_set_ecdh_auto returns one. */
 #define SSL_set_ecdh_auto(ssl, onoff) 1
+
+/* SSL_get_session returns a non-owning pointer to |ssl|'s session. For
+ * historical reasons, which session it returns depends on |ssl|'s state.
+ *
+ * Prior to the start of the initial handshake, it returns the session the
+ * caller set with |SSL_set_session|. After the initial handshake has finished
+ * and if no additional handshakes are in progress, it returns the currently
+ * active session. Its behavior is undefined while a handshake is in progress.
+ *
+ * If trying to add new sessions to an external session cache, use
+ * |SSL_CTX_sess_set_new_cb| instead. In particular, using the callback is
+ * required as of TLS 1.3. For compatibility, this function will return an
+ * unresumable session which may be cached, but will never be resumed.
+ *
+ * If querying properties of the connection, use APIs on the |SSL| object. */
+OPENSSL_EXPORT SSL_SESSION *SSL_get_session(const SSL *ssl);
+
+/* SSL_get0_session is an alias for |SSL_get_session|. */
+#define SSL_get0_session SSL_get_session
+
+/* SSL_get1_session acts like |SSL_get_session| but returns a new reference to
+ * the session. */
+OPENSSL_EXPORT SSL_SESSION *SSL_get1_session(SSL *ssl);
 
 
 /* Private structures.
@@ -4097,6 +4190,10 @@ struct ssl_ctx_st {
    * and is further constrainted by |SSL_OP_NO_*|. */
   uint16_t conf_min_version;
 
+  /* tls13_variant is the variant of TLS 1.3 we are using for this
+   * configuration. */
+  enum tls13_variant_t tls13_variant;
+
   struct ssl_cipher_preference_list_st *cipher_list;
 
   X509_STORE *cert_store;
@@ -4143,6 +4240,9 @@ struct ssl_ctx_st {
   /* if defined, these override the X509_verify_cert() calls */
   int (*app_verify_callback)(X509_STORE_CTX *store_ctx, void *arg);
   void *app_verify_arg;
+
+  enum ssl_verify_result_t (*custom_verify_callback)(SSL *ssl,
+                                                     uint8_t *out_alert);
 
   /* Default password callback. */
   pem_password_cb *default_passwd_callback;
@@ -4323,12 +4423,6 @@ struct ssl_ctx_st {
   /* grease_enabled is one if draft-davidben-tls-grease-01 is enabled and zero
    * otherwise. */
   unsigned grease_enabled:1;
-
-  /* i_promise_to_verify_certs_after_the_handshake indicates that the
-   * application is using the |CRYPTO_BUFFER|-based methods and understands
-   * that this currently requires post-handshake verification of
-   * certificates. */
-  unsigned i_promise_to_verify_certs_after_the_handshake:1;
 
   /* allow_unknown_alpn_protos is one if the client allows unsolicited ALPN
    * protocols from the peer. */

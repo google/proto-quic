@@ -169,7 +169,8 @@ TEST_P(QuicClientSessionTest, NoEncryptionAfterInitialEncryption) {
   CryptoHandshakeMessage rej;
   crypto_test_utils::FillInDummyReject(&rej, /* stateless */ false);
   EXPECT_TRUE(session_->IsEncryptionEstablished());
-  session_->GetMutableCryptoStream()->OnHandshakeMessage(rej);
+  crypto_test_utils::SendHandshakeMessageToStream(
+      session_->GetMutableCryptoStream(), rej, Perspective::IS_CLIENT);
   EXPECT_FALSE(session_->IsEncryptionEstablished());
   EXPECT_EQ(ENCRYPTION_NONE,
             QuicPacketCreatorPeer::GetEncryptionLevel(

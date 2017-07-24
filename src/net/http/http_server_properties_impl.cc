@@ -20,17 +20,10 @@
 
 namespace net {
 
-HttpServerPropertiesImpl::HttpServerPropertiesImpl()
-    : HttpServerPropertiesImpl(nullptr) {}
-
-HttpServerPropertiesImpl::HttpServerPropertiesImpl(
-    base::TickClock* broken_alternative_services_clock)
-    : broken_alternative_services_(this,
-                                   broken_alternative_services_clock
-                                       ? broken_alternative_services_clock
-                                       : &broken_alternative_services_clock_),
-      spdy_servers_map_(SpdyServersMap::NO_AUTO_EVICT),
+HttpServerPropertiesImpl::HttpServerPropertiesImpl(base::TickClock* clock)
+    : spdy_servers_map_(SpdyServersMap::NO_AUTO_EVICT),
       alternative_service_map_(AlternativeServiceMap::NO_AUTO_EVICT),
+      broken_alternative_services_(this, clock ? clock : &default_clock_),
       server_network_stats_map_(ServerNetworkStatsMap::NO_AUTO_EVICT),
       quic_server_info_map_(QuicServerInfoMap::NO_AUTO_EVICT),
       max_server_configs_stored_in_properties_(kMaxQuicServersToPersist) {
@@ -39,6 +32,9 @@ HttpServerPropertiesImpl::HttpServerPropertiesImpl(
   canonical_suffixes_.push_back(".googlevideo.com");
   canonical_suffixes_.push_back(".googleusercontent.com");
 }
+
+HttpServerPropertiesImpl::HttpServerPropertiesImpl()
+    : HttpServerPropertiesImpl(nullptr) {}
 
 HttpServerPropertiesImpl::~HttpServerPropertiesImpl() {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
@@ -163,6 +159,26 @@ void HttpServerPropertiesImpl::GetSpdyServerList(
       ++count;
     }
   }
+}
+
+void HttpServerPropertiesImpl::SetBrokenAndRecentlyBrokenAlternativeServices(
+    std::unique_ptr<BrokenAlternativeServiceList>
+        broken_alternative_service_list,
+    std::unique_ptr<RecentlyBrokenAlternativeServices>
+        recently_broken_alternative_services) {
+  broken_alternative_services_.SetBrokenAndRecentlyBrokenAlternativeServices(
+      std::move(broken_alternative_service_list),
+      std::move(recently_broken_alternative_services));
+}
+
+const BrokenAlternativeServiceList&
+HttpServerPropertiesImpl::broken_alternative_service_list() const {
+  return broken_alternative_services_.broken_alternative_service_list();
+}
+
+const RecentlyBrokenAlternativeServices&
+HttpServerPropertiesImpl::recently_broken_alternative_services() const {
+  return broken_alternative_services_.recently_broken_alternative_services();
 }
 
 void HttpServerPropertiesImpl::Clear() {

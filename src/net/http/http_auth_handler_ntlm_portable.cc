@@ -19,8 +19,8 @@
 #include "base/strings/utf_string_conversions.h"
 #include "net/base/net_errors.h"
 #include "net/base/network_interfaces.h"
-#include "net/http/des.h"
-#include "net/http/md4.h"
+#include "net/ntlm/des.h"
+#include "net/ntlm/md4.h"
 
 namespace net {
 
@@ -363,11 +363,19 @@ static int ParseType2Msg(const void* in_buf, uint32_t in_len, Type2Msg* msg) {
   uint32_t offset = ReadUint32(cursor);  // get offset from in_buf
   msg->target_len = 0;
   msg->target = NULL;
-  // Check the offset / length combo is in range of the input buffer, including
-  // integer overflow checking.
-  if (offset + target_len > offset && offset + target_len <= in_len) {
-    msg->target_len = target_len;
-    msg->target = ((const uint8_t*)in_buf) + offset;
+
+  // Target length 0 is valid and indicates no target information.
+  if (target_len != 0) {
+    // Check the offset / length combo is in range of the input buffer,
+    // including integer overflow checking.
+    if (target_len <= in_len && in_len - offset >= target_len) {
+      msg->target_len = target_len;
+      msg->target = ((const uint8_t*)in_buf) + offset;
+    } else {
+      // Reject a message with a non-zero target length that
+      // would cause an overflow.
+      return ERR_UNEXPECTED;
+    }
   }
 
   // read flags

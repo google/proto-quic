@@ -5,7 +5,6 @@
 #include "net/test/android/net_test_jni_onload.h"
 
 #include "base/android/base_jni_onload.h"
-#include "base/android/base_jni_registrar.h"
 #include "base/android/jni_android.h"
 #include "base/bind.h"
 #include "net/test/embedded_test_server/android/embedded_test_server_android.h"
@@ -23,7 +22,7 @@ bool RegisterJNI(JNIEnv* env) {
 }  // namesapce
 
 bool OnJNIOnLoadRegisterJNI(JNIEnv* env) {
-  return base::android::RegisterJni(env) && RegisterJNI(env);
+  return RegisterJNI(env);
 }
 
 bool OnJNIOnLoadInit() {

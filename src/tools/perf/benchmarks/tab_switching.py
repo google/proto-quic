@@ -50,5 +50,6 @@ class TabSwitchingTypical25(perf_benchmark.PerfBenchmark):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # No tests disabled.
+        self.PermanentlyDisableBenchmark([story.expectations.ALL_MOBILE],
+                                         'Desktop benchmark.')
     return StoryExpectations()

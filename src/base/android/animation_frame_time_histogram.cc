@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/android/animation_frame_time_histogram.h"
-
 #include "base/android/jni_string.h"
 #include "base/metrics/histogram_macros.h"
 #include "jni/AnimationFrameTimeHistogram_jni.h"
@@ -25,14 +23,3 @@ void SaveHistogram(JNIEnv* env,
                         base::TimeDelta::FromMilliseconds(frame_times_ms[i]));
   }
 }
-
-namespace base {
-namespace android {
-
-// static
-bool RegisterAnimationFrameTimeHistogram(JNIEnv* env) {
-  return RegisterNativesImpl(env);
-}
-
-}  // namespace android
-}  // namespace base

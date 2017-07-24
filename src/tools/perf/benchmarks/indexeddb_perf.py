@@ -107,7 +107,7 @@ class IndexedDbTracing(perf_benchmark.PerfBenchmark):
   """IndexedDB Performance tests that use tracing."""
   page_set = page_sets.IndexedDBEndurePageSet
 
-  def CreateTimelineBasedMeasurementOptions(self):
+  def CreateCoreTimelineBasedMeasurementOptions(self):
     cat_filter = chrome_trace_category_filter.ChromeTraceCategoryFilter()
     cat_filter.AddIncludedCategory(IDB_CATEGORY)
     cat_filter.AddIncludedCategory(TIMELINE_REQUIRED_CATEGORY)

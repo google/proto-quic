@@ -1453,14 +1453,11 @@ template("ios_xctest_bundle") {
       executable_name = _target_name
 
       if (ios_automatically_manage_certs) {
-        # Use the same bundle identifier for EarlGrey tests as for unit tests
-        # when managing certificates as the number of free certs is limited.
-        extra_substitutions = [
-          "EXECUTABLE_NAME=gtest.${ios_generic_test_bundle_id_suffix}",
-          "MODULE_NAME=${ios_generic_test_bundle_id_suffix}-module",
-        ]
+        # Use a fixed bundle identifier for EarlGrey tests when using Xcode to
+        # manage the certificates as the number of free certs is limited.
+        extra_substitutions = [ "MODULE_BUNDLE_ID=gtest.${ios_generic_test_bundle_id_suffix}-module" ]
       } else {
-        extra_substitutions = [ "MODULE_NAME=$_output_name" ]
+        extra_substitutions = [ "MODULE_BUNDLE_ID=gtest.$_output_name" ]
       }
     }
 

@@ -47,7 +47,7 @@ CONFIG_DEFAULT_PATH = os.path.join(host_paths.DIR_SOURCE_ROOT, 'build',
 
 LICENSE_FILE_NAME = 'LICENSE'
 ZIP_FILE_NAME = 'google_play_services_library.zip'
-GMS_PACKAGE_ID = 'extra-google-m2repository'  # used by sdk manager
+GMS_PACKAGE_ID = 'extras;google;m2repository'  # used by sdk manager
 
 LICENSE_PATTERN = re.compile(r'^Pkg\.License=(?P<text>.*)$', re.MULTILINE)
 
@@ -256,9 +256,8 @@ def UpdateSdk(args):
     with open(paths.source_prop, 'w') as prop_file:
       prop_file.write('Pkg.Revision=0.0.0\n')
 
-  sdk_manager = os.path.join(args.sdk_root, 'tools', 'android')
-  cmd = [sdk_manager, 'update', 'sdk', '--no-ui', '--filter', GMS_PACKAGE_ID]
-  cmd_helper.Call(cmd)
+  sdk_manager = os.path.join(args.sdk_root, 'tools', 'bin', 'sdkmanager')
+  cmd_helper.Call([sdk_manager, GMS_PACKAGE_ID])
   # If no update is needed, it still returns successfully so we just do nothing
 
   return 0

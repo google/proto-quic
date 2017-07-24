@@ -9,10 +9,7 @@
 
 #include <stddef.h>
 
-#include <string>
-
 #include "base/logging.h"
-#include "base/strings/string_piece.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/decoder/frame_decoder_state.h"
@@ -21,6 +18,8 @@
 #include "net/http2/http2_constants_test_util.h"
 #include "net/http2/http2_structures.h"
 #include "net/http2/platform/api/http2_reconstruct_object.h"
+#include "net/http2/platform/api/http2_string.h"
+#include "net/http2/platform/api/http2_string_piece.h"
 #include "net/http2/test_tools/frame_parts.h"
 #include "net/http2/tools/http2_frame_builder.h"
 #include "net/http2/tools/random_decoder_test.h"
@@ -87,7 +86,7 @@ class PayloadDecoderBaseTest : public RandomDecoderTest {
   // Given the specified payload (without the common frame header), decode
   // it with several partitionings of the payload.
   ::testing::AssertionResult DecodePayloadAndValidateSeveralWays(
-      base::StringPiece payload,
+      Http2StringPiece payload,
       Validator validator);
 
   // TODO(jamessynge): Add helper method for verifying these are both non-zero,
@@ -196,7 +195,7 @@ class AbstractPayloadDecoderTest : public PayloadDecoderBaseTest {
   // will be decoded several times with different partitionings of the payload,
   // and after each the validator will be called.
   AssertionResult DecodePayloadAndValidateSeveralWays(
-      base::StringPiece payload,
+      Http2StringPiece payload,
       const FrameParts& expected) {
     NoArgValidator validator = [&expected, this]() -> AssertionResult {
       VERIFY_FALSE(listener_.IsInProgress());
@@ -215,7 +214,7 @@ class AbstractPayloadDecoderTest : public PayloadDecoderBaseTest {
   // std::nullptr_t (not extra validation).
   template <typename WrappedValidator>
   ::testing::AssertionResult VerifyDetectsFrameSizeError(
-      base::StringPiece payload,
+      Http2StringPiece payload,
       const Http2FrameHeader& header,
       WrappedValidator wrapped_validator) {
     set_frame_header(header);
@@ -254,7 +253,7 @@ class AbstractPayloadDecoderTest : public PayloadDecoderBaseTest {
   // randomly selected flag bits not excluded by FlagsAffectingPayloadDecoding.
   ::testing::AssertionResult VerifyDetectsMultipleFrameSizeErrors(
       uint8_t required_flags,
-      base::StringPiece unpadded_payload,
+      Http2StringPiece unpadded_payload,
       ApproveSize approve_size,
       int total_pad_length) {
     // required_flags should come from those that are defined for the frame
@@ -312,7 +311,7 @@ class AbstractPayloadDecoderTest : public PayloadDecoderBaseTest {
   // As above, but for frames without padding.
   ::testing::AssertionResult VerifyDetectsFrameSizeError(
       uint8_t required_flags,
-      base::StringPiece unpadded_payload,
+      Http2StringPiece unpadded_payload,
       ApproveSize approve_size) {
     Http2FrameType frame_type = DecoderPeer::FrameType();
     uint8_t known_flags = KnownFlagsMaskForFrameType(frame_type);
@@ -392,7 +391,7 @@ class AbstractPaddablePayloadDecoderTest
   // amount of missing padding is as specified. header.IsPadded must be true,
   // and the payload must be empty or the PadLength field must be too large.
   ::testing::AssertionResult VerifyDetectsPaddingTooLong(
-      base::StringPiece payload,
+      Http2StringPiece payload,
       const Http2FrameHeader& header,
       size_t expected_missing_length) {
     set_frame_header(header);
@@ -435,7 +434,7 @@ class AbstractPaddablePayloadDecoderTest
     }
 
     VLOG(1) << "payload_length=" << payload_length;
-    std::string payload = fb.buffer().substr(0, payload_length);
+    Http2String payload = fb.buffer().substr(0, payload_length);
 
     // The missing length is the amount we cut off the end, unless
     // payload_length is zero, in which case the decoder knows only that 1

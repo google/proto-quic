@@ -99,7 +99,7 @@ src:*/third_party/libwebm/source/mkvmuxer.cpp
 #############################################################################
 # LLVM is not UBSan vptr clean.
 src:*third_party/swiftshader/third_party/LLVM*
-src:*third_party/swiftshader/third_party/llvm-subzero*
+src:*third_party/swiftshader/third_party/llvm\-subzero*
 
 #############################################################################
 # UBSan yields false positives in SwiftShader's libEGL when objects created in

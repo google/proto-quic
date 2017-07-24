@@ -13,14 +13,13 @@
 #include "net/http2/hpack/http2_hpack_constants.h"
 #include "net/http2/hpack/tools/hpack_block_builder.h"
 #include "net/http2/hpack/tools/hpack_example.h"
+#include "net/http2/platform/api/http2_string_piece.h"
 #include "net/http2/tools/failure.h"
 #include "net/http2/tools/http2_random.h"
 #include "net/http2/tools/random_decoder_test.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using ::testing::AssertionSuccess;
-using std::string;
-using base::StringPiece;
 
 namespace net {
 namespace test {
@@ -67,16 +66,16 @@ class HpackBlockDecoderTest : public RandomDecoderTest {
   }
 
   AssertionResult DecodeHpackExampleAndValidateSeveralWays(
-      StringPiece hpack_example,
+      Http2StringPiece hpack_example,
       Validator validator) {
-    string input = HpackExampleToStringOrDie(hpack_example);
+    Http2String input = HpackExampleToStringOrDie(hpack_example);
     DecodeBuffer db(input);
     return DecodeAndValidateSeveralWays(&db, validator);
   }
 
   uint8_t Rand8() { return Random().Rand8(); }
 
-  string Rand8String() { return Random().RandString(Rand8()); }
+  Http2String Rand8String() { return Random().RandString(Rand8()); }
 
   HpackBlockCollector collector_;
   HpackEntryDecoderVLoggingListener listener_;
@@ -159,7 +158,7 @@ TEST_F(HpackBlockDecoderTest, SpecExample_C_2_4) {
 }
 // http://httpwg.org/specs/rfc7541.html#rfc.section.C.3.1
 TEST_F(HpackBlockDecoderTest, SpecExample_C_3_1) {
-  string example = R"(
+  Http2String example = R"(
       82                                      | == Indexed - Add ==
                                               |   idx = 2
                                               | -> :method: GET
@@ -193,7 +192,7 @@ TEST_F(HpackBlockDecoderTest, SpecExample_C_3_1) {
 
 // http://httpwg.org/specs/rfc7541.html#rfc.section.C.5.1
 TEST_F(HpackBlockDecoderTest, SpecExample_C_5_1) {
-  string example = R"(
+  Http2String example = R"(
       48                                      | == Literal indexed ==
                                               |   Indexed name (idx = 8)
                                               |     :status

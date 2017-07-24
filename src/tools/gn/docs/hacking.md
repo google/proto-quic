@@ -2,9 +2,9 @@
 
 ## Building GN itself
 
-GN is part of the Chromium tree. If you have a Chromium checkout, you
-already have the source and you can do `ninja -C out/Debug gn` to
-build it.
+GN is part of the Chromium tree, in [//tools/gn/](../). If you have a
+Chromium checkout, you already have the source and you can do `ninja -C
+out/Debug gn` to build it.
 
 To build gn using gn, run (in the root `src` directory):
 

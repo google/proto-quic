@@ -5,6 +5,9 @@
 #ifndef NET_HTTP2_HPACK_TOOLS_HPACK_EXAMPLE_H_
 #define NET_HTTP2_HPACK_TOOLS_HPACK_EXAMPLE_H_
 
+#include "net/http2/platform/api/http2_string.h"
+#include "net/http2/platform/api/http2_string_piece.h"
+
 // Parses HPACK examples in the format seen in the HPACK specification,
 // RFC 7541. For example:
 //
@@ -17,14 +20,10 @@
 //
 // (excluding the leading "//").
 
-#include <string>
-
-#include "base/strings/string_piece.h"
-
 namespace net {
 namespace test {
 
-std::string HpackExampleToStringOrDie(base::StringPiece example);
+Http2String HpackExampleToStringOrDie(Http2StringPiece example);
 
 }  // namespace test
 }  // namespace net

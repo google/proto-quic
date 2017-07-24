@@ -476,7 +476,7 @@ class SequencedWorkerPool::Inner {
   // only does threadsafe increment operations, you do not need to hold the
   // lock. This is class-static to make SequenceTokens issued by
   // GetSequenceToken unique across SequencedWorkerPool instances.
-  static base::StaticAtomicSequenceNumber g_last_sequence_number_;
+  static base::AtomicSequenceNumber g_last_sequence_number_;
 
   // This lock protects |everything in this class|. Do not read or modify
   // anything without holding this lock. Do not block while holding this
@@ -675,7 +675,7 @@ SequencedWorkerPool::Inner::~Inner() {
 // static
 SequencedWorkerPool::SequenceToken
 SequencedWorkerPool::Inner::GetSequenceToken() {
-  // Need to add one because StaticAtomicSequenceNumber starts at zero, which
+  // Need to add one because AtomicSequenceNumber starts at zero, which
   // is used as a sentinel value in SequenceTokens.
   return SequenceToken(g_last_sequence_number_.GetNext() + 1);
 }
@@ -1420,8 +1420,7 @@ bool SequencedWorkerPool::Inner::CanShutdown() const {
          blocking_shutdown_pending_task_count_ == 0;
 }
 
-base::StaticAtomicSequenceNumber
-SequencedWorkerPool::Inner::g_last_sequence_number_;
+base::AtomicSequenceNumber SequencedWorkerPool::Inner::g_last_sequence_number_;
 
 // SequencedWorkerPool --------------------------------------------------------
 

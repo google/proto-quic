@@ -45,11 +45,13 @@ HistogramSnapshotManager::~HistogramSnapshotManager() {
 }
 
 void HistogramSnapshotManager::PrepareDelta(HistogramBase* histogram) {
+  histogram->ValidateHistogramContents();
   PrepareSamples(histogram, histogram->SnapshotDelta());
 }
 
 void HistogramSnapshotManager::PrepareFinalDelta(
     const HistogramBase* histogram) {
+  histogram->ValidateHistogramContents();
   PrepareSamples(histogram, histogram->SnapshotFinalDelta());
 }
 

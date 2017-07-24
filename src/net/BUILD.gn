@@ -42,7 +42,8 @@ enable_net_mojo = !is_ios && !is_proto_quic
 # in addition to use_openssl_certs or use_nss_certs, in that case byte certs
 # are used internally but OpenSSL or NSS are used for certificate verification.
 # TODO(mattm): crbug.com/671420: Implement and enable this for all platforms.
-use_byte_certs = is_mac || is_android || is_nacl || is_ios || is_win
+use_byte_certs =
+    is_mac || is_android || is_nacl || is_ios || is_win || is_fuchsia
 
 buildflag_header("features") {
   header = "net_features.h"
@@ -54,6 +55,7 @@ buildflag_header("features") {
     "ENABLE_REPORTING=$enable_reporting",
     "ENABLE_WEBSOCKETS=$enable_websockets",
     "USE_BYTE_CERTS=$use_byte_certs",
+    "INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST=$include_transport_security_state_preload_list",
   ]
 }
 
@@ -284,6 +286,7 @@ component("net") {
     "http/http_vary_data.h",
     "http/transport_security_state.cc",
     "http/transport_security_state.h",
+    "http/transport_security_state_source.cc",
     "http/transport_security_state_source.h",
     "log/net_log.cc",
     "log/net_log.h",
@@ -358,10 +361,13 @@ component("net") {
     "//base",
     "//net/base/registry_controlled_domains",
     "//net/data/ssl/certificate_transparency:ct_log_list",
-    "//net/http:generate_transport_security_state",
     "//third_party/protobuf:protobuf_lite",
     "//url:url_features",
   ]
+
+  if (include_transport_security_state_preload_list) {
+    deps += [ "//net/http:generate_transport_security_state" ]
+  }
 
   public_deps = [
     ":net_quic_proto",
@@ -794,8 +800,6 @@ component("net") {
       "http/bidirectional_stream_request_info.h",
       "http/broken_alternative_services.cc",
       "http/broken_alternative_services.h",
-      "http/des.cc",
-      "http/des.h",
       "http/failing_http_transaction_factory.cc",
       "http/failing_http_transaction_factory.h",
       "http/http_auth.cc",
@@ -838,6 +842,8 @@ component("net") {
       "http/http_cache_lookup_manager.h",
       "http/http_cache_transaction.cc",
       "http/http_cache_transaction.h",
+      "http/http_cache_writers.cc",
+      "http/http_cache_writers.h",
       "http/http_chunked_decoder.cc",
       "http/http_chunked_decoder.h",
       "http/http_content_disposition.cc",
@@ -884,8 +890,6 @@ component("net") {
       "http/http_transaction.h",
       "http/http_transaction_factory.h",
       "http/http_version.h",
-      "http/md4.cc",
-      "http/md4.h",
       "http/partial_data.cc",
       "http/partial_data.h",
       "http/proxy_client_socket.cc",
@@ -978,8 +982,14 @@ component("net") {
       "http2/http2_structures.h",
       "http2/platform/api/http2_export.h",
       "http2/platform/api/http2_reconstruct_object.h",
+      "http2/platform/api/http2_string.h",
+      "http2/platform/api/http2_string_piece.h",
+      "http2/platform/api/http2_string_utils.h",
       "http2/platform/impl/http2_export_impl.h",
       "http2/platform/impl/http2_reconstruct_object_impl.h",
+      "http2/platform/impl/http2_string_impl.h",
+      "http2/platform/impl/http2_string_piece_impl.h",
+      "http2/platform/impl/http2_string_utils_impl.h",
       "http2/tools/http2_bug_tracker.h",
       "log/file_net_log_observer.cc",
       "log/file_net_log_observer.h",
@@ -987,8 +997,6 @@ component("net") {
       "log/net_log_util.h",
       "log/trace_net_log_observer.cc",
       "log/trace_net_log_observer.h",
-      "log/write_to_file_net_log_observer.cc",
-      "log/write_to_file_net_log_observer.h",
       "nqe/cached_network_quality.cc",
       "nqe/cached_network_quality.h",
       "nqe/effective_connection_type.cc",
@@ -1023,6 +1031,17 @@ component("net") {
       "nqe/throughput_analyzer.cc",
       "nqe/throughput_analyzer.h",
       "nqe/weighted_observation.h",
+      "ntlm/des.cc",
+      "ntlm/des.h",
+      "ntlm/md4.cc",
+      "ntlm/md4.h",
+      "ntlm/ntlm.cc",
+      "ntlm/ntlm.h",
+      "ntlm/ntlm_buffer_reader.cc",
+      "ntlm/ntlm_buffer_reader.h",
+      "ntlm/ntlm_buffer_writer.cc",
+      "ntlm/ntlm_buffer_writer.h",
+      "ntlm/ntlm_constants.h",
       "proxy/dhcp_proxy_script_adapter_fetcher_win.cc",
       "proxy/dhcp_proxy_script_adapter_fetcher_win.h",
       "proxy/dhcp_proxy_script_fetcher.cc",
@@ -1764,6 +1783,22 @@ component("net") {
       }
     }
 
+    if (is_win) {
+      sources -= [
+        "ntlm/des.cc",
+        "ntlm/des.h",
+        "ntlm/md4.cc",
+        "ntlm/md4.h",
+        "ntlm/ntlm.cc",
+        "ntlm/ntlm.h",
+        "ntlm/ntlm_buffer_reader.cc",
+        "ntlm/ntlm_buffer_reader.h",
+        "ntlm/ntlm_buffer_writer.cc",
+        "ntlm/ntlm_buffer_writer.h",
+        "ntlm/ntlm_constants.h",
+      ]
+    }
+
     if (!enable_built_in_dns) {
       sources -= [
         "dns/address_sorter_posix.cc",
@@ -1946,6 +1981,14 @@ component("net") {
         "base/network_interfaces_linux.cc",
         "base/network_interfaces_linux.h",
         "base/platform_mime_util_linux.cc",
+      ]
+    }
+
+    if (is_fuchsia) {
+      sources += [
+        "base/platform_mime_util_fuchsia.cc",
+        "cert/cert_database_fuchsia.cc",
+        "cert/test_root_certs_fuchsia.cc",
       ]
     }
   } else {
@@ -4532,7 +4575,9 @@ test("net_unittests") {
     "base/network_change_notifier_unittest.cc",
     "base/network_change_notifier_win_unittest.cc",
     "base/network_interfaces_getifaddrs_unittest.cc",
+    "base/network_interfaces_linux_unittest.cc",
     "base/network_interfaces_unittest.cc",
+    "base/network_interfaces_win_unittest.cc",
     "base/network_throttle_manager_impl_unittest.cc",
     "base/parse_number_unittest.cc",
     "base/percentile_estimator_unittest.cc",
@@ -4675,7 +4720,6 @@ test("net_unittests") {
     "ftp/ftp_util_unittest.cc",
     "http/bidirectional_stream_unittest.cc",
     "http/broken_alternative_services_unittest.cc",
-    "http/des_unittest.cc",
     "http/http_auth_cache_unittest.cc",
     "http/http_auth_challenge_tokenizer_unittest.cc",
     "http/http_auth_controller_unittest.cc",
@@ -4687,6 +4731,7 @@ test("net_unittests") {
     "http/http_auth_handler_mock.cc",
     "http/http_auth_handler_mock.h",
     "http/http_auth_handler_negotiate_unittest.cc",
+    "http/http_auth_handler_ntlm_portable_unittest.cc",
     "http/http_auth_handler_unittest.cc",
     "http/http_auth_multi_round_parse_unittest.cc",
     "http/http_auth_preferences_unittest.cc",
@@ -4696,6 +4741,7 @@ test("net_unittests") {
     "http/http_byte_range_unittest.cc",
     "http/http_cache_lookup_manager_unittest.cc",
     "http/http_cache_unittest.cc",
+    "http/http_cache_writers_unittest.cc",
     "http/http_chunked_decoder_unittest.cc",
     "http/http_content_disposition_unittest.cc",
     "http/http_log_util_unittest.cc",
@@ -4782,6 +4828,7 @@ test("net_unittests") {
     "http2/http2_structures_test.cc",
     "http2/http2_structures_test_util.cc",
     "http2/http2_structures_test_util.h",
+    "http2/platform/api/http2_string_utils_test.cc",
     "http2/test_tools/frame_parts.cc",
     "http2/test_tools/frame_parts.h",
     "http2/test_tools/frame_parts_collector.cc",
@@ -4803,7 +4850,6 @@ test("net_unittests") {
     "log/net_log_unittest.cc",
     "log/net_log_util_unittest.cc",
     "log/trace_net_log_observer_unittest.cc",
-    "log/write_to_file_net_log_observer_unittest.cc",
     "nqe/effective_connection_type_unittest.cc",
     "nqe/event_creator_unittest.cc",
     "nqe/network_qualities_prefs_manager_unittest.cc",
@@ -4814,6 +4860,11 @@ test("net_unittests") {
     "nqe/observation_buffer_unittest.cc",
     "nqe/socket_watcher_unittest.cc",
     "nqe/throughput_analyzer_unittest.cc",
+    "ntlm/des_unittest.cc",
+    "ntlm/ntlm_buffer_reader_unittest.cc",
+    "ntlm/ntlm_buffer_writer_unittest.cc",
+    "ntlm/ntlm_test_data.h",
+    "ntlm/ntlm_unittest.cc",
     "proxy/dhcp_proxy_script_adapter_fetcher_win_unittest.cc",
     "proxy/dhcp_proxy_script_fetcher_factory_unittest.cc",
     "proxy/dhcp_proxy_script_fetcher_win_unittest.cc",
@@ -5227,6 +5278,17 @@ test("net_unittests") {
     deps += [ "//gin" ]
   }
 
+  if (is_win) {
+    sources -= [
+      "http/http_auth_handler_ntlm_portable_unittest.cc",
+      "ntlm/des_unittest.cc",
+      "ntlm/ntlm_buffer_reader_unittest.cc",
+      "ntlm/ntlm_buffer_writer_unittest.cc",
+      "ntlm/ntlm_test_data.h",
+      "ntlm/ntlm_unittest.cc",
+    ]
+  }
+
   if (!use_nss_certs) {
     sources -= [
       "cert/internal/trust_store_nss_unittest.cc",
@@ -5456,7 +5518,10 @@ test("net_unittests") {
     ]
     android_manifest = "//net/android/unittest_support/AndroidManifest.xml"
     set_sources_assignment_filter([])
-    sources += [ "base/address_tracker_linux_unittest.cc" ]
+    sources += [
+      "base/address_tracker_linux_unittest.cc",
+      "base/network_interfaces_linux_unittest.cc",
+    ]
     set_sources_assignment_filter(sources_assignment_filter)
     shard_timeout = 300
   }

@@ -26,8 +26,39 @@ const (
 	VersionTLS13 = 0x0304
 )
 
+const (
+	VersionDTLS10 = 0xfeff
+	VersionDTLS12 = 0xfefd
+)
+
 // A draft version of TLS 1.3 that is sent over the wire for the current draft.
-const tls13DraftVersion = 0x7f12
+const (
+	tls13DraftVersion                = 0x7f12
+	tls13ExperimentVersion           = 0x7e01
+	tls13RecordTypeExperimentVersion = 0x7a12
+)
+
+const (
+	TLS13Default               = 0
+	TLS13Experiment            = 1
+	TLS13RecordTypeExperiment  = 2
+	TLS13NoSessionIDExperiment = 3
+)
+
+var allTLSWireVersions = []uint16{
+	tls13DraftVersion,
+	tls13ExperimentVersion,
+	tls13RecordTypeExperimentVersion,
+	VersionTLS12,
+	VersionTLS11,
+	VersionTLS10,
+	VersionSSL30,
+}
+
+var allDTLSWireVersions = []uint16{
+	VersionDTLS12,
+	VersionDTLS10,
+}
 
 const (
 	maxPlaintext        = 16384        // maximum plaintext payload length
@@ -44,10 +75,11 @@ const (
 type recordType uint8
 
 const (
-	recordTypeChangeCipherSpec recordType = 20
-	recordTypeAlert            recordType = 21
-	recordTypeHandshake        recordType = 22
-	recordTypeApplicationData  recordType = 23
+	recordTypeChangeCipherSpec   recordType = 20
+	recordTypeAlert              recordType = 21
+	recordTypeHandshake          recordType = 22
+	recordTypeApplicationData    recordType = 23
+	recordTypePlaintextHandshake recordType = 24
 )
 
 // TLS handshake message types.
@@ -386,6 +418,9 @@ type Config struct {
 	// which is currently TLS 1.2.
 	MaxVersion uint16
 
+	// TLS13Variant is the variant of TLS 1.3 to use.
+	TLS13Variant int
+
 	// CurvePreferences contains the elliptic curves that will be used in
 	// an ECDHE handshake, in preference order. If empty, the default will
 	// be used.
@@ -625,12 +660,12 @@ type ProtocolBugs struct {
 	SendSupportedVersions []uint16
 
 	// NegotiateVersion, if non-zero, causes the server to negotiate the
-	// specifed TLS version rather than the version supported by either
+	// specifed wire version rather than the version supported by either
 	// peer.
 	NegotiateVersion uint16
 
 	// NegotiateVersionOnRenego, if non-zero, causes the server to negotiate
-	// the specified TLS version on renegotiation rather than retaining it.
+	// the specified wire version on renegotiation rather than retaining it.
 	NegotiateVersionOnRenego uint16
 
 	// ExpectFalseStart causes the server to, on full handshakes,
@@ -683,6 +718,18 @@ type ProtocolBugs struct {
 	// normally expected to look ahead for ChangeCipherSpec.)
 	EmptyTicketSessionID bool
 
+	// SendClientHelloSessionID, if not nil, is the session ID sent in the
+	// ClientHello.
+	SendClientHelloSessionID []byte
+
+	// ExpectClientHelloSessionID, if true, causes the server to fail the
+	// connection if there is not a SessionID in the ClientHello.
+	ExpectClientHelloSessionID bool
+
+	// ExpectEmptyClientHelloSessionID, if true, causes the server to fail the
+	// connection if there is a SessionID in the ClientHello.
+	ExpectEmptyClientHelloSessionID bool
+
 	// ExpectNoTLS12Session, if true, causes the server to fail the
 	// connection if either a session ID or TLS 1.2 ticket is offered.
 	ExpectNoTLS12Session bool
@@ -710,8 +757,12 @@ type ProtocolBugs struct {
 	EmptyRenegotiationInfo bool
 
 	// BadRenegotiationInfo causes the renegotiation extension value in a
-	// renegotiation handshake to be incorrect.
+	// renegotiation handshake to be incorrect at the start.
 	BadRenegotiationInfo bool
+
+	// BadRenegotiationInfoEnd causes the renegotiation extension value in
+	// a renegotiation handshake to be incorrect at the end.
+	BadRenegotiationInfoEnd bool
 
 	// NoRenegotiationInfo disables renegotiation info support in all
 	// handshakes.
@@ -1228,6 +1279,10 @@ type ProtocolBugs struct {
 	// specified value in ServerHello version field.
 	SendServerHelloVersion uint16
 
+	// SendServerSupportedExtensionVersion, if non-zero, causes the server to send
+	// the specified value in supported_versions extension in the ServerHello.
+	SendServerSupportedExtensionVersion uint16
+
 	// SkipHelloRetryRequest, if true, causes the TLS 1.3 server to not send
 	// HelloRetryRequest.
 	SkipHelloRetryRequest bool
@@ -1256,6 +1311,10 @@ type ProtocolBugs struct {
 	// SendCompressionMethods, if not nil, is the compression method list to
 	// send in the ClientHello.
 	SendCompressionMethods []byte
+
+	// SendCompressionMethod is the compression method to send in the
+	// ServerHello.
+	SendCompressionMethod byte
 
 	// AlwaysSendPreSharedKeyIdentityHint, if true, causes the server to
 	// always send a ServerKeyExchange for PSK ciphers, even if the identity
@@ -1338,6 +1397,18 @@ type ProtocolBugs struct {
 	// RejectUnsolicitedKeyUpdate, if true, causes all unsolicited
 	// KeyUpdates from the peer to be rejected.
 	RejectUnsolicitedKeyUpdate bool
+
+	// OmitExtensions, if true, causes the extensions field in ClientHello
+	// and ServerHello messages to be omitted.
+	OmitExtensions bool
+
+	// EmptyExtensions, if true, causes the extensions field in ClientHello
+	// and ServerHello messages to be present, but empty.
+	EmptyExtensions bool
+
+	// ExpectRecordSplitting, if true, causes application records to only be
+	// accepted if they follow a 1/n-1 record split.
+	ExpectRecordSplitting bool
 }
 
 func (c *Config) serverInit() {
@@ -1438,10 +1509,35 @@ func (c *Config) defaultCurves() map[CurveID]bool {
 	return defaultCurves
 }
 
-// isSupportedVersion returns true if the specified protocol version is
-// acceptable.
-func (c *Config) isSupportedVersion(vers uint16, isDTLS bool) bool {
-	return c.minVersion(isDTLS) <= vers && vers <= c.maxVersion(isDTLS)
+// isSupportedVersion checks if the specified wire version is acceptable. If so,
+// it returns true and the corresponding protocol version. Otherwise, it returns
+// false.
+func (c *Config) isSupportedVersion(wireVers uint16, isDTLS bool) (uint16, bool) {
+	if (c.TLS13Variant != TLS13Experiment && c.TLS13Variant != TLS13NoSessionIDExperiment && wireVers == tls13ExperimentVersion) ||
+		(c.TLS13Variant != TLS13RecordTypeExperiment && wireVers == tls13RecordTypeExperimentVersion) ||
+		(c.TLS13Variant != TLS13Default && wireVers == tls13DraftVersion) {
+		return 0, false
+	}
+
+	vers, ok := wireToVersion(wireVers, isDTLS)
+	if !ok || c.minVersion(isDTLS) > vers || vers > c.maxVersion(isDTLS) {
+		return 0, false
+	}
+	return vers, true
+}
+
+func (c *Config) supportedVersions(isDTLS bool) []uint16 {
+	versions := allTLSWireVersions
+	if isDTLS {
+		versions = allDTLSWireVersions
+	}
+	var ret []uint16
+	for _, vers := range versions {
+		if _, ok := c.isSupportedVersion(vers, isDTLS); ok {
+			ret = append(ret, vers)
+		}
+	}
+	return ret
 }
 
 // getCertificateForName returns the best certificate for the given name,
@@ -1717,3 +1813,12 @@ var (
 	downgradeTLS13 = []byte{0x44, 0x4f, 0x57, 0x4e, 0x47, 0x52, 0x44, 0x01}
 	downgradeTLS12 = []byte{0x44, 0x4f, 0x57, 0x4e, 0x47, 0x52, 0x44, 0x00}
 )
+
+func containsGREASE(values []uint16) bool {
+	for _, v := range values {
+		if isGREASEValue(v) {
+			return true
+		}
+	}
+	return false
+}

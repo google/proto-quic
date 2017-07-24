@@ -15,49 +15,61 @@ namespace disk_cache {
 
 const base::Feature kSimpleSizeExperiment = {"SimpleSizeExperiment",
                                              base::FEATURE_DISABLED_BY_DEFAULT};
+const base::Feature kSimpleCacheEvictionWithSizeExperiment = {
+    "SimpleCacheEvictionWithSizeExperiment", base::FEATURE_DISABLED_BY_DEFAULT};
+
 const char kSizeMultiplierParam[] = "SizeMultiplier";
+const char kSizeEvictionParam[] = "SizeEviction";
 
 namespace {
 
-// Returns true if the experiment is found and properly defined.
-bool CheckForSimpleSizeExperiment(disk_cache::SimpleExperiment* experiment) {
-  DCHECK_EQ(disk_cache::SimpleExperimentType::NONE, experiment->type);
-  DCHECK_EQ(0u, experiment->param);
+struct ExperimentDescription {
+  disk_cache::SimpleExperimentType experiment_type;
+  const base::Feature* feature;
+  const char* param_name;
+};
 
-  if (!base::FeatureList::IsEnabled(kSimpleSizeExperiment))
-    return false;
-
-  base::FieldTrial* trial =
-      base::FeatureList::GetFieldTrial(kSimpleSizeExperiment);
-  if (!trial)
-    return false;
-
-  std::map<std::string, std::string> params;
-  base::FieldTrialParamAssociator::GetInstance()->GetFieldTrialParams(
-      trial->trial_name(), &params);
-  auto iter = params.find(kSizeMultiplierParam);
-  if (iter == params.end())
-    return false;
-
-  uint32_t param;
-  if (!base::StringToUint(iter->second, &param))
-    return false;
-
-  experiment->type = disk_cache::SimpleExperimentType::SIZE;
-  experiment->param = param;
-  return true;
-}
+// List of experimens to be checked for.
+const ExperimentDescription experiments[] = {
+    {disk_cache::SimpleExperimentType::SIZE, &kSimpleSizeExperiment,
+     kSizeMultiplierParam},
+    {disk_cache::SimpleExperimentType::EVICT_WITH_SIZE,
+     &kSimpleCacheEvictionWithSizeExperiment, kSizeEvictionParam},
+};
 
 }  // namespace
 
 // Returns the experiment for the given |cache_type|.
 SimpleExperiment GetSimpleExperiment(net::CacheType cache_type) {
   SimpleExperiment experiment;
-
   if (cache_type != net::DISK_CACHE)
     return experiment;
 
-  CheckForSimpleSizeExperiment(&experiment);
+  for (size_t i = 0; i < arraysize(experiments); i++) {
+    if (!base::FeatureList::IsEnabled(*experiments[i].feature))
+      continue;
+
+    base::FieldTrial* trial =
+        base::FeatureList::GetFieldTrial(*experiments[i].feature);
+    if (!trial)
+      continue;
+
+    std::map<std::string, std::string> params;
+    base::FieldTrialParamAssociator::GetInstance()->GetFieldTrialParams(
+        trial->trial_name(), &params);
+    auto iter = params.find(experiments[i].param_name);
+    if (iter == params.end())
+      continue;
+
+    uint32_t param;
+    if (!base::StringToUint(iter->second, &param))
+      continue;
+
+    experiment.type = experiments[i].experiment_type;
+    experiment.param = param;
+    return experiment;
+  }
+
   return experiment;
 }
 

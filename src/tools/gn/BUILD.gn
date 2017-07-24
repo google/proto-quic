@@ -338,6 +338,7 @@ test("gn_unittests") {
     "visibility_unittest.cc",
     "visual_studio_utils_unittest.cc",
     "visual_studio_writer_unittest.cc",
+    "xcode_object_unittest.cc",
     "xml_element_writer_unittest.cc",
   ]
 

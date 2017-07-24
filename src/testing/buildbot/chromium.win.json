@@ -455,6 +455,12 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
+        "test": "viz_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
         "test": "wm_unittests"
       }
     ],
@@ -489,16 +495,6 @@
         "name": "nacl_integration",
         "script": "nacl_integration.py"
       }
-    ]
-  },
-  "Win x64 GN": {
-    "additional_compile_targets": [
-      "base_unittests"
-    ]
-  },
-  "Win x64 GN (dbg)": {
-    "additional_compile_targets": [
-      "base_unittests"
     ]
   },
   "Win10 Tests x64": {
@@ -1010,6 +1006,12 @@
           "can_use_on_swarming_builders": true
         },
         "test": "views_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "viz_unittests"
       },
       {
         "swarming": {
@@ -1540,6 +1542,12 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
+        "test": "viz_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
         "test": "webkit_unit_tests"
       },
       {
@@ -2005,6 +2013,12 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
+        "test": "viz_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
         "test": "wm_unittests"
       }
     ],
@@ -2024,16 +2038,6 @@
           "shards": 2
         }
       }
-    ]
-  },
-  "Win8 GYP": {
-    "additional_compile_targets": [
-      "chrome_official_builder"
-    ]
-  },
-  "Win8 GYP (dbg)": {
-    "additional_compile_targets": [
-      "all"
     ]
   }
 }

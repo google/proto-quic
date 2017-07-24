@@ -29,45 +29,45 @@ This comment signals that a tree of nodes matching the BUILD comment
 symatics should exist.  This is an exact match.
 */
 
-/* TREE
+/** TREE
  *Enum(MealType1)
  *  EnumItem(rice)
  *  EnumItem(noodles)
  *  EnumItem(other)
 */
 enum MealType1 {
-  /* BUILD EnumItem (rice) */
+  /** BUILD EnumItem (rice) */
   "rice",
-  /* BUILD EnumItem (noodles) */
+  /** BUILD EnumItem (noodles) */
   "noodles",
-  /* BUILD EnumItem(other) */
+  /** BUILD EnumItem(other) */
   "other"
 };
 
-/* BUILD Error(Enum missing name.) */
-/* ERROR Enum missing name. */
+/** BUILD Error(Enum missing name.) */
+/** ERROR Enum missing name. */
 enum {
   "rice",
   "noodles",
   "other"
 };
 
-/* TREE
+/** TREE
  *Enum(MealType2)
  *  EnumItem(rice)
  *  EnumItem(noodles)
  *  EnumItem(other)
 */
 enum MealType2 {
-  /* BUILD EnumItem(rice) */
+  /** BUILD EnumItem(rice) */
   "rice",
-  /* BUILD EnumItem(noodles) */
+  /** BUILD EnumItem(noodles) */
   "noodles",
-  /* BUILD EnumItem(other) */
+  /** BUILD EnumItem(other) */
   "other"
 };
 
-/* TREE
+/** TREE
  *Enum(TrailingComma)
  *  EnumItem(rice)
  *  EnumItem(noodles)
@@ -79,45 +79,45 @@ enum TrailingComma {
   "other",
 };
 
-/* BUILD Error(Unexpected string "noodles" after string "rice".) */
-/* ERROR Unexpected string "noodles" after string "rice". */
+/** BUILD Error(Unexpected string "noodles" after string "rice".) */
+/** ERROR Unexpected string "noodles" after string "rice". */
 enum MissingComma {
   "rice"
   "noodles",
   "other"
 };
 
-/* BUILD Error(Unexpected "," after ",".) */
-/* ERROR Unexpected "," after ",". */
+/** BUILD Error(Unexpected "," after ",".) */
+/** ERROR Unexpected "," after ",". */
 enum ExtraComma {
   "rice",
   "noodles",
   ,"other",
 };
 
-/* BUILD Error(Unexpected keyword "interface" after "{".) */
-/* ERROR Unexpected keyword "interface" after "{". */
+/** BUILD Error(Unexpected keyword "interface" after "{".) */
+/** ERROR Unexpected keyword "interface" after "{". */
 enum ExtraComma {
   interface,
   "noodles",
   ,"other",
 };
 
-/* BUILD Error(Unexpected identifier "somename" after "{".) */
-/* ERROR Unexpected identifier "somename" after "{". */
+/** BUILD Error(Unexpected identifier "somename" after "{".) */
+/** ERROR Unexpected identifier "somename" after "{". */
 enum ExtraComma {
   somename,
   "noodles",
   ,"other",
 };
 
-/* BUILD Enum(MealType3) */
+/** BUILD Enum(MealType3) */
 enum MealType3 {
-  /* BUILD EnumItem(rice) */
+  /** BUILD EnumItem(rice) */
   "rice",
-  /* BUILD EnumItem(noodles) */
+  /** BUILD EnumItem(noodles) */
   "noodles",
-  /* BUILD EnumItem(other) */
+  /** BUILD EnumItem(other) */
   "other"
 };
 

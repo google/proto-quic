@@ -244,21 +244,6 @@ void QuicEndpoint::WriteStreamData() {
   }
 }
 
-void QuicEndpoint::SaveStreamData(QuicStreamId id,
-                                  QuicIOVector iov,
-                                  size_t iov_offset,
-                                  QuicStreamOffset offset,
-                                  QuicByteCount data_length) {
-  producer_.SaveStreamData(id, iov, iov_offset, offset, data_length);
-}
-
-bool QuicEndpoint::WriteStreamData(QuicStreamId id,
-                                   QuicStreamOffset offset,
-                                   QuicByteCount data_length,
-                                   QuicDataWriter* writer) {
-  return producer_.WriteStreamData(id, offset, data_length, writer);
-}
-
 QuicEndpointMultiplexer::QuicEndpointMultiplexer(
     string name,
     std::initializer_list<QuicEndpoint*> endpoints)

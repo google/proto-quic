@@ -246,6 +246,9 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory {
   class QuicServerInfoFactoryAdaptor;
   class Transaction;
   class WorkItem;
+  class Writers;
+  friend class WritersTest;  // To access ActiveEntry in the test class.
+  friend class MockHttpCacheTransaction;
   friend class Transaction;
   friend class ViewCacheHelper;
   struct PendingOp;  // Info for an entry under construction.
@@ -341,7 +344,9 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory {
 
   // Dooms the entry selected by |key|. |trans| will be notified via its IO
   // callback if this method returns ERR_IO_PENDING. The entry can be
-  // currently in use or not.
+  // currently in use or not. If entry is in use and the invoking transaction
+  // is associated with this entry and this entry is already doomed, this API
+  // should not be invoked.
   int DoomEntry(const std::string& key, Transaction* trans);
 
   // Dooms the entry selected by |key|. |trans| will be notified via its IO

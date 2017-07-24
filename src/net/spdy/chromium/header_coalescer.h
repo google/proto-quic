@@ -13,6 +13,8 @@
 
 namespace net {
 
+const size_t kMaxHeaderListSize = 256 * 1024;
+
 class NET_EXPORT_PRIVATE HeaderCoalescer : public SpdyHeadersHandlerInterface {
  public:
   explicit HeaderCoalescer(const NetLogWithSource& net_log);

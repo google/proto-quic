@@ -1001,6 +1001,10 @@ TEST_F(DnsTransactionTest, InvalidQuery) {
 
   TransactionHelper helper0(".", dns_protocol::kTypeA, ERR_INVALID_ARGUMENT);
   EXPECT_TRUE(helper0.Run(transaction_factory_.get()));
+
+  TransactionHelper helper1("foo,bar.com", dns_protocol::kTypeA,
+                            ERR_INVALID_ARGUMENT);
+  EXPECT_TRUE(helper1.Run(transaction_factory_.get()));
 }
 
 }  // namespace

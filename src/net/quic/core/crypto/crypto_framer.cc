@@ -64,6 +64,14 @@ std::unique_ptr<CryptoHandshakeMessage> CryptoFramer::ParseMessage(
   return visitor.release();
 }
 
+QuicErrorCode CryptoFramer::error() const {
+  return error_;
+}
+
+const std::string& CryptoFramer::error_detail() const {
+  return error_detail_;
+}
+
 bool CryptoFramer::ProcessInput(QuicStringPiece input,
                                 Perspective perspective) {
   DCHECK_EQ(QUIC_NO_ERROR, error_);
@@ -78,6 +86,10 @@ bool CryptoFramer::ProcessInput(QuicStringPiece input,
   }
 
   return true;
+}
+
+size_t CryptoFramer::InputBytesRemaining() const {
+  return buffer_.length();
 }
 
 // static

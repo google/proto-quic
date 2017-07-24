@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "base/files/file_path.h"
+#include "base/memory/ptr_util.h"
 #include "base/process/process.h"
 #include "base/strings/string_number_conversions.h"
 #include "build/build_config.h"
@@ -31,7 +32,7 @@ class IPCDump : public IPC::ChannelProxy::OutgoingMessageFilter {
   }
 
   IPC::Message* Rewrite(IPC::Message* message) override {
-    messages_.push_back(new IPC::Message(*message));
+    messages_.push_back(base::MakeUnique<IPC::Message>(*message));
     return message;
   }
 

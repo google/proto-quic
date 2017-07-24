@@ -54,11 +54,6 @@ void ApplicationStatusListener::Notify(ApplicationState state) {
 }
 
 // static
-bool ApplicationStatusListener::RegisterBindings(JNIEnv* env) {
-  return RegisterNativesImpl(env);
-}
-
-// static
 void ApplicationStatusListener::NotifyApplicationStateChange(
     ApplicationState state) {
   g_observers.Get().Notify(FROM_HERE, &ApplicationStatusListener::Notify,

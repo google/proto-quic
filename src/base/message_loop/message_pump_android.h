@@ -47,8 +47,6 @@ class BASE_EXPORT MessagePumpForUI : public MessagePump {
   void Abort() { should_abort_ = true; }
   bool ShouldAbort() const { return should_abort_; }
 
-  static bool RegisterBindings(JNIEnv* env);
-
  private:
   JNIEnv* StartInternal();
 

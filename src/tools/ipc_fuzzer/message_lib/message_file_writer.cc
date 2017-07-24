@@ -105,7 +105,7 @@ bool Writer::WriteHeader() {
 
 bool Writer::WriteMessages() {
   for (size_t i = 0; i < messages_->size(); ++i) {
-    IPC::Message* message = (*messages_)[i];
+    IPC::Message* message = (*messages_)[i].get();
     if (!WriteBlob(message->data(), message->size()))
       return false;
   }

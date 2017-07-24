@@ -324,7 +324,7 @@ bool ParseBasicOCSPResponse(const der::Input& raw_tlv, OCSPResponse* out) {
   if (!parser.ReadRawTLV(&sigalg_tlv))
     return false;
   // TODO(crbug.com/634443): Propagate the errors.
-  net::CertErrors errors;
+  CertErrors errors;
   out->signature_algorithm = SignatureAlgorithm::Create(sigalg_tlv, &errors);
   if (!out->signature_algorithm)
     return false;

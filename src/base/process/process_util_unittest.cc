@@ -55,7 +55,6 @@
 #endif
 #if defined(OS_WIN)
 #include <windows.h>
-#include "base/win/windows_version.h"
 #endif
 #if defined(OS_MACOSX)
 #include <mach/vm_param.h>
@@ -493,13 +492,6 @@ TEST_F(ProcessUtilTest, InheritSpecifiedHandles) {
   cmd_line.AppendSwitchASCII(
       kEventToTriggerHandleSwitch,
       base::Uint64ToString(reinterpret_cast<uint64_t>(event.handle())));
-
-  // This functionality actually requires Vista or later. Make sure that it
-  // fails properly on XP.
-  if (base::win::GetVersion() < base::win::VERSION_VISTA) {
-    EXPECT_FALSE(base::LaunchProcess(cmd_line, options).IsValid());
-    return;
-  }
 
   // Launch the process and wait for it to trigger the event.
   ASSERT_TRUE(base::LaunchProcess(cmd_line, options).IsValid());

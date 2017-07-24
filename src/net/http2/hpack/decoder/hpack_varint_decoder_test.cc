@@ -17,9 +17,9 @@
 
 #include "base/logging.h"
 #include "base/strings/string_number_conversions.h"
-#include "base/strings/string_piece.h"
-#include "base/strings/stringprintf.h"
 #include "net/http2/hpack/tools/hpack_block_builder.h"
+#include "net/http2/platform/api/http2_string_piece.h"
+#include "net/http2/platform/api/http2_string_utils.h"
 #include "net/http2/tools/failure.h"
 #include "net/http2/tools/http2_random.h"
 #include "net/http2/tools/random_decoder_test.h"
@@ -27,9 +27,6 @@
 
 using ::testing::AssertionFailure;
 using ::testing::AssertionSuccess;
-using base::StringPiece;
-using base::StringPrintf;
-using std::string;
 
 namespace net {
 namespace test {
@@ -158,7 +155,7 @@ class HpackVarintDecoderTest : public RandomDecoderTest {
          << "), prefix_length=" << std::dec << prefix_length
          << ", expected_bytes=" << expected_bytes << std::endl
          << HexEncode(buffer_);
-      string msg(ss.str());
+      Http2String msg(ss.str());
 
       if (value == minimum) {
         LOG(INFO) << "Checking minimum; " << msg;
@@ -228,7 +225,7 @@ class HpackVarintDecoderTest : public RandomDecoderTest {
   }
 
   HpackVarintDecoder decoder_;
-  string buffer_;
+  Http2String buffer_;
   uint8_t prefix_mask_ = 0;
   uint8_t prefix_length_ = 0;
 };
@@ -269,15 +266,15 @@ TEST_F(HpackVarintDecoderTest, Encode) {
 
     for (uint32_t value : values) {
       EncodeNoRandom(value, prefix_length);
-      string dump = HexEncode(buffer_);
-      LOG(INFO) << StringPrintf("%10u %0#10x ", value, value)
+      Http2String dump = HexEncode(buffer_);
+      LOG(INFO) << Http2StringPrintf("%10u %0#10x ", value, value)
                 << HexEncode(buffer_);
     }
   }
 }
 
 TEST_F(HpackVarintDecoderTest, FromSpec1337) {
-  DecodeBuffer b(StringPiece("\x1f\x9a\x0a"));
+  DecodeBuffer b(Http2StringPiece("\x1f\x9a\x0a"));
   uint32_t prefix_length = 5;
   uint32_t prefix_mask = (1 << prefix_length) - 1;
   uint8_t p = b.DecodeUInt8();

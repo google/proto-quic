@@ -40,15 +40,21 @@ namespace net {
 namespace {
 
 #include "net/http/transport_security_state_ct_policies.inc"
+
+#if BUILDFLAG(INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST)
 #include "net/http/transport_security_state_static.h"
+// Points to the active transport security state source.
+const TransportSecurityStateSource* const kDefaultHSTSSource = &kHSTSSource;
+#else
+const TransportSecurityStateSource* const kDefaultHSTSSource = nullptr;
+#endif
+
+const TransportSecurityStateSource* g_hsts_source = kDefaultHSTSSource;
 
 // Parameters for remembering sent HPKP and Expect-CT reports.
 const size_t kMaxReportCacheEntries = 50;
 const int kTimeToRememberReportsMins = 60;
 const size_t kReportCacheKeyLength = 16;
-
-// Points to the active transport security state source.
-const TransportSecurityStateSource* g_hsts_source = &kHSTSSource;
 
 // Override for CheckCTRequirements() for unit tests. Possible values:
 //  -1: Unless a delegate says otherwise, do not require CT.
@@ -637,6 +643,11 @@ bool DecodeHSTSPreloadRaw(const std::string& search_hostname,
 }
 
 bool DecodeHSTSPreload(const std::string& hostname, PreloadResult* out) {
+#if !BUILDFLAG(INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST)
+  if (g_hsts_source == nullptr)
+    return false;
+#endif
+
   bool found;
   if (!DecodeHSTSPreloadRaw(hostname, &found, out)) {
     DCHECK(false) << "Internal error in DecodeHSTSPreloadRaw for hostname "
@@ -734,7 +745,7 @@ const base::Feature TransportSecurityState::kDynamicExpectCTFeature{
 
 void SetTransportSecurityStateSourceForTesting(
     const TransportSecurityStateSource* source) {
-  g_hsts_source = source ? source : &kHSTSSource;
+  g_hsts_source = source ? source : kDefaultHSTSSource;
 }
 
 TransportSecurityState::TransportSecurityState()

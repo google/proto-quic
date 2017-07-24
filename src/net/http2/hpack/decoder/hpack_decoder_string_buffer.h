@@ -12,12 +12,12 @@
 #include <stddef.h>
 
 #include <ostream>
-#include <string>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/http2/hpack/huffman/http2_hpack_huffman_decoder.h"
 #include "net/http2/platform/api/http2_export.h"
+#include "net/http2/platform/api/http2_string.h"
+#include "net/http2/platform/api/http2_string_piece.h"
 
 namespace net {
 
@@ -30,7 +30,7 @@ class HTTP2_EXPORT_PRIVATE HpackDecoderStringBuffer {
   ~HpackDecoderStringBuffer();
 
   void Reset();
-  void Set(base::StringPiece value, bool is_static);
+  void Set(Http2StringPiece value, bool is_static);
 
   // Note that for Huffman encoded strings the length of the string after
   // decoding may be larger (expected), the same or even smaller; the latter
@@ -45,18 +45,18 @@ class HTTP2_EXPORT_PRIVATE HpackDecoderStringBuffer {
   // Accessors for the completely collected string (i.e. Set or OnEnd has just
   // been called, and no reset of the state has occurred).
 
-  // Returns a StringPiece pointing to the backing store for the string, either
-  // the internal buffer or the original transport buffer (e.g. for a literal
-  // value that wasn't Huffman encoded, and that wasn't split across transport
-  // buffers).
-  base::StringPiece str() const;
+  // Returns a Http2StringPiece pointing to the backing store for the string,
+  // either the internal buffer or the original transport buffer (e.g. for a
+  // literal value that wasn't Huffman encoded, and that wasn't split across
+  // transport buffers).
+  Http2StringPiece str() const;
 
   // Returns the completely collected string by value, using std::move in an
   // effort to avoid unnecessary copies. ReleaseString() must not be called
   // unless the string has been buffered (to avoid forcing a potentially
   // unnecessary copy). ReleaseString() also resets the instance so that it can
   // be used to collect another string.
-  std::string ReleaseString();
+  Http2String ReleaseString();
 
   State state_for_testing() const { return state_; }
   Backing backing_for_testing() const { return backing_; }
@@ -68,11 +68,12 @@ class HTTP2_EXPORT_PRIVATE HpackDecoderStringBuffer {
  private:
   // Storage for the string being buffered, if buffering is necessary
   // (e.g. if Huffman encoded, buffer_ is storage for the decoded string).
-  std::string buffer_;
+  Http2String buffer_;
 
-  // The StringPiece to be returned by HpackDecoderStringBuffer::str(). If a
-  // string has been collected, but not buffered, value_ points to that string.
-  base::StringPiece value_;
+  // The Http2StringPiece to be returned by HpackDecoderStringBuffer::str(). If
+  // a string has been collected, but not buffered, value_ points to that
+  // string.
+  Http2StringPiece value_;
 
   // The decoder to use if the string is Huffman encoded.
   HpackHuffmanDecoder decoder_;

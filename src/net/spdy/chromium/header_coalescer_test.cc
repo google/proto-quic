@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "net/log/net_log_with_source.h"
+#include "net/log/test_net_log.h"
 #include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -20,9 +20,28 @@ namespace test {
 
 class HeaderCoalescerTest : public ::testing::Test {
  public:
-  HeaderCoalescerTest() : header_coalescer_(NetLogWithSource()) {}
+  HeaderCoalescerTest() : header_coalescer_(net_log_.bound()) {}
+
+  void ExpectEntry(SpdyStringPiece expected_header_name,
+                   SpdyStringPiece expected_header_value,
+                   SpdyStringPiece expected_error_message) {
+    TestNetLogEntry::List entry_list;
+    net_log_.GetEntries(&entry_list);
+    ASSERT_EQ(1u, entry_list.size());
+    EXPECT_EQ(entry_list[0].type,
+              NetLogEventType::HTTP2_SESSION_RECV_INVALID_HEADER);
+    EXPECT_EQ(entry_list[0].source.id, net_log_.bound().source().id);
+    std::string value;
+    EXPECT_TRUE(entry_list[0].GetStringValue("header_name", &value));
+    EXPECT_EQ(expected_header_name, value);
+    EXPECT_TRUE(entry_list[0].GetStringValue("header_value", &value));
+    EXPECT_EQ(expected_header_value, value);
+    EXPECT_TRUE(entry_list[0].GetStringValue("error", &value));
+    EXPECT_EQ(expected_error_message, value);
+  }
 
  protected:
+  BoundTestNetLog net_log_;
   HeaderCoalescer header_coalescer_;
 };
 
@@ -37,9 +56,9 @@ TEST_F(HeaderCoalescerTest, CorrectHeaders) {
 }
 
 TEST_F(HeaderCoalescerTest, EmptyHeaderKey) {
-  EXPECT_FALSE(header_coalescer_.error_seen());
   header_coalescer_.OnHeader("", "foo");
   EXPECT_TRUE(header_coalescer_.error_seen());
+  ExpectEntry("", "foo", "Header name must not be empty.");
 }
 
 TEST_F(HeaderCoalescerTest, HeaderBlockTooLarge) {
@@ -49,9 +68,11 @@ TEST_F(HeaderCoalescerTest, HeaderBlockTooLarge) {
   header_coalescer_.OnHeader("foo", data);
   EXPECT_FALSE(header_coalescer_.error_seen());
 
-  // Another 3 + 3 + 32 bytes: too large.
-  header_coalescer_.OnHeader("bar", "baz");
+  // Another 3 + 4 + 32 bytes: too large.
+  SpdyStringPiece header_value("\x1\x7F\x80\xFF");
+  header_coalescer_.OnHeader("bar", header_value);
   EXPECT_TRUE(header_coalescer_.error_seen());
+  ExpectEntry("bar", "%01%7F%80%FF", "Header list too large.");
 }
 
 TEST_F(HeaderCoalescerTest, PseudoHeadersMustNotFollowRegularHeaders) {
@@ -59,6 +80,7 @@ TEST_F(HeaderCoalescerTest, PseudoHeadersMustNotFollowRegularHeaders) {
   EXPECT_FALSE(header_coalescer_.error_seen());
   header_coalescer_.OnHeader(":baz", "qux");
   EXPECT_TRUE(header_coalescer_.error_seen());
+  ExpectEntry(":baz", "qux", "Pseudo header must not follow regular headers.");
 }
 
 TEST_F(HeaderCoalescerTest, Append) {
@@ -75,15 +97,16 @@ TEST_F(HeaderCoalescerTest, Append) {
 }
 
 TEST_F(HeaderCoalescerTest, CRLFInHeaderValue) {
-  EXPECT_FALSE(header_coalescer_.error_seen());
   header_coalescer_.OnHeader("foo", "bar\r\nbaz");
   EXPECT_TRUE(header_coalescer_.error_seen());
+  ExpectEntry("foo", "bar%0D%0Abaz", "Header value must not contain CR+LF.");
 }
 
 TEST_F(HeaderCoalescerTest, HeaderNameNotValid) {
-  SpdyStringPiece header_name("\x01\x7F\x80\xff");
+  SpdyStringPiece header_name("\x1\x7F\x80\xFF");
   header_coalescer_.OnHeader(header_name, "foo");
   EXPECT_TRUE(header_coalescer_.error_seen());
+  ExpectEntry("%01%7F%80%FF", "foo", "Invalid character in header name.");
 }
 
 // RFC 7230 Section 3.2. Valid header name is defined as:

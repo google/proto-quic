@@ -195,4 +195,4 @@ class ReportingTestBase : public ::testing::Test {
 
 }  // namespace net
 
-#endif  // NET_REPORING_REPORTING_TEST_UTIL_H_
+#endif  // NET_REPORTING_REPORTING_TEST_UTIL_H_

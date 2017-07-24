@@ -45,6 +45,7 @@
 #include "net/proxy/proxy_server.h"
 #include "net/socket/socket.h"
 #include "net/socket/ssl_client_socket.h"
+#include "net/spdy/chromium/header_coalescer.h"
 #include "net/spdy/chromium/spdy_buffer_producer.h"
 #include "net/spdy/chromium/spdy_http_utils.h"
 #include "net/spdy/chromium/spdy_log_util.h"
@@ -181,14 +182,6 @@ std::unique_ptr<base::Value> NetLogSpdySendSettingsCallback(
         SpdyStringPrintf("[id:%u (%s) value:%u]", id, settings_string, value));
   }
   dict->Set("settings", std::move(settings_list));
-  return std::move(dict);
-}
-
-std::unique_ptr<base::Value> NetLogSpdyRecvSettingsCallback(
-    const HostPortPair& host_port_pair,
-    NetLogCaptureMode /* capture_mode */) {
-  auto dict = base::MakeUnique<base::DictionaryValue>();
-  dict->SetString("host", host_port_pair.ToString());
   return std::move(dict);
 }
 
@@ -894,6 +887,9 @@ void SpdySession::InitializeWithSocket(
   buffered_spdy_framer_->set_visitor(this);
   buffered_spdy_framer_->set_debug_visitor(this);
   buffered_spdy_framer_->UpdateHeaderDecoderTableSize(max_header_table_size_);
+  // Do not bother decoding response headers more than a factor over the limit.
+  buffered_spdy_framer_->set_max_decode_buffer_size_bytes(2 *
+                                                          kMaxHeaderListSize);
 
   net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_INITIALIZED,
                     base::Bind(&NetLogSpdyInitializedCallback,
@@ -2827,9 +2823,8 @@ void SpdySession::OnSettings() {
   CHECK(in_io_loop_);
 
   if (net_log_.IsCapturing()) {
-    net_log_.AddEvent(
-        NetLogEventType::HTTP2_SESSION_RECV_SETTINGS,
-        base::Bind(&NetLogSpdyRecvSettingsCallback, host_port_pair()));
+    net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_RECV_SETTINGS);
+    net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_SEND_SETTINGS_ACK);
   }
 
   // Send an acknowledgment of the setting.
@@ -2838,6 +2833,13 @@ void SpdySession::OnSettings() {
   auto frame = base::MakeUnique<SpdySerializedFrame>(
       buffered_spdy_framer_->SerializeFrame(settings_ir));
   EnqueueSessionWrite(HIGHEST, SpdyFrameType::SETTINGS, std::move(frame));
+}
+
+void SpdySession::OnSettingsAck() {
+  CHECK(in_io_loop_);
+
+  if (net_log_.IsCapturing())
+    net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_RECV_SETTINGS_ACK);
 }
 
 void SpdySession::OnSetting(SpdySettingsIds id, uint32_t value) {

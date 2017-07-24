@@ -364,7 +364,7 @@ class _ProjectContextGenerator(object):
     res_dirs.add(
         os.path.join(self.EntryOutputDir(root_entry), _RES_SUBDIR))
     variables['res_dirs'] = self._Relativize(root_entry, res_dirs)
-    android_manifest = root_entry.Gradle().get('android_manifest')
+    android_manifest = root_entry.DepsInfo().get('android_manifest')
     if not android_manifest:
       android_manifest = self._GenCustomManifest(root_entry)
     variables['android_manifest'] = self._Relativize(

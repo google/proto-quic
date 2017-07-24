@@ -25,6 +25,7 @@ from pylib.instrumentation import instrumentation_test_instance
 from pylib.local.device import local_device_environment
 from pylib.local.device import local_device_test_run
 from pylib.utils import google_storage_helper
+from pylib.utils import instrumentation_tracing
 from pylib.utils import logdog_helper
 from pylib.utils import shared_preference_utils
 from py_trace_event import trace_event
@@ -143,6 +144,7 @@ class LocalDeviceInstrumentationTestRun(
         steps.append(self._replace_package_contextmanager.__enter__)
 
       def install_helper(apk, permissions):
+        @instrumentation_tracing.no_tracing
         @trace_event.traced("apk_path")
         def install_helper_internal(d, apk_path=apk.path):
           # pylint: disable=unused-argument
@@ -202,7 +204,7 @@ class LocalDeviceInstrumentationTestRun(
         shared_preference_utils.ApplySharedPreferenceSettings(
             dev, self._test_instance.edit_shared_prefs)
 
-      @trace_event.traced
+      @instrumentation_tracing.no_tracing
       def push_test_data():
         device_root = posixpath.join(dev.GetExternalStoragePath(),
                                      'chromium_tests_root')
@@ -319,7 +321,6 @@ class LocalDeviceInstrumentationTestRun(
     extras = {}
 
     flags_to_add = []
-    flags_to_remove = []
     test_timeout_scale = None
     if self._test_instance.coverage_directory:
       coverage_basename = '%s.ec' % ('%s_group' % test[0]['method']
@@ -375,9 +376,8 @@ class LocalDeviceInstrumentationTestRun(
         target = '%s/%s' % (
             self._test_instance.test_package, self._test_instance.test_runner)
       extras['class'] = test_name
-      if 'flags' in test:
-        flags_to_add.extend(test['flags'].add)
-        flags_to_remove.extend(test['flags'].remove)
+      if 'flags' in test and test['flags']:
+        flags_to_add.extend(test['flags'])
       timeout = self._GetTimeoutFromAnnotations(
         test['annotations'], test_display_name)
 
@@ -398,10 +398,9 @@ class LocalDeviceInstrumentationTestRun(
       flags_to_add.append('--render-test-output-dir=%s' %
                           render_tests_device_output_dir)
 
-    if flags_to_add or flags_to_remove:
+    if flags_to_add:
       self._CreateFlagChangerIfNeeded(device)
-      self._flag_changers[str(device)].PushFlags(
-        add=flags_to_add, remove=flags_to_remove)
+      self._flag_changers[str(device)].PushFlags(add=flags_to_add)
 
     time_ms = lambda: int(time.time() * 1e3)
     start_ms = time_ms()
@@ -424,11 +423,6 @@ class LocalDeviceInstrumentationTestRun(
 
     logcat_url = logmon.GetLogcatURL()
     duration_ms = time_ms() - start_ms
-    if flags_to_add or flags_to_remove:
-      self._flag_changers[str(device)].Restore()
-    if test_timeout_scale:
-      valgrind_tools.SetChromeTimeoutScale(
-          device, self._test_instance.timeout_scale)
 
     # TODO(jbudorick): Make instrumentation tests output a JSON so this
     # doesn't have to parse the output.
@@ -436,23 +430,56 @@ class LocalDeviceInstrumentationTestRun(
         self._test_instance.ParseAmInstrumentRawOutput(output))
     results = self._test_instance.GenerateTestResults(
         result_code, result_bundle, statuses, start_ms, duration_ms)
+
+    def restore_flags():
+      if flags_to_add:
+        self._flag_changers[str(device)].Restore()
+
+    def restore_timeout_scale():
+      if test_timeout_scale:
+        valgrind_tools.SetChromeTimeoutScale(
+            device, self._test_instance.timeout_scale)
+
+    def handle_coverage_data():
+      if self._test_instance.coverage_directory:
+        device.PullFile(coverage_directory,
+            self._test_instance.coverage_directory)
+        device.RunShellCommand(
+            'rm -f %s' % posixpath.join(coverage_directory, '*'),
+            check_return=True, shell=True)
+
+    def handle_render_test_data():
+      if _IsRenderTest(test):
+        # Render tests do not cause test failure by default. So we have to check
+        # to see if any failure images were generated even if the test does not
+        # fail.
+        try:
+          self._ProcessRenderTestResults(
+              device, render_tests_device_output_dir, results)
+        finally:
+          device.RemovePath(render_tests_device_output_dir,
+                            recursive=True, force=True)
+
+    # While constructing the TestResult objects, we can parallelize several
+    # steps that involve ADB. These steps should NOT depend on any info in
+    # the results! Things such as whether the test CRASHED have not yet been
+    # determined.
+    post_test_steps = [restore_flags, restore_timeout_scale,
+                       handle_coverage_data, handle_render_test_data]
+    if self._env.concurrent_adb:
+      post_test_step_thread_group = reraiser_thread.ReraiserThreadGroup(
+          reraiser_thread.ReraiserThread(f) for f in post_test_steps)
+      post_test_step_thread_group.StartAll(will_block=True)
+    else:
+      for step in post_test_steps:
+        step()
+
     for result in results:
       if logcat_url:
         result.SetLink('logcat', logcat_url)
 
-    if _IsRenderTest(test):
-      # Render tests do not cause test failure by default. So we have to check
-      # to see if any failure images were generated even if the test does not
-      # fail.
-      try:
-        self._ProcessRenderTestResults(
-            device, render_tests_device_output_dir, results)
-      finally:
-        device.RemovePath(render_tests_device_output_dir,
-                          recursive=True, force=True)
-
     # Update the result name if the test used flags.
-    if flags_to_add or flags_to_remove:
+    if flags_to_add:
       for r in results:
         if r.GetName() == test_name:
           r.SetName(test_display_name)
@@ -503,12 +530,6 @@ class LocalDeviceInstrumentationTestRun(
       logging.debug('raw output from %s:', test_display_name)
       for l in output:
         logging.debug('  %s', l)
-    if self._test_instance.coverage_directory:
-      device.PullFile(coverage_directory,
-          self._test_instance.coverage_directory)
-      device.RunShellCommand(
-          'rm -f %s' % posixpath.join(coverage_directory, '*'),
-          check_return=True, shell=True)
     if self._test_instance.store_tombstones:
       tombstones_url = None
       for result in results:
@@ -525,6 +546,9 @@ class LocalDeviceInstrumentationTestRun(
             tombstones_url = logdog_helper.text(
                 stream_name, '\n'.join(resolved_tombstones))
           result.SetLink('tombstones', tombstones_url)
+
+    if self._env.concurrent_adb:
+      post_test_step_thread_group.JoinAll()
     return results, None
 
   def _SaveScreenshot(self, device, screenshot_host_dir, screenshot_device_file,

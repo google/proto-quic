@@ -12,10 +12,19 @@
 #if defined(OS_WIN)
 #include "base/win/object_watcher.h"
 #include "base/win/scoped_handle.h"
+#elif defined(OS_MACOSX)
+#include <dispatch/dispatch.h>
+
+#include "base/files/scoped_file.h"
+#include "base/mac/scoped_dispatch_object.h"
+#include "base/memory/weak_ptr.h"
 #else
-#include "base/callback.h"
 #include "base/sequence_checker.h"
 #include "base/synchronization/waitable_event.h"
+#endif
+
+#if !defined(OS_WIN)
+#include "base/callback.h"
 #endif
 
 namespace base {
@@ -101,6 +110,27 @@ class BASE_EXPORT WaitableEventWatcher
 
   EventCallback callback_;
   WaitableEvent* event_ = nullptr;
+#elif defined(OS_MACOSX)
+  // Invokes the callback and resets the source. Must be called on the task
+  // runner on which StartWatching() was called.
+  void InvokeCallback();
+
+  // Closure bound to the event being watched. This will be is_null() if
+  // nothing is being watched.
+  OnceClosure callback_;
+
+  // A dup()'d descriptor of the kqueue used by the WaitableEvent being
+  // watched, or the invalid value if nothing is.
+  ScopedFD kqueue_;
+
+  // A TYPE_READ dispatch source on |kqueue_|. When a read event is delivered,
+  // the kqueue has an event pending, and the bound |callback_| will be
+  // invoked. This will be null if nothing is currently being watched.
+  ScopedDispatchObject<dispatch_source_t> source_;
+
+  // Used to vend a weak pointer for calling InvokeCallback() from the
+  // |source_| event handler.
+  WeakPtrFactory<WaitableEventWatcher> weak_ptr_factory_;
 #else
   // Instantiated in StartWatching(). Set before the callback runs. Reset in
   // StopWatching() or StartWatching().

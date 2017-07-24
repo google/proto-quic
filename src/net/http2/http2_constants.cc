@@ -8,15 +8,12 @@
 #include <sstream>
 
 #include "base/logging.h"
-#include "base/strings/string_piece.h"
-#include "base/strings/stringprintf.h"
-
-using base::StringPrintf;
-using std::string;
+#include "net/http2/platform/api/http2_string_piece.h"
+#include "net/http2/platform/api/http2_string_utils.h"
 
 namespace net {
 
-string Http2FrameTypeToString(Http2FrameType v) {
+Http2String Http2FrameTypeToString(Http2FrameType v) {
   switch (v) {
     case Http2FrameType::DATA:
       return "DATA";
@@ -41,23 +38,22 @@ string Http2FrameTypeToString(Http2FrameType v) {
     case Http2FrameType::ALTSVC:
       return "ALTSVC";
   }
-  std::stringstream ss;
-  ss << "UnknownFrameType(" << static_cast<int>(v) << ")";
-  return ss.str();
+  return Http2StrCat("UnknownFrameType(", static_cast<int>(v), ")");
 }
-string Http2FrameTypeToString(uint8_t v) {
+
+Http2String Http2FrameTypeToString(uint8_t v) {
   return Http2FrameTypeToString(static_cast<Http2FrameType>(v));
 }
 
-string Http2FrameFlagsToString(Http2FrameType type, uint8_t flags) {
-  string s;
-  // Closure to append flag name |v| to the string |s|, and to clear
-  // |bit| from |flags|.
-  auto append_and_clear = [&s, &flags](base::StringPiece v, uint8_t bit) {
+Http2String Http2FrameFlagsToString(Http2FrameType type, uint8_t flags) {
+  Http2String s;
+  // Closure to append flag name |v| to the Http2String |s|,
+  // and to clear |bit| from |flags|.
+  auto append_and_clear = [&s, &flags](Http2StringPiece v, uint8_t bit) {
     if (!s.empty()) {
       s.push_back('|');
     }
-    s.append(v.data(), v.size());
+    Http2StrAppend(&s, v);
     flags ^= bit;
   };
   if (flags & 0x01) {
@@ -87,16 +83,16 @@ string Http2FrameFlagsToString(Http2FrameType type, uint8_t flags) {
     }
   }
   if (flags != 0) {
-    append_and_clear(StringPrintf("0x%02x", flags), flags);
+    append_and_clear(Http2StringPrintf("0x%02x", flags), flags);
   }
   DCHECK_EQ(0, flags);
   return s;
 }
-string Http2FrameFlagsToString(uint8_t type, uint8_t flags) {
+Http2String Http2FrameFlagsToString(uint8_t type, uint8_t flags) {
   return Http2FrameFlagsToString(static_cast<Http2FrameType>(type), flags);
 }
 
-string Http2ErrorCodeToString(uint32_t v) {
+Http2String Http2ErrorCodeToString(uint32_t v) {
   switch (v) {
     case 0x0:
       return "NO_ERROR";
@@ -131,11 +127,11 @@ string Http2ErrorCodeToString(uint32_t v) {
   ss << "UnknownErrorCode(0x" << std::hex << v << ")";
   return ss.str();
 }
-string Http2ErrorCodeToString(Http2ErrorCode v) {
+Http2String Http2ErrorCodeToString(Http2ErrorCode v) {
   return Http2ErrorCodeToString(static_cast<uint32_t>(v));
 }
 
-string Http2SettingsParameterToString(uint32_t v) {
+Http2String Http2SettingsParameterToString(uint32_t v) {
   switch (v) {
     case 0x1:
       return "HEADER_TABLE_SIZE";
@@ -154,7 +150,7 @@ string Http2SettingsParameterToString(uint32_t v) {
   ss << "UnknownSettingsParameter(0x" << std::hex << v << ")";
   return ss.str();
 }
-string Http2SettingsParameterToString(Http2SettingsParameter v) {
+Http2String Http2SettingsParameterToString(Http2SettingsParameter v) {
   return Http2SettingsParameterToString(static_cast<uint32_t>(v));
 }
 

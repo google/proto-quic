@@ -140,7 +140,8 @@ QuicFramer::QuicFramer(const QuicVersionVector& supported_versions,
       perspective_(perspective),
       validate_flags_(true),
       creation_time_(creation_time),
-      last_timestamp_(QuicTime::Delta::Zero()) {
+      last_timestamp_(QuicTime::Delta::Zero()),
+      data_producer_(nullptr) {
   DCHECK(!supported_versions.empty());
   quic_version_ = supported_versions_[0];
   decrypter_ = QuicMakeUnique<NullDecrypter>(perspective);
@@ -313,8 +314,7 @@ QuicFramer::AckFrameInfo::~AckFrameInfo() {}
 size_t QuicFramer::BuildDataPacket(const QuicPacketHeader& header,
                                    const QuicFrames& frames,
                                    char* buffer,
-                                   size_t packet_length,
-                                   QuicStreamFrameDataProducer* data_producer) {
+                                   size_t packet_length) {
   QuicDataWriter writer(packet_length, buffer, perspective_, endianness());
   if (!AppendPacketHeader(header, &writer)) {
     QUIC_BUG << "AppendPacketHeader failed";
@@ -340,7 +340,7 @@ size_t QuicFramer::BuildDataPacket(const QuicPacketHeader& header,
         break;
       case STREAM_FRAME:
         if (!AppendStreamFrame(*frame.stream_frame, no_stream_frame_length,
-                               &writer, data_producer)) {
+                               &writer)) {
           QUIC_BUG << "AppendStreamFrame failed";
           return 0;
         }
@@ -1793,8 +1793,7 @@ bool QuicFramer::AppendAckBlock(uint8_t gap,
 
 bool QuicFramer::AppendStreamFrame(const QuicStreamFrame& frame,
                                    bool no_stream_frame_length,
-                                   QuicDataWriter* writer,
-                                   QuicStreamFrameDataProducer* data_producer) {
+                                   QuicDataWriter* writer) {
   if (!AppendStreamId(GetStreamIdSize(frame.stream_id), frame.stream_id,
                       writer)) {
     QUIC_BUG << "Writing stream id size failed.";
@@ -1813,13 +1812,13 @@ bool QuicFramer::AppendStreamFrame(const QuicStreamFrame& frame,
     }
   }
 
-  if (data_producer != nullptr) {
+  if (data_producer_ != nullptr) {
     DCHECK_EQ(nullptr, frame.data_buffer);
     if (frame.data_length == 0) {
       return true;
     }
-    if (!data_producer->WriteStreamData(frame.stream_id, frame.offset,
-                                        frame.data_length, writer)) {
+    if (!data_producer_->WriteStreamData(frame.stream_id, frame.offset,
+                                         frame.data_length, writer)) {
       QUIC_BUG << "Writing frame data failed.";
       return false;
     }
@@ -2173,6 +2172,17 @@ bool QuicFramer::RaiseError(QuicErrorCode error) {
 
 Endianness QuicFramer::endianness() const {
   return quic_version_ > QUIC_VERSION_38 ? NETWORK_BYTE_ORDER : HOST_BYTE_ORDER;
+}
+
+void QuicFramer::SaveStreamData(QuicStreamId id,
+                                QuicIOVector iov,
+                                size_t iov_offset,
+                                QuicStreamOffset offset,
+                                QuicByteCount data_length) {
+  DCHECK_NE(nullptr, data_producer_);
+  if (data_producer_ != nullptr) {
+    data_producer_->SaveStreamData(id, iov, iov_offset, offset, data_length);
+  }
 }
 
 }  // namespace net

@@ -127,7 +127,7 @@ class NET_EXPORT TestRootCerts {
   bool allow_system_trust_;
 #endif
 
-#if defined(OS_WIN) || defined(OS_ANDROID)
+#if defined(OS_WIN) || defined(OS_ANDROID) || defined(OS_FUCHSIA)
   // True if there are no temporarily trusted root certificates.
   bool empty_;
 #endif

@@ -35,6 +35,21 @@ type clientHandshakeState struct {
 	finishedBytes []byte
 }
 
+func mapClientHelloVersion(vers uint16, isDTLS bool) uint16 {
+	if !isDTLS {
+		return vers
+	}
+
+	switch vers {
+	case VersionTLS12:
+		return VersionDTLS12
+	case VersionTLS10:
+		return VersionDTLS10
+	}
+
+	panic("Unknown ClientHello version.")
+}
+
 func (c *Conn) clientHandshake() error {
 	if c.config == nil {
 		c.config = defaultConfig()
@@ -63,14 +78,12 @@ func (c *Conn) clientHandshake() error {
 	maxVersion := c.config.maxVersion(c.isDTLS)
 	hello := &clientHelloMsg{
 		isDTLS:                  c.isDTLS,
-		vers:                    versionToWire(maxVersion, c.isDTLS),
 		compressionMethods:      []uint8{compressionNone},
 		random:                  make([]byte, 32),
 		ocspStapling:            !c.config.Bugs.NoOCSPStapling,
 		sctListSupported:        !c.config.Bugs.NoSignedCertificateTimestamps,
 		serverName:              c.config.ServerName,
 		supportedCurves:         c.config.curvePreferences(),
-		pskKEModes:              []byte{pskDHEKEMode},
 		supportedPoints:         []uint8{pointFormatUncompressed},
 		nextProtoNeg:            len(c.config.NextProtos) > 0,
 		secureRenegotiation:     []byte{},
@@ -83,6 +96,26 @@ func (c *Conn) clientHandshake() error {
 		srtpMasterKeyIdentifier: c.config.Bugs.SRTPMasterKeyIdentifer,
 		customExtension:         c.config.Bugs.CustomExtension,
 		pskBinderFirst:          c.config.Bugs.PSKBinderFirst,
+		omitExtensions:          c.config.Bugs.OmitExtensions,
+		emptyExtensions:         c.config.Bugs.EmptyExtensions,
+	}
+
+	if maxVersion >= VersionTLS13 {
+		hello.vers = mapClientHelloVersion(VersionTLS12, c.isDTLS)
+		if !c.config.Bugs.OmitSupportedVersions {
+			hello.supportedVersions = c.config.supportedVersions(c.isDTLS)
+		}
+		hello.pskKEModes = []byte{pskDHEKEMode}
+	} else {
+		hello.vers = mapClientHelloVersion(maxVersion, c.isDTLS)
+	}
+
+	if c.config.Bugs.SendClientVersion != 0 {
+		hello.vers = c.config.Bugs.SendClientVersion
+	}
+
+	if len(c.config.Bugs.SendSupportedVersions) > 0 {
+		hello.supportedVersions = c.config.Bugs.SendSupportedVersions
 	}
 
 	disableEMS := c.config.Bugs.NoExtendedMasterSecret
@@ -310,23 +343,6 @@ NextCipherSuite:
 		}
 	}
 
-	if maxVersion == VersionTLS13 && !c.config.Bugs.OmitSupportedVersions {
-		if hello.vers >= VersionTLS13 {
-			hello.vers = VersionTLS12
-		}
-		for version := maxVersion; version >= minVersion; version-- {
-			hello.supportedVersions = append(hello.supportedVersions, versionToWire(version, c.isDTLS))
-		}
-	}
-
-	if len(c.config.Bugs.SendSupportedVersions) > 0 {
-		hello.supportedVersions = c.config.Bugs.SendSupportedVersions
-	}
-
-	if c.config.Bugs.SendClientVersion != 0 {
-		hello.vers = c.config.Bugs.SendClientVersion
-	}
-
 	if c.config.Bugs.SendCipherSuites != nil {
 		hello.cipherSuites = c.config.Bugs.SendCipherSuites
 	}
@@ -341,6 +357,9 @@ NextCipherSuite:
 	}
 	if c.config.Bugs.OmitEarlyDataExtension {
 		hello.hasEarlyData = false
+	}
+	if c.config.Bugs.SendClientHelloSessionID != nil {
+		hello.sessionId = c.config.Bugs.SendClientHelloSessionID
 	}
 
 	var helloBytes []byte
@@ -409,7 +428,7 @@ NextCipherSuite:
 	if c.isDTLS {
 		helloVerifyRequest, ok := msg.(*helloVerifyRequestMsg)
 		if ok {
-			if helloVerifyRequest.vers != versionToWire(VersionTLS10, c.isDTLS) {
+			if helloVerifyRequest.vers != VersionDTLS10 {
 				// Per RFC 6347, the version field in
 				// HelloVerifyRequest SHOULD be always DTLS
 				// 1.0. Enforce this for testing purposes.
@@ -443,14 +462,12 @@ NextCipherSuite:
 		return fmt.Errorf("tls: received unexpected message of type %T when waiting for HelloRetryRequest or ServerHello", msg)
 	}
 
-	serverVersion, ok := wireToVersion(serverWireVersion, c.isDTLS)
-	if ok {
-		ok = c.config.isSupportedVersion(serverVersion, c.isDTLS)
-	}
+	serverVersion, ok := c.config.isSupportedVersion(serverWireVersion, c.isDTLS)
 	if !ok {
 		c.sendAlert(alertProtocolVersion)
 		return fmt.Errorf("tls: server selected unsupported protocol version %x", c.vers)
 	}
+	c.wireVersion = serverWireVersion
 	c.vers = serverVersion
 	c.haveVers = true
 
@@ -670,6 +687,10 @@ NextCipherSuite:
 func (hs *clientHandshakeState) doTLS13Handshake() error {
 	c := hs.c
 
+	if c.wireVersion == tls13ExperimentVersion && !bytes.Equal(hs.hello.sessionId, hs.serverHello.sessionId) {
+		return errors.New("tls: session IDs did not match.")
+	}
+
 	// Once the PRF hash is known, TLS 1.3 does not require a handshake
 	// buffer.
 	hs.finishedHash.discardHandshakeBuffer()
@@ -718,6 +739,12 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 		hs.finishedHash.addEntropy(ecdheSecret)
 	} else {
 		hs.finishedHash.addEntropy(zeroSecret)
+	}
+
+	if c.wireVersion == tls13ExperimentVersion {
+		if err := c.readRecord(recordTypeChangeCipherSpec); err != nil {
+			return err
+		}
 	}
 
 	// Derive handshake traffic keys and switch read key to handshake
@@ -899,6 +926,11 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 		}
 		c.sendAlert(alertEndOfEarlyData)
 	}
+
+	if c.wireVersion == tls13ExperimentVersion {
+		c.writeRecord(recordTypeChangeCipherSpec, []byte{1})
+	}
+
 	c.out.useTrafficSecret(c.vers, hs.suite, clientHandshakeTrafficSecret, clientWrite)
 
 	if certReq != nil && !c.config.Bugs.SkipClientCertificate {

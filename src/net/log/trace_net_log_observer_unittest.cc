@@ -79,9 +79,8 @@ class TraceNetLogObserverTest : public testing::Test {
     trace_buffer_.Finish();
 
     std::unique_ptr<base::Value> trace_value;
-    trace_value = base::JSONReader::Read(
-        json_output_.json_output,
-        base::JSON_PARSE_RFC | base::JSON_DETACHABLE_CHILDREN);
+    trace_value =
+        base::JSONReader::Read(json_output_.json_output, base::JSON_PARSE_RFC);
 
     ASSERT_TRUE(trace_value) << json_output_.json_output;
     base::ListValue* trace_events = NULL;

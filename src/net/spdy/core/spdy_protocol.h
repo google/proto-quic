@@ -123,11 +123,6 @@ enum SpdyPushPromiseFlags {
   PUSH_PROMISE_FLAG_PADDED = 0x08,
 };
 
-// Flags on the SETTINGS control frame.
-enum SpdySettingsControlFlags {
-  SETTINGS_FLAG_CLEAR_PREVIOUSLY_PERSISTED_SETTINGS = 0x01,
-};
-
 enum Http2SettingsControlFlags {
   SETTINGS_FLAG_ACK = 0x01,
 };
@@ -284,18 +279,21 @@ const size_t kPriorityWeightPayloadSize = 1;
 namespace size_utils {
 
 // Returns the (minimum) size of frames (sans variable-length portions).
-size_t GetDataFrameMinimumSize();
 size_t GetFrameHeaderSize();
+size_t GetDataFrameMinimumSize();
+size_t GetHeadersMinimumSize();
+size_t GetPrioritySize();
 size_t GetRstStreamSize();
 size_t GetSettingsMinimumSize();
+size_t GetPushPromiseMinimumSize();
 size_t GetPingSize();
 size_t GetGoAwayMinimumSize();
-size_t GetHeadersMinimumSize();
 size_t GetWindowUpdateSize();
-size_t GetPushPromiseMinimumSize();
 size_t GetContinuationMinimumSize();
 size_t GetAltSvcMinimumSize();
-size_t GetPrioritySize();
+
+// Convenience function for above.
+size_t GetMinimumSizeOfFrame(SpdyFrameType frame_type);
 
 // Returns the minimum size a frame can be (data or control).
 size_t GetFrameMinimumSize();

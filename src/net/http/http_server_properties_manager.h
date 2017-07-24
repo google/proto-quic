@@ -15,6 +15,7 @@
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
+#include "base/time/default_tick_clock.h"
 #include "base/timer/timer.h"
 #include "base/values.h"
 #include "net/base/host_port_pair.h"
@@ -93,11 +94,24 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   // cache update to the pref thread;
   // |network_task_runner| should be bound with the network thread and is used
   // to post pref update to the cache thread.
+  //
+  // |clock| is used for setting expiration times and scheduling the
+  // expiration of broken alternative services. If null, the default clock will
+  // be used.
+  HttpServerPropertiesManager(
+      PrefDelegate* pref_delegate,
+      scoped_refptr<base::SingleThreadTaskRunner> pref_task_runner,
+      scoped_refptr<base::SingleThreadTaskRunner> network_task_runner,
+      NetLog* net_log,
+      base::TickClock* clock);
+
+  // Default clock will be used.
   HttpServerPropertiesManager(
       PrefDelegate* pref_delegate,
       scoped_refptr<base::SingleThreadTaskRunner> pref_task_runner,
       scoped_refptr<base::SingleThreadTaskRunner> network_task_runner,
       NetLog* net_log);
+
   ~HttpServerPropertiesManager() override;
 
   // Initialize on Network thread.
@@ -218,6 +232,10 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
       std::unique_ptr<IPAddress> last_quic_address,
       std::unique_ptr<ServerNetworkStatsMap> server_network_stats_map,
       std::unique_ptr<QuicServerInfoMap> quic_server_info_map,
+      std::unique_ptr<BrokenAlternativeServiceList>
+          broken_alternative_service_list,
+      std::unique_ptr<RecentlyBrokenAlternativeServices>
+          recently_broken_alternative_services,
       bool detected_corrupted_prefs);
 
   // These are used to delay updating the preferences when cached data in
@@ -245,6 +263,10 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
       std::unique_ptr<IPAddress> last_quic_address,
       std::unique_ptr<ServerNetworkStatsMap> server_network_stats_map,
       std::unique_ptr<QuicServerInfoMap> quic_server_info_map,
+      std::unique_ptr<BrokenAlternativeServiceList>
+          broken_alternative_service_list,
+      std::unique_ptr<RecentlyBrokenAlternativeServices>
+          recently_broken_alternative_services,
       const base::Closure& completion);
 
  private:
@@ -263,8 +285,21 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
                       AlternativeServiceMap* alternative_service_map,
                       ServerNetworkStatsMap* network_stats_map,
                       int version);
-  bool ParseAlternativeServiceDict(
-      const base::DictionaryValue& alternative_service_dict,
+  // Helper method used for parsing an alternative service from JSON.
+  // |dict| is the JSON dictionary to be parsed. It should contain fields
+  // corresponding to members of AlternativeService.
+  // |host_optional| determines whether or not the "host" field is optional. If
+  // optional, the default value is empty string.
+  // |parsing_under| is used only for debug log outputs in case of error; it
+  // should describe what section of the JSON prefs is currently being parsed.
+  // |alternative_service| is the output of parsing |dict|.
+  // Return value is true if parsing is successful.
+  bool ParseAlternativeServiceDict(const base::DictionaryValue& dict,
+                                   bool host_optional,
+                                   const std::string& parsing_under,
+                                   AlternativeService* alternative_service);
+  bool ParseAlternativeServiceInfoDictOfServer(
+      const base::DictionaryValue& dict,
       const std::string& server_str,
       AlternativeServiceInfo* alternative_service_info);
   bool AddToAlternativeServiceMap(
@@ -278,6 +313,10 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
                             ServerNetworkStatsMap* network_stats_map);
   bool AddToQuicServerInfoMap(const base::DictionaryValue& server_dict,
                               QuicServerInfoMap* quic_server_info_map);
+  bool AddToBrokenAlternativeServices(
+      const base::DictionaryValue& broken_alt_svc_entry_dict,
+      BrokenAlternativeServiceList* broken_alternative_service_list,
+      RecentlyBrokenAlternativeServices* recently_broken_alternative_services);
 
   void SaveAlternativeServiceToServerPrefs(
       const AlternativeServiceInfoVector& alternative_service_info_vector,
@@ -291,7 +330,15 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   void SaveQuicServerInfoMapToServerPrefs(
       const QuicServerInfoMap& quic_server_info_map,
       base::DictionaryValue* http_server_properties_dict);
+  void SaveBrokenAlternativeServicesToPrefs(
+      const BrokenAlternativeServiceList* broken_alternative_service_list,
+      const RecentlyBrokenAlternativeServices*
+          recently_broken_alternative_services,
+      base::DictionaryValue* http_server_properties_dict);
+
   void SetInitialized();
+
+  base::DefaultTickClock default_clock_;
 
   // -----------
   // Pref thread
@@ -306,6 +353,8 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
 
   std::unique_ptr<PrefDelegate> pref_delegate_;
   bool setting_prefs_;
+
+  base::TickClock* clock_;  // Unowned
 
   // --------------
   // Network thread

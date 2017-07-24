@@ -7,6 +7,7 @@
 #include <magenta/syscalls.h>
 
 #include "base/compiler_specific.h"
+#include "base/numerics/checked_math.h"
 
 namespace base {
 
@@ -65,6 +66,12 @@ bool TimeTicks::IsConsistentAcrossProcesses() {
 // static
 TimeTicks TimeTicks::FromMXTime(mx_time_t nanos_since_boot) {
   return TimeTicks(MxTimeToMicroseconds(nanos_since_boot));
+}
+
+mx_time_t TimeTicks::ToMXTime() const {
+  CheckedNumeric<mx_time_t> result(base::Time::kNanosecondsPerMicrosecond);
+  result *= us_;
+  return result.ValueOrDie();
 }
 
 // static

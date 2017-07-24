@@ -27,12 +27,11 @@
 #ifndef NET_HTTP2_HPACK_DECODER_HPACK_VARINT_DECODER_H_
 #define NET_HTTP2_HPACK_DECODER_HPACK_VARINT_DECODER_H_
 
-#include <string>
-
 #include "base/logging.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/platform/api/http2_export.h"
+#include "net/http2/platform/api/http2_string.h"
 
 namespace net {
 // Decodes an HPACK variable length unsigned integer, in a resumable fashion
@@ -124,7 +123,7 @@ class HTTP2_EXPORT_PRIVATE HpackVarintDecoder {
 
   // All the public methods below are for supporting assertions and tests.
 
-  std::string DebugString() const;
+  Http2String DebugString() const;
 
   // For benchmarking, these methods ensure the decoder
   // is NOT inlined into the caller.

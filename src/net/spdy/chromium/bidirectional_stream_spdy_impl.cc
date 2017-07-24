@@ -193,6 +193,9 @@ bool BidirectionalStreamSpdyImpl::GetLoadTimingInfo(
   return stream_->GetLoadTimingInfo(load_timing_info);
 }
 
+void BidirectionalStreamSpdyImpl::PopulateNetErrorDetails(
+    NetErrorDetails* details) {}
+
 void BidirectionalStreamSpdyImpl::OnHeadersSent() {
   DCHECK(stream_);
 

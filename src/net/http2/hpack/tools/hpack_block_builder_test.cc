@@ -7,8 +7,6 @@
 #include "net/spdy/core/spdy_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
-
 namespace net {
 namespace test {
 namespace {
@@ -98,7 +96,7 @@ TEST(HpackBlockBuilderTest, ExamplesFromSpecC3) {
     // 0x0000:  8286 8441 0f77 7777 2e65 7861 6d70 6c65  ...A.www.example
     // 0x0010:  2e63 6f6d                                .com
 
-    const std::string expected =
+    const Http2String expected =
         a2b_hex("828684410f7777772e6578616d706c652e636f6d");
     EXPECT_EQ(expected, b.buffer());
   }
@@ -122,14 +120,14 @@ TEST(HpackBlockBuilderTest, ExamplesFromSpecC4) {
                                           0xabu, 0x90u, 0xf4u, 0xffu};
     b.AppendNameIndexAndLiteralValue(
         HpackEntryType::kIndexedLiteralHeader, 1, kCompressed,
-        StringPiece(kHuffmanWwwExampleCom, sizeof kHuffmanWwwExampleCom));
+        Http2StringPiece(kHuffmanWwwExampleCom, sizeof kHuffmanWwwExampleCom));
     EXPECT_EQ(17u, b.size());
 
     // Hex dump of encoded data (copied from RFC):
     // 0x0000:  8286 8441 8cf1 e3c2 e5f2 3a6b a0ab 90f4  ...A......:k....
     // 0x0010:  ff                                       .
 
-    const std::string expected = a2b_hex("828684418cf1e3c2e5f23a6ba0ab90f4ff");
+    const Http2String expected = a2b_hex("828684418cf1e3c2e5f23a6ba0ab90f4ff");
     EXPECT_EQ(expected, b.buffer());
   }
 }
@@ -141,7 +139,7 @@ TEST(HpackBlockBuilderTest, DynamicTableSizeUpdate) {
     EXPECT_EQ(1u, b.size());
 
     const char kData[] = {0x20};
-    StringPiece expected(kData, sizeof kData);
+    Http2StringPiece expected(kData, sizeof kData);
     EXPECT_EQ(expected, b.buffer());
   }
   {
@@ -150,7 +148,7 @@ TEST(HpackBlockBuilderTest, DynamicTableSizeUpdate) {
     EXPECT_EQ(3u, b.size());
 
     const char kData[] = {0x3f, 0xe1u, 0x1f};
-    StringPiece expected(kData, sizeof kData);
+    Http2StringPiece expected(kData, sizeof kData);
     EXPECT_EQ(expected, b.buffer());
   }
   {
@@ -159,7 +157,7 @@ TEST(HpackBlockBuilderTest, DynamicTableSizeUpdate) {
     EXPECT_EQ(7u, b.size());
 
     const char kData[] = {0x3fu, 0xe1u, 0x9fu, 0x94u, 0xa5u, 0x8du, 0x1du};
-    StringPiece expected(kData, sizeof kData);
+    Http2StringPiece expected(kData, sizeof kData);
     EXPECT_EQ(expected, b.buffer());
   }
 }

@@ -493,7 +493,7 @@ def GetThirdPartyDepsFromGNDepsOutput(gn_deps):
     third_party_deps = set()
     for build_dep in gn_deps.split():
         m = re.search(r'^(.+/third_party/[^/]+)/(.+/)?BUILD\.gn$', build_dep)
-        if m:
+        if m and not os.path.join('build', 'secondary') in build_dep:
             third_party_deps.add(m.group(1))
     return third_party_deps
 

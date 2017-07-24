@@ -143,6 +143,17 @@ Baseline Requirements, and then subsequently published the private key.
 
   * [83618f932d6947744d5ecca299d4b2820c01483947bd16be814e683f7436be24.pem](83618f932d6947744d5ecca299d4b2820c01483947bd16be814e683f7436be24.pem)
 
+### Superfish
+
+For details, see <https://www.eff.org/deeplinks/2015/02/how-remove-superfish-adware-your-lenovo-computer>
+
+Superfish software with an associated root certificate came preinstalled on
+Lenovo computers. The software used a single root certificate across all
+computers, and the private key was trivially extracted; thus the associated
+public key was blacklisted.
+
+  * [b6fe9151402bad1c06d7e66db67a26aa7356f2e6c644dbcf9f98968ff632e1b7.pem](b6fe9151402bad1c06d7e66db67a26aa7356f2e6c644dbcf9f98968ff632e1b7.pem)
+
 ## Miscellaneous
 
 ### DigiCert

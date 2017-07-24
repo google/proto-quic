@@ -14,7 +14,6 @@
 #include <signal.h>
 #include <string.h>
 
-#include "base/android/base_jni_registrar.h"
 #include "base/android/jni_string.h"
 #include "base/android/scoped_java_ref.h"
 #include "base/at_exit.h"
@@ -132,8 +131,6 @@ static void RunTests(JNIEnv* env,
 }
 
 bool RegisterNativeTestJNI(JNIEnv* env) {
-  if (!base::android::RegisterJni(env))
-    return false;
   if (!RegisterMainRunnerJni(env))
     return false;
   return RegisterNativesImpl(env);

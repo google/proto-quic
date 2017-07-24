@@ -784,6 +784,8 @@ TEST_F(TaskSchedulerTaskTrackerTest,
 
   for (const auto& thread : post_threads)
     thread->Join();
+  // Clean up unused Thread objects to avoid running out of system resources.
+  post_threads.clear();
 
   // Call Shutdown() asynchronously.
   CallShutdownAsync();

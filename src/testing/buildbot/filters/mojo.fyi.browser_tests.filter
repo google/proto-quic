@@ -1,14 +1,7 @@
+BrowserTest.*
+
 # Failing test
 -BrowserTest.FullscreenBookmarkBar
-
-# Flaky tests -crbug.com/707195
--BrowserTest.AboutVersion
--BrowserTest.CanDuplicateTab
--BrowserTest.ClearPendingOnFailUnlessNT
--BrowserTest.DefaultMediaDevices
--BrowserTest.GetSizeForNewRenderView
--BrowserTest.JavascriptAlertActivatesTab
--BrowserTest.Title
 
 # Trying to whitelist
 BrowserDialogTest.Invoke

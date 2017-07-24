@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SSL_SSL_CLIENT_CERT_IDENTITY_MAC_H_
-#define NET_SSL_SSL_CLIENT_CERT_IDENTITY_MAC_H_
+#ifndef NET_SSL_CLIENT_CERT_IDENTITY_MAC_H_
+#define NET_SSL_CLIENT_CERT_IDENTITY_MAC_H_
 
 #include "net/ssl/client_cert_identity.h"
 
@@ -31,4 +31,4 @@ class NET_EXPORT_PRIVATE ClientCertIdentityMac : public ClientCertIdentity {
 
 }  // namespace net
 
-#endif  // NET_SSL_SSL_CLIENT_CERT_IDENTITY_MAC_H_
+#endif  // NET_SSL_CLIENT_CERT_IDENTITY_MAC_H_

@@ -108,22 +108,19 @@ class SPDY_EXPORT_PRIVATE SpdyFramerVisitorInterface {
   // will receive headers for stream |stream_id|. The caller will not take
   // ownership of the headers handler. The same instance should remain live
   // and be returned for all header frames comprising a logical header block
-  // (i.e. until OnHeaderFrameEnd() is called with end_headers == true).
+  // (i.e. until OnHeaderFrameEnd() is called).
   virtual SpdyHeadersHandlerInterface* OnHeaderFrameStart(
       SpdyStreamId stream_id) = 0;
 
   // Called after processing the payload of a frame containing header data.
-  // |end_headers| is true if there will not be any subsequent CONTINUATION
-  // frames.
-  virtual void OnHeaderFrameEnd(SpdyStreamId stream_id, bool end_headers) = 0;
+  virtual void OnHeaderFrameEnd(SpdyStreamId stream_id) = 0;
 
   // Called when a RST_STREAM frame has been parsed.
   virtual void OnRstStream(SpdyStreamId stream_id,
                            SpdyErrorCode error_code) = 0;
 
   // Called when a SETTINGS frame is received.
-  // |clear_persisted| True if the respective flag is set on the SETTINGS frame.
-  virtual void OnSettings(bool clear_persisted) {}
+  virtual void OnSettings() {}
 
   // Called when a complete setting within a SETTINGS frame has been parsed and
   // validated.
@@ -223,8 +220,7 @@ class SPDY_EXPORT_PRIVATE SpdyFrameSequence {
   virtual bool HasNextFrame() const = 0;
 
   // Get SpdyFrameIR of the frame to be serialized.
-  // TODO(yasong): return const SpdyFrameIR& instead.
-  virtual const SpdyFrameIR* GetIR() const = 0;
+  virtual const SpdyFrameIR& GetIR() const = 0;
 };
 
 class ExtensionVisitorInterface {
@@ -340,7 +336,7 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
       const SpdyHeaderBlock& header_block) const;
 
   // Retrieve serialized length of SpdyHeaderBlock.
-  static size_t GetSerializedLength(const SpdyHeaderBlock* headers);
+  static size_t GetUncompressedSerializedLength(const SpdyHeaderBlock& headers);
 
   // Gets the serialized flags for the given |frame|.
   static uint8_t GetSerializedFlags(const SpdyFrameIR& frame);
@@ -532,18 +528,21 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   }
 
   // Returns the (minimum) size of frames (sans variable-length portions).
-  size_t GetDataFrameMinimumSize() const;
   size_t GetFrameHeaderSize() const;
+  size_t GetDataFrameMinimumSize() const;
+  size_t GetHeadersMinimumSize() const;
+  size_t GetPrioritySize() const;
   size_t GetRstStreamSize() const;
   size_t GetSettingsMinimumSize() const;
+  size_t GetPushPromiseMinimumSize() const;
   size_t GetPingSize() const;
   size_t GetGoAwayMinimumSize() const;
-  size_t GetHeadersMinimumSize() const;
   size_t GetWindowUpdateSize() const;
-  size_t GetPushPromiseMinimumSize() const;
   size_t GetContinuationMinimumSize() const;
   size_t GetAltSvcMinimumSize() const;
-  size_t GetPrioritySize() const;
+
+  // Convenience function for above.
+  size_t GetMinimumSizeOfFrame(SpdyFrameType frame_type) const;
 
   // Returns the minimum size a frame can be (data or control).
   size_t GetFrameMinimumSize() const;
@@ -668,9 +667,6 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
     std::unique_ptr<HpackEncoder::ProgressiveEncoder> encoder_;
     bool is_first_frame_;
     bool has_next_frame_;
-
-    // Field for debug reporting.
-    size_t debug_total_size_;
   };
 
   // Iteratively converts a SpdyHeadersIR (with a possibly huge
@@ -685,7 +681,7 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
     ~SpdyHeaderFrameIterator() override;
 
    private:
-    const SpdyFrameIR* GetIR() const override;
+    const SpdyFrameIR& GetIR() const override;
     size_t GetFrameSizeSansBlock() const override;
     bool SerializeGivenEncoding(const SpdyString& encoding,
                                 ZeroCopyOutputBuffer* output) const override;
@@ -707,7 +703,7 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
     ~SpdyPushPromiseFrameIterator() override;
 
    private:
-    const SpdyFrameIR* GetIR() const override;
+    const SpdyFrameIR& GetIR() const override;
     size_t GetFrameSizeSansBlock() const override;
     bool SerializeGivenEncoding(const SpdyString& encoding,
                                 ZeroCopyOutputBuffer* output) const override;
@@ -717,7 +713,8 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
 
   // Converts a SpdyFrameIR into one Spdy frame (a sequence of length 1), and
   // write it to the output.
-  class SpdyControlFrameIterator : public SpdyFrameSequence {
+  class SPDY_EXPORT_PRIVATE SpdyControlFrameIterator
+      : public SpdyFrameSequence {
    public:
     SpdyControlFrameIterator(SpdyFramer* framer,
                              std::unique_ptr<const SpdyFrameIR> frame_ir);
@@ -727,12 +724,12 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
 
     bool HasNextFrame() const override;
 
-    const SpdyFrameIR* GetIR() const override;
+    const SpdyFrameIR& GetIR() const override;
 
    private:
     SpdyFramer* const framer_;
-    bool has_next_frame_ = true;
     std::unique_ptr<const SpdyFrameIR> frame_ir_;
+    bool has_next_frame_ = true;
   };
 
  private:
@@ -838,7 +835,7 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
 
   // Serializes a PUSH_PROMISE frame from the given SpdyPushPromiseIR and
   // encoded header block. Does not need or use the SpdyHeaderBlock inside
-  // SpdyHeadersIR.
+  // SpdyPushPromiseIR.
   bool SerializePushPromiseGivenEncoding(const SpdyPushPromiseIR& push_promise,
                                          const SpdyString& encoding,
                                          ZeroCopyOutputBuffer* output) const;

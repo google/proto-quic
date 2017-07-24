@@ -8,14 +8,14 @@
 // in net/http2/http2_structures.h).
 
 #include <stddef.h>
-#include <string>
 
 #include "base/logging.h"
-#include "base/strings/string_piece.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/http2_constants.h"
 #include "net/http2/http2_structures_test_util.h"
+#include "net/http2/platform/api/http2_string.h"
+#include "net/http2/platform/api/http2_string_piece.h"
 #include "net/http2/tools/http2_frame_builder.h"
 #include "net/http2/tools/http2_random.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -23,20 +23,18 @@
 using ::testing::AssertionFailure;
 using ::testing::AssertionResult;
 using ::testing::AssertionSuccess;
-using base::StringPiece;
-using std::string;
 
 namespace net {
 namespace test {
 namespace {
 
 template <typename T, size_t N>
-StringPiece ToStringPiece(T (&data)[N]) {
-  return StringPiece(reinterpret_cast<const char*>(data), N * sizeof(T));
+Http2StringPiece ToStringPiece(T (&data)[N]) {
+  return Http2StringPiece(reinterpret_cast<const char*>(data), N * sizeof(T));
 }
 
 template <class S>
-string SerializeStructure(const S& s) {
+Http2String SerializeStructure(const S& s) {
   Http2FrameBuilder fb;
   fb.Append(s);
   EXPECT_EQ(S::EncodedSize(), fb.size());
@@ -57,7 +55,7 @@ class StructureDecoderTest : public ::testing::Test {
 
   // Fully decodes the Structure at the start of data, and confirms it matches
   // *expected (if provided).
-  void DecodeLeadingStructure(const S* expected, StringPiece data) {
+  void DecodeLeadingStructure(const S* expected, Http2StringPiece data) {
     ASSERT_LE(S::EncodedSize(), data.size());
     DecodeBuffer db(data);
     Randomize(&structure_);
@@ -70,13 +68,13 @@ class StructureDecoderTest : public ::testing::Test {
 
   template <size_t N>
   void DecodeLeadingStructure(const char (&data)[N]) {
-    DecodeLeadingStructure(nullptr, StringPiece(data, N));
+    DecodeLeadingStructure(nullptr, Http2StringPiece(data, N));
   }
 
   // Encode the structure |in_s| into bytes, then decode the bytes
   // and validate that the decoder produced the same field values.
   void EncodeThenDecode(const S& in_s) {
-    string bytes = SerializeStructure(in_s);
+    Http2String bytes = SerializeStructure(in_s);
     EXPECT_EQ(S::EncodedSize(), bytes.size());
     DecodeLeadingStructure(&in_s, bytes);
   }
@@ -295,7 +293,8 @@ TEST_F(PingFieldsDecoderTest, DecodesLiteral) {
     };
     DecodeLeadingStructure(kData);
     if (!HasFailure()) {
-      EXPECT_EQ(StringPiece(kData, 8), ToStringPiece(structure_.opaque_data));
+      EXPECT_EQ(Http2StringPiece(kData, 8),
+                ToStringPiece(structure_.opaque_data));
     }
   }
   {
@@ -305,7 +304,8 @@ TEST_F(PingFieldsDecoderTest, DecodesLiteral) {
     };
     DecodeLeadingStructure(kData);
     if (!HasFailure()) {
-      EXPECT_EQ(StringPiece(kData, 8), ToStringPiece(structure_.opaque_data));
+      EXPECT_EQ(Http2StringPiece(kData, 8),
+                ToStringPiece(structure_.opaque_data));
     }
   }
   {
@@ -314,7 +314,8 @@ TEST_F(PingFieldsDecoderTest, DecodesLiteral) {
     };
     DecodeLeadingStructure(kData);
     if (!HasFailure()) {
-      EXPECT_EQ(StringPiece(kData, 8), ToStringPiece(structure_.opaque_data));
+      EXPECT_EQ(Http2StringPiece(kData, 8),
+                ToStringPiece(structure_.opaque_data));
     }
   }
 }

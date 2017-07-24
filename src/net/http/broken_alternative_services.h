@@ -84,6 +84,10 @@ class NET_EXPORT_PRIVATE BrokenAlternativeServices {
   // expiration time.
   // All AlternativeServices in |broken_alternative_service_list| must exist in
   // |recently_broken_alternative_services|.
+  //
+  // If a broken/recently-broken alt svc that's being added is already stored,
+  // the stored expiration/broken-count for that alt svc will be overwritten
+  // with the new value.
   void SetBrokenAndRecentlyBrokenAlternativeServices(
       std::unique_ptr<BrokenAlternativeServiceList>
           broken_alternative_service_list,

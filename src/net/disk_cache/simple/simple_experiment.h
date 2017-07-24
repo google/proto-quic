@@ -14,13 +14,20 @@
 namespace disk_cache {
 
 NET_EXPORT_PRIVATE extern const base::Feature kSimpleSizeExperiment;
+NET_EXPORT_PRIVATE extern const base::Feature
+    kSimpleCacheEvictionWithSizeExperiment;
 NET_EXPORT_PRIVATE extern const char kSizeMultiplierParam[];
+NET_EXPORT_PRIVATE extern const char kSizeEvictionParam[];
 
 // This lists the experiment groups for SimpleCache. Only add new groups at
 // the end of the list, and always increase the number.
 enum class SimpleExperimentType : uint32_t {
   NONE = 0,
   SIZE = 1,
+
+  // param = 0 -> control group
+  // param = 1 -> experiment group
+  EVICT_WITH_SIZE = 2,
 };
 
 struct NET_EXPORT_PRIVATE SimpleExperiment {

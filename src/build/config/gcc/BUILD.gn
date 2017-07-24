@@ -109,7 +109,7 @@ config("executable_ldconfig") {
     if (is_component_build || using_sanitizer) {
       configs = [ ":rpath_for_built_shared_libraries" ]
     }
-    if (current_cpu == "mipsel") {
+    if (current_cpu == "mipsel" || current_cpu == "mips64el") {
       ldflags += [ "-pie" ]
     }
   }

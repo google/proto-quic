@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <map>
+#include <memory>
 #include <string>
 
 #include "base/base_export.h"
@@ -20,6 +21,8 @@
 
 namespace base {
 namespace trace_event {
+
+class ProcessMemoryDump;
 
 // Captures the reason why a memory dump is being requested. This is to allow
 // selective enabling of dumps, filtering and post-processing. Keep this
@@ -110,10 +113,14 @@ struct BASE_EXPORT MemoryDumpCallbackResult {
 using GlobalMemoryDumpCallback =
     Callback<void(bool success, uint64_t dump_guid)>;
 
+// TODO(ssid): This should just sent a single PMD once the support for multi
+// process dumps are removed from MemoryDumpManager.
+using ProcessMemoryDumpsMap =
+    std::map<ProcessId, std::unique_ptr<ProcessMemoryDump>>;
 using ProcessMemoryDumpCallback =
     Callback<void(bool success,
                   uint64_t dump_guid,
-                  const Optional<MemoryDumpCallbackResult>& result)>;
+                  const ProcessMemoryDumpsMap& process_dumps)>;
 
 BASE_EXPORT const char* MemoryDumpTypeToString(const MemoryDumpType& dump_type);
 

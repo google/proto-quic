@@ -4,11 +4,6 @@
 
 #include "base/trace_event/heap_profiler_serialization_state.h"
 
-#include "base/memory/ptr_util.h"
-#include "base/trace_event/heap_profiler_stack_frame_deduplicator.h"
-#include "base/trace_event/heap_profiler_string_deduplicator.h"
-#include "base/trace_event/heap_profiler_type_name_deduplicator.h"
-
 namespace base {
 namespace trace_event {
 
@@ -16,12 +11,16 @@ HeapProfilerSerializationState::HeapProfilerSerializationState()
     : heap_profiler_breakdown_threshold_bytes_(0) {}
 HeapProfilerSerializationState::~HeapProfilerSerializationState() {}
 
-void HeapProfilerSerializationState::CreateDeduplicators() {
-  string_deduplicator_ = base::MakeUnique<StringDeduplicator>();
-  stack_frame_deduplicator_ =
-      base::MakeUnique<StackFrameDeduplicator>(string_deduplicator_.get());
-  type_name_deduplicator_ =
-      base::MakeUnique<TypeNameDeduplicator>(string_deduplicator_.get());
+void HeapProfilerSerializationState::SetStackFrameDeduplicator(
+    std::unique_ptr<StackFrameDeduplicator> stack_frame_deduplicator) {
+  DCHECK(!stack_frame_deduplicator_);
+  stack_frame_deduplicator_ = std::move(stack_frame_deduplicator);
+}
+
+void HeapProfilerSerializationState::SetTypeNameDeduplicator(
+    std::unique_ptr<TypeNameDeduplicator> type_name_deduplicator) {
+  DCHECK(!type_name_deduplicator_);
+  type_name_deduplicator_ = std::move(type_name_deduplicator);
 }
 
 }  // namespace trace_event

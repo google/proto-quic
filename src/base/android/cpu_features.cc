@@ -18,9 +18,5 @@ jlong GetCpuFeatures(JNIEnv*, const JavaParamRef<jclass>&) {
   return android_getCpuFeatures();
 }
 
-bool RegisterCpuFeatures(JNIEnv* env) {
-  return RegisterNativesImpl(env);
-}
-
 }  // namespace android
 }  // namespace base

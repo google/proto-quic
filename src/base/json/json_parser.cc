@@ -667,8 +667,13 @@ bool JSONParser::DecodeUTF16(std::string* dest_string) {
   } else {
     // Not a surrogate.
     DCHECK(CBU16_IS_SINGLE(code_unit16_high));
-    if (!IsValidCharacter(code_unit16_high))
-      return false;
+    if (!IsValidCharacter(code_unit16_high)) {
+      if ((options_ & JSON_REPLACE_INVALID_CHARACTERS) == 0) {
+        return false;
+      }
+      dest_string->append(kUnicodeReplacementString);
+      return true;
+    }
 
     CBU8_APPEND_UNSAFE(code_unit8, offset, code_unit16_high);
   }

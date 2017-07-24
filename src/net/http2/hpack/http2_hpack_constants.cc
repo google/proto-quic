@@ -6,9 +6,11 @@
 
 #include <sstream>
 
+#include "net/http2/platform/api/http2_string_utils.h"
+
 namespace net {
 
-std::string HpackEntryTypeToString(HpackEntryType v) {
+Http2String HpackEntryTypeToString(HpackEntryType v) {
   switch (v) {
     case HpackEntryType::kIndexedHeader:
       return "kIndexedHeader";
@@ -21,9 +23,7 @@ std::string HpackEntryTypeToString(HpackEntryType v) {
     case HpackEntryType::kNeverIndexedLiteralHeader:
       return "kNeverIndexedLiteralHeader";
   }
-  std::stringstream ss;
-  ss << "UnknownHpackEntryType(" << static_cast<int>(v) << ")";
-  return ss.str();
+  return Http2StrCat("UnknownHpackEntryType(", static_cast<int>(v), ")");
 }
 
 std::ostream& operator<<(std::ostream& out, HpackEntryType v) {

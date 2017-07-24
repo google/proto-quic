@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/android/child_process_service_impl.h"
-
 #include "base/android/jni_array.h"
 #include "base/android/jni_string.h"
 #include "base/android/library_loader/library_loader_hooks.h"
@@ -72,10 +70,6 @@ void ExitChildProcess(JNIEnv* env, const JavaParamRef<jclass>& clazz) {
   VLOG(0) << "ChildProcessServiceImpl: Exiting child process.";
   base::android::LibraryLoaderExitHook();
   _exit(0);
-}
-
-bool RegisterChildProcessServiceImpl(JNIEnv* env) {
-  return RegisterNativesImpl(env);
 }
 
 }  // namespace android

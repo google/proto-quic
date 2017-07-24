@@ -9,6 +9,7 @@
 
 #include "base/metrics/histogram.h"
 
+#include <inttypes.h>
 #include <limits.h>
 #include <math.h>
 
@@ -18,6 +19,7 @@
 
 #include "base/compiler_specific.h"
 #include "base/debug/alias.h"
+#include "base/debug/crash_logging.h"
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
@@ -31,6 +33,7 @@
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/lock.h"
 #include "base/values.h"
+#include "build/build_config.h"
 
 namespace base {
 
@@ -527,6 +530,43 @@ void Histogram::WriteHTMLGraph(std::string* output) const {
 
 void Histogram::WriteAscii(std::string* output) const {
   WriteAsciiImpl(true, "\n", output);
+}
+
+void Histogram::ValidateHistogramContents() const {
+  enum Fields : int {
+    kBucketRangesField,
+    kUnloggedSamplesField,
+    kLoggedSamplesField,
+    kIdField,
+    kHistogramNameField,
+    kFlagsField,
+  };
+
+  uint32_t bad_fields = 0;
+  if (!bucket_ranges_)
+    bad_fields |= 1 << kBucketRangesField;
+  if (!unlogged_samples_)
+    bad_fields |= 1 << kUnloggedSamplesField;
+  if (!logged_samples_)
+    bad_fields |= 1 << kLoggedSamplesField;
+  else if (logged_samples_->id() == 0)
+    bad_fields |= 1 << kIdField;
+  else if (HashMetricName(histogram_name()) != logged_samples_->id())
+    bad_fields |= 1 << kHistogramNameField;
+  if (flags() == 0)
+    bad_fields |= 1 << kFlagsField;
+
+  // Abort if a problem is found (except "flags", which could legally be zero).
+  if ((bad_fields & ~(1 << kFlagsField)) != 0) {
+    const std::string debug_string =
+        base::StringPrintf("%s/%" PRIu32, histogram_name().c_str(), bad_fields);
+#if !defined(OS_NACL)
+    // Temporary for https://crbug.com/736675.
+    base::debug::ScopedCrashKey crash_key("bad_histogram", debug_string);
+#endif
+    CHECK(false) << debug_string;
+    debug::Alias(&bad_fields);
+  }
 }
 
 bool Histogram::SerializeInfoImpl(Pickle* pickle) const {

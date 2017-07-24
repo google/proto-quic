@@ -58,6 +58,26 @@ const char kServerHostname[] = "test.example.com";
 const uint16_t kServerPort = 443;
 const size_t kMaxReadersPerQuicSession = 5;
 
+// A subclass of QuicChromiumClientSession with GetSSLInfo overriden to allow
+// forcing the value of SSLInfo::channel_id_sent to true.
+class TestingQuicChromiumClientSession : public QuicChromiumClientSession {
+ public:
+  using QuicChromiumClientSession::QuicChromiumClientSession;
+
+  bool GetSSLInfo(SSLInfo* ssl_info) const override {
+    bool ret = QuicChromiumClientSession::GetSSLInfo(ssl_info);
+    if (ret)
+      ssl_info->channel_id_sent =
+          ssl_info->channel_id_sent || force_channel_id_sent_;
+    return ret;
+  }
+
+  void OverrideChannelIDSent() { force_channel_id_sent_ = true; }
+
+ private:
+  bool force_channel_id_sent_ = false;
+};
+
 class QuicChromiumClientSessionTest
     : public ::testing::TestWithParam<QuicVersion> {
  protected:
@@ -97,7 +117,7 @@ class QuicChromiumClientSessionTest
         0, QuicSocketAddress(QuicSocketAddressImpl(kIpEndPoint)), &helper_,
         &alarm_factory_, writer, true, Perspective::IS_CLIENT,
         SupportedVersions(GetParam()));
-    session_.reset(new QuicChromiumClientSession(
+    session_.reset(new TestingQuicChromiumClientSession(
         connection, std::move(socket),
         /*stream_factory=*/nullptr, &crypto_client_stream_factory_, &clock_,
         &transport_security_state_,
@@ -159,7 +179,7 @@ class QuicChromiumClientSessionTest
   MockCryptoClientStreamFactory crypto_client_stream_factory_;
   QuicClientPushPromiseIndex push_promise_index_;
   QuicServerId server_id_;
-  std::unique_ptr<QuicChromiumClientSession> session_;
+  std::unique_ptr<TestingQuicChromiumClientSession> session_;
   TestServerPushDelegate test_push_delegate_;
   QuicConnectionVisitorInterface* visitor_;
   TestCompletionCallback callback_;
@@ -976,7 +996,7 @@ TEST_P(QuicChromiumClientSessionTest, ConnectionPooledWithTlsChannelId) {
   CompleteCryptoHandshake();
   session_->OnProofVerifyDetailsAvailable(details);
   QuicChromiumClientSessionPeer::SetHostname(session_.get(), "www.example.org");
-  QuicChromiumClientSessionPeer::SetChannelIDSent(session_.get(), true);
+  session_->OverrideChannelIDSent();
 
   EXPECT_TRUE(session_->CanPool("www.example.org", PRIVACY_MODE_DISABLED));
   EXPECT_TRUE(session_->CanPool("mail.example.org", PRIVACY_MODE_DISABLED));
@@ -1012,7 +1032,7 @@ TEST_P(QuicChromiumClientSessionTest, ConnectionNotPooledWithDifferentPin) {
   CompleteCryptoHandshake();
   session_->OnProofVerifyDetailsAvailable(details);
   QuicChromiumClientSessionPeer::SetHostname(session_.get(), "www.example.org");
-  QuicChromiumClientSessionPeer::SetChannelIDSent(session_.get(), true);
+  session_->OverrideChannelIDSent();
 
   EXPECT_FALSE(session_->CanPool("mail.example.org", PRIVACY_MODE_DISABLED));
 }
@@ -1044,7 +1064,7 @@ TEST_P(QuicChromiumClientSessionTest, ConnectionPooledWithMatchingPin) {
   CompleteCryptoHandshake();
   session_->OnProofVerifyDetailsAvailable(details);
   QuicChromiumClientSessionPeer::SetHostname(session_.get(), "www.example.org");
-  QuicChromiumClientSessionPeer::SetChannelIDSent(session_.get(), true);
+  session_->OverrideChannelIDSent();
 
   EXPECT_TRUE(session_->CanPool("mail.example.org", PRIVACY_MODE_DISABLED));
 }

@@ -5,9 +5,8 @@
 #ifndef NET_HTTP2_HTTP2_STRUCTURES_TEST_UTIL_H_
 #define NET_HTTP2_HTTP2_STRUCTURES_TEST_UTIL_H_
 
-#include <string>
-
 #include "net/http2/http2_structures.h"
+#include "net/http2/platform/api/http2_string.h"
 #include "net/http2/tools/http2_frame_builder.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -17,7 +16,7 @@ namespace test {
 class RandomBase;
 
 template <class S>
-std::string SerializeStructure(const S& s) {
+Http2String SerializeStructure(const S& s) {
   Http2FrameBuilder fb;
   fb.Append(s);
   EXPECT_EQ(S::EncodedSize(), fb.size());

@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "net/http2/http2_structures_test_util.h"
+#include "net/http2/platform/api/http2_string_utils.h"
 #include "net/http2/tools/failure.h"
 #include "net/http2/tools/http2_random.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -33,7 +34,6 @@ using ::testing::MatchesRegex;
 using ::testing::Not;
 using ::testing::Values;
 using ::testing::ValuesIn;
-using std::string;
 
 namespace net {
 namespace test {
@@ -139,7 +139,7 @@ INSTANTIATE_TEST_CASE_P(IsEndStream,
 TEST_P(IsEndStreamTest, IsEndStream) {
   const bool is_set =
       (flags_ & Http2FrameFlag::END_STREAM) == Http2FrameFlag::END_STREAM;
-  string flags_string;
+  Http2String flags_string;
   Http2FrameHeader v(0, type_, flags_, 0);
   switch (type_) {
     case Http2FrameType::DATA:
@@ -176,7 +176,7 @@ INSTANTIATE_TEST_CASE_P(IsAck,
                                 Values(~Http2FrameFlag::ACK, 0xff)));
 TEST_P(IsACKTest, IsAck) {
   const bool is_set = (flags_ & Http2FrameFlag::ACK) == Http2FrameFlag::ACK;
-  string flags_string;
+  Http2String flags_string;
   Http2FrameHeader v(0, type_, flags_, 0);
   switch (type_) {
     case Http2FrameType::SETTINGS:
@@ -214,7 +214,7 @@ INSTANTIATE_TEST_CASE_P(IsEndHeaders,
 TEST_P(IsEndHeadersTest, IsEndHeaders) {
   const bool is_set =
       (flags_ & Http2FrameFlag::END_HEADERS) == Http2FrameFlag::END_HEADERS;
-  string flags_string;
+  Http2String flags_string;
   Http2FrameHeader v(0, type_, flags_, 0);
   switch (type_) {
     case Http2FrameType::HEADERS:
@@ -255,7 +255,7 @@ INSTANTIATE_TEST_CASE_P(IsPadded,
 TEST_P(IsPaddedTest, IsPadded) {
   const bool is_set =
       (flags_ & Http2FrameFlag::PADDED) == Http2FrameFlag::PADDED;
-  string flags_string;
+  Http2String flags_string;
   Http2FrameHeader v(0, type_, flags_, 0);
   switch (type_) {
     case Http2FrameType::DATA:
@@ -294,7 +294,7 @@ INSTANTIATE_TEST_CASE_P(HasPriority,
 TEST_P(HasPriorityTest, HasPriority) {
   const bool is_set =
       (flags_ & Http2FrameFlag::PRIORITY) == Http2FrameFlag::PRIORITY;
-  string flags_string;
+  Http2String flags_string;
   Http2FrameHeader v(0, type_, flags_, 0);
   switch (type_) {
     case Http2FrameType::HEADERS:
@@ -399,11 +399,9 @@ TEST(Http2PushPromiseTest, Misc) {
   EXPECT_EQ(promised_stream_id, v.promised_stream_id);
   EXPECT_EQ(v, v);
 
-  std::stringstream s1;
-  s1 << "promised_stream_id=" << promised_stream_id;
-  std::stringstream s2;
-  s2 << v;
-  EXPECT_EQ(s1.str(), s2.str());
+  std::stringstream s;
+  s << v;
+  EXPECT_EQ(Http2StrCat("promised_stream_id=", promised_stream_id), s.str());
 
   // High-bit is reserved, but not used, so we can set it.
   promised_stream_id |= 0x80000000;
@@ -445,11 +443,10 @@ TEST(Http2WindowUpdateTest, Misc) {
   EXPECT_EQ(window_size_increment, v.window_size_increment);
   EXPECT_EQ(v, v);
 
-  std::stringstream s1;
-  s1 << "window_size_increment=" << window_size_increment;
-  std::stringstream s2;
-  s2 << v;
-  EXPECT_EQ(s1.str(), s2.str());
+  std::stringstream s;
+  s << v;
+  EXPECT_EQ(Http2StrCat("window_size_increment=", window_size_increment),
+            s.str());
 
   // High-bit is reserved, but not used, so we can set it.
   window_size_increment |= 0x80000000;
@@ -469,11 +466,9 @@ TEST(Http2AltSvcTest, Misc) {
   EXPECT_EQ(origin_length, v.origin_length);
   EXPECT_EQ(v, v);
 
-  std::stringstream s1;
-  s1 << "origin_length=" << origin_length;
-  std::stringstream s2;
-  s2 << v;
-  EXPECT_EQ(s1.str(), s2.str());
+  std::stringstream s;
+  s << v;
+  EXPECT_EQ(Http2StrCat("origin_length=", origin_length), s.str());
 
   Http2AltSvcFields w{++origin_length};
   EXPECT_EQ(w, w);

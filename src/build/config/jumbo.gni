@@ -25,8 +25,9 @@ declare_args() {
   jumbo_file_merge_limit = 200
 }
 
-# Use this to generate a target which merges sources if possible to
-# compile much faster.
+# Use one of the targets jumbo_source_set, jumbo_static_library,
+# jumbo_split_static_library or jumbo_component to generate a target
+# which merges sources if possible to compile much faster.
 #
 # Special values.
 #
@@ -46,7 +47,7 @@ declare_args() {
 #      If set to a list of files, those files will not be merged with
 #      the rest. This can be necessary if merging the files causes
 #      compilation issues and fixing the issues is impractical.
-template("jumbo_target") {
+template("internal_jumbo_target") {
   use_jumbo_build_for_target = use_jumbo_build
   if (defined(invoker.always_build_jumbo) && invoker.always_build_jumbo) {
     use_jumbo_build_for_target = true
@@ -66,6 +67,25 @@ template("jumbo_target") {
   invoker_sources = invoker.sources
   gen_target_dir = get_path_info(invoker_sources[0], "gen_dir")
   assert(excluded_sources != [] || true)  # Prevent "unused variable".
+
+  # Find the gen_target_dir directory with shortest path. Short paths
+  # are nice in themselves since they mean shorter error messages and
+  # fewer bytes to parse, but the currently deployed version of ninja
+  # also has a limitation where it only allows 32 path components in
+  # Windows.
+  # See https://crbug.com/738186 and
+  # https://github.com/ninja-build/ninja/issues/1161
+  foreach(source_file, invoker.sources) {
+    possibly_better_gen_target_dir = get_path_info(gen_target_dir, "dir")
+    possibly_better_gen_target_dir_2 =
+        get_path_info(possibly_better_gen_target_dir, "dir")
+    alt_gen_target_dir = get_path_info(source_file, "gen_dir")
+    if (alt_gen_target_dir == possibly_better_gen_target_dir ||
+        alt_gen_target_dir == possibly_better_gen_target_dir_2) {
+      gen_target_dir = alt_gen_target_dir
+    }
+  }
+
   assert(gen_target_dir != "")  # Prevent "unused variable".
 
   if (use_jumbo_build_for_target) {
@@ -114,6 +134,11 @@ template("jumbo_target") {
       args = [ "--outputs" ] + rebase_path(outputs, root_build_dir) +
              [ "--file-list={{response_file_name}}" ]
     }
+  } else {
+    # If the list subtraction triggers a gn error,
+    # jumbo_excluded_sources lists a file that is not in sources.
+    sources_after_exclusion = invoker.sources - excluded_sources
+    assert(sources_after_exclusion != [] || true)  # Prevent "unused variable".
   }
 
   target_type = invoker.target_type
@@ -153,9 +178,69 @@ template("jumbo_target") {
   }
 }
 
-set_defaults("jumbo_target") {
+# See documentation above by "internal_jumbo_target".
+template("jumbo_source_set") {
+  internal_jumbo_target(target_name) {
+    target_type = "source_set"
+    forward_variables_from(invoker, "*")
+  }
+}
+
+set_defaults("jumbo_source_set") {
   # This sets the default list of configs when the content_source_set target
   # is defined. The default_compiler_configs comes from BUILDCONFIG.gn and
   # is the list normally applied to static libraries and source sets.
   configs = default_compiler_configs
+}
+
+# See documentation above by "internal_jumbo_target".
+template("jumbo_static_library") {
+  internal_jumbo_target(target_name) {
+    target_type = "static_library"
+    forward_variables_from(invoker, "*")
+  }
+}
+
+set_defaults("jumbo_static_library") {
+  # This sets the default list of configs when the content_source_set target
+  # is defined. The default_compiler_configs comes from BUILDCONFIG.gn and
+  # is the list normally applied to static libraries and source sets.
+  configs = default_compiler_configs
+}
+
+# See documentation above by "internal_jumbo_target".
+template("jumbo_split_static_library") {
+  internal_jumbo_target(target_name) {
+    target_type = "split_static_library"
+    forward_variables_from(invoker, "*")
+  }
+}
+
+set_defaults("jumbo_split_static_library") {
+  # This sets the default list of configs when the content_source_set target
+  # is defined. The default_compiler_configs comes from BUILDCONFIG.gn and
+  # is the list normally applied to static libraries and source sets.
+  configs = default_compiler_configs
+}
+
+# See documentation above by "internal_jumbo_target".
+template("jumbo_component") {
+  internal_jumbo_target(target_name) {
+    target_type = "component"
+    forward_variables_from(invoker, "*")
+  }
+}
+
+set_defaults("jumbo_component") {
+  # This sets the default list of configs when the content_source_set
+  # target is defined. This code is a clone of set_defaults for the
+  # ordinary "component" template.
+  if (is_component_build) {
+    configs = default_shared_library_configs
+    if (is_android) {
+      configs -= [ "//build/config/android:hide_all_but_jni_onload" ]
+    }
+  } else {
+    configs = default_compiler_configs
+  }
 }

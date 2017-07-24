@@ -1839,14 +1839,22 @@ TEST_F(PartitionAllocTest, PurgeDiscardable) {
       EXPECT_TRUE(stats);
       EXPECT_TRUE(stats->is_valid);
       EXPECT_EQ(0u, stats->decommittable_bytes);
+#if defined(OS_WIN)
+      EXPECT_EQ(0u, stats->discardable_bytes);
+#else
       EXPECT_EQ(kSystemPageSize, stats->discardable_bytes);
+#endif
       EXPECT_EQ(kSystemPageSize, stats->active_bytes);
       EXPECT_EQ(2 * kSystemPageSize, stats->resident_bytes);
     }
     CheckPageInCore(ptr1 - kPointerOffset, true);
     PartitionPurgeMemoryGeneric(generic_allocator.root(),
                                 PartitionPurgeDiscardUnusedSystemPages);
+#if defined(OS_WIN)
+    CheckPageInCore(ptr1 - kPointerOffset, true);
+#else
     CheckPageInCore(ptr1 - kPointerOffset, false);
+#endif
 
     PartitionFreeGeneric(generic_allocator.root(), ptr2);
   }
@@ -1969,7 +1977,11 @@ TEST_F(PartitionAllocTest, PurgeDiscardable) {
       EXPECT_TRUE(stats);
       EXPECT_TRUE(stats->is_valid);
       EXPECT_EQ(0u, stats->decommittable_bytes);
+#if defined(OS_WIN)
+      EXPECT_EQ(kSystemPageSize, stats->discardable_bytes);
+#else
       EXPECT_EQ(2 * kSystemPageSize, stats->discardable_bytes);
+#endif
       EXPECT_EQ(kSystemPageSize, stats->active_bytes);
       EXPECT_EQ(4 * kSystemPageSize, stats->resident_bytes);
     }
@@ -1981,7 +1993,11 @@ TEST_F(PartitionAllocTest, PurgeDiscardable) {
                                 PartitionPurgeDiscardUnusedSystemPages);
     EXPECT_EQ(1u, page->num_unprovisioned_slots);
     CheckPageInCore(ptr1 - kPointerOffset, true);
+#if defined(OS_WIN)
+    CheckPageInCore(ptr1 - kPointerOffset + kSystemPageSize, true);
+#else
     CheckPageInCore(ptr1 - kPointerOffset + kSystemPageSize, false);
+#endif
     CheckPageInCore(ptr1 - kPointerOffset + (kSystemPageSize * 2), true);
     CheckPageInCore(ptr1 - kPointerOffset + (kSystemPageSize * 3), false);
 

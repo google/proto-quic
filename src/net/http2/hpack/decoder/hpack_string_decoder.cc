@@ -4,21 +4,19 @@
 
 #include "net/http2/hpack/decoder/hpack_string_decoder.h"
 
-#include <sstream>
+#include "net/http2/platform/api/http2_string_utils.h"
 
 namespace net {
 
-std::string HpackStringDecoder::DebugString() const {
-  std::stringstream ss;
-  ss << "HpackStringDecoder(state=" << StateToString(state_)
-     << ", length=" << length_decoder_.DebugString()
-     << ", remaining=" << remaining_
-     << ", huffman=" << (huffman_encoded_ ? "true)" : "false)");
-  return ss.str();
+Http2String HpackStringDecoder::DebugString() const {
+  return Http2StrCat("HpackStringDecoder(state=", StateToString(state_),
+                     ", length=", length_decoder_.DebugString(),
+                     ", remaining=", remaining_,
+                     ", huffman=", huffman_encoded_ ? "true)" : "false)");
 }
 
 // static
-std::string HpackStringDecoder::StateToString(StringDecoderState v) {
+Http2String HpackStringDecoder::StateToString(StringDecoderState v) {
   switch (v) {
     case kStartDecodingLength:
       return "kStartDecodingLength";
@@ -27,9 +25,7 @@ std::string HpackStringDecoder::StateToString(StringDecoderState v) {
     case kResumeDecodingLength:
       return "kResumeDecodingLength";
   }
-  std::stringstream ss;
-  ss << "UNKNOWN_STATE(" << static_cast<uint32_t>(v) << ")";
-  return ss.str();
+  return Http2StrCat("UNKNOWN_STATE(", static_cast<uint32_t>(v), ")");
 }
 
 std::ostream& operator<<(std::ostream& out, const HpackStringDecoder& v) {

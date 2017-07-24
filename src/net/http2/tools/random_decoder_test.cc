@@ -11,7 +11,6 @@
 
 #include "base/logging.h"
 #include "base/strings/string_number_conversions.h"
-#include "base/strings/string_piece.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/http2_constants.h"
@@ -25,12 +24,11 @@
 using ::testing::AssertionFailure;
 using ::testing::AssertionResult;
 using ::testing::AssertionSuccess;
-using base::StringPiece;
 
 namespace net {
 namespace test {
 
-std::string HexEncode(StringPiece s) {
+Http2String HexEncode(Http2StringPiece s) {
   return base::HexEncode(s.data(), s.size());
 }
 

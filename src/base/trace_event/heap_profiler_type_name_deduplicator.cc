@@ -9,11 +9,11 @@
 #include <string>
 #include <utility>
 
+#include "base/json/string_escape.h"
 #include "base/strings/string_split.h"
-#include "base/trace_event/heap_profiler_string_deduplicator.h"
+#include "base/strings/stringprintf.h"
 #include "base/trace_event/memory_usage_estimator.h"
 #include "base/trace_event/trace_event.h"
-#include "base/trace_event/trace_event_argument.h"
 #include "base/trace_event/trace_event_memory_overhead.h"
 
 namespace base {
@@ -62,11 +62,9 @@ StringPiece ExtractCategoryFromTypeName(const char* type_name) {
 
 }  // namespace
 
-TypeNameDeduplicator::TypeNameDeduplicator(
-    StringDeduplicator* string_deduplicator)
-    : string_deduplicator_(string_deduplicator) {
-  // Add implicit entry for id 0 (NULL type names).
-  Insert(nullptr);
+TypeNameDeduplicator::TypeNameDeduplicator() {
+  // A null pointer has type ID 0 ("unknown type");
+  type_ids_.insert(std::make_pair(nullptr, 0));
 }
 
 TypeNameDeduplicator::~TypeNameDeduplicator() {}
@@ -80,35 +78,45 @@ int TypeNameDeduplicator::Insert(const char* type_name) {
     // The type IDs are assigned sequentially and they are zero-based, so
     // |size() - 1| is the ID of the new element.
     elem->second = static_cast<int>(type_ids_.size() - 1);
-    new_type_ids_.push_back(&*result.first);
   }
 
   return elem->second;
 }
 
-void TypeNameDeduplicator::SerializeIncrementally(TracedValue* traced_value) {
-  for (const auto* name_and_id : new_type_ids_) {
-    traced_value->BeginDictionary();
+void TypeNameDeduplicator::AppendAsTraceFormat(std::string* out) const {
+  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("memory-infra"),
+               "TypeNameDeduplicator::AppendAsTraceFormat");
+  out->append("{");  // Begin the type names dictionary.
 
-    traced_value->SetInteger("id", name_and_id->second);
+  auto it = type_ids_.begin();
+  std::string buffer;
+
+  // Write the first entry manually; the null pointer must not be dereferenced.
+  // (The first entry is the null pointer because a |std::map| is ordered.)
+  it++;
+  out->append("\"0\":\"[unknown]\"");
+
+  for (; it != type_ids_.end(); it++) {
+    // Type IDs in the trace are strings, write them as stringified keys of
+    // a dictionary.
+    SStringPrintf(&buffer, ",\"%d\":", it->second);
 
     // TODO(ssid): crbug.com/594803 the type name is misused for file name in
     // some cases.
-    StringPiece name = name_and_id->first
-                           ? ExtractCategoryFromTypeName(name_and_id->first)
-                           : "[unknown]";
-    int name_string_id = string_deduplicator_->Insert(name);
-    traced_value->SetInteger("name_sid", name_string_id);
+    StringPiece type_info = ExtractCategoryFromTypeName(it->first);
 
-    traced_value->EndDictionary();
+    // |EscapeJSONString| appends, it does not overwrite |buffer|.
+    bool put_in_quotes = true;
+    EscapeJSONString(type_info, put_in_quotes, &buffer);
+    out->append(buffer);
   }
-  new_type_ids_.clear();
+
+  out->append("}");  // End the type names dictionary.
 }
 
 void TypeNameDeduplicator::EstimateTraceMemoryOverhead(
     TraceEventMemoryOverhead* overhead) {
-  size_t memory_usage =
-      EstimateMemoryUsage(type_ids_) + EstimateMemoryUsage(new_type_ids_);
+  size_t memory_usage = EstimateMemoryUsage(type_ids_);
   overhead->Add(TraceEventMemoryOverhead::kHeapProfilerTypeNameDeduplicator,
                 sizeof(TypeNameDeduplicator) + memory_usage);
 }

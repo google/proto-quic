@@ -1333,7 +1333,11 @@ TEST_P(EndToEndTest, NegotiateCongestionControl) {
   CongestionControlType expected_congestion_control_type = kReno;
   switch (GetParam().congestion_control_tag) {
     case kRENO:
-      expected_congestion_control_type = kReno;
+      if (!FLAGS_quic_reloadable_flag_quic_disable_packets_based_cc) {
+        expected_congestion_control_type = kReno;
+      } else {
+        expected_congestion_control_type = kRenoBytes;
+      }
       break;
     case kTBBR:
       expected_congestion_control_type = kBBR;

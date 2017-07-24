@@ -98,6 +98,7 @@ class LitePage(IntegrationTest):
 
   # Checks that a Lite Page is not served for the Cellular-Only option but
   # not on cellular connection.
+  @ChromeVersionEqualOrAfterM(61)
   def testLitePageNotAcceptedForCellularOnlyFlag(self):
     with TestDriver() as test_driver:
       test_driver.AddChromeArg('--enable-spdy-proxy-auth')

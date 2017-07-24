@@ -36,7 +36,7 @@ define the following:
 
   <histogram name="FileLoadLatency"/>
 
-  <histogram_suffixes name="SuperHttpExperiment">
+  <histogram_suffixes name="SuperHttpExperiment" separator=".">
     <suffix name="SuperHttpEnabled"/>
     <suffix name="SuperHttpDisabled"/>
     <affected-histogram name="FileLoadLatency"/>
@@ -45,14 +45,14 @@ define the following:
 The complete list of histograms will be:
 
   FileLoadLatency
-  FileLoadLatency_SuperHttpEnabled
-  FileLoadLatency_SuperHttpDisabled
+  FileLoadLatency.SuperHttpEnabled
+  FileLoadLatency.SuperHttpDisabled
 
 histogram_suffixes can also be used to insert affix in the middle. Example:
 
   <histogram name="Prerender.Events"/>
 
-  <histogram_suffixes name="SuperHttpExperiment" ordering="prefix">
+  <histogram_suffixes name="HoverStatsTypes" separator="_" ordering="prefix">
     <suffix name="HoverStats50"/>
     <affected-histogram name="Prerender.Events"/>
   </histogram_suffixes>
@@ -67,6 +67,11 @@ will be inserted after the first dot separator of the affected-histogram name.
 Optionally, ordering can be specified as "prefix,N" where N indicates after
 how many dots the suffix should be inserted (default=1). The affected-histogram
 name has to have at least N dots in it.
+
+If a <histogram> or a <suffix> element is only provided so that its name can be
+extended by <histogram_suffixes>, the element should be annotated with the
+attribute base="true". This instructs tools not to treat the base name as a
+distinct histogram.
 
 Googlers: There are also a small number of private internal histograms found at
 http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
@@ -618,6 +623,26 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     Records that a specific background task has been stopped by Background Task
     Scheduler before it was able to complete itself.
+  </summary>
+</histogram>
+
+<histogram name="Android.ChildProcessLauncher.OnServiceConnectedTime"
+    units="ms">
+  <owner>boliu@chromium.org</owner>
+  <summary>
+    Measure time from bindService call to onServiceConnected. This is part of
+    launching child services on Android that's under Android's control. Recorded
+    in the first onServiceConnected of a connection.
+  </summary>
+</histogram>
+
+<histogram name="Android.ChildProcessLauncher.OnServiceConnectedTimedOut"
+    enum="BooleanTimedOut">
+  <owner>boliu@chromium.org</owner>
+  <summary>
+    Boolean histogram that records whether bindServiced timed out. Timeout is
+    recorded in a delayed task, and success is recorded in onServiceConnected
+    callback.
   </summary>
 </histogram>
 
@@ -1760,6 +1785,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="Arc.FirstAppLaunchRequest.TimeDelta" units="ms">
+  <owner>yusukes@google.com</owner>
+  <owner>khmel@google.com</owner>
+  <summary>
+    Elapsed time from the when UI is shown after login to when the user
+    activates first ARC app.
+  </summary>
+</histogram>
+
 <histogram name="Arc.FirstComplianceReportTime.SinceSignIn" units="ms">
   <owner>alexchau@google.com</owner>
   <owner>emaxx@google.com</owner>
@@ -2217,6 +2251,24 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     The type of the window which is put into immersive fullscreen. Immersive
     fullscreen is entered via the F4 key.
+  </summary>
+</histogram>
+
+<histogram name="Ash.NightLight.ScheduleType" enum="AshNightLightScheduleType">
+  <owner>afakhry@chromium.org</owner>
+  <summary>
+    The selected Night Light schedule type. Emitted when the user changes the
+    Night Light schedule type from the Display System Settings.
+  </summary>
+</histogram>
+
+<histogram name="Ash.NightLight.Temperature"
+    enum="AshNightLightTemperatureRanges">
+  <owner>afakhry@chromium.org</owner>
+  <summary>
+    The ranges in which the selected values of the Night Light color temperature
+    reside. Emitted when the user drags the Night Light color temperature slider
+    to change its value from the Display System Settings.
   </summary>
 </histogram>
 
@@ -3619,6 +3671,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="AuthPolicy.TimeToRunNetAdsGpo" units="ms">
+  <owner>ljusten@chromium.org</owner>
+  <summary>
+    Time in milliseconds to call 'net ads gpo list' (list Active Directory group
+    policy objects). The value is recorded no matter if the operation was
+    successful or not.
+  </summary>
+</histogram>
+
 <histogram name="AuthPolicy.TimeToRunNetAdsInfo" units="ms">
   <owner>ljusten@chromium.org</owner>
   <summary>
@@ -4035,7 +4096,19 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram name="Autofill.DaysSinceLastUse.Profile" units="days">
   <owner>sebsg@chromium.org</owner>
   <summary>
-    Logs the number of days that have passed since the profile was last used.
+    Logged at the time of autofill address use, this histogram captures the
+    number of days that have passed since the address was last used. I.e., the
+    distribution of time between uses of an &quot;active&quot; autofill address.
+  </summary>
+</histogram>
+
+<histogram name="Autofill.DaysSinceLastUse.StoredProfile" units="days">
+  <owner>rogerm@chromium.org</owner>
+  <summary>
+    This histogram captures the number of days that have passed since each
+    stored address profile belonging to a given Chrome Profile was last used.
+    This is logged for each Autofill address profile once per Chrome User
+    Profile load.
   </summary>
 </histogram>
 
@@ -4617,6 +4690,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     The number of Autofill addresses a user has stored, measured when an
     autofillable form is submitted.
+  </summary>
+</histogram>
+
+<histogram name="Autofill.StoredProfileDisusedCount">
+  <owner>rogerm@chromium.org</owner>
+  <summary>
+    The number of stored Autofill address profiles which have not been used in a
+    sufficiently long time for autofill to consider them disused. Measured once
+    per Chrome user profile launch.
   </summary>
 </histogram>
 
@@ -5615,6 +5697,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     Time spent updating paint properties and paint invalidation in the Blink
     document lifecycle. Available when SlimmingPaintInvalidation or
     SlimmingPaintV2 is enabled.
+  </summary>
+</histogram>
+
+<histogram base="true" name="Blink.ResourceLoadScheduler.PeakRequests"
+    units="requests">
+<!-- Name completed by histogram_suffixes name="ResourceLoadScheduler.FrameType" -->
+
+  <owner>ksakamoto@chromium.org</owner>
+  <summary>
+    The largest number of outstanding resource requests issued by a frame until
+    the network 2-quiet (no more than 2 active network requests for 1 seconds).
   </summary>
 </histogram>
 
@@ -7173,8 +7266,12 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Cast.Sender.Overlay" enum="CastOverlayEvents">
+  <obsolete>
+    Deprecated July 2017 in favor of Media.Controls.CTR.CastOverlayButton.
+  </obsolete>
   <owner>avayvod@chromium.org</owner>
   <owner>mlamouri@chromium.org</owner>
+  <owner>media-dev@chromium.org</owner>
   <summary>
     Records events and user interactions related to the Cast overlay shown on
     video elements.
@@ -8754,6 +8851,19 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="Compositing.Renderer.CheckerImagingDecision"
+    enum="CheckerImagingDecision">
+  <owner>khushalsagar@chromium.org</owner>
+  <summary>
+    The outcome for whether an image could be sucessfully deferred for
+    asynchronous decode in the renderer compositor. If not, the reason for using
+    a synchronous decode. An image which is decoded asynchronously will be
+    checkerboarded on the rasterized tiles until the decode is finished, as
+    opposed to synchronous decodes where the tile rasterization is blocked on
+    the image decode completing.
+  </summary>
+</histogram>
+
 <histogram
     name="Compositing.Renderer.DisplayListRecordingSource.UpdateInvalidatedAreaPerMs"
     units="pixels/ms">
@@ -9486,6 +9596,10 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Cookie.CookieLineCookieValueValidity" enum="BooleanValid">
+  <obsolete>
+    Removed 2017-07-14 as it demonstrated that making cookie parsing rules
+    stricter was not feasible. See https://crbug.com/638117.
+  </obsolete>
   <owner>ricea@chromium.org</owner>
   <summary>
     Indicates whether a cookie initialised from a Set-Cookie header value was
@@ -11143,8 +11257,11 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     Records the sending of accepted transform headers to the data reduction
     proxy and also receiving transforms and policies from the data reduction
-    proxy. Recorded on a per page request basis and possibly on a per image
-    subresource request basis for empty-image transforms.
+    proxy. Recorded on a per page request basis and also on a per image resource
+    request basis for empty-image transforms. Headers for both types of requests
+    (pages and resources) are recorded here for convenience in viewing in a
+    single histogram. In general, the separate groups of request/receive buckets
+    for either page or resource types can be compared.
   </summary>
 </histogram>
 
@@ -15133,6 +15250,212 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     Events (e.g. Started, Cancelled, Finished, Write to Completed file, Write to
     Failed file) occuring within the state machine of a SavePackage operation.
+  </summary>
+</histogram>
+
+<histogram name="Download.Service.Db.Operation.Failure"
+    enum="Download.Service.ModelAction">
+  <owner>xingliu@chromium.org</owner>
+  <summary>Records a failed database operation.</summary>
+</histogram>
+
+<histogram name="Download.Service.Db.Operation.Success"
+    enum="Download.Service.ModelAction">
+  <owner>xingliu@chromium.org</owner>
+  <summary>Records a successful database operation.</summary>
+</histogram>
+
+<histogram base="true" name="Download.Service.Db.Records" units="records">
+<!-- Name completed by histogram_suffixes
+     name="Download.Service.EntryState" -->
+
+  <owner>xingliu@chromium.org</owner>
+  <summary>
+    The total number of database records used by download service, and the
+    number of records in each entry state.
+  </summary>
+</histogram>
+
+<histogram name="Download.Service.Driver.InterruptReason"
+    enum="InterruptReason">
+  <owner>xingliu@chromium.org</owner>
+  <summary>
+    The interrupt reason for failed downloads in download service.
+  </summary>
+</histogram>
+
+<histogram base="true" name="Download.Service.Files.CleanUp.External"
+    units="files">
+<!-- Name completed by histogram_suffixes
+     name="Download.Service.CleanupReason" -->
+
+  <owner>xingliu@chromium.org</owner>
+  <summary>
+    The number of files that have been deleted by external application or the
+    user, when performing clean up tasks in download service.
+  </summary>
+</histogram>
+
+<histogram base="true" name="Download.Service.Files.CleanUp.Failure"
+    units="attempts">
+<!-- Name completed by histogram_suffixes
+     name="Download.Service.CleanupReason" -->
+
+  <owner>xingliu@chromium.org</owner>
+  <summary>
+    The number of failed file deletion attempts, when performing clean up tasks
+    in download service.
+  </summary>
+</histogram>
+
+<histogram base="true" name="Download.Service.Files.CleanUp.Success"
+    units="files">
+<!-- Name completed by histogram_suffixes
+     name="Download.Service.CleanupReason" -->
+
+  <owner>xingliu@chromium.org</owner>
+  <summary>
+    The number of files successfully deleted, when performing clean up tasks in
+    download service.
+  </summary>
+</histogram>
+
+<histogram name="Download.Service.Files.DirCreationError"
+    enum="PlatformFileError">
+  <owner>xingliu@chromium.org</owner>
+  <summary>
+    The error code when failed to create the download directory.
+  </summary>
+</histogram>
+
+<histogram name="Download.Service.Files.DiskUsed" units="%">
+  <owner>xingliu@chromium.org</owner>
+  <summary>
+    The percentage of disk space used by download service files. Recorded during
+    initialization of the file monitor.
+  </summary>
+</histogram>
+
+<histogram name="Download.Service.Files.FreeDiskSpace" units="%">
+  <owner>xingliu@chromium.org</owner>
+  <summary>
+    The percentage of free disk space to total disk space. Recorded during
+    initialization of the file monitor.
+  </summary>
+</histogram>
+
+<histogram name="Download.Service.Files.LifeTime" units="ms">
+  <owner>xingliu@chromium.org</owner>
+  <summary>
+    The lifestime of a download file, which begins from the download completion
+    to the file being deleted by the clean up task.
+  </summary>
+</histogram>
+
+<histogram name="Download.Service.Files.PathRenamed" enum="BooleanRenamed">
+  <owner>xingliu@chromium.org</owner>
+  <summary>
+    Records if the final file path has been renamed by low level download
+    library after the download is successfully completed.
+  </summary>
+</histogram>
+
+<histogram base="true" name="Download.Service.Finish.FileSize" units="KB">
+<!-- Name completed by histogram_suffixes
+     name="Download.Service.CompletionType" -->
+
+  <owner>xingliu@chromium.org</owner>
+  <summary>
+    The file size of completed download, including failed downloads.
+  </summary>
+</histogram>
+
+<histogram base="true" name="Download.Service.Finish.Time" units="ms">
+<!-- Name completed by histogram_suffixes
+     name="Download.Service.CompletionType" -->
+
+  <owner>xingliu@chromium.org</owner>
+  <summary>The time to complete the download in download service.</summary>
+</histogram>
+
+<histogram name="Download.Service.Finish.Type"
+    enum="Download.Service.CompletionType">
+  <owner>xingliu@chromium.org</owner>
+  <summary>The completion type for downloads in download service.</summary>
+</histogram>
+
+<histogram name="Download.Service.Recovery" enum="Download.Service.EntryStates">
+  <owner>xingliu@chromium.org</owner>
+  <summary>
+    The state that the entry transitions to when recovery operation happens.
+  </summary>
+</histogram>
+
+<histogram name="Download.Service.Request.BatteryRequirement"
+    enum="Download.Service.BatteryRequirements">
+  <owner>xingliu@chromium.org</owner>
+  <summary>The battery requirement of the download request.</summary>
+</histogram>
+
+<histogram base="true" name="Download.Service.Request.ClientAction"
+    enum="Download.Service.ServiceApiAction">
+<!-- Name completed by histogram_suffixes
+     name="Download.Service.Client" -->
+
+  <owner>xingliu@chromium.org</owner>
+  <summary>Records the API calls on download service.</summary>
+</histogram>
+
+<histogram name="Download.Service.Request.NetworkRequirement"
+    enum="Download.Service.NetworkRequirements">
+  <owner>xingliu@chromium.org</owner>
+  <summary>The network requirement of the download request.</summary>
+</histogram>
+
+<histogram name="Download.Service.Request.Priority"
+    enum="Download.Service.Priority">
+  <owner>xingliu@chromium.org</owner>
+  <summary>The priority of the download request.</summary>
+</histogram>
+
+<histogram base="true" name="Download.Service.Request.StartResponse"
+    enum="Download.Service.ShouldDownload">
+<!-- Name completed by histogram_suffixes
+     name="Download.Service.Client" -->
+
+  <owner>xingliu@chromium.org</owner>
+  <summary>The start response of download attempts.</summary>
+</histogram>
+
+<histogram base="true" name="Download.Service.Request.StartResult"
+    enum="Download.Service.StartResult">
+<!-- Name completed by histogram_suffixes
+     name="Download.Service.Client" -->
+
+  <owner>xingliu@chromium.org</owner>
+  <summary>The start result of download attempts.</summary>
+</histogram>
+
+<histogram base="true" name="Download.Service.StartUpStatus"
+    enum="Download.Service.StartUpResult">
+<!-- Name completed by histogram_suffixes
+     name="Download.Service.StartUpStep" -->
+
+  <owner>xingliu@chromium.org</owner>
+  <summary>The start up result of the download service.</summary>
+</histogram>
+
+<histogram base="true" name="Download.Service.TaskScheduler.Status"
+    enum="Download.Service.ScheduledTaskStatus">
+<!-- Name completed by histogram_suffixes
+     name="Download.Service.TaskType" -->
+
+  <owner>xingliu@chromium.org</owner>
+  <summary>
+    The platform background tasks used by download service will invoke native
+    functions after being scheduled. The tasks may be aborted or canceled. This
+    metric records the status of background tasks when native functions are
+    invoked.
   </summary>
 </histogram>
 
@@ -25760,15 +26083,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram base="true" name="InProductHelp.ShouldTriggerHelpUI"
-    enum="TriggerHelpUIResult">
+<histogram name="InProductHelp.ShouldTriggerHelpUI" enum="TriggerHelpUIResult">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
 <!-- Name completed by histogram_suffixes name="IPHFeatures" -->
 
   <summary>
     Records if in-product help is shown to the user, and the failure reasons if
-    in-product help is not shown.
+    in-product help is not shown. Recorded on its own across all in-product help
+    features, in addition to being a base name for feature-specific histograms.
   </summary>
 </histogram>
 
@@ -26681,7 +27004,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     Provides a top-level breakdown of the times a connection to a host has
     failed.
 
-    An &quot;unknown error&quot; is generally caused by the host returning an
+    An &quot;unknown error&quot; is caused by the host returning an
     &quot;unknown error&quot; response code. Tethering timing out and client
     connection error and 3) are both broken down further in
     InstantTethering.ConnectionToHostResult.Failure.TetheringTimeout and
@@ -26696,9 +27019,12 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>hansberry@chromium.com</owner>
   <summary>
     Breaks down the reasons why the client failed to connect to the hotspot, and
-    the number of times they occurred. This histogram captures 2 reasons: 1) the
-    connection attempt to the hotspot timed out, or 2) any stage of the
-    connection attempt was canceled by a new connection attempt.
+    the number of times they occurred.
+
+    Note that a client connection can be canceled by a user either via pressing
+    the Disconnect button or beginning a connection attempt to another host. The
+    &quot;internal error&quot; case is a general bucket that captures client
+    errors we don't expect to be significant failure causes.
 
     This histogram breaks down the &quot;client connection error&quot; count of
     InstantTethering.ConnectionToHostResult.Failure.
@@ -27799,14 +28125,14 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>Records events related to local discovery notifications.</summary>
 </histogram>
 
-<histogram name="LocalNetworkRequests.PrivatePage" units="requests">
+<histogram base="true" name="LocalNetworkRequests.PrivatePage" units="requests">
   <owner>uthakore@chromium.org</owner>
   <summary>
     Number of requests made by a private page to resources besides itself.
   </summary>
 </histogram>
 
-<histogram name="LocalNetworkRequests.PublicPage" units="requests">
+<histogram base="true" name="LocalNetworkRequests.PublicPage" units="requests">
   <owner>uthakore@chromium.org</owner>
   <summary>
     Number of requests made by a public page to resources with reserved IP
@@ -27974,6 +28300,16 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>mek@chromium.org</owner>
   <summary>
     The reason opening the LevelDB database that backs LocalStorage failed.
+  </summary>
+</histogram>
+
+<histogram base="true" name="LocalStorageContext.OpenResultAfter"
+    enum="LocalStorageOpenError">
+<!-- Name completed by histogram_suffixes name="LocalStorageContextOpenReasons" -->
+
+  <owner>mek@chromium.org</owner>
+  <summary>
+    The result of opening the LevelDB database that backs LocalStorage.
   </summary>
 </histogram>
 
@@ -29206,9 +29542,31 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="Media.Controls.CTR" enum="MediaControlsCTREvent">
+  <owner>mlamouri@chromium.org</owner>
+  <owner>media-dev@chromium.org</owner>
+  <summary>
+    Records events related to click through rate (CTR) calculation.
+
+    The CTR can be calculated by computing &quot;Interacted&quot; /
+    &quot;Displayed&quot;. &quot;Interacted&quot;, for buttons, means that they
+    were clicked. For sliders, it will reflect any change in the internal state
+    and includes other events in addition to clicks. &quot;Displayed&quot; means
+    that the control element was meant to be displayed in the controls. It does
+    not mean that the user have seen the element so is not to be confused with
+    visibility. Furthermore, because the controls UI changes while loading,
+    &quot;Displayed&quot; is only computed when metadata are available unless
+    preloading was disabled on the element or the browser.
+  </summary>
+</histogram>
+
 <histogram name="Media.Controls.Download" enum="MediaControlsDownloadReason">
+  <obsolete>
+    Deprecated July 2017 in favor of Media.Controls.CTR.DownloadButton.
+  </obsolete>
   <owner>mlamouri@chromium.org</owner>
   <owner>nyquist@chromium.org</owner>
+  <owner>media-dev@chromium.org</owner>
   <summary>
     Records events and user interactions related to the download button shown on
     media elements.
@@ -29665,6 +30023,77 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     Whether the robustness level of any video capability in the supported
     configuration passed into requestMediaKeySystemAccess() is empty. This is
     specific to the Widevine key system.
+  </summary>
+</histogram>
+
+<histogram name="Media.Engagement.ScoreAtPlayback" units="%">
+  <owner>beccahughes@chromium.org</owner>
+  <owner>media-dev@chromium.org</owner>
+  <summary>
+    The media engagement score recorded at the time of playback. It is converted
+    to a percentage so should be divided by 100 to get the actual score. It is
+    only recorded for playback that is either lacking an audio track or not
+    muted.
+  </summary>
+</histogram>
+
+<histogram name="Media.Engagement.ScoreAtStartup" units="%">
+  <owner>beccahughes@chromium.org</owner>
+  <owner>media-dev@chromium.org</owner>
+  <summary>
+    Media engagement scores for each origin, recorded at Chrome startup. It is
+    converted to a percentage so should be divided by 100 to get the actual
+    score.
+  </summary>
+</histogram>
+
+<histogram
+    name="Media.Engagement.SignificantPlayers.PlayerNotAdded.AfterFirstTime"
+    enum="InsignificantPlaybackReason">
+  <owner>beccahughes@chromium.org</owner>
+  <owner>media-dev@chromium.org</owner>
+  <summary>
+    Recorded when the Media Engagement service doesn't determine a player to be
+    significant. If a player is not significant the reasons why will be
+    individually recorded to this histogram each time except for the first time
+    which is recorded to a different histogram.
+
+    The significant state of a player is reevaluated any time the state of the
+    player changes (e.g. muted, playing/paused). If the player was not
+    considered signficiant and still is not then we will record the reasons why
+    in this histogram.
+  </summary>
+</histogram>
+
+<histogram name="Media.Engagement.SignificantPlayers.PlayerNotAdded.FirstTime"
+    enum="InsignificantPlaybackReason">
+  <owner>beccahughes@chromium.org</owner>
+  <owner>media-dev@chromium.org</owner>
+  <summary>
+    Recorded when the Media Engagement service doesn't determine a player to be
+    significant. If a player is not significant the reasons why will be
+    individually recorded to this histogram the first time only.
+
+    The significant state of a player is reevaluated any time the state of the
+    player changes (e.g. muted, playing/paused). If the player was not
+    considered signficiant and still is not then we will record the reasons why
+    in this histogram.
+  </summary>
+</histogram>
+
+<histogram name="Media.Engagement.SignificantPlayers.PlayerRemoved"
+    enum="InsignificantPlaybackReason">
+  <owner>beccahughes@chromium.org</owner>
+  <owner>media-dev@chromium.org</owner>
+  <summary>
+    Recorded when the Media Engagement service no longer determines a player to
+    be significant. If a player is no longer significant, the reasons why will
+    be individually recorded to this histogram.
+
+    The significant state of a player is re-evaluted any time the state of the
+    player changes (e.g. muted, playing/paused). If the player was previously
+    considered significant and is no longer considered that we will record the
+    reasons why in this histogram.
   </summary>
 </histogram>
 
@@ -31543,12 +31972,22 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="MediaRouter.Source.FileFormat" enum="MediaContainers">
+<histogram name="MediaRouter.Source.LocalFileFormat" enum="MediaContainers">
   <owner>paezagon@chromium.org</owner>
   <summary>
     The file format of a local media Media Router session. This is recorded when
     a casting session begins to keep track of what kind of media is being
     streamed.
+  </summary>
+</histogram>
+
+<histogram name="MediaRouter.Source.LocalFileSize" units="MB">
+  <owner>paezagon@chromium.org</owner>
+  <summary>
+    The file size of a local media Media Router session. This is recorded when a
+    casting session begins to keep track of what kind of media is being
+    streamed, specifically, whether it is a clip or a song, or a full length
+    film or podcast.
   </summary>
 </histogram>
 
@@ -31643,6 +32082,11 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="MemCache.WriteResult" enum="MemCacheWriteResult">
+  <owner>jkarlin@chromium.org</owner>
+  <summary>The outcome of Entry::WriteData in the memory cache.</summary>
+</histogram>
+
 <histogram name="Memory.BackingStore">
   <owner>hajimehoshi@chromium.org</owner>
   <owner>kenjibaheux@google.com</owner>
@@ -31692,6 +32136,14 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     The private working set used by the browser process.  Recorded once per UMA
     ping.
+  </summary>
+</histogram>
+
+<histogram name="Memory.Browser.PrivateMemoryFootprint" units="MB">
+  <owner>erikchen@chromium.org</owner>
+  <summary>
+    A rough estimate of the private memory footprint of the browser process.
+    Recorded once per UMA ping.
   </summary>
 </histogram>
 
@@ -32037,6 +32489,14 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="Memory.Gpu.PrivateMemoryFootprint" units="MB">
+  <owner>erikchen@chromium.org</owner>
+  <summary>
+    A rough estimate of the private memory footprint of the gpu process.
+    Recorded once per UMA ping.
+  </summary>
+</histogram>
+
 <histogram name="Memory.Graphics" units="MB">
   <owner>hajimehoshi@chromium.org</owner>
   <owner>jamescook@chromium.org</owner>
@@ -32327,6 +32787,14 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     The private working set used by each renderer process.  Each renderer
     process provides one sample.  Recorded once per UMA ping.
+  </summary>
+</histogram>
+
+<histogram name="Memory.Renderer.PrivateMemoryFootprint" units="MB">
+  <owner>erikchen@chromium.org</owner>
+  <summary>
+    A rough estimate of the private memory footprint of the renderer process.
+    Recorded once per UMA ping.
   </summary>
 </histogram>
 
@@ -32800,6 +33268,14 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     The sum of all processes. This is not aware of shared memory so it is just a
     rough estimate. Recorded once per UMA ping. See Memory.Total2 for the same
     metric with higher precision bucketing.
+  </summary>
+</histogram>
+
+<histogram name="Memory.Total.PrivateMemoryFootprint" units="MB">
+  <owner>erikchen@chromium.org</owner>
+  <summary>
+    A rough estimate of the private memory footprint of all processes. Recorded
+    once per UMA ping.
   </summary>
 </histogram>
 
@@ -34601,6 +35077,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="Navigation.SecureSchemeHasSSLStatus" enum="BooleanPresent">
+  <owner>jam@chromium.org</owner>
+  <summary>
+    True counts the events when a https URL commits with a SSL certificate.
+    False is when the certificate is missing. This should be at 100%, anything
+    less is probably a bug.
+  </summary>
+</histogram>
+
 <histogram name="Navigation.Start.RendererBrowserDifference.Negative"
     units="ms">
   <obsolete>
@@ -36351,6 +36836,18 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="Net.CountOfBrokenAlternativeServices" units="services">
+  <owner>wangyix@chromium.org</owner>
+  <summary>
+    The number of broken alternative services loaded from the prefs file on
+    startup. Alternative services allow an origin server to specify additional
+    means of interacting with it on the network. A broken alternative service is
+    one whose most recent connection attempt failed and whose retry timeout
+    period has not yet expired. Recorded when broken alternative services are
+    loaded from the prefs file on startup.
+  </summary>
+</histogram>
+
 <histogram name="Net.CountOfPipelineCapableServers" units="servers">
   <obsolete>
     Deprecated 05/2014, related field trial already long expired.
@@ -36366,6 +36863,18 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>zhongyi@chromium.org</owner>
   <summary>
     This counts the number of server configs persisted in prefs file.
+  </summary>
+</histogram>
+
+<histogram name="Net.CountOfRecentlyBrokenAlternativeServices" units="services">
+  <owner>wangyix@chromium.org</owner>
+  <summary>
+    The number of recently broken alternative services loaded from the prefs
+    file on startup. Alternative services allow an origin server to specify
+    additional means of interacting with it on the network. A recently broken
+    alternative service is one whose most recent connection attempt failed.
+    Recorded when broken alternative services are loaded from the prefs file on
+    startup.
   </summary>
 </histogram>
 
@@ -36965,6 +37474,10 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Net.DNSNameCompliantIfValid" enum="Boolean">
+  <obsolete>
+    Deprecated 07/2017, not necessary to determine deprecation for invalid DNS
+    names.
+  </obsolete>
   <owner>palmer@chromium.org</owner>
   <summary>
     True if |net::IsCanonicalizedHostCompliant| returns true. Used to see if
@@ -37718,6 +38231,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Net.HttpContentLength" units="bytes">
+  <obsolete>
+    Replaced by Net.HttpContentLengthV2
+  </obsolete>
   <owner>bengr@chromium.org</owner>
   <summary>
     Size of the response body. This is the actual number of bytes received,
@@ -37768,6 +38284,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     The difference between the size specified in the X-Original-Content-Length
     header and the size of the response body. Only includes resources that have
     the X-Original-Content-Length header.
+  </summary>
+</histogram>
+
+<histogram name="Net.HttpContentLengthV2" units="bytes">
+  <owner>bengr@chromium.org</owner>
+  <summary>
+    Size of the response body. This is the actual number of bytes received,
+    which usually agrees with but is not necessarily the same as the size
+    specified by the Content-Length header. Replaces Net.HttpContentLength,
+    recording non-DRP Http traffic as &quot;Http.Direct&quot; instead of
+    &quot;Http.Other&quot;.
   </summary>
 </histogram>
 
@@ -37849,10 +38376,27 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Net.HttpOriginalContentLength" units="bytes">
+  <obsolete>
+    Should be removed once consumers have been updated to use
+    Net.HttpOriginalContentLengthV2
+  </obsolete>
   <owner>bengr@chromium.org</owner>
   <summary>
     Size specified in the X-Original-Content-Length header. If this header is
     not present in the response, the size of the response body is used.
+  </summary>
+</histogram>
+
+<histogram name="Net.HttpOriginalContentLengthV2" units="bytes">
+  <owner>bengr@chromium.org</owner>
+  <summary>
+    Net.HttpOriginalContentLength with non-data reduction proxy traffic properly
+    labeled with the &quot;Direct&quot; suffix.
+
+    Size specified in the X-Original-Content-Length header. If this header is
+    not present in the response, the size of the response body is used. Replaces
+    Net.HttpOriginalContentLength, breaking down traffic by Direct, ViaDRP,
+    Bypassed, and Other.
   </summary>
 </histogram>
 
@@ -40566,6 +41110,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Net.Socket.IdleSocketReuseTime" units="seconds">
+  <obsolete>
+    Deprecated as of 7/2017.
+  </obsolete>
   <owner>mmenke@chromium.org</owner>
   <summary>
     Seconds a socket was idle before it was reused. Emitted upon reuse. Does not
@@ -42181,6 +42728,10 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Net.ValidDNSName" enum="Boolean">
+  <obsolete>
+    Deprecated 07/2017, not necessary to determine deprecation for invalid DNS
+    names.
+  </obsolete>
   <owner>palmer@chromium.org</owner>
   <summary>
     True if a DNS name contains only characters for which
@@ -48241,8 +48792,11 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>dimich@chromium.org</owner>
   <summary>
     Enum-based buckets reflect the number of days the Chrome was used in each
-    specific way. This data is accumulated locally and reported when connection
-    is likely to succeed (usually after successful online navigation).
+    specific way: - Not used at all during whole day. - Started, but failed to
+    successfully navigate. - Only navigated to offline pages locally saved on
+    the device. - Only navigated online. - Navigated to both online and offline
+    pages. This data is accumulated locally and reported when connection is
+    likely to succeed (usually after successful online navigation).
   </summary>
 </histogram>
 
@@ -50032,8 +50586,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="PageLoad.Clients.Ads.Google.Bytes.AdFrames.Aggregate.Network"
-    units="KB">
+<histogram name="PageLoad.Bytes.AdFrames.Aggregate.Network" units="KB">
   <owner>jkarlin@chromium.org</owner>
   <summary>
     The size (in KB) of the resources loaded for all of the ad frames on the
@@ -50047,9 +50600,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram
-    name="PageLoad.Clients.Ads.Google.Bytes.AdFrames.Aggregate.PercentNetwork"
-    units="%">
+<histogram name="PageLoad.Bytes.AdFrames.Aggregate.PercentNetwork" units="%">
   <owner>jkarlin@chromium.org</owner>
   <summary>
     The percentage of bytes loaded for all ad frames that were loaded over the
@@ -50063,8 +50614,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="PageLoad.Clients.Ads.Google.Bytes.AdFrames.Aggregate.Total"
-    units="KB">
+<histogram name="PageLoad.Bytes.AdFrames.Aggregate.Total" units="KB">
   <owner>jkarlin@chromium.org</owner>
   <summary>
     The size (in KB) of the resources loaded for all of the ad frames on the
@@ -50078,8 +50628,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="PageLoad.Clients.Ads.Google.Bytes.AdFrames.PerFrame.Network"
-    units="KB">
+<histogram name="PageLoad.Bytes.AdFrames.PerFrame.Network" units="KB">
   <owner>jkarlin@chromium.org</owner>
   <summary>
     The size (in KB) of the resources loaded for an ad frame from the network.
@@ -50092,9 +50641,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram
-    name="PageLoad.Clients.Ads.Google.Bytes.AdFrames.PerFrame.PercentNetwork"
-    units="%">
+<histogram name="PageLoad.Bytes.AdFrames.PerFrame.PercentNetwork" units="%">
   <owner>jkarlin@chromium.org</owner>
   <summary>
     The percentage of bytes loaded for a single ad frame that were loaded over
@@ -50108,8 +50655,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="PageLoad.Clients.Ads.Google.Bytes.AdFrames.PerFrame.Total"
-    units="KB">
+<histogram name="PageLoad.Bytes.AdFrames.PerFrame.Total" units="KB">
   <owner>jkarlin@chromium.org</owner>
   <summary>
     The size (in KB) of the resources loaded for an ad frame.
@@ -50122,7 +50668,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="PageLoad.Clients.Ads.Google.Bytes.FullPage.Network" units="KB">
+<histogram name="PageLoad.Bytes.FullPage.Network" units="KB">
   <owner>jkarlin@chromium.org</owner>
   <summary>
     The size (in KB) of all of the page's resources that loaded over the
@@ -50134,8 +50680,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="PageLoad.Clients.Ads.Google.Bytes.FullPage.Network.PercentAds"
-    units="%">
+<histogram name="PageLoad.Bytes.FullPage.Network.PercentAds" units="%">
   <owner>jkarlin@chromium.org</owner>
   <summary>
     The percentage of bytes loaded for the page (from the network) that came
@@ -50149,7 +50694,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="PageLoad.Clients.Ads.Google.Bytes.FullPage.Total" units="KB">
+<histogram name="PageLoad.Bytes.FullPage.Total" units="KB">
   <owner>jkarlin@chromium.org</owner>
   <summary>
     The size (in KB) of all of the page's resources.
@@ -50160,8 +50705,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="PageLoad.Clients.Ads.Google.Bytes.FullPage.Total.PercentAds"
-    units="%">
+<histogram name="PageLoad.Bytes.FullPage.Total.PercentAds" units="%">
   <owner>jkarlin@chromium.org</owner>
   <summary>
     The percentage of bytes loaded for the page that came from resource loads in
@@ -50175,8 +50719,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="PageLoad.Clients.Ads.Google.Bytes.NonAdFrames.Aggregate.Total"
-    units="KB">
+<histogram name="PageLoad.Bytes.NonAdFrames.Aggregate.Total" units="KB">
   <owner>jkarlin@chromium.org</owner>
   <summary>
     The size (in KB) of all of the page's resources except for those loaded in
@@ -50190,18 +50733,51 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram
-    name="PageLoad.Clients.Ads.Google.FrameCounts.AnyParentFrame.AdFrames"
-    units="Ad frames">
+<histogram name="PageLoad.Clients.Ads.All.Navigations.AdFrameRenavigatedToAd"
+    enum="DidNavigateToAd">
   <owner>jkarlin@chromium.org</owner>
   <summary>
-    The number of frames on the page identified as Google Ad Frames that have
-    loaded more than 0 bytes of content.
+    When a frame that is (or previously was) an ad frame renavigates, record
+    whether it renavigated to an ad frame or a non-ad frame.
 
-    For pages with zero ad frames, the other PageLoad.Clients.Ads metrics are
-    not recorded unless otherwise specified.
+    An ad frame consists of the identified ad frame and all of its children. Its
+    children (which may also be ads) are not counted when they renavigate.
 
-    Child frames of an ad frame are not included in the count.
+    This metric is recorded as the event happens. Note that this is unlike most
+    other Clients.Ads metrics, which are recorded when the page load is
+    complete.
+  </summary>
+</histogram>
+
+<histogram
+    name="PageLoad.Clients.Ads.All.Navigations.NonAdFrameRenavigatedToAd"
+    enum="DidNavigateToAd">
+  <owner>jkarlin@chromium.org</owner>
+  <summary>
+    When a frame that has never been part of an ad frame renavigates, record
+    whether it renavigated to an ad frame or a non-ad frame.
+
+    This metric is recorded as the event happens. Note that this is unlike most
+    other Clients.Ads metrics, which are recorded when the page load is
+    complete.
+  </summary>
+</histogram>
+
+<histogram name="PageLoad.Clients.Ads.All.ParentExistsForSubFrame"
+    enum="ParentFrameKnown">
+  <owner>jkarlin@chromium.org</owner>
+  <summary>
+    Records whether or not a parent frame is found for a subframe that finishes
+    navigating.
+  </summary>
+</histogram>
+
+<histogram name="PageLoad.Clients.Ads.All.ResourceTypeWhenNoFrameFound"
+    enum="ContentResourceType2">
+  <owner>jkarlin@chromium.org</owner>
+  <summary>
+    Records the content::ResourceType when a resource finishes loading but the
+    ads metrics aren't aware of a committed frame for the resource.
   </summary>
 </histogram>
 
@@ -50255,6 +50831,10 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram
     name="PageLoad.Clients.Ads.Google.Navigations.AdFrameRenavigatedToAd"
     enum="DidNavigateToAd">
+  <obsolete>
+    Deprecated In July 2017. Use
+    PageLoad.Clients.Ads.All.Navigations.AdFrameRenavigatedToAd instead.
+  </obsolete>
   <owner>jkarlin@chromium.org</owner>
   <summary>
     When a frame that is (or previously was) an ad frame renavigates, record
@@ -50272,6 +50852,10 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram
     name="PageLoad.Clients.Ads.Google.Navigations.NonAdFrameRenavigatedToAd"
     enum="DidNavigateToAd">
+  <obsolete>
+    Deprecated In July 2017. Use
+    PageLoad.Clients.Ads.All.Navigations.NonAdFrameRenavigatedToAd instead.
+  </obsolete>
   <owner>jkarlin@chromium.org</owner>
   <summary>
     When a frame that has never been part of an ad frame renavigates, record
@@ -50285,6 +50869,10 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
 <histogram name="PageLoad.Clients.Ads.Google.ParentExistsForSubFrame"
     enum="ParentFrameKnown">
+  <obsolete>
+    Deprecated In July 2017. Use
+    PageLoad.Clients.Ads.All.ParentExistsForSubFrame instead.
+  </obsolete>
   <owner>jkarlin@chromium.org</owner>
   <summary>
     Records whether or not a parent frame is found for a subframe that finishes
@@ -50294,6 +50882,10 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
 <histogram name="PageLoad.Clients.Ads.Google.ResourceTypeWhenNoFrameFound"
     enum="ContentResourceType2">
+  <obsolete>
+    Deprecated In July 2017. Use
+    PageLoad.Clients.Ads.All.ResourceTypeWhenNoFrameFound instead.
+  </obsolete>
   <owner>jkarlin@chromium.org</owner>
   <summary>
     Records the content::ResourceType when a resource finishes loading but the
@@ -50987,6 +51579,20 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>csharrison@chromium.org</owner>
   <summary>
     The number of resources a given page finished loading at parse stop.
+  </summary>
+</histogram>
+
+<histogram name="PageLoad.FrameCounts.AnyParentFrame.AdFrames"
+    units="Ad frames">
+  <owner>jkarlin@chromium.org</owner>
+  <summary>
+    The number of frames on the page that have loaded more than 0 bytes of
+    content.
+
+    For pages with zero ad frames, the other PageLoad.Clients.Ads metrics are
+    not recorded unless otherwise specified.
+
+    Child frames of an ad frame are not included in the count.
   </summary>
 </histogram>
 
@@ -52335,6 +52941,14 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="PasswordManager.IE7LookupResult" enum="IE7LookupResultStatus">
+  <owner>vabr@chromium.org</owner>
+  <summary>
+    The result of importing passwords stored in IE7 into Chrome's password
+    store.
+  </summary>
+</histogram>
+
 <histogram name="PasswordManager.ImportedPasswordsPerUserInCSV">
   <owner>xunlu@chromium.org</owner>
   <owner>vabr@chromium.org</owner>
@@ -52360,6 +52974,16 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     The distribution of responses to the &quot;Do you want Chrome to remember
     this password&quot;? info bar prompt.
+  </summary>
+</histogram>
+
+<histogram name="PasswordManager.IsSyncPasswordHashSaved"
+    enum="IsSyncPasswordHashSaved">
+  <owner>dvadym@chromium.org</owner>
+  <owner>nparker@chromium.org</owner>
+  <summary>
+    This metric reports whether a sync password hash is saved. Recorded shortly
+    after Chrome startup.
   </summary>
 </histogram>
 
@@ -53233,12 +53857,26 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram
-    name="PaymentRequest.UserDidNotHaveInitialFormOfPayment.EffectOnCompletion"
+    name="PaymentRequest.UserDidNotHaveCompleteSuggestionsForEverything.EffectOnCompletion"
     enum="PaymentRequestFlowCompletionStatus">
   <owner>sebsg@chromium.org</owner>
   <summary>
-    Whether the flow was completed when the user did not have a form of payment
-    on file when the Payment Request was shown.
+    Whether the flow was completed when the user did not have a complete
+    suggestion offered for each requested information.
+  </summary>
+</histogram>
+
+<histogram
+    name="PaymentRequest.UserDidNotHaveInitialFormOfPayment.EffectOnCompletion"
+    enum="PaymentRequestFlowCompletionStatus">
+  <obsolete>
+    Replaced by PaymentRequest.NumberOfSuggestionsShown.PaymentMethod on July
+    19th 2017.
+  </obsolete>
+  <owner>sebsg@chromium.org</owner>
+  <summary>
+    Whether the flow was completed when the user did not have a a form of
+    payment on file when the Payment Request was shown.
   </summary>
 </histogram>
 
@@ -53252,12 +53890,26 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="PaymentRequest.UserHadInitialFormOfPayment.EffectOnCompletion"
+<histogram
+    name="PaymentRequest.UserHadCompleteSuggestionsForEverything.EffectOnCompletion"
     enum="PaymentRequestFlowCompletionStatus">
   <owner>sebsg@chromium.org</owner>
   <summary>
-    Whether the flow was completed when the user had an a form of payment on
-    file when the Payment Request was shown.
+    Whether the flow was completed when the user had at least one complete
+    suggestion offered for each requested information.
+  </summary>
+</histogram>
+
+<histogram name="PaymentRequest.UserHadInitialFormOfPayment.EffectOnCompletion"
+    enum="PaymentRequestFlowCompletionStatus">
+  <obsolete>
+    Replaced by PaymentRequest.NumberOfSuggestionsShown.PaymentMethod on July
+    19th 2017.
+  </obsolete>
+  <owner>sebsg@chromium.org</owner>
+  <summary>
+    Whether the flow was completed when the user had a form of payment on file
+    when the Payment Request was shown.
   </summary>
 </histogram>
 
@@ -54143,6 +54795,16 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     Chrome OS KB in use in the /var filesystem tree. Logged once a day during
     log file cleanup.
+  </summary>
+</histogram>
+
+<histogram name="Platform.Emmc.LifeUsed" enum="EmmcLifeUsed">
+  <owner>gwendal@google.com</owner>
+  <summary>
+    eMMC [5.0] Device life time estimation for flash. This field provides an
+    estimated indication about the device life time that is reflected by the
+    averaged wear out of memory of a given type relative to its maximum
+    estimated lifetime.
   </summary>
 </histogram>
 
@@ -57690,6 +58352,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.BatteryPercentage.Start" units="%">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>bengr@chromium.org</owner>
   <owner>rajendrant@chromium.org</owner>
   <summary>
@@ -57698,6 +58363,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.BatteryPercentageDiff.End" units="%">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>bengr@chromium.org</owner>
   <owner>rajendrant@chromium.org</owner>
   <summary>
@@ -57710,6 +58378,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.CacheSize.AllEntries" units="KB">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>jamartin@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -57719,6 +58390,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.CacheStatus.NonPrefetch" enum="HttpCachePattern">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>jamartin@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -57729,6 +58403,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
 <histogram name="Precache.CacheStatus.NonPrefetch.FromPrecache"
     enum="HttpCachePattern">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>jamartin@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -57740,6 +58417,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
 <histogram name="Precache.CacheStatus.NonPrefetch.NonTopHosts"
     enum="HttpCachePattern">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>twifkak@chromium.org</owner>
   <owner>jamartin@chromium.org</owner>
   <summary>
@@ -57751,6 +58431,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
 <histogram name="Precache.CacheStatus.NonPrefetch.TopHosts"
     enum="HttpCachePattern">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>twifkak@chromium.org</owner>
   <owner>jamartin@chromium.org</owner>
   <summary>
@@ -57761,6 +58444,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.CacheStatus.Prefetch" enum="HttpCachePattern">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>jamartin@chromium.org</owner>
   <owner>twifkak@chromium.org</owner>
   <summary>
@@ -57770,6 +58456,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.DownloadedNonPrecache" units="bytes">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>bengr@chromium.org</owner>
   <summary>
     The number of bytes that were downloaded over the network for HTTP/HTTPS
@@ -57778,6 +58467,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.DownloadedPrecacheMotivated" units="bytes">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>bengr@chromium.org</owner>
   <summary>
     The number of bytes that were downloaded because of precaching. Logged
@@ -57786,6 +58478,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.Events" enum="PrecacheEvents">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>rajendrant@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -57796,6 +58491,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.Fetch.FailureReasons">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>twifkak@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -57805,6 +58503,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.Fetch.MinWeight" units="thousandths">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>twifkak@chromium.org</owner>
   <summary>
     The minimum resource weight that is fetched in a given precache run.
@@ -57815,6 +58516,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.Fetch.PercentCompleted" units="%">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>twifkak@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -57836,6 +58540,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.Fetch.ResponseBytes.Daily" units="bytes">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>twifkak@chromium.org</owner>
   <summary>
     The total number of response bytes in 24 hours received over the network
@@ -57845,6 +58552,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.Fetch.ResponseBytes.Network" units="bytes">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>twifkak@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -57855,6 +58565,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.Fetch.ResponseBytes.NetworkWasted" units="bytes">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>rajendrant@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -57866,6 +58579,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.Fetch.ResponseBytes.Total" units="bytes">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>twifkak@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -57875,6 +58591,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.Fetch.TimeToComplete" units="ms">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>twifkak@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -57884,6 +58603,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.Freshness.Prefetch" units="seconds">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>jamartin@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -57944,6 +58666,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.PeriodicTaskInterval" units="minutes">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>rajendrant@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -57954,6 +58679,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.Saved" units="bytes">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>bengr@chromium.org</owner>
   <summary>
     The number of bytes during user browsing that were served from the cache,
@@ -57963,6 +58691,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.Saved.Freshness" units="seconds">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>jamartin@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -57975,6 +58706,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Precache.TimeSinceLastPrecache" units="seconds">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <owner>jamartin@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -61592,6 +62326,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="Renderer4.ImageDecodeMipLevel" units="mip level">
+  <owner>khushalsagar@chromium.org</owner>
+  <summary>
+    The mip level at which images are decoded for rasterization in the renderer.
+    This value is recorded each time an image is decoded in the compositor and
+    records the mip level used for the decode. Note that the mip levels recorded
+    lie between [1, 32], with the value of 1 indicating the use of the original
+    image.
+  </summary>
+</histogram>
+
 <histogram name="Renderer4.ImageDecodeTaskDurationUs" units="microseconds">
   <owner>vmpstr@chromium.org</owner>
   <summary>
@@ -61950,6 +62695,11 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="RendererScheduler.BackgroundRendererMainThreadLoad2" units="%">
+  <obsolete>
+    Replaced with
+    RendererScheduler.RendererMainThreadLoad3.Background.AfterFirstMinute as of
+    July 2017.
+  </obsolete>
   <owner>altimin@chromium.org</owner>
   <summary>
     Renderer main thread load when renderer is backgrounded, i.e. percentage of
@@ -61990,6 +62740,11 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="RendererScheduler.ForegroundRendererMainThreadLoad2" units="%">
+  <obsolete>
+    Replaced with
+    RendererScheduler.RendererMainThreadLoad3.Foreground.AfterFirstMinute as of
+    July 2017.
+  </obsolete>
   <owner>altimin@chromium.org</owner>
   <summary>
     Renderer main thread load when renderer is foregrounded, i.e. percentage of
@@ -62058,6 +62813,20 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     the expected queueing time was past some threshold.
 
     Team: input-dev@chromium.org.
+  </summary>
+</histogram>
+
+<histogram name="RendererScheduler.RendererMainThreadLoad3" units="%">
+  <owner>altimin@chromium.org</owner>
+  <summary>
+    Renderer main thread load (percentage of time spent in tasks), reported in
+    one second chunks.
+
+    See http://bit.ly/chromium-renderer-main-thread-load-metric for details.
+
+    This metric is emitted when the renderer main thread task is completed or
+    renderer is backgrounded or foregrounded, at most once per second per
+    renderer amortized.
   </summary>
 </histogram>
 
@@ -64351,6 +65120,25 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram base="true" name="SafeBrowsing.WebSocket.Elapsed" units="ms">
+  <owner>ricea@chromium.org</owner>
+  <summary>
+    Time spent on SafeBrowsing lookup. Since this includes any time spent on the
+    interstitial page the average may not be useful.
+  </summary>
+</histogram>
+
+<histogram name="SafeBrowsing.WebSocket.Result"
+    enum="SafeBrowsingWebSocketResult">
+  <owner>ricea@chromium.org</owner>
+  <summary>
+    Results of a SafeBrowsing lookup for a WebSocket handshake. All lookups are
+    counted. Note: the &quot;ABANDONED&quot; bucket contains both connections
+    that were abandoned before the check completed and those that were cancelled
+    when the user navigated away from the SafeBrowsing interstitial.
+  </summary>
+</histogram>
+
 <histogram name="SB.BloomFilter" units="ms">
   <obsolete>
     Has not been generated for years (7/8/14).
@@ -65535,6 +66323,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     Records a histogram of how often users download a file with a file extension
     that is possibly dangerous (e.g., exe, class).
+  </summary>
+</histogram>
+
+<histogram name="SBClientDownload.DownloadFileHasDmgSignature" enum="Boolean">
+  <owner>jialiul@chromium.org</owner>
+  <summary>
+    A Mac-only metric that records whether a given download file is a
+    cryptographically signed DMG archive. This metric is logged before Chrome
+    sends SafeBrowsing download pings.
   </summary>
 </histogram>
 
@@ -68370,6 +69167,36 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="Search.ContextualSearchTapDurationNotSeen" units="ms">
+  <owner>donnd@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <summary>
+    The duration of a tap that triggered a Contextual Search when the user does
+    not open the panel. Implemented for Android.  Logged when the panel closes
+    after being triggered by a tap.
+  </summary>
+</histogram>
+
+<histogram name="Search.ContextualSearchTapDurationSeen" units="ms">
+  <owner>donnd@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <summary>
+    The duration of a tap that triggered a Contextual Search when the user does
+    open the panel. Implemented for Android.  Logged when the panel closes after
+    being triggered by a tap and subsequently opened.
+  </summary>
+</histogram>
+
+<histogram name="Search.ContextualSearchTapLongDurationSeen"
+    enum="ContextualSearchResultsSeen">
+  <owner>donnd@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <summary>
+    Whether results were seen for a Tap that was of long duration. Recorded when
+    the UX is hidden. Implemented for Android.
+  </summary>
+</histogram>
+
 <histogram name="Search.ContextualSearchTapLongWordSeen"
     enum="ContextualSearchResultsSeen">
   <owner>donnd@chromium.org</owner>
@@ -68377,6 +69204,26 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     Whether results were seen for a Tap that was on a word considered long.
     Recorded when the UX is hidden. Implemented for Android.
+  </summary>
+</histogram>
+
+<histogram name="Search.ContextualSearchTapOnWordMiddleSeen"
+    enum="ContextualSearchResultsSeen">
+  <owner>donnd@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <summary>
+    Whether results were seen for a Tap that was on the middle part of a word.
+    Recorded when the UX is hidden. Implemented for Android.
+  </summary>
+</histogram>
+
+<histogram name="Search.ContextualSearchTapShortDurationSeen"
+    enum="ContextualSearchResultsSeen">
+  <owner>donnd@chromium.org</owner>
+  <owner>twellington@chromium.org</owner>
+  <summary>
+    Whether results were seen for a Tap that was of short duration. Recorded
+    when the UX is hidden. Implemented for Android.
   </summary>
 </histogram>
 
@@ -69596,6 +70443,24 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     implementations, but as of Jan 2017, this is only recorded for the IPC
     implementation. This histogram will be removed after the IPC implementation
     is removed.
+  </summary>
+</histogram>
+
+<histogram name="ServiceWorker.StartForNavigationHint.Result"
+    enum="ServiceWorkerStartForNavigationHintResult">
+  <owner>horo@chromium.org</owner>
+  <summary>
+    The result of starting a service worker for a navigation hint.
+  </summary>
+</histogram>
+
+<histogram name="ServiceWorker.StartHintPrecision" enum="BooleanEnabled">
+  <owner>horo@chromium.org</owner>
+  <summary>
+    The precision of the speculative launch of Service Workers for navigation
+    hints. Recorded when the worker is stopped. True if a fetch event for a
+    main/sub frame navigation was fired on the worker before it stopped;
+    otherwise, false. False means the speculative launch wasn't helpful.
   </summary>
 </histogram>
 
@@ -73337,6 +74202,24 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="SoftwareReporter.Cleaner.CleanupResult"
+    enum="SoftwareReporterCleanupResult">
+  <owner>ftirelo@chromium.org</owner>
+  <summary>
+    The final status of the Chrome Cleanup Tool run (e.g. succeeded, failed,
+    reboot required).
+  </summary>
+</histogram>
+
+<histogram name="SoftwareReporter.Cleaner.DownloadStatus"
+    enum="SoftwareReporterCleanerDownloadStatus">
+  <owner>ftirelo@chromium.org</owner>
+  <summary>
+    An indication if an attempt to download the Chrome Cleanup Tool succeeded or
+    the reason why it failed.
+  </summary>
+</histogram>
+
 <histogram name="SoftwareReporter.Cleaner.HasCompleted" enum="SRTCompleted">
   <owner>mad@chromium.org</owner>
   <summary>
@@ -73354,6 +74237,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="SoftwareReporter.Cleaner.RebootResponse" enum="Boolean">
+  <owner>ftirelo@chromium.org</owner>
+  <summary>
+    Indicates that the user accepted to initiate a reboot to complete a run of
+    the Chrome Cleanup Tool. This is logged the user starts a reboot from the
+    cleanup card in the Settings page. We can't track when the reboot is not
+    initiated, because it can happen at any moment in the future (there is no
+    prompt blocking the user).
+  </summary>
+</histogram>
+
 <histogram name="SoftwareReporter.Cleaner.RunningTime" units="ms">
   <owner>mad@chromium.org</owner>
   <summary>How long it took to run the software reporter cleaner tool.</summary>
@@ -73362,6 +74256,31 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram name="SoftwareReporter.Cleaner.Version">
   <owner>mad@chromium.org</owner>
   <summary>The build version of the software reporter cleaner tool.</summary>
+</histogram>
+
+<histogram name="SoftwareReporter.CleanerLogsAcceptance" enum="Boolean">
+  <owner>ftirelo@chromium.org</owner>
+  <summary>
+    Whether the user accepted to upload logs from Chrome Cleanup Tool. This is
+    logged when the user accepts the Chrome prompt to start a cleanup either
+    from the prompt dialog or from the cleanup card in the Settings page.
+  </summary>
+</histogram>
+
+<histogram name="SoftwareReporter.CleanupCard" enum="Boolean">
+  <owner>ftirelo@chromium.org</owner>
+  <summary>
+    Whether the Chrome Cleanup Tool card in the Settings page has been shown.
+  </summary>
+</histogram>
+
+<histogram name="SoftwareReporter.CleanupStarted"
+    enum="SoftwareReporterCleanupStarted">
+  <owner>ftirelo@chromium.org</owner>
+  <summary>
+    Indicates where the user started a cleanup from (e.g. from the prompt dialog
+    or the settings page).
+  </summary>
 </histogram>
 
 <histogram name="SoftwareReporter.ExperimentErrors"
@@ -73378,6 +74297,20 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     Whether there was an error reading the registry key containing UwS found by
     the Software Removal Tool.
+  </summary>
+</histogram>
+
+<histogram name="SoftwareReporter.IPCDisconnected"
+    enum="SoftwareReporterIPCDisconnected">
+  <owner>ftirelo@chromium.org</owner>
+  <summary>
+    Indicates when the IPC with the Chrome Cleanup Tool process is disconnected
+    from Chrome. Success is logged when it's disconnected and no longer needed
+    (the user already responded to the prompt in Chrome or the cleaner process
+    terminated normally); failures are logged when the IPC is disconnected, but
+    communication between Chrome and the cleaner process is still required (e.g.
+    while Chrome is waiting for scanning results or when the cleaner is waiting
+    for the user's response from Chrome).
   </summary>
 </histogram>
 
@@ -73441,6 +74374,46 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="SoftwareReporter.NoPromptReason"
+    enum="SoftwareReporterNoPromptReason">
+  <owner>ftirelo@chromium.org</owner>
+  <summary>
+    The reason why the user has not been prompted to run the Chrome Cleanup Tool
+    (e.g. no unwanted software found, user recently prompted).
+  </summary>
+</histogram>
+
+<histogram name="SoftwareReporter.NumberOfFilesToDelete" units="counts">
+  <owner>ftirelo@chromium.org</owner>
+  <summary>
+    The number of files to be deleted by the Chrome Cleanup Tool.
+  </summary>
+</histogram>
+
+<histogram name="SoftwareReporter.PostCleanupSettingsReset" units="counts">
+  <owner>ftirelo@chromium.org</owner>
+  <summary>
+    The number of profiles whose settings will be reset once a successful
+    cleanup completes.
+  </summary>
+</histogram>
+
+<histogram name="SoftwareReporter.PromptDialogResponse"
+    enum="SoftwareReporterPromptDialogResponse">
+  <owner>ftirelo@chromium.org</owner>
+  <summary>
+    The user response on the modal Chrome Cleanup Tool prompt dialog (e.g.
+    accepted, cancelled).
+  </summary>
+</histogram>
+
+<histogram name="SoftwareReporter.PromptShown" enum="Boolean">
+  <owner>ftirelo@chromium.org</owner>
+  <summary>
+    Whether the user has been prompted to run the Chrome Cleanup Tool.
+  </summary>
+</histogram>
+
 <histogram name="SoftwareReporter.PromptUsage" enum="SRTPromptUsage">
   <owner>mad@chromium.org</owner>
   <summary>Usage of the Software Removal Tool (SRT) Prompt.</summary>
@@ -73476,6 +74449,14 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>mad@chromium.org</owner>
   <summary>
     The registration and execution steps for the software reporter.
+  </summary>
+</histogram>
+
+<histogram name="SoftwareReporter.TaggedProfileForResetting" enum="Boolean">
+  <owner>ftirelo@chromium.org</owner>
+  <summary>
+    Registers when a profile is tagged for settings reset before a run of the
+    Chrome Cleanup Tool.
   </summary>
 </histogram>
 
@@ -73799,6 +74780,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
 <histogram name="sri.resource_integrity_mismatch_event"
     enum="SRIResourceIntegrityMismatchEvent">
+  <obsolete>
+    Removed 07/2017. Reference: crbug.com/708041
+  </obsolete>
   <owner>jww@chromium.org</owner>
   <summary>
     When resources are checked for mismatching integrity and whether the
@@ -79411,6 +80395,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="TouchAction.EffectiveTouchAction" enum="TouchActions">
+  <owner>hayleyferr@chromium.org</owner>
+  <owner>xidachen@chromium.org</owner>
+  <summary>
+    Tracks how often each touch action is allowed (AKA the frequency of each
+    effective touch action) at the end of each touch sequence.
+  </summary>
+</histogram>
+
 <histogram name="TouchBar.Default.Metrics" enum="DefaultTouchBarActions">
   <owner>spqchan@chromium.com</owner>
   <summary>Tracks the usage of the default touch bar buttons.</summary>
@@ -80037,6 +81030,22 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     case, Chrome ignore the CLD-determined language and instead uses the page
     language code. The page language code is decided by Content-Language and
     HTML lang attribute.
+  </summary>
+</histogram>
+
+<histogram name="Translate.SourceLanguage" enum="CLD3LanguageCode">
+  <owner>yyushkina@google.com</owner>
+  <summary>
+    The number of requests sent to the Translate server, grouped by source
+    language.
+  </summary>
+</histogram>
+
+<histogram name="Translate.TargetLanguage" enum="CLD3LanguageCode">
+  <owner>yyushkina@google.com</owner>
+  <summary>
+    The number of requests sent to the Translate server, grouped by target
+    language.
   </summary>
 </histogram>
 
@@ -80971,13 +81980,14 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="UMA.SubprocessMetricsProvider.UntrackedProcesses"
-    units="subprocesses">
+    enum="SubprocessType">
   <owner>asvitkine@chromium.org</owner>
   <owner>bcwhite@chromium.org</owner>
   <summary>
     The number of subprocesses, by type, from which persistent metrics are NOT
     collected because there is no information about this (likely new) process
-    type.
+    type. Process numbers 1000 or greater are &quot;custom&quot; processes used
+    by embedders.
   </summary>
 </histogram>
 
@@ -81108,6 +82118,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     expected to be zero in most cases, or a small number otherwise. Large values
     indicate a problem with the job creation or clean up code. The metric is
     recorded before a new BITS job is created and inserted into BITS queue.
+  </summary>
+</histogram>
+
+<histogram name="UpdateClient.BackgroundDownloaderNewJob" enum="Boolean">
+  <owner>sorin@chromium.org</owner>
+  <summary>
+    True if a new BITS job was created to download the url, or false, if an
+    existing job was found in the BITS queue. The metric is recorded when the
+    component updater background downloader is asked to download a CRX.
   </summary>
 </histogram>
 
@@ -82724,6 +83743,33 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="Variations.SafeMode.FellBackToSafeMode" enum="BooleanSafeMode">
+  <owner>isherman@chromium.org</owner>
+  <summary>
+    Whether or not the VariationsService fell back to Safe Mode, due to either
+    too many crashes or too many failures to fetch a new seed. Recorded during
+    Chrome startup, when the VariationsService is created.
+  </summary>
+</histogram>
+
+<histogram name="Variations.SafeMode.Streak.Crashes" units="crashes">
+  <owner>isherman@chromium.org</owner>
+  <summary>
+    The number of consecutive crashes observed by the VariationsService, without
+    a single intervening successful seed fetch. Recorded during Chrome startup,
+    when the VariationsService is created.
+  </summary>
+</histogram>
+
+<histogram name="Variations.SafeMode.Streak.FetchFailures" units="failures">
+  <owner>isherman@chromium.org</owner>
+  <summary>
+    The number of consecutive failed attempts to fetch a new seed by the
+    VariationsService. Recorded during Chrome startup, when the
+    VariationsService is created.
+  </summary>
+</histogram>
+
 <histogram name="Variations.SeedDateChange" enum="VariationsSeedDateChange">
   <owner>jwd@chromium.org</owner>
   <summary>
@@ -83136,6 +84182,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="VirtualKeyboard.LingeringIntermediateState"
+    enum="VirtualKeyboardControllerState">
+  <owner>oka@chromium.org</owner>
+  <summary>
+    Records whenever an intermediate keyboard state has been active for longer
+    than a fixed timeout.
+  </summary>
+</histogram>
+
 <histogram name="VoiceInteraction.IllegalContextRequest" enum="BooleanHit">
   <owner>muyuanli@chromium.org</owner>
   <summary>
@@ -83156,6 +84211,13 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     We must exit VR mode when browsing in certain situations. This tracks which
     situations are encountered in practice.
+  </summary>
+</histogram>
+
+<histogram name="VRAutopresentedWebVR" enum="Boolean">
+  <owner>ymalik@chromium.org</owner>
+  <summary>
+    Whether we're auto-presenting the first time we enter WebVR mode.
   </summary>
 </histogram>
 
@@ -83396,6 +84458,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
 <histogram name="WebApk.Install.GooglePlayInstallState"
     enum="WebApkGooglePlayInstallState">
+  <obsolete>
+    Deleted in M61.
+  </obsolete>
   <owner>hanxi@chromium.org</owner>
   <owner>pkotwicz@chromium.org</owner>
   <owner>yfriedman@chromium.org</owner>
@@ -87841,6 +88906,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="WinJumplist.DeleteDirectoryContentDuration" units="ms">
+  <obsolete>
+    Obsolete 07/06/2016 as we are no long recording this metric.
+  </obsolete>
   <owner>chengx@chromium.org</owner>
   <summary>Time spent in DeleteDirectoryContentAndLogRuntime().</summary>
 </histogram>
@@ -87992,10 +89060,21 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="WinJumplist.NotificationTimeInterval" units="ms">
+  <obsolete>
+    Obsolete 07/10/2017 as it's no longer needed.
+  </obsolete>
   <owner>chengx@chromium.org</owner>
   <summary>
     The time interval between two adjacent update notifications if it's less
     than 3500 ms.
+  </summary>
+</histogram>
+
+<histogram name="WinJumplist.NotificationTimeInterval2" units="ms">
+  <owner>chengx@chromium.org</owner>
+  <summary>
+    The time interval between two adjacent update notifications. A zero value
+    indicates the interval is greater than 3500 ms.
   </summary>
 </histogram>
 
@@ -88040,6 +89119,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="WinJumplistUpdater.AddTasksDuration" units="ms">
+  <obsolete>
+    Obsolete 07/10/2017 as it's no longer needed.
+  </obsolete>
   <owner>chengx@chromium.org</owner>
   <summary>Time spent in JumpListUpdater::AddTasks.</summary>
 </histogram>
@@ -88259,6 +89341,25 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <suffix name="WebApp" label="WebApp"/>
   <suffix name="WebApk" label="WebApk"/>
   <affected-histogram name="MobileStartup.IntentToCreationTime"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="AdsPageLoadMetrics" separator="." ordering="prefix">
+  <suffix name="Clients.Ads.Google" label="Includes only Google ads."/>
+  <suffix name="Clients.Ads.SubresourceFilter"
+      label="Includes only ads discovered by the SubResourceFilter."/>
+  <suffix name="Clients.Ads.All" label="Includes all discovered ads."/>
+  <affected-histogram name="PageLoad.Bytes.AdFrames.Aggregate.Network"/>
+  <affected-histogram name="PageLoad.Bytes.AdFrames.Aggregate.PercentNetwork"/>
+  <affected-histogram name="PageLoad.Bytes.AdFrames.Aggregate.Total"/>
+  <affected-histogram name="PageLoad.Bytes.AdFrames.PerFrame.Network"/>
+  <affected-histogram name="PageLoad.Bytes.AdFrames.PerFrame.PercentNetwork"/>
+  <affected-histogram name="PageLoad.Bytes.AdFrames.PerFrame.Total"/>
+  <affected-histogram name="PageLoad.Bytes.FullPage.Network"/>
+  <affected-histogram name="PageLoad.Bytes.FullPage.Network.PercentAds"/>
+  <affected-histogram name="PageLoad.Bytes.FullPage.Total"/>
+  <affected-histogram name="PageLoad.Bytes.FullPage.Total.PercentAds"/>
+  <affected-histogram name="PageLoad.Bytes.NonAdFrames.Aggregate.Total"/>
+  <affected-histogram name="PageLoad.FrameCounts.AnyParentFrame.AdFrames"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="AffiliationDummyData" separator=".">
@@ -90304,6 +91405,54 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <affected-histogram name="Cookie.ReinstatedCookies"/>
 </histogram_suffixes>
 
+<histogram_suffixes name="Download.Service.CleanUpReason" separator=".">
+  <suffix name="Timeout" label="File is deleted after timeout."/>
+  <suffix name="Orphaned" label="No client associated with the file."/>
+  <suffix name="Unknown" label="No database entry associated with the file."/>
+  <suffix name="HardRecovery" label="File is deleted in hard recovery."/>
+  <affected-histogram name="Download.Service.Files.CleanUp.External"/>
+  <affected-histogram name="Download.Service.Files.CleanUp.Failure"/>
+  <affected-histogram name="Download.Service.Files.CleanUp.Success"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="Download.Service.Client" separator=".">
+  <suffix name="OfflinePage" label="Offline page prefetch."/>
+  <affected-histogram name="Download.Service.Request.ClientAction"/>
+  <affected-histogram name="Download.Service.Request.StartResponse"/>
+  <affected-histogram name="Download.Service.Request.StartResult"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="Download.Service.CompletionType" separator=".">
+  <suffix name="Succeed" label="Succeed."/>
+  <suffix name="Fail" label="Fail."/>
+  <suffix name="Abort" label="Abort."/>
+  <suffix name="Timeout" label="Timeout."/>
+  <suffix name="Unknown" label="Unknown."/>
+  <suffix name="Cancel" label="Cancel."/>
+  <affected-histogram name="Download.Service.Finish.FileSize"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="Download.Service.EntryState" separator=".">
+  <suffix name="New" label="The initial state."/>
+  <suffix name="Available" label="The available state."/>
+  <suffix name="Active" label="The active state."/>
+  <suffix name="Paused" label="The paused state."/>
+  <suffix name="Complete" label="The complte state."/>
+  <affected-histogram name="Download.Service.Db.Records"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="Download.Service.StartUpStep" separator=".">
+  <suffix name="Initialization" label="The initialization start up step."/>
+  <suffix name="Recovery" label="The recovery start up step."/>
+  <affected-histogram name="Download.Service.StartUpStatus"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="Download.Service.TaskType" separator=".">
+  <suffix name="DownloadTask" label="Download task."/>
+  <suffix name="CleanUpTask" label="Clean up task."/>
+  <affected-histogram name="Download.Service.TaskScheduler.Status"/>
+</histogram_suffixes>
+
 <histogram_suffixes name="DownloadDangerPromptResponse" separator=".">
   <suffix name="Proceed"
       label="The user clicked through and recovered the download."/>
@@ -91265,6 +92414,11 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <suffix name="IPH_DownloadHome" label="In product help download home."/>
   <suffix name="IPH_NewTab" label="In product help new tab."/>
   <suffix name="IPH_IncognitoWindow" label="In product help incognito window."/>
+  <suffix name="IPH_NewTabTip" label="In product help new tab tip."/>
+  <suffix name="IPH_NewIncognitoTabTip"
+      label="In product help new incognito tab tip."/>
+  <suffix name="IPH_BadgedReadingList"
+      label="In product help badged reading list."/>
 </histogram_suffixes>
 
 <histogram_suffixes name="IPProtocolType" separator="_">
@@ -91476,34 +92630,36 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram_suffixes>
 
 <histogram_suffixes name="LocalNetReqsLocalhostResources" separator=".">
-  <suffix name="Localhost.DbRequests"
+  <suffix base="true" name="Localhost.DbRequests"
       label="Requests made to localhost on a database server port."/>
-  <suffix name="Localhost.DevRequests"
+  <suffix base="true" name="Localhost.DevRequests"
       label="Requests made to localhost on a development server port."/>
-  <suffix name="Localhost.OtherRequests"
+  <suffix base="true" name="Localhost.OtherRequests"
       label="Requests made to localhost on any port not otherwise monitored
              by the other local network request metrics."/>
-  <suffix name="Localhost.PrinterRequests"
+  <suffix base="true" name="Localhost.PrinterRequests"
       label="Requests made to localhost on a printer server port."/>
-  <suffix name="Localhost.WebRequests"
+  <suffix base="true" name="Localhost.WebRequests"
       label="Requests made to localhost on a web server port."/>
   <affected-histogram name="LocalNetworkRequests.PrivatePage"/>
   <affected-histogram name="LocalNetworkRequests.PublicPage"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="LocalNetReqsPrivatePage" separator=".">
-  <suffix name="DifferentSubnetRequests"
+  <suffix base="true" name="DifferentSubnetRequests"
       label="Requests made to local resources on a different subnet."/>
-  <suffix name="PublicRequests" label="Requests made to public resources."/>
-  <suffix name="SameSubnetRequests"
+  <suffix base="true" name="PublicRequests"
+      label="Requests made to public resources."/>
+  <suffix base="true" name="SameSubnetRequests"
       label="Requests made to local resources on the same reserved IP space
              as the page."/>
   <affected-histogram name="LocalNetworkRequests.PrivatePage"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="LocalNetReqsPublicPage" separator=".">
-  <suffix name="PrivateRequests" label="Requests made to private resources."/>
-  <suffix name="RouterRequests"
+  <suffix base="true" name="PrivateRequests"
+      label="Requests made to private resources."/>
+  <suffix base="true" name="RouterRequests"
       label="Requests made to resources likely to be routers."/>
   <affected-histogram name="LocalNetworkRequests.PublicPage"/>
 </histogram_suffixes>
@@ -91552,6 +92708,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <suffix name="SizeLimitExceeded" label="Cache size exceeded limit."/>
   <affected-histogram name="LocalStorage.BrowserLocalStorageCachePurgedInKB"/>
   <affected-histogram name="LocalStorageContext.CachePurgedInKB"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="LocalStorageContextOpenReasons" separator="">
+  <suffix name="CommitErrors" label="After too many commit errors."/>
+  <suffix name="InvalidVersion" label="After an invalid version was read."/>
+  <suffix name="OpenFailed" label="After opening the DB failed."/>
+  <suffix name="ReadVersionError"
+      label="After reading the schema version failed."/>
+  <affected-histogram name="LocalStorageContext.OpenResultAfter"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="LocalStorageSizes" separator="">
@@ -91662,6 +92827,28 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
       label="Measures the time taken for DoPlay(). Technically only the
              worker method AudioOutputController::PollAndStartIfDataReady()."/>
   <affected-histogram name="Media.AudioOutputController"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="MediaControlsElements" separator=".">
+  <suffix name="CastButton" label="Cast button"/>
+  <suffix name="CastOverflowButton" label="Cast overflow button"/>
+  <suffix name="CastOverlayButton" label="Cast overlay button"/>
+  <suffix name="ClosedCaptionButton" label="Closed caption button"/>
+  <suffix name="ClosedCaptionOverflowButton"
+      label="Closed caption overflow button"/>
+  <suffix name="DownloadButton" label="Download button"/>
+  <suffix name="DownloadOverflowButton" label="Download overflow button"/>
+  <suffix name="FullscreenButton" label="Fullscreen button"/>
+  <suffix name="FullscreenOverflowButton" label="Fullscreen overflow button"/>
+  <suffix name="MuteButton" label="Mute button"/>
+  <suffix name="MuteOverflowButton" label="Mute overflow button"/>
+  <suffix name="OverflowButton" label="Overflow button"/>
+  <suffix name="PlayOverlayButton" label="Play overlay button"/>
+  <suffix name="PlayPauseButton" label="Play/pause button"/>
+  <suffix name="PlayPauseOverflowButton" label="Play/pause overflow button"/>
+  <suffix name="TimelineSlider" label="Timeline slider"/>
+  <suffix name="VolumeSlider" label="Volume slider"/>
+  <affected-histogram name="Media.Controls.CTR"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="MediaElementConfigurations" separator=".">
@@ -92058,6 +93245,36 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <affected-histogram name="ServiceWorker.NavigationPreload.ConcurrentTime"/>
 </histogram_suffixes>
 
+<histogram_suffixes name="NavigationType" separator=".">
+  <suffix name="NewPageInPageOriginMismatch"
+      label="in-document new page navigation with a non-matching origin"/>
+  <suffix name="NewPageInPage" label="in-document new page navigation"/>
+  <suffix name="NewPagePendingEntryMatches"
+      label="new page navigation which found a pending entry"/>
+  <suffix name="NewPageNoMatchingEntry"
+      label="new page navigation with no matching entry"/>
+  <suffix name="ExistingPageSameDocumentIntendedAsNew"
+      label="in-document existing page navigation which is intended as new"/>
+  <suffix name="ExistingPageDifferentDocumentIntendedAsNew"
+      label="existing page navigation which is intended as new"/>
+  <suffix name="ExistingPageSameDocumentRestoredBrowserInitiated"
+      label="in-document existing page browser-initiated navigation which is
+             restored"/>
+  <suffix name="ExistingPageSameDocumentBrowserInitiated"
+      label="in-document existing page browser-initiated navigation"/>
+  <suffix name="ExistingPageRestoredBrowserInitiated"
+      label="existing page browser-initiated navigation which is restored"/>
+  <suffix name="ExistingPageBrowserInitiated"
+      label="existing page browser-initiated navigation"/>
+  <suffix name="ExistingPageSameDocumentRendererInitiated"
+      label="in-document existing page renderer-initiated navigation"/>
+  <suffix name="ExistingPageDifferentDocumentRendererInitiated"
+      label="existing page renderer-initiated navigation"/>
+  <suffix name="SamePage" label="same page navigation"/>
+  <suffix name="NewSubFrame" label="new subframe navigation"/>
+  <affected-histogram name="Navigation.SecureSchemeHasSSLStatus"/>
+</histogram_suffixes>
+
 <histogram_suffixes name="Net.BidirectionalStreamExperiment" separator=".">
   <owner>xunjieli@chromium.org</owner>
   <suffix name="QUIC" label="Bidirectional streams that use QUIC protocol"/>
@@ -92068,6 +93285,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <affected-histogram name="Net.BidirectionalStream.TimeToReadStart"/>
   <affected-histogram name="Net.BidirectionalStream.TimeToSendEnd"/>
   <affected-histogram name="Net.BidirectionalStream.TimeToSendStart"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="Net.HttpJob.TotalTimeSuccess.Priorities"
+    separator=".">
+  <suffix name="Priority0" label="THROTTLED or MINIMUM_PRIORITY"/>
+  <suffix name="Priority1" label="IDLE"/>
+  <suffix name="Priority2" label="LOWEST or DEFAULT_PRIORITY"/>
+  <suffix name="Priority3" label="LOW"/>
+  <suffix name="Priority4" label="MEDIUM"/>
+  <suffix name="Priority5" label="HIGHEST or MAXIMUM_PRIORITY"/>
+  <affected-histogram name="Net.HttpJob.TotalTimeSuccess"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="Net.QuicClientHelloRejectReasons.QuicIsSecureOrNot"
@@ -93348,7 +94576,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <suffix name="Https"/>
   <suffix name="Video"/>
   <affected-histogram name="Net.HttpContentLength"/>
+  <affected-histogram name="Net.HttpContentLengthV2"/>
   <affected-histogram name="Net.HttpOriginalContentLength"/>
+  <affected-histogram name="Net.HttpOriginalContentLengthV2"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="NetHttpContentLengthType2" separator=".">
@@ -93364,8 +94594,12 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
       label="Bytes of traffic that passed through the Data Reduction Proxy"/>
   <affected-histogram name="Net.HttpContentLength.Http"/>
   <affected-histogram name="Net.HttpContentLength.Https"/>
+  <affected-histogram name="Net.HttpContentLengthV2.Http"/>
+  <affected-histogram name="Net.HttpContentLengthV2.Https"/>
   <affected-histogram name="Net.HttpOriginalContentLength.Http"/>
   <affected-histogram name="Net.HttpOriginalContentLength.Https"/>
+  <affected-histogram name="Net.HttpOriginalContentLengthV2.Http"/>
+  <affected-histogram name="Net.HttpOriginalContentLengthV2.Https"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="NetHttpContentLengthType3" separator=".">
@@ -93378,6 +94612,30 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <affected-histogram name="Net.HttpContentLength.Https.Direct"/>
   <affected-histogram name="Net.HttpContentLength.Https.Other"/>
   <affected-histogram name="Net.HttpContentLength.Https.ViaDRP"/>
+  <affected-histogram name="Net.HttpContentLengthV2.Http.BypassedDRP"/>
+  <affected-histogram name="Net.HttpContentLengthV2.Http.Direct"/>
+  <affected-histogram name="Net.HttpContentLengthV2.Http.Other"/>
+  <affected-histogram name="Net.HttpContentLengthV2.Http.ViaDRP"/>
+  <affected-histogram name="Net.HttpContentLengthV2.Https.BypassedDRP"/>
+  <affected-histogram name="Net.HttpContentLengthV2.Https.Direct"/>
+  <affected-histogram name="Net.HttpContentLengthV2.Https.Other"/>
+  <affected-histogram name="Net.HttpContentLengthV2.Https.ViaDRP"/>
+  <affected-histogram name="Net.HttpOriginalContentLength.Http.BypassedDRP"/>
+  <affected-histogram name="Net.HttpOriginalContentLength.Http.Direct"/>
+  <affected-histogram name="Net.HttpOriginalContentLength.Http.Other"/>
+  <affected-histogram name="Net.HttpOriginalContentLength.Http.ViaDRP"/>
+  <affected-histogram name="Net.HttpOriginalContentLength.Https.BypassedDRP"/>
+  <affected-histogram name="Net.HttpOriginalContentLength.Https.Direct"/>
+  <affected-histogram name="Net.HttpOriginalContentLength.Https.Other"/>
+  <affected-histogram name="Net.HttpOriginalContentLength.Https.ViaDRP"/>
+  <affected-histogram name="Net.HttpOriginalContentLengthV2.Http.BypassedDRP"/>
+  <affected-histogram name="Net.HttpOriginalContentLengthV2.Http.Direct"/>
+  <affected-histogram name="Net.HttpOriginalContentLengthV2.Http.Other"/>
+  <affected-histogram name="Net.HttpOriginalContentLengthV2.Http.ViaDRP"/>
+  <affected-histogram name="Net.HttpOriginalContentLengthV2.Https.BypassedDRP"/>
+  <affected-histogram name="Net.HttpOriginalContentLengthV2.Https.Direct"/>
+  <affected-histogram name="Net.HttpOriginalContentLengthV2.Https.Other"/>
+  <affected-histogram name="Net.HttpOriginalContentLengthV2.Https.ViaDRP"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="NetHttpProxyConnectLatencySecure" separator=".">
@@ -94630,6 +95888,8 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
       name="PageLoad.Clients.ServiceWorker.PaintTiming.ParseStartToFirstContentfulPaint"/>
   <affected-histogram
       name="PageLoad.Clients.ServiceWorker.ParseTiming.NavigationToParseStart"/>
+  <affected-histogram
+      name="ServiceWorker.ActivatedWorkerPreparationForMainFrame.Type"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="PageLoadMetricsClientsSubresourceFilter"
@@ -95237,6 +96497,12 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <affected-histogram name="Platform.BootMode.FirmwareWriteProtect"/>
 </histogram_suffixes>
 
+<histogram_suffixes name="PlatformEmmcLifeUsed" separator=".">
+  <suffix name="TypeA" label="Memory Type A"/>
+  <suffix name="TypeB" label="Memory Type B"/>
+  <affected-histogram name="Platform.Emmc.LifeUsed"/>
+</histogram_suffixes>
+
 <histogram_suffixes name="PlatformMeminfoPercentage" separator="">
   <suffix name="infoActive" label="Active memory."/>
   <suffix name="infoActiveAnon"
@@ -95325,6 +96591,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram_suffixes>
 
 <histogram_suffixes name="PrecacheCellular" separator=".">
+  <obsolete>
+    Deprecated July 11 2017.
+  </obsolete>
   <suffix name="Cellular"
       label="covers fetches when connected to cellular networks"/>
   <affected-histogram name="Precache.DownloadedNonPrecache"/>
@@ -95961,6 +97230,12 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
       label="Recorded 10 minutes after backgrounded."/>
   <suffix name="AfterBackgrounded.15min"
       label="Recorded 15 minutes after backgrounded."/>
+  <suffix name="PeakDuringLoad"
+      label="Polled each time CreateURLLoader is called, and the maximum
+             value is recorded when DidFinishLoad is called."/>
+  <suffix name="MainFrame.PeakDuringLoad"
+      label="In the main frame, polled each time CreateURLLoader is called,
+             and the maximum value is recorded when DidFinishLoad is called."/>
   <affected-histogram name="Memory.Experimental.Renderer.BlinkGC"/>
   <affected-histogram name="Memory.Experimental.Renderer.Discardable"/>
   <affected-histogram name="Memory.Experimental.Renderer.Malloc"/>
@@ -95971,6 +97246,22 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <affected-histogram
       name="Memory.Experimental.Renderer.TotalAllocatedPerRenderView"/>
   <affected-histogram name="Memory.Experimental.Renderer.V8MainThreadIsolate"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="RendererScheduler.MainThreadLoadSplit" separator=".">
+  <suffix name="Background"
+      label="Main thread load when the renderer is backgrounded."/>
+  <suffix name="Background.AfterFirstMinute"
+      label="Main thread load when the renderer is backgrounded for longer
+             than one minute. Most of loading tasks are expected to complete
+             by then."/>
+  <suffix name="Foreground"
+      label="Main thread load when the renderer is foregrounded."/>
+  <suffix name="Foreground.AfterFirstMinute"
+      label="Main thread load when the renderer is foregrounded for longer
+             than one minute. Most of loading tasks are expected to complete
+             by then."/>
+  <affected-histogram name="RendererScheduler.RendererMainThreadLoad3"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="RendererScheduler.TaskDurationPerQueueTypeSplit"
@@ -96069,6 +97360,18 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     </obsolete>
   </suffix>
   <affected-histogram name="Net.ResourceLoader.ResponseStartToEnd"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="ResourceLoadScheduler.FrameType" separator=".">
+  <suffix name="MainframeThrottled" label="Main frame, throttled"/>
+  <suffix name="MainframeNotThrottled" label="Main frame, not throttled"/>
+  <suffix name="MainframePartiallyThrottled"
+      label="Main frame, partially throttled"/>
+  <suffix name="SubframeThrottled" label="Sub frame, throttled"/>
+  <suffix name="SubframeNotThrottled" label="Sub frame, not throttled"/>
+  <suffix name="SubframePartiallyThrottled"
+      label="Sub frame, partially throttled"/>
+  <affected-histogram name="Blink.ResourceLoadScheduler.PeakRequests"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="ResourcePrefetchPredictorNetworkTypePrefetch"
@@ -96371,6 +97674,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <affected-histogram name="SafeBrowsing.Pref.Scout.SetPref"/>
 </histogram_suffixes>
 
+<histogram_suffixes name="SafeBrowsingWebSocketElapsed" separator=".">
+  <suffix name="Safe"
+      label="Passed SafeBrowsing check, or blocked and interstitial clicked
+             through"/>
+  <suffix name="Blocked" label="Failed SafeBrowsing check and blocked"/>
+  <suffix name="Abandoned"
+      label="Connection abandoned, or interstitial displayed and user did not
+             proceed to site"/>
+  <affected-histogram name="SafeBrowsing.WebSocket.Elapsed"/>
+</histogram_suffixes>
+
 <histogram_suffixes name="SameVersionStartupCounts" separator=".">
   <suffix name="1" label="1st startup with same version"/>
   <suffix name="2" label="2nd startup with same version"/>
@@ -96637,7 +97951,10 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <affected-histogram name="ServiceWorker.EventDispatchingDelay"/>
   <affected-histogram name="ServiceWorker.StartWorker.StatusByPurpose"/>
   <affected-histogram name="ServiceWorker.StartWorker.Time_DuringStartup"/>
-  <affected-histogram name="ServiceWorker.StartWorker.Time_ExistingProcess"/>
+  <affected-histogram
+      name="ServiceWorker.StartWorker.Time_ExistingReadyProcess"/>
+  <affected-histogram
+      name="ServiceWorker.StartWorker.Time_ExistingUnreadyProcess"/>
   <affected-histogram name="ServiceWorker.StartWorker.Time_NewProcess"/>
 </histogram_suffixes>
 
@@ -96678,11 +97995,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram_suffixes name="ServiceWorker.StartSituation" separator="_">
   <suffix name="DuringStartup"
       label="The worker started up during browser startup."/>
-  <suffix name="NewProcess"
-      label="A new process was created for the worker (or is asyncly being
-             created, depending on the histogram)."/>
-  <suffix name="ExistingProcess"
-      label="An existing process was used for the worker."/>
+  <suffix name="NewProcess" label="A new process was created for the worker."/>
+  <suffix name="ExistingProcess">
+    <obsolete>
+      Deprecated as of 07/2017. Replaced by ExistingUnreadyProcess and
+      ExistingReadyProcess.
+    </obsolete>
+  </suffix>
+  <suffix name="ExistingUnreadyProcess"
+      label="An existing unready process was used for the worker."/>
+  <suffix name="ExistingReadyProcess"
+      label="An existing ready process was used for the worker."/>
   <affected-histogram name="EmbeddedWorkerInstance.Start.StartMessageLatency"/>
   <affected-histogram name="EmbeddedWorkerInstance.Start.TimeToEvaluateScript"/>
   <affected-histogram name="EmbeddedWorkerInstance.Start.TimeToLoad.HttpCache"/>
@@ -96701,8 +98024,16 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
       label="Started a worker during browser startup."/>
   <suffix name="StartWorkerNewProcess"
       label="Started a worker in a new process."/>
-  <suffix name="StartWorkerExistingProcess"
-      label="Started a worker in an existing process."/>
+  <suffix name="StartWorkerExistingProcess">
+    <obsolete>
+      Deprecated as of 07/2017. Replaced by StartWorkerExistingUnreadyProcess
+      and StartWorkerExistingReadyProcess.
+    </obsolete>
+  </suffix>
+  <suffix name="StartWorkerExistingUnreadyProcess"
+      label="Started a worker in an existing unready process."/>
+  <suffix name="StartWorkerExistingReadyProcess"
+      label="Started a worker in an existing ready process."/>
   <suffix name="StartingWorker"
       label="The activated worker was already starting up."/>
   <suffix name="RunningWorker"
@@ -97085,7 +98416,11 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <suffix name="History" label="History"/>
   <suffix name="OfflinePageMetadata" label="OfflinePageMetadata"/>
   <suffix name="Passwords" label="Passwords"/>
-  <suffix name="Precache" label="Precache"/>
+  <suffix name="Precache" label="Precache">
+    <obsolete>
+      Deprecated July 11 2017.
+    </obsolete>
+  </suffix>
   <suffix name="PrefetchStore" label="PrefetchStore"/>
   <suffix name="Predictor" label="Predictor"/>
   <suffix name="PreviewsOptOut" label="PreviewsOptOut"/>

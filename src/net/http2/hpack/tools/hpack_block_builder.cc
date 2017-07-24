@@ -73,7 +73,7 @@ void HpackBlockBuilder::AppendEntryTypeAndVarint(HpackEntryType entry_type,
 }
 
 void HpackBlockBuilder::AppendString(bool is_huffman_encoded,
-                                     base::StringPiece str) {
+                                     Http2StringPiece str) {
   uint8_t high_bits = is_huffman_encoded ? 0x80 : 0;
   uint8_t prefix_length = 7;
   AppendHighBitsAndVarint(high_bits, prefix_length, str.size());

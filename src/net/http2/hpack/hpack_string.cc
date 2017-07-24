@@ -7,39 +7,37 @@
 #include <utility>
 
 #include "base/logging.h"
-
-using base::StringPiece;
-using std::string;
+#include "net/http2/platform/api/http2_string_utils.h"
 
 namespace net {
 
 HpackString::HpackString(const char* data) : str_(data) {}
-HpackString::HpackString(StringPiece str) : str_(str.as_string()) {}
-HpackString::HpackString(string str) : str_(std::move(str)) {}
+HpackString::HpackString(Http2StringPiece str) : str_(str.as_string()) {}
+HpackString::HpackString(Http2String str) : str_(std::move(str)) {}
 HpackString::HpackString(const HpackString& other) : str_(other.str_) {}
 HpackString::~HpackString() {}
 
-StringPiece HpackString::ToStringPiece() const {
+Http2StringPiece HpackString::ToStringPiece() const {
   return str_;
 }
 
 bool HpackString::operator==(const HpackString& other) const {
   return str_ == other.str_;
 }
-bool HpackString::operator==(StringPiece str) const {
+bool HpackString::operator==(Http2StringPiece str) const {
   return str == str_;
 }
 
-bool operator==(StringPiece a, const HpackString& b) {
+bool operator==(Http2StringPiece a, const HpackString& b) {
   return b == a;
 }
-bool operator!=(StringPiece a, const HpackString& b) {
+bool operator!=(Http2StringPiece a, const HpackString& b) {
   return !(b == a);
 }
 bool operator!=(const HpackString& a, const HpackString& b) {
   return !(a == b);
 }
-bool operator!=(const HpackString& a, StringPiece b) {
+bool operator!=(const HpackString& a, Http2StringPiece b) {
   return !(a == b);
 }
 std::ostream& operator<<(std::ostream& out, const HpackString& v) {
@@ -52,7 +50,7 @@ HpackStringPair::HpackStringPair(const HpackString& name,
   DVLOG(3) << DebugString() << " ctor";
 }
 
-HpackStringPair::HpackStringPair(StringPiece name, StringPiece value)
+HpackStringPair::HpackStringPair(Http2StringPiece name, Http2StringPiece value)
     : name(name), value(value) {
   DVLOG(3) << DebugString() << " ctor";
 }
@@ -61,13 +59,9 @@ HpackStringPair::~HpackStringPair() {
   DVLOG(3) << DebugString() << " dtor";
 }
 
-string HpackStringPair::DebugString() const {
-  string debug_string("HpackStringPair(name=");
-  debug_string.append(name.ToString());
-  debug_string.append(", value=");
-  debug_string.append(value.ToString());
-  debug_string.append(")");
-  return debug_string;
+Http2String HpackStringPair::DebugString() const {
+  return Http2StrCat("HpackStringPair(name=", name.ToString(),
+                     ", value=", value.ToString(), ")");
 }
 
 std::ostream& operator<<(std::ostream& os, const HpackStringPair& p) {

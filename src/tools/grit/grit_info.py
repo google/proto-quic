@@ -117,6 +117,7 @@ def DoMain(argv):
   # grit build also supports '-E KEY=VALUE', support that to share command
   # line flags.
   parser.add_option("-E", action="append", dest="build_env", default=[])
+  parser.add_option("-p", action="store", dest="predetermined_ids_file")
   parser.add_option("-w", action="append", dest="whitelist_files", default=[])
   parser.add_option("--output-all-resource-defines", action="store_true",
                     dest="output_all_resource_defines", default=True,

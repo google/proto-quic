@@ -281,6 +281,7 @@ bool SharedMemory::MapAt(off_t offset, size_t bytes) {
   bool mmap_succeeded = memory_ != (void*)-1 && memory_ != NULL;
   if (mmap_succeeded) {
     mapped_size_ = bytes;
+    mapped_id_ = shm_.GetGUID();
     DCHECK_EQ(0U,
               reinterpret_cast<uintptr_t>(memory_) &
                   (SharedMemory::MAP_MINIMUM_ALIGNMENT - 1));
@@ -300,6 +301,7 @@ bool SharedMemory::Unmap() {
   munmap(memory_, mapped_size_);
   memory_ = NULL;
   mapped_size_ = 0;
+  mapped_id_ = UnguessableToken();
   return true;
 }
 

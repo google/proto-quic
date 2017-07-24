@@ -452,6 +452,25 @@ bool IsTabletDevice(std::string* reason) {
     }
   }
 
+  // If the device is not supporting rotation, it's unlikely to be a tablet,
+  // a convertible or a detachable.
+  // See
+  // https://msdn.microsoft.com/en-us/library/windows/desktop/dn629263(v=vs.85).aspx
+  typedef decltype(GetAutoRotationState)* GetAutoRotationStateType;
+  GetAutoRotationStateType get_auto_rotation_state_func =
+      reinterpret_cast<GetAutoRotationStateType>(GetProcAddress(
+          GetModuleHandle(L"user32.dll"), "GetAutoRotationState"));
+
+  if (get_auto_rotation_state_func) {
+    AR_STATE rotation_state;
+    ZeroMemory(&rotation_state, sizeof(AR_STATE));
+    if (get_auto_rotation_state_func(&rotation_state)) {
+      if ((rotation_state & AR_NOT_SUPPORTED) || (rotation_state & AR_LAPTOP) ||
+          (rotation_state & AR_NOSENSOR))
+        return false;
+    }
+  }
+
   // PlatformRoleSlate was added in Windows 8+.
   POWER_PLATFORM_ROLE role = GetPlatformRole();
   bool mobile_power_profile = (role == PlatformRoleMobile);
@@ -468,8 +487,8 @@ bool IsTabletDevice(std::string* reason) {
       }
     } else {
       if (reason) {
-        *reason += (role == PlatformRoleMobile) ? "PlatformRoleMobile\n" :
-                                                  "PlatformRoleSlate\n";
+        *reason += (role == PlatformRoleMobile) ? "PlatformRoleMobile\n"
+                                                : "PlatformRoleSlate\n";
       }
     }
   } else {

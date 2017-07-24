@@ -24,9 +24,6 @@ class QuicChromiumClientSessionPeer {
                                 size_t max_streams,
                                 size_t default_streams);
 
-  static void SetChannelIDSent(QuicChromiumClientSession* session,
-                               bool channel_id_sent);
-
   static void SetHostname(QuicChromiumClientSession* session,
                           const std::string& hostname);
 

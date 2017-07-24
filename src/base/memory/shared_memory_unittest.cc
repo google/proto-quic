@@ -734,4 +734,29 @@ MULTIPROCESS_TEST_MAIN(SharedMemoryTestMain) {
 #endif  // !defined(OS_IOS) && !defined(OS_ANDROID) && !defined(OS_MACOSX) &&
         // !defined(OS_FUCHSIA)
 
+TEST(SharedMemoryTest, MappedId) {
+  const uint32_t kDataSize = 1024;
+  SharedMemory memory;
+  SharedMemoryCreateOptions options;
+  options.size = kDataSize;
+#if defined(OS_MACOSX) && !defined(OS_IOS)
+  // The Mach functionality is tested in shared_memory_mac_unittest.cc.
+  options.type = SharedMemoryHandle::POSIX;
+#endif
+
+  EXPECT_TRUE(memory.Create(options));
+  base::UnguessableToken id = memory.handle().GetGUID();
+  EXPECT_FALSE(id.is_empty());
+  EXPECT_TRUE(memory.mapped_id().is_empty());
+
+  EXPECT_TRUE(memory.Map(kDataSize));
+  EXPECT_EQ(id, memory.mapped_id());
+
+  memory.Close();
+  EXPECT_EQ(id, memory.mapped_id());
+
+  memory.Unmap();
+  EXPECT_TRUE(memory.mapped_id().is_empty());
+}
+
 }  // namespace base

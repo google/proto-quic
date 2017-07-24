@@ -8,7 +8,6 @@
 #include "base/logging.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/process/kill.h"
-#include "base/win/windows_version.h"
 
 namespace {
 
@@ -187,7 +186,7 @@ bool Process::SetProcessBackgrounded(bool value) {
   // sets the priority class on the threads but also on the IO generated
   // by it. Unfortunately it can only be set for the calling process.
   DWORD priority;
-  if ((base::win::GetVersion() >= base::win::VERSION_VISTA) && (is_current())) {
+  if (is_current()) {
     priority = value ? PROCESS_MODE_BACKGROUND_BEGIN :
                        PROCESS_MODE_BACKGROUND_END;
   } else {

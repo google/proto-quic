@@ -188,9 +188,4 @@ void MessagePumpForUI::ScheduleDelayedWork(const TimeTicks& delayed_work_time) {
       millis);
 }
 
-// static
-bool MessagePumpForUI::RegisterBindings(JNIEnv* env) {
-  return RegisterNativesImpl(env);
-}
-
 }  // namespace base

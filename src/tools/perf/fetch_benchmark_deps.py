@@ -6,6 +6,7 @@
 """This module fetches and prints the dependencies given a benchmark."""
 
 import argparse
+import optparse
 import os
 import sys
 
@@ -23,6 +24,9 @@ from chrome_telemetry_build import chromium_config
 
 def _FetchDependenciesIfNeeded(story_set):
   """ Download files needed by a user story set. """
+  if not story_set.wpr_archive_info:
+    return
+
   # Download files in serving_dirs.
   serving_dirs = story_set.serving_dirs
   for directory in serving_dirs:
@@ -60,9 +64,14 @@ def _EnumerateDependencies(story_set):
 
 
 def FetchDepsForBenchmark(benchmark, output):
-  # Download files according to specified benchmark.
-  story_set = benchmark().CreateStorySet(None)
+  # Create a dummy options object which hold default values that are expected
+  # by Benchmark.CreateStorySet(options) method.
+  parser = optparse.OptionParser()
+  benchmark.AddBenchmarkCommandLineArgs(parser)
+  options, _ = parser.parse_args([])
+  story_set = benchmark().CreateStorySet(options)
 
+  # Download files according to specified benchmark.
   _FetchDependenciesIfNeeded(story_set)
 
   # Print files downloaded.
@@ -96,9 +105,8 @@ def main(args, output):
       raw_input(
           'No benchmark name is specified. Fetching all benchmark deps. '
           'Press enter to continue...')
-    for b in benchmark_finders.GetAllBenchmarks():
-      print >> output, ('Fetch dependencies for benchmark %s:'
-                        % benchmark.Name())
+    for b in benchmark_finders.GetAllPerfBenchmarks():
+      print >> output, ('Fetch dependencies for benchmark %s' % b.Name())
       FetchDepsForBenchmark(b, output)
 
 if __name__ == '__main__':

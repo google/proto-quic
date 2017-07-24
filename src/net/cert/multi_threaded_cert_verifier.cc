@@ -341,7 +341,7 @@ class CertVerifierJob {
 };
 
 MultiThreadedCertVerifier::MultiThreadedCertVerifier(
-    CertVerifyProc* verify_proc)
+    scoped_refptr<CertVerifyProc> verify_proc)
     : requests_(0), inflight_joins_(0), verify_proc_(verify_proc) {}
 
 MultiThreadedCertVerifier::~MultiThreadedCertVerifier() {

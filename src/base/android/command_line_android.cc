@@ -90,9 +90,5 @@ void InitNativeCommandLineFromJavaArray(JNIEnv* env, jobjectArray array) {
   AppendJavaStringArrayToCommandLine(env, array, true);
 }
 
-bool RegisterCommandLine(JNIEnv* env) {
-  return RegisterNativesImpl(env);
-}
-
 }  // namespace android
 }  // namespace base

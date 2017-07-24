@@ -2441,23 +2441,9 @@ void QuicConnection::SetStreamNotifier(
   sent_packet_manager_.SetStreamNotifier(stream_notifier);
 }
 
-void QuicConnection::SetDelegateSavesData(bool delegate_saves_data) {
-  packet_generator_.SetDelegateSavesData(delegate_saves_data);
-}
-
-void QuicConnection::SaveStreamData(QuicStreamId id,
-                                    QuicIOVector iov,
-                                    size_t iov_offset,
-                                    QuicStreamOffset offset,
-                                    QuicByteCount data_length) {
-  visitor_->SaveStreamData(id, iov, iov_offset, offset, data_length);
-}
-
-bool QuicConnection::WriteStreamData(QuicStreamId id,
-                                     QuicStreamOffset offset,
-                                     QuicByteCount data_length,
-                                     QuicDataWriter* writer) {
-  return visitor_->WriteStreamData(id, offset, data_length, writer);
+void QuicConnection::SetDataProducer(
+    QuicStreamFrameDataProducer* data_producer) {
+  framer_.set_data_producer(data_producer);
 }
 
 }  // namespace net

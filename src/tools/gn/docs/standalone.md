@@ -39,6 +39,6 @@ If you are in a directory with such a file and you want to not use it
 (e.g., to do the full Chrome build instead), you can use the command-line
 flags `--root` and `--dotfile` to set the values you want.
 
-If you want a completely standalone build that has nothing to do w/ Chrome
-and doesn't use Chrome's //build files, you can look at an example in
+If you want a completely standalone build that has nothing to do with Chrome
+and doesn't use Chrome's `//build` files, you can look at an example in
 [//tools/gn/example](../example).

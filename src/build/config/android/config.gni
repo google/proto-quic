@@ -45,13 +45,14 @@ if (is_android) {
     default_android_sdk_root = "//third_party/android_tools/sdk"
     default_android_sdk_version = "26"
     default_android_sdk_build_tools_version = "26.0.0"
+    default_android_sdk_tools_version_suffix = "-25.3.2"
   }
 
   if (!defined(default_lint_android_sdk_root)) {
     # Purposefully repeated so that downstream can change
     # default_android_sdk_root without changing lint version.
     default_lint_android_sdk_root = "//third_party/android_tools/sdk"
-    default_lint_android_sdk_version = "25"
+    default_lint_android_sdk_version = "26"
   }
 
   if (!defined(default_extras_android_sdk_root)) {
@@ -104,6 +105,7 @@ if (is_android) {
     android_sdk_root = default_android_sdk_root
     android_sdk_version = default_android_sdk_version
     android_sdk_build_tools_version = default_android_sdk_build_tools_version
+    android_sdk_tools_version_suffix = default_android_sdk_tools_version_suffix
 
     lint_android_sdk_root = default_lint_android_sdk_root
     lint_android_sdk_version = default_lint_android_sdk_version
@@ -193,6 +195,9 @@ if (is_android) {
   # byte-for-byte identical output.
   assert(!(enable_incremental_dx && !is_java_debug))
   assert(!(enable_incremental_javac && !is_java_debug))
+
+  # Path to where selected build variables are written to.
+  android_build_vars = "$root_build_dir/build_vars.txt"
 
   # Host stuff -----------------------------------------------------------------
 

@@ -180,7 +180,7 @@ TEST(MemoryAllocatorDumpTest, GetSize) {
   dump->AddScalar(MemoryAllocatorDump::kNameSize,
                   MemoryAllocatorDump::kUnitsBytes, 1);
   dump->AddScalar("foo", MemoryAllocatorDump::kUnitsBytes, 2);
-  EXPECT_EQ(1u, dump->GetSize());
+  EXPECT_EQ(1u, dump->GetSizeInternal());
 }
 
 // DEATH tests are not supported in Android/iOS/Fuchsia.

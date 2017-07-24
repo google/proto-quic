@@ -4,17 +4,15 @@
 
 #include "net/http2/hpack/decoder/hpack_entry_type_decoder.h"
 
-#include <sstream>
-
 #include "base/logging.h"
+#include "net/http2/platform/api/http2_string_utils.h"
 
 namespace net {
 
-std::string HpackEntryTypeDecoder::DebugString() const {
-  std::stringstream ss;
-  ss << "HpackEntryTypeDecoder(varint_decoder=" << varint_decoder_.DebugString()
-     << ", entry_type=" << entry_type_ << ")";
-  return ss.str();
+Http2String HpackEntryTypeDecoder::DebugString() const {
+  return Http2StrCat(
+      "HpackEntryTypeDecoder(varint_decoder=", varint_decoder_.DebugString(),
+      ", entry_type = ", entry_type_, ") ");
 }
 
 std::ostream& operator<<(std::ostream& out, const HpackEntryTypeDecoder& v) {

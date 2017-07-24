@@ -29,7 +29,7 @@ class SpdyNoOpVisitor : public SpdyFramerVisitorInterface,
   void OnError(SpdyFramer* framer) override {}
   SpdyHeadersHandlerInterface* OnHeaderFrameStart(
       SpdyStreamId stream_id) override;
-  void OnHeaderFrameEnd(SpdyStreamId stream_id, bool end_headers) override {}
+  void OnHeaderFrameEnd(SpdyStreamId stream_id) override {}
   void OnDataFrameHeader(SpdyStreamId stream_id,
                          size_t length,
                          bool fin) override {}

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/android/field_trial_list.h"
-
 #include <jni.h>
 
 #include <map>
@@ -46,13 +44,3 @@ static ScopedJavaLocalRef<jstring> GetVariationParameter(
   return ConvertUTF8ToJavaString(
       env, parameters[ConvertJavaStringToUTF8(env, jparameter_key)]);
 }
-
-namespace base {
-namespace android {
-
-bool RegisterFieldTrialList(JNIEnv* env) {
-  return RegisterNativesImpl(env);
-}
-
-}  // namespace android
-}  // namespace base

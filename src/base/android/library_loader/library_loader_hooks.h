@@ -38,13 +38,6 @@ BASE_EXPORT void SetNativeInitializationHook(
 // RegisterLibraryPreloaderRendererHistogram.
 BASE_EXPORT void RecordLibraryLoaderRendererHistograms();
 
-// Registers the callbacks that allows the entry point of the library to be
-// exposed to the calling java code.  This handles only registering the
-// the callbacks needed by the loader. Any application specific JNI bindings
-// should happen once the native library has fully loaded, either in the library
-// loaded hook function or later.
-BASE_EXPORT bool RegisterLibraryLoaderEntryHook(JNIEnv* env);
-
 // Typedef for hook function to be called (indirectly from Java) once the
 // libraries are loaded. The hook function should register the JNI bindings
 // required to start the application. It should return true for success and

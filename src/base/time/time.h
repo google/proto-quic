@@ -410,7 +410,7 @@ class TimeBase {
   static TimeClass FromInternalValue(int64_t us) { return TimeClass(us); }
 
  protected:
-  explicit TimeBase(int64_t us) : us_(us) {}
+  constexpr explicit TimeBase(int64_t us) : us_(us) {}
 
   // Time value in a microsecond timebase.
   int64_t us_;
@@ -740,8 +740,7 @@ class BASE_EXPORT TimeTicks : public time_internal::TimeBase<TimeTicks> {
     WIN_ROLLOVER_PROTECTED_TIME_GET_TIME
   };
 
-  TimeTicks() : TimeBase(0) {
-  }
+  constexpr TimeTicks() : TimeBase(0) {}
 
   // Platform-dependent tick count representing "right now." When
   // IsHighResolution() returns false, the resolution of the clock could be
@@ -763,9 +762,9 @@ class BASE_EXPORT TimeTicks : public time_internal::TimeBase<TimeTicks> {
   static bool IsConsistentAcrossProcesses() WARN_UNUSED_RESULT;
 
 #if defined(OS_FUCHSIA)
-  // Creates a TimeTicks from a mx_time_t value. Note that the mx_time_t value
-  // is interpreted in terms of the MX_CLOCK_MONOTONIC clock.
+  // Converts between TimeTicks and an MX_CLOCK_MONOTONIC mx_time_t value.
   static TimeTicks FromMXTime(mx_time_t nanos_since_boot);
+  mx_time_t ToMXTime() const;
 #endif
 
 #if defined(OS_WIN)

@@ -29,11 +29,11 @@
 #include <stdint.h>
 
 #include <ostream>
-#include <string>
 
 #include "base/logging.h"
 #include "net/http2/http2_constants.h"
 #include "net/http2/platform/api/http2_export.h"
+#include "net/http2/platform/api/http2_string.h"
 
 namespace net {
 
@@ -106,8 +106,8 @@ struct HTTP2_EXPORT_PRIVATE Http2FrameHeader {
   bool IsProbableHttpResponse() const;
 
   // Produce strings useful for debugging/logging messages.
-  std::string ToString() const;
-  std::string FlagsToString() const;
+  Http2String ToString() const;
+  Http2String FlagsToString() const;
 
   // 24 bit length of the payload after the header, including any padding.
   // First field in encoding.
@@ -158,7 +158,7 @@ struct HTTP2_EXPORT_PRIVATE Http2PriorityFields {
   static constexpr size_t EncodedSize() { return 5; }
 
   // Produce strings useful for debugging/logging messages.
-  std::string ToString() const;
+  Http2String ToString() const;
 
   // A 31-bit stream identifier for the stream that this stream depends on.
   uint32_t stream_dependency;

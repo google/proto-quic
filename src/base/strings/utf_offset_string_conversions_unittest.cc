@@ -77,13 +77,14 @@ TEST(UTFOffsetStringConversionsTest, AdjustOffset) {
 }
 
 TEST(UTFOffsetStringConversionsTest, LimitOffsets) {
+  const OffsetAdjuster::Adjustments kNoAdjustments;
   const size_t kLimit = 10;
   const size_t kItems = 20;
   std::vector<size_t> size_ts;
-  for (size_t t = 0; t < kItems; ++t)
+  for (size_t t = 0; t < kItems; ++t) {
     size_ts.push_back(t);
-  std::for_each(size_ts.begin(), size_ts.end(),
-                LimitOffset<string16>(kLimit));
+    OffsetAdjuster::AdjustOffset(kNoAdjustments, &size_ts.back(), kLimit);
+  }
   size_t unlimited_count = 0;
   for (std::vector<size_t>::iterator ti = size_ts.begin(); ti != size_ts.end();
        ++ti) {
@@ -94,10 +95,10 @@ TEST(UTFOffsetStringConversionsTest, LimitOffsets) {
 
   // Reverse the values in the vector and try again.
   size_ts.clear();
-  for (size_t t = kItems; t > 0; --t)
+  for (size_t t = kItems; t > 0; --t) {
     size_ts.push_back(t - 1);
-  std::for_each(size_ts.begin(), size_ts.end(),
-                LimitOffset<string16>(kLimit));
+    OffsetAdjuster::AdjustOffset(kNoAdjustments, &size_ts.back(), kLimit);
+  }
   unlimited_count = 0;
   for (std::vector<size_t>::iterator ti = size_ts.begin(); ti != size_ts.end();
        ++ti) {

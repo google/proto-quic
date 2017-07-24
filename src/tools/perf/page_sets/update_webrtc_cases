@@ -22,7 +22,9 @@ TEST_PAGES_LOCATION_BY_REPO = {
         'dirs': [
             'src/canvas-capture',
             'src/multiple-peerconnections',
+            'src/pause-play',
         ],
+        'revision': 'cbb12a3994692c63c9d885c95db0f67c5e3e3465',
     },
     'samples': {
         'dirs': [
@@ -34,11 +36,13 @@ TEST_PAGES_LOCATION_BY_REPO = {
         'files': [
             'src/js/common.js',
         ],
+        'revision': '6f9a14c10ee9b990d56c309d86d4b9129a4aa626',
     },
     'adapter': {
         'files': [
             'release/adapter.js',
         ],
+        'revision': '5b7ce4bdce79b9cb754fe27b097106e9491e0354',
     },
 }
 
@@ -60,7 +64,7 @@ JS_COPYRIGHT_NOTICE = ' * '.join(['/*\n'] + COPYRIGHT_NOTICE) + ' */\n'
 HTML_COPYRIGHT_NOTICE = ' * '.join(['<!--\n'] + COPYRIGHT_NOTICE) + '-->\n'
 
 STRIPPED_TAGS_RE = ('( *<meta.*?>\n?| *<link.*?>\n?|'
-                    ' *<script.*>.*?</script>\n?|</body>.*?</html>)')
+                    ' *<script.*>.*?</script>\n?| *</body>.*?</html>)')
 
 
 class TemporaryDirectory(object):
@@ -131,13 +135,18 @@ def main():
     os.makedirs(args.destination)
 
   with TemporaryDirectory() as temp_dir:
-    for repo_name, test_dirs in TEST_PAGES_LOCATION_BY_REPO.items():
+    for repo_name, repo_info in TEST_PAGES_LOCATION_BY_REPO.items():
       p = subprocess.Popen(['git', 'clone', WEBRTC_GITHUB_URL + repo_name],
                            cwd=temp_dir)
       p.wait()
 
-      for test_dir in test_dirs.get('dirs', []):
-        test_dir = os.path.join(temp_dir, repo_name, test_dir)
+      repo_dir = os.path.join(temp_dir, repo_name)
+      p = subprocess.Popen(['git', 'checkout', repo_info.get('revision')],
+                           cwd=repo_dir)
+      p.wait()
+
+      for test_dir in repo_info.get('dirs', []):
+        test_dir = os.path.join(repo_dir, test_dir)
         test_name = os.path.basename(test_dir)
 
         CopyJSFile(os.path.join(test_dir, 'js', 'main.js'),
@@ -145,7 +154,7 @@ def main():
         CopyHTMLFile(test_name, os.path.join(test_dir, 'index.html'),
                      os.path.join(args.destination, test_name + '.html'))
 
-      for test_file in test_dirs.get('files', []):
+      for test_file in repo_info.get('files', []):
         file_name = os.path.basename(test_file)
         CopyJSFile(os.path.join(temp_dir, repo_name, test_file),
                    os.path.join(args.destination, file_name), False)

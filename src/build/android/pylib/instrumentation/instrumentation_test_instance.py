@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import collections
 import copy
 import logging
 import os
@@ -19,6 +18,7 @@ from pylib.constants import host_paths
 from pylib.instrumentation import test_result
 from pylib.instrumentation import instrumentation_parser
 from pylib.utils import dexdump
+from pylib.utils import instrumentation_tracing
 from pylib.utils import proguard
 from pylib.utils import shared_preference_utils
 
@@ -47,12 +47,12 @@ _EXTRA_DRIVER_TARGET_CLASS = (
 _EXTRA_TIMEOUT_SCALE = (
     'org.chromium.test.driver.OnDeviceInstrumentationDriver.TimeoutScale')
 
-_PARAMETERIZED_TEST_ANNOTATION = 'ParameterizedTest'
-_PARAMETERIZED_TEST_SET_ANNOTATION = 'ParameterizedTest$Set'
+_SKIP_PARAMETERIZATION = 'SkipCommandLineParameterization'
+_COMMANDLINE_PARAMETERIZATION = 'CommandLineParameter'
 _NATIVE_CRASH_RE = re.compile('(process|native) crash', re.IGNORECASE)
 _CMDLINE_NAME_SEGMENT_RE = re.compile(
     r' with(?:out)? \{[^\}]*\}')
-_PICKLE_FORMAT_VERSION = 11
+_PICKLE_FORMAT_VERSION = 12
 
 
 class MissingSizeAnnotationError(test_exception.TestException):
@@ -155,56 +155,6 @@ def GenerateTestResults(
     results.append(current_result)
 
   return results
-
-
-def ParseCommandLineFlagParameters(annotations):
-  """Determines whether the test is parameterized to be run with different
-     command-line flags.
-
-  Args:
-    annotations: The annotations of the test.
-
-  Returns:
-    If the test is parameterized, returns a list of named tuples
-    with lists of flags, e.g.:
-
-      [(add=['--flag-to-add']), (remove=['--flag-to-remove']), ()]
-
-    That means, the test must be run three times, the first time with
-    "--flag-to-add" added to command-line, the second time with
-    "--flag-to-remove" to be removed from command-line, and the third time
-    with default command-line args. If the same flag is listed both for adding
-    and for removing, it is left unchanged.
-
-    If the test is not parametrized, returns None.
-
-  """
-  ParamsTuple = collections.namedtuple('ParamsTuple', ['add', 'remove'])
-  parameterized_tests = []
-  if _PARAMETERIZED_TEST_SET_ANNOTATION in annotations:
-    if annotations[_PARAMETERIZED_TEST_SET_ANNOTATION]:
-      parameterized_tests = annotations[
-        _PARAMETERIZED_TEST_SET_ANNOTATION].get('tests', [])
-  elif _PARAMETERIZED_TEST_ANNOTATION in annotations:
-    parameterized_tests = [annotations[_PARAMETERIZED_TEST_ANNOTATION]]
-  else:
-    return None
-
-  result = []
-  for pt in parameterized_tests:
-    if not pt:
-      continue
-    for p in pt['parameters']:
-      if p['tag'] == _COMMAND_LINE_PARAMETER:
-        to_add = []
-        to_remove = []
-        for a in p.get('arguments', []):
-          if a['name'] == 'add':
-            to_add = ['--%s' % f for f in a['stringArray']]
-          elif a['name'] == 'remove':
-            to_remove = ['--%s' % f for f in a['stringArray']]
-        result.append(ParamsTuple(to_add, to_remove))
-  return result if result else None
 
 
 def FilterTests(tests, test_filter=None, annotations=None,
@@ -313,7 +263,6 @@ def GetAllTestsFromApk(test_apk):
     _SaveTestsToPickle(pickle_path, test_apk, tests)
   return tests
 
-
 def _GetTestsFromPickle(pickle_path, jar_path):
   if not os.path.exists(pickle_path):
     raise TestListPickleException('%s does not exist.' % pickle_path)
@@ -332,6 +281,8 @@ def _GetTestsFromPickle(pickle_path, jar_path):
   return pickle_data['TEST_METHODS']
 
 
+# TODO(yolandyan): remove this once the test listing from java runner lands
+@instrumentation_tracing.no_tracing
 def _GetTestsFromProguard(jar_path):
   p = proguard.Dump(jar_path)
   class_lookup = dict((c['class'], c) for c in p['classes'])
@@ -443,12 +394,8 @@ def GetUniqueTestName(test, sep='#'):
     The unique test name as a string.
   """
   display_name = GetTestName(test, sep=sep)
-  if 'flags' in test:
-    flags = test['flags']
-    if flags.add:
-      display_name = '%s with {%s}' % (display_name, ' '.join(flags.add))
-    if flags.remove:
-      display_name = '%s without {%s}' % (display_name, ' '.join(flags.remove))
+  if test.get('flags', [None])[0]:
+    display_name = '%s with %s' % (display_name, ' '.join(test['flags']))
   return display_name
 
 
@@ -574,23 +521,23 @@ class InstrumentationTestInstance(test_instance.TestInstance):
 
     self._test_package = self._test_apk.GetPackageName()
     all_instrumentations = self._test_apk.GetAllInstrumentations()
-    junit3_runners = [
+    test_runners = [
         x for x in all_instrumentations if ('true' not in x.get(
             'chromium-junit4', ''))]
-    junit4_runners = [
+    test_runners_junit4 = [
         x for x in all_instrumentations if ('true' in x.get(
             'chromium-junit4', ''))]
 
-    if len(junit3_runners) > 1:
+    if len(test_runners) > 1:
       logging.warning('This test apk has more than one JUnit3 instrumentation')
-    if len(junit4_runners) > 1:
+    if len(test_runners_junit4) > 1:
       logging.warning('This test apk has more than one JUnit4 instrumentation')
 
     self._test_runner = (
-      junit3_runners[0]['android:name'] if junit3_runners else
+      test_runners[0]['android:name'] if test_runners else
       self.test_apk.GetInstrumentationName())
     self._test_runner_junit4 = (
-      junit4_runners[0]['android:name'] if junit4_runners else None)
+      test_runners_junit4[0]['android:name'] if test_runners_junit4 else None)
 
     self._package_info = None
     if self._apk_under_test:
@@ -828,7 +775,7 @@ class InstrumentationTestInstance(test_instance.TestInstance):
       tests = GetAllTestsFromJar(self.test_jar)
     else:
       tests = GetAllTestsFromApk(self.test_apk.path)
-    inflated_tests = self._ParametrizeTestsWithFlags(self._InflateTests(tests))
+    inflated_tests = self._ParameterizeTestsWithFlags(self._InflateTests(tests))
     if self._test_runner_junit4 is None and any(
         t['is_junit4'] for t in inflated_tests):
       raise MissingJUnit4RunnerException()
@@ -856,15 +803,19 @@ class InstrumentationTestInstance(test_instance.TestInstance):
         })
     return inflated_tests
 
-  def _ParametrizeTestsWithFlags(self, tests):
+  def _ParameterizeTestsWithFlags(self, tests):
     new_tests = []
     for t in tests:
-      parameters = ParseCommandLineFlagParameters(t['annotations'])
+      annotations = t['annotations']
+      parameters = None
+      if (annotations.get(_COMMANDLINE_PARAMETERIZATION)
+          and _SKIP_PARAMETERIZATION not in annotations):
+        parameters = annotations[_COMMANDLINE_PARAMETERIZATION]['value']
       if parameters:
-        t['flags'] = parameters[0]
+        t['flags'] = [parameters[0]]
         for p in parameters[1:]:
           parameterized_t = copy.copy(t)
-          parameterized_t['flags'] = p
+          parameterized_t['flags'] = ['--%s' % p]
           new_tests.append(parameterized_t)
     return tests + new_tests
 

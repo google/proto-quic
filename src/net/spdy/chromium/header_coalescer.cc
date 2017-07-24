@@ -8,8 +8,8 @@
 
 #include "base/bind.h"
 #include "base/memory/ptr_util.h"
-#include "base/strings/string_util.h"
 #include "base/values.h"
+#include "net/base/escape.h"
 #include "net/http/http_log_util.h"
 #include "net/http/http_util.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
@@ -20,18 +20,19 @@ namespace {
 std::unique_ptr<base::Value> ElideNetLogHeaderCallback(
     SpdyStringPiece header_name,
     SpdyStringPiece header_value,
+    SpdyStringPiece error_message,
     NetLogCaptureMode capture_mode) {
   auto dict = base::MakeUnique<base::DictionaryValue>();
-  dict->SetString("header_name", header_name);
-  dict->SetString("header_value", ElideHeaderValueForNetLog(
-                                      capture_mode, header_name.as_string(),
-                                      header_value.as_string()));
+  dict->SetString("header_name", EscapeExternalHandlerValue(header_name));
+  dict->SetString(
+      "header_value",
+      EscapeExternalHandlerValue(ElideHeaderValueForNetLog(
+          capture_mode, header_name.as_string(), header_value.as_string())));
+  dict->SetString("error", error_message);
   return std::move(dict);
 }
 
 }  // namespace
-
-const size_t kMaxHeaderListSize = 256 * 1024;
 
 HeaderCoalescer::HeaderCoalescer(const NetLogWithSource& net_log)
     : net_log_(net_log) {}
@@ -39,13 +40,8 @@ HeaderCoalescer::HeaderCoalescer(const NetLogWithSource& net_log)
 void HeaderCoalescer::OnHeader(SpdyStringPiece key, SpdyStringPiece value) {
   if (error_seen_)
     return;
-  if (!AddHeader(key, value)) {
+  if (!AddHeader(key, value))
     error_seen_ = true;
-    if (net_log_.IsCapturing()) {
-      net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_RECV_INVALID_HEADER,
-                        base::Bind(&ElideNetLogHeaderCallback, key, value));
-    }
-  }
 }
 
 SpdyHeaderBlock HeaderCoalescer::release_headers() {
@@ -60,13 +56,19 @@ size_t HeaderCoalescer::EstimateMemoryUsage() const {
 
 bool HeaderCoalescer::AddHeader(SpdyStringPiece key, SpdyStringPiece value) {
   if (key.empty()) {
-    DVLOG(1) << "Header name must not be empty.";
+    net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_RECV_INVALID_HEADER,
+                      base::Bind(&ElideNetLogHeaderCallback, key, value,
+                                 "Header name must not be empty."));
     return false;
   }
 
   SpdyStringPiece key_name = key;
   if (key[0] == ':') {
     if (regular_header_seen_) {
+      net_log_.AddEvent(
+          NetLogEventType::HTTP2_SESSION_RECV_INVALID_HEADER,
+          base::Bind(&ElideNetLogHeaderCallback, key, value,
+                     "Pseudo header must not follow regular headers."));
       return false;
     }
     key_name.remove_prefix(1);
@@ -75,18 +77,29 @@ bool HeaderCoalescer::AddHeader(SpdyStringPiece key, SpdyStringPiece value) {
   }
 
   if (!HttpUtil::IsValidHeaderName(key_name)) {
+    net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_RECV_INVALID_HEADER,
+                      base::Bind(&ElideNetLogHeaderCallback, key, value,
+                                 "Invalid character in header name."));
     return false;
   }
 
   // 32 byte overhead according to RFC 7540 Section 6.5.2.
   header_list_size_ += key.size() + value.size() + 32;
-  if (header_list_size_ > kMaxHeaderListSize)
+  if (header_list_size_ > kMaxHeaderListSize) {
+    net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_RECV_INVALID_HEADER,
+                      base::Bind(&ElideNetLogHeaderCallback, key, value,
+                                 "Header list too large."));
     return false;
+  }
 
   // End of line delimiter is forbidden according to RFC 7230 Section 3.2.
   // Line folding, RFC 7230 Section 3.2.4., is a special case of this.
-  if (value.find("\r\n") != SpdyStringPiece::npos)
+  if (value.find("\r\n") != SpdyStringPiece::npos) {
+    net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_RECV_INVALID_HEADER,
+                      base::Bind(&ElideNetLogHeaderCallback, key, value,
+                                 "Header value must not contain CR+LF."));
     return false;
+  }
 
   auto iter = headers_.find(key);
   if (iter == headers_.end()) {

@@ -1,22 +1,4 @@
 {
-  "Linux": {
-    "additional_compile_targets": [
-      "all"
-    ],
-    "scripts": [
-      {
-        "name": "checkperms",
-        "script": "checkperms.py"
-      },
-      {
-        "args": [
-          "linux-release/sizes"
-        ],
-        "name": "sizes",
-        "script": "sizes.py"
-      }
-    ]
-  },
   "Linux x64": {
     "additional_compile_targets": [
       "all"

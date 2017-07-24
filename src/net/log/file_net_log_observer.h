@@ -5,6 +5,7 @@
 #ifndef NET_LOG_FILE_NET_LOG_OBSERVER_H_
 #define NET_LOG_FILE_NET_LOG_OBSERVER_H_
 
+#include <limits>
 #include <memory>
 
 #include "base/macros.h"
@@ -23,54 +24,42 @@ namespace net {
 class NetLogCaptureMode;
 
 // FileNetLogObserver watches the NetLog event stream and sends all entries to
-// either a group of files in a directory (bounded mode) or to a single file
-// (unbounded mode).
+// a file.
 //
-// Bounded mode:
-// The events are written to a single JSON object that is split across the
-// files, and the files must be stitched together once the observation period
-// is over. The first file is constants.json, followed by a consumer-specified
-// number of event files named event_file_<index>.json, and the last file is
-// end_netlog.json.
-//
-// The user is able to specify an approximate maximum cumulative size for the
-// netlog files and the observer overwrites old events when the maximum file
-// size is reached.
-//
-// Unbounded mode:
-// The entire JSON object is put into one file. There is no size limit to how
-// large this file can grow; all events added will be written to the file.
-//
-// The consumer must call StartObserving before calling StopObserving, and must
+// Consumers must call StartObserving before calling StopObserving, and must
 // call each method exactly once in the lifetime of the observer.
+//
+// The log will not be completely written until StopObserving is called.
+//
+// When a file size limit is given, FileNetLogObserver will create temporary
+// directory containing chunks of events. This is used to drop older events in
+// favor of newer ones.
 class NET_EXPORT FileNetLogObserver : public NetLog::ThreadSafeObserver {
  public:
-  // Creates a FileNetLogObserver in bounded mode.
+  // Special value meaning "can use an unlimited number of bytes".
+  static constexpr size_t kNoLimit = std::numeric_limits<size_t>::max();
+
+  // Creates an instance of FileNetLogObserver that writes observed netlog
+  // events to |log_path|.
   //
-  // |directory| is the directory where the log files will be written to.
+  // |log_path| is where the final log file will be written to. If a file
+  // already exists at this path it will be overwritten. While logging is in
+  // progress, events may be written to a like-named directory.
   //
-  // |max_total_size| is the approximate limit on the cumulative size of all
-  // netlog files.
-  //
-  // |total_num_files| sets the total number of event files that are used to
-  // write the events. It must be greater than 0.
+  // |max_total_size| is the limit on how many bytes logging may consume on
+  // disk. This is an approximate limit, and in practice FileNetLogObserver may
+  // (slightly) exceed it. This may be set to kNoLimit to remove any size
+  // restrictions.
   //
   // |constants| is an optional legend for decoding constant values used in
   // the log. It should generally be a modified version of GetNetConstants().
   // If not present, the output of GetNetConstants() will be used.
   static std::unique_ptr<FileNetLogObserver> CreateBounded(
-      const base::FilePath& directory,
+      const base::FilePath& log_path,
       size_t max_total_size,
-      size_t total_num_files,
       std::unique_ptr<base::Value> constants);
 
-  // Creates a FileNetLogObserver in unbounded mode.
-  //
-  // |log_path| is where the log file will be written to.
-  //
-  // |constants| is an optional legend for decoding constant values used in
-  // the log. It should generally be a modified version of GetNetConstants().
-  // If not present, the output of GetNetConstants() will be used.
+  // Shortcut for calling CreateBounded() with kNoLimit.
   static std::unique_ptr<FileNetLogObserver> CreateUnbounded(
       const base::FilePath& log_path,
       std::unique_ptr<base::Value> constants);
@@ -83,7 +72,9 @@ class NET_EXPORT FileNetLogObserver : public NetLog::ThreadSafeObserver {
   // Stops observing net_log() and closes the output file(s). Must be called
   // after StartObserving. Should be called before destruction of the
   // FileNetLogObserver and the NetLog, or the NetLog files will be deleted when
-  // the observer is destroyed.
+  // the observer is destroyed. Note that it is OK to destroy |this| immediately
+  // after calling StopObserving() - the callback will still be called once the
+  // file writing has completed.
   //
   // |polled_data| is an optional argument used to add additional network stack
   // state to the log.
@@ -97,11 +88,23 @@ class NET_EXPORT FileNetLogObserver : public NetLog::ThreadSafeObserver {
   // NetLog::ThreadSafeObserver
   void OnAddEntry(const NetLogEntry& entry) override;
 
+  // Same as CreateBounded() but you can additionally specify
+  // |total_num_event_files|.
+  static std::unique_ptr<FileNetLogObserver> CreateBoundedForTests(
+      const base::FilePath& log_path,
+      size_t max_total_size,
+      size_t total_num_event_files,
+      std::unique_ptr<base::Value> constants);
+
  private:
   class WriteQueue;
   class FileWriter;
-  class BoundedFileWriter;
-  class UnboundedFileWriter;
+
+  static std::unique_ptr<FileNetLogObserver> CreateBoundedInternal(
+      const base::FilePath& log_path,
+      size_t max_total_size,
+      size_t total_num_event_files,
+      std::unique_ptr<base::Value> constants);
 
   FileNetLogObserver(scoped_refptr<base::SequencedTaskRunner> file_task_runner,
                      std::unique_ptr<FileWriter> file_writer,

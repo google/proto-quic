@@ -4,8 +4,6 @@
 
 #include "net/http2/hpack/decoder/hpack_decoder_listener.h"
 
-using base::StringPiece;
-
 namespace net {
 
 HpackDecoderListener::HpackDecoderListener() {}
@@ -20,7 +18,7 @@ void HpackDecoderNoOpListener::OnHeader(HpackEntryType entry_type,
                                         const HpackString& value) {}
 void HpackDecoderNoOpListener::OnHeaderListEnd() {}
 void HpackDecoderNoOpListener::OnHeaderErrorDetected(
-    StringPiece error_message) {}
+    Http2StringPiece error_message) {}
 
 // static
 HpackDecoderNoOpListener* HpackDecoderNoOpListener::NoOpListener() {

@@ -21,26 +21,28 @@
 namespace base {
 namespace internal {
 
-// This provides a small optimization that generates more compact code when one
-// of the components in an operation is a compile-time constant.
-template <typename T>
-constexpr bool IsCompileTimeConstant(const T v) {
-#if defined(__clang__) || defined(__GNUC__)
-  return __builtin_constant_p(v);
-#else
-  return false;
-#endif
+template <typename T,
+          typename std::enable_if<std::is_integral<T>::value>::type* = nullptr>
+constexpr T SaturatedAbsWrapper(T value) {
+  // The calculation below is a static identity for unsigned types, but for
+  // signed integer types it provides a non-branching, saturated absolute value.
+  // This works because SafeUnsignedAbs() returns an unsigned type, which can
+  // represent the absolute value of all negative numbers of an equal-width
+  // integer type. The call to IsValueNegative() then detects overflow in the
+  // special case of numeric_limits<T>::min(), by evaluating the bit pattern as
+  // a signed integer value. If it is the overflow case, we end up subtracting
+  // one from the unsigned result, thus saturating to numeric_limits<T>::max().
+  return MustTreatAsConstexpr(value) && !ClampedAbsFastOp<T>::is_supported
+             ? static_cast<T>(SafeUnsignedAbs(value) -
+                              IsValueNegative<T>(SafeUnsignedAbs(value)))
+             : ClampedAbsFastOp<T>::Do(value);
 }
 
-// This is a wrapper to generate return the max or min for a supplied type.
-// If the argument is false, the returned value is the maximum. If true the
-// returned value is the minimum.
-template <typename T>
-constexpr T GetMaxOrMin(bool is_min) {
-  // For both signed and unsigned math the bit pattern for minimum is really
-  // just one plus the maximum. However, we have to cast to unsigned to ensure
-  // we get well-defined overflow semantics.
-  return as_unsigned(std::numeric_limits<T>::max()) + is_min;
+template <
+    typename T,
+    typename std::enable_if<std::is_floating_point<T>::value>::type* = nullptr>
+constexpr T SaturatedAbsWrapper(T value) {
+  return value < 0 ? -value : value;
 }
 
 template <typename T, typename U, class Enable = void>
@@ -54,6 +56,10 @@ struct ClampedAddOp<T,
   using result_type = typename MaxExponentPromotion<T, U>::type;
   template <typename V = result_type>
   static V Do(T x, U y) {
+    // TODO(jschuh) Make this "constexpr if" once we're C++17.
+    if (ClampedAddFastOp<T, U>::is_supported)
+      return ClampedAddFastOp<T, U>::template Do<V>(x, y);
+
     V result;
     return CheckedAddOp<T, U>::Do(x, y, &result)
                ? result
@@ -74,6 +80,10 @@ struct ClampedSubOp<T,
   using result_type = typename MaxExponentPromotion<T, U>::type;
   template <typename V = result_type>
   static V Do(T x, U y) {
+    // TODO(jschuh) Make this "constexpr if" once we're C++17.
+    if (ClampedSubFastOp<T, U>::is_supported)
+      return ClampedSubFastOp<T, U>::template Do<V>(x, y);
+
     V result;
     return CheckedSubOp<T, U>::Do(x, y, &result)
                ? result
@@ -94,6 +104,10 @@ struct ClampedMulOp<T,
   using result_type = typename MaxExponentPromotion<T, U>::type;
   template <typename V = result_type>
   static V Do(T x, U y) {
+    // TODO(jschuh) Make this "constexpr if" once we're C++17.
+    if (ClampedMulFastOp<T, U>::is_supported)
+      return ClampedMulFastOp<T, U>::template Do<V>(x, y);
+
     V result;
     return CheckedMulOp<T, U>::Do(x, y, &result)
                ? result

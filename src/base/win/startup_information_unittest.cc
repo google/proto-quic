@@ -12,7 +12,6 @@
 #include "base/win/scoped_handle.h"
 #include "base/win/scoped_process_information.h"
 #include "base/win/startup_information.h"
-#include "base/win/windows_version.h"
 #include "testing/multiprocess_func_list.h"
 
 const wchar_t kSectionName[] = L"EventTestSection";
@@ -36,9 +35,6 @@ class StartupInformationTest : public base::MultiProcessTest {};
 
 // Verify that only the explicitly specified event is inherited.
 TEST_F(StartupInformationTest, InheritStdOut) {
-  if (base::win::GetVersion() < base::win::VERSION_VISTA)
-    return;
-
   base::win::StartupInformation startup_info;
 
   HANDLE section = ::CreateFileMappingW(INVALID_HANDLE_VALUE, NULL,
