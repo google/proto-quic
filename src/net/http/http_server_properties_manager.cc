@@ -641,41 +641,54 @@ bool HttpServerPropertiesManager::AddToBrokenAlternativeServices(
     return false;
   }
 
+  // Each entry must contain either broken-count and/or broken-until fields.
+  bool contains_broken_count_or_broken_until = false;
+
   // Read broken-count and add an entry for |alt_service| into
   // |recently_broken_alternative_services|.
-  int broken_count;
-  if (!broken_alt_svc_entry_dict.GetIntegerWithoutPathExpansion(
-          kBrokenCountKey, &broken_count)) {
-    DVLOG(1) << "Recently broken alternative service is missing "
-             << "broken-count.";
-    return false;
+  if (broken_alt_svc_entry_dict.HasKey(kBrokenCountKey)) {
+    int broken_count;
+    if (!broken_alt_svc_entry_dict.GetIntegerWithoutPathExpansion(
+            kBrokenCountKey, &broken_count)) {
+      DVLOG(1) << "Recently broken alternative service has malformed "
+               << "broken-count.";
+      return false;
+    }
+    if (broken_count < 0) {
+      DVLOG(1) << "Broken alternative service has negative broken-count.";
+      return false;
+    }
+    recently_broken_alternative_services->Put(alt_service, broken_count);
+    contains_broken_count_or_broken_until = true;
   }
-  if (broken_count < 0) {
-    DVLOG(1) << "Broken alternative service has negative broken-count.";
-    return false;
-  }
-  recently_broken_alternative_services->Put(alt_service, broken_count);
 
-  // Read broken-until (optional) and if it exists, add an entry for
-  // |alt_service| in |broken_alternative_service_list|.
+  // Read broken-until and add an entry for |alt_service| in
+  // |broken_alternative_service_list|.
   if (broken_alt_svc_entry_dict.HasKey(kBrokenUntilKey)) {
     std::string expiration_string;
     int64_t expiration_int64;
-    if (broken_alt_svc_entry_dict.GetStringWithoutPathExpansion(
-            kBrokenUntilKey, &expiration_string) &&
-        base::StringToInt64(expiration_string, &expiration_int64)) {
-      time_t expiration_time_t = static_cast<time_t>(expiration_int64);
-      // Convert expiration from time_t to Time to TimeTicks
-      base::TimeTicks expiration_time_ticks =
-          clock_->NowTicks() +
-          (base::Time::FromTimeT(expiration_time_t) - base::Time::Now());
-      broken_alternative_service_list->push_back(
-          std::make_pair(alt_service, expiration_time_ticks));
-    } else {
+    if (!broken_alt_svc_entry_dict.GetStringWithoutPathExpansion(
+            kBrokenUntilKey, &expiration_string) ||
+        !base::StringToInt64(expiration_string, &expiration_int64)) {
       DVLOG(1) << "Broken alternative service has malformed broken-until "
                << "string.";
       return false;
     }
+
+    time_t expiration_time_t = static_cast<time_t>(expiration_int64);
+    // Convert expiration from time_t to Time to TimeTicks
+    base::TimeTicks expiration_time_ticks =
+        clock_->NowTicks() +
+        (base::Time::FromTimeT(expiration_time_t) - base::Time::Now());
+    broken_alternative_service_list->push_back(
+        std::make_pair(alt_service, expiration_time_ticks));
+    contains_broken_count_or_broken_until = true;
+  }
+
+  if (!contains_broken_count_or_broken_until) {
+    DVLOG(1) << "Broken alternative service has neither broken-count nor "
+             << "broken-until specified.";
+    return false;
   }
 
   return true;
@@ -916,7 +929,7 @@ bool HttpServerPropertiesManager::AddToNetworkStatsMap(
     return false;
   }
   ServerNetworkStats server_network_stats;
-  server_network_stats.srtt = base::TimeDelta::FromInternalValue(srtt);
+  server_network_stats.srtt = base::TimeDelta::FromMicroseconds(srtt);
   // TODO(rtenneti): When QUIC starts using bandwidth_estimate, then persist
   // bandwidth_estimate.
   network_stats_map->Put(server, server_network_stats);
@@ -1365,7 +1378,7 @@ void HttpServerPropertiesManager::SaveNetworkStatsToServerPrefs(
   auto server_network_stats_dict = base::MakeUnique<base::DictionaryValue>();
   // Becasue JSON doesn't support int64_t, persist int64_t as a string.
   server_network_stats_dict->SetInteger(
-      kSrttKey, static_cast<int>(server_network_stats.srtt.ToInternalValue()));
+      kSrttKey, static_cast<int>(server_network_stats.srtt.InMicroseconds()));
   // TODO(rtenneti): When QUIC starts using bandwidth_estimate, then persist
   // bandwidth_estimate.
   server_pref_dict->SetWithoutPathExpansion(
@@ -1395,55 +1408,63 @@ void HttpServerPropertiesManager::SaveBrokenAlternativeServicesToPrefs(
     const RecentlyBrokenAlternativeServices*
         recently_broken_alternative_services,
     base::DictionaryValue* http_server_properties_dict) {
-  if (!recently_broken_alternative_services) {
-    DCHECK(!broken_alternative_service_list);
-    return;
-  }
-
   // JSON list will be in MRU order according to
   // |recently_broken_alternative_services|.
-  base::ListValue* json_list = new base::ListValue;
-  // Maps an alternative service to the index where it's stored in |json_list|.
+  std::unique_ptr<base::ListValue> json_list =
+      base::MakeUnique<base::ListValue>();
+
+  // Maps recently-broken alternative services to the index where it's stored
+  // in |json_list|.
   std::unordered_map<AlternativeService, size_t, AlternativeServiceHash>
       json_list_index_map;
-  for (auto it = recently_broken_alternative_services->rbegin();
-       it != recently_broken_alternative_services->rend(); ++it) {
-    const AlternativeService& alt_service = it->first;
-    int broken_count = it->second;
-    base::DictionaryValue entry_dict;
-    AddAlternativeServiceFieldsToDictionaryValue(alt_service, &entry_dict);
-    entry_dict.SetIntegerWithoutPathExpansion(kBrokenCountKey, broken_count);
-    json_list_index_map[alt_service] = json_list->GetList().size();
-    json_list->GetList().push_back(std::move(entry_dict));
+
+  if (recently_broken_alternative_services) {
+    for (auto it = recently_broken_alternative_services->rbegin();
+         it != recently_broken_alternative_services->rend(); ++it) {
+      const AlternativeService& alt_service = it->first;
+      int broken_count = it->second;
+      base::DictionaryValue entry_dict;
+      AddAlternativeServiceFieldsToDictionaryValue(alt_service, &entry_dict);
+      entry_dict.SetIntegerWithoutPathExpansion(kBrokenCountKey, broken_count);
+      json_list_index_map[alt_service] = json_list->GetList().size();
+      json_list->GetList().push_back(std::move(entry_dict));
+    }
   }
 
-  if (!broken_alternative_service_list)
-    return;
+  if (broken_alternative_service_list) {
+    // Add expiration time info from |broken_alternative_service_list| to
+    // the JSON list.
+    for (auto entry : *broken_alternative_service_list) {
+      const AlternativeService& alt_service = entry.first;
+      base::TimeTicks expiration_time_ticks = entry.second;
+      // Convert expiration from TimeTicks to Time to time_t
+      time_t expiration_time_t =
+          (base::Time::Now() + (expiration_time_ticks - clock_->NowTicks()))
+              .ToTimeT();
+      int64_t expiration_int64 = static_cast<int64_t>(expiration_time_t);
 
-  // Add expiration time info from |broken_alternative_service_list| to
-  // the JSON list.
-  for (auto entry : *broken_alternative_service_list) {
-    const AlternativeService& alt_service = entry.first;
-    base::TimeTicks expiration_time_ticks = entry.second;
-    // Convert expiration from TimeTicks to Time to time_t
-    time_t expiration_time_t =
-        (base::Time::Now() + (expiration_time_ticks - clock_->NowTicks()))
-            .ToTimeT();
-    int64_t expiration_int64 = static_cast<int64_t>(expiration_time_t);
-
-    auto it = json_list_index_map.find(alt_service);
-    DCHECK(it != json_list_index_map.end());
-    size_t json_list_index = it->second;
-    base::DictionaryValue* entry_dict = nullptr;
-    bool result = json_list->GetDictionary(json_list_index, &entry_dict);
-    DCHECK(result);
-    entry_dict->SetStringWithoutPathExpansion(
-        kBrokenUntilKey, base::Int64ToString(expiration_int64));
+      auto it = json_list_index_map.find(alt_service);
+      if (it != json_list_index_map.end()) {
+        size_t json_list_index = it->second;
+        base::DictionaryValue* entry_dict = nullptr;
+        bool result = json_list->GetDictionary(json_list_index, &entry_dict);
+        DCHECK(result);
+        entry_dict->SetStringWithoutPathExpansion(
+            kBrokenUntilKey, base::Int64ToString(expiration_int64));
+      } else {
+        base::DictionaryValue entry_dict;
+        AddAlternativeServiceFieldsToDictionaryValue(alt_service, &entry_dict);
+        entry_dict.SetStringWithoutPathExpansion(
+            kBrokenUntilKey, base::Int64ToString(expiration_int64));
+        json_list->GetList().push_back(std::move(entry_dict));
+      }
+    }
   }
 
-  http_server_properties_dict->SetWithoutPathExpansion(
-      kBrokenAlternativeServicesKey,
-      base::WrapUnique<base::ListValue>(json_list));
+  if (recently_broken_alternative_services || broken_alternative_service_list) {
+    http_server_properties_dict->SetWithoutPathExpansion(
+        kBrokenAlternativeServicesKey, std::move(json_list));
+  }
 }
 
 void HttpServerPropertiesManager::OnHttpServerPropertiesChanged() {

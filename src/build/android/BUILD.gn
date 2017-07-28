@@ -6,6 +6,15 @@ import("//build/config/android/config.gni")
 import("//build/config/android/rules.gni")
 
 if (enable_java_templates) {
+  java_library("build_hooks_java") {
+    java_files = [
+      "buildhooks/java/org/chromium/build/BuildHooks.java",
+      "buildhooks/java/org/chromium/build/Callback.java",
+    ]
+    no_build_hooks = true
+    supports_android = true
+  }
+
   import("//third_party/ijar/ijar.gni")
 
   sun_tools_jar_path = "$root_gen_dir/sun_tools_jar/tools.jar"

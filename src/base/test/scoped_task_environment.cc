@@ -102,9 +102,8 @@ ScopedTaskEnvironment::ScopedTaskEnvironment(
   // threads and get rid of this limitation. http://crbug.com/738104
   constexpr int kMaxThreads = 2;
   const TimeDelta kSuggestedReclaimTime = TimeDelta::Max();
-  const SchedulerWorkerPoolParams worker_pool_params(
-      SchedulerWorkerPoolParams::StandbyThreadPolicy::ONE, kMaxThreads,
-      kSuggestedReclaimTime);
+  const SchedulerWorkerPoolParams worker_pool_params(kMaxThreads,
+                                                     kSuggestedReclaimTime);
   TaskScheduler::SetInstance(MakeUnique<internal::TaskSchedulerImpl>(
       "ScopedTaskEnvironment", WrapUnique(task_tracker_)));
   task_scheduler_ = TaskScheduler::GetInstance();

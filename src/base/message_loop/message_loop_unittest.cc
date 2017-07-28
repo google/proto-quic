@@ -149,7 +149,7 @@ TEST(MessageLoopTest, JavaExceptionAbortInitJavaFirst) {
 static void SlowFunc(TimeDelta pause, int* quit_counter) {
     PlatformThread::Sleep(pause);
     if (--(*quit_counter) == 0)
-      MessageLoop::current()->QuitWhenIdle();
+      RunLoop::QuitCurrentWhenIdleDeprecated();
 }
 
 // This function records the time when Run was called in a Time object, which is
@@ -170,7 +170,7 @@ void SubPumpFunc() {
     TranslateMessage(&msg);
     DispatchMessage(&msg);
   }
-  MessageLoop::current()->QuitWhenIdle();
+  RunLoop::QuitCurrentWhenIdleDeprecated();
 }
 
 void RunTest_PostDelayedTask_SharedTimer_SubPump() {
@@ -334,7 +334,7 @@ void RecursiveFunc(TaskList* order, int cookie, int depth,
 
 void QuitFunc(TaskList* order, int cookie) {
   order->RecordStart(QUITMESSAGELOOP, cookie);
-  MessageLoop::current()->QuitWhenIdle();
+  RunLoop::QuitCurrentWhenIdleDeprecated();
   order->RecordEnd(QUITMESSAGELOOP, cookie);
 }
 
@@ -475,7 +475,7 @@ void PostNTasksThenQuit(int posts_remaining) {
     ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, BindOnce(&PostNTasksThenQuit, posts_remaining - 1));
   } else {
-    MessageLoop::current()->QuitWhenIdle();
+    RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 }
 
@@ -816,8 +816,7 @@ TEST(MessageLoopTest, ThreadMainTaskRunner) {
 
   // Post quit task;
   ThreadTaskRunnerHandle::Get()->PostTask(
-      FROM_HERE,
-      BindOnce(&MessageLoop::QuitWhenIdle, Unretained(MessageLoop::current())));
+      FROM_HERE, BindOnce(&RunLoop::QuitCurrentWhenIdleDeprecated));
 
   // Now kick things off
   RunLoop().Run();
@@ -895,7 +894,7 @@ LRESULT CALLBACK TestWndProcThunk(HWND hwnd, UINT message,
         break;
     }
     EXPECT_TRUE(did_run);
-    MessageLoop::current()->QuitWhenIdle();
+    RunLoop::QuitCurrentWhenIdleDeprecated();
     break;
   }
   return 0;

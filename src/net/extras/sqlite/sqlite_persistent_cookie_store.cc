@@ -123,6 +123,9 @@ class SQLitePersistentCookieStore::Backend
   // Batch a cookie deletion.
   void DeleteCookie(const CanonicalCookie& cc);
 
+  // Sets callback to run at the beginning of Commit.
+  void SetBeforeFlushCallback(base::RepeatingClosure callback);
+
   // Commit pending operations as soon as possible.
   void Flush(base::OnceClosure callback);
 
@@ -294,6 +297,10 @@ class SQLitePersistentCookieStore::Backend
   //
   // Not owned.
   CookieCryptoDelegate* crypto_;
+  // Callback to run before Commit.
+  base::RepeatingClosure before_flush_callback_;
+  // Guards |before_flush_callback_|.
+  base::Lock before_flush_callback_lock_;
 
   DISALLOW_COPY_AND_ASSIGN(Backend);
 };
@@ -1102,6 +1109,12 @@ void SQLitePersistentCookieStore::Backend::BatchOperation(
 void SQLitePersistentCookieStore::Backend::Commit() {
   DCHECK(background_task_runner_->RunsTasksInCurrentSequence());
 
+  {
+    base::AutoLock locked(before_flush_callback_lock_);
+    if (!before_flush_callback_.is_null())
+      before_flush_callback_.Run();
+  }
+
   PendingOperationsList ops;
   {
     base::AutoLock locked(lock_);
@@ -1199,6 +1212,12 @@ void SQLitePersistentCookieStore::Backend::Commit() {
   bool succeeded = transaction.Commit();
   UMA_HISTOGRAM_ENUMERATION("Cookie.BackingStoreUpdateResults",
                             succeeded ? 0 : 1, 2);
+}
+
+void SQLitePersistentCookieStore::Backend::SetBeforeFlushCallback(
+    base::RepeatingClosure callback) {
+  base::AutoLock locked(before_flush_callback_lock_);
+  before_flush_callback_ = std::move(callback);
 }
 
 void SQLitePersistentCookieStore::Backend::Flush(base::OnceClosure callback) {
@@ -1431,6 +1450,12 @@ void SQLitePersistentCookieStore::DeleteCookie(const CanonicalCookie& cc) {
 
 void SQLitePersistentCookieStore::SetForceKeepSessionState() {
   // This store never discards session-only cookies, so this call has no effect.
+}
+
+void SQLitePersistentCookieStore::SetBeforeFlushCallback(
+    base::RepeatingClosure callback) {
+  if (backend_)
+    backend_->SetBeforeFlushCallback(std::move(callback));
 }
 
 void SQLitePersistentCookieStore::Flush(base::OnceClosure callback) {

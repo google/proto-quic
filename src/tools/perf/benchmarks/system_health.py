@@ -54,10 +54,6 @@ class _CommonSystemHealthBenchmark(perf_benchmark.PerfBenchmark):
   def CreateStorySet(self, options):
     return page_sets.SystemHealthStorySet(platform=self.PLATFORM)
 
-  @classmethod
-  def ShouldTearDownStateAfterEachStoryRun(cls):
-    return True
-
 
 @benchmark.Disabled('android')
 @benchmark.Owner(emails=['charliea@chromium.org', 'nednguyen@chromium.org'])
@@ -111,10 +107,6 @@ class _MemorySystemHealthBenchmark(perf_benchmark.PerfBenchmark):
   def CreateStorySet(self, options):
     return page_sets.SystemHealthStorySet(platform=self.PLATFORM,
                                           take_memory_measurement=True)
-
-  @classmethod
-  def ShouldTearDownStateAfterEachStoryRun(cls):
-    return True
 
   @classmethod
   def ValueCanBeAddedPredicate(cls, value, is_first_result):
@@ -185,10 +177,6 @@ class WebviewStartupSystemHealthBenchmark(perf_benchmark.PerfBenchmark):
     options.config.enable_chrome_trace = False
     options.config.atrace_config.app_name = 'org.chromium.webview_shell'
     return options
-
-  @classmethod
-  def ShouldTearDownStateAfterEachStoryRun(cls):
-    return True
 
   @classmethod
   def Name(cls):

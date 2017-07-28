@@ -114,21 +114,6 @@ class ThreadTimesCompositorCases(_ThreadTimes):
 
 
 @benchmark.Enabled('android')
-@benchmark.Owner(emails=['ykyyip@chromium.org'])
-class ThreadTimesPolymer(_ThreadTimes):
-  """Measures timeline metrics while performing smoothness action on
-  Polymer cases."""
-  page_set = page_sets.PolymerPageSet
-
-  @classmethod
-  def Name(cls):
-    return 'thread_times.polymer'
-
-  def GetExpectations(self):
-    return page_sets.PolymerThreadTimesStoryExpectations()
-
-
-@benchmark.Enabled('android')
 @benchmark.Owner(emails=['skyostil@chromium.org'])
 class ThreadTimesKeyIdlePowerCases(_ThreadTimes):
   """Measures timeline metrics for sites that should be idle in foreground

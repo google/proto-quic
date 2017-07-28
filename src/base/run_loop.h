@@ -200,6 +200,15 @@ class BASE_EXPORT RunLoop {
   // Delegate::Client is valid as long as |delegate| is kept alive.
   static Delegate::Client* RegisterDelegateForCurrentThread(Delegate* delegate);
 
+  // Quits the active RunLoop (when idle) -- there must be one. These were
+  // introduced as prefered temporary replacements to the long deprecated
+  // MessageLoop::Quit(WhenIdle) methods. Callers should properly plumb a
+  // reference to the appropriate RunLoop instance (or its QuitClosure) instead
+  // of using these in order to link Run()/Quit() to a single RunLoop instance
+  // and increase readability.
+  static void QuitCurrentDeprecated();
+  static void QuitCurrentWhenIdleDeprecated();
+
  private:
   // TODO(gab): Break the inter-dependency between MessageLoop and RunLoop
   // further. http://crbug.com/703346

@@ -33,12 +33,6 @@ class WebIDLParser(unittest.TestCase):
                               value, str(node)))
         self.assertEqual(value, node.GetName(), msg)
 
-      if check == 'PROP':
-        key, expect = value.split('=')
-        actual = str(node.GetProperty(key))
-        msg = 'Mismatched property %s: %s vs %s.\n' % (key, expect, actual)
-        self.assertEqual(expect, actual, msg)
-
       if check == 'TREE':
         quick = '\n'.join(node.Tree())
         lineno = node.GetProperty('LINENO')
@@ -54,6 +48,54 @@ class WebIDLParser(unittest.TestCase):
 
       for node in filenode.GetChildren():
         self._TestNode(node)
+
+
+class TestImplements(unittest.TestCase):
+  def setUp(self):
+    self.parser = IDLParser(IDLLexer(), mute_error=True)
+
+  def _ParseImplements(self, idl_text):
+    filenode = self.parser.ParseText(filename='', data=idl_text)
+    self.assertEqual(1, len(filenode.GetChildren()))
+    return filenode.GetChildren()[0]
+
+  def testAImplementsB(self):
+    idl_text = 'A implements B;'
+    implements_node = self._ParseImplements(idl_text)
+    self.assertEqual('Implements(A)', str(implements_node))
+    reference_node = implements_node.GetProperty('REFERENCE')
+    self.assertEqual('B', str(reference_node))
+
+  def testBImplementsC(self):
+    idl_text = 'B implements C;'
+    implements_node = self._ParseImplements(idl_text)
+    self.assertEqual('Implements(B)', str(implements_node))
+    reference_node = implements_node.GetProperty('REFERENCE')
+    self.assertEqual('C', str(reference_node))
+
+  def testUnexpectedSemicolon(self):
+    idl_text = 'A implements;'
+    node = self._ParseImplements(idl_text)
+    self.assertEqual('Error', node.GetClass())
+    error_message = node.GetName()
+    self.assertEqual('Unexpected ";" after keyword "implements".',
+                     error_message)
+
+  def testUnexpectedImplements(self):
+    idl_text = 'implements C;'
+    node = self._ParseImplements(idl_text)
+    self.assertEqual('Error', node.GetClass())
+    error_message = node.GetName()
+    self.assertEqual('Unexpected implements.',
+                     error_message)
+
+  def testUnexpectedImplementsAfterBracket(self):
+    idl_text = '[foo] implements B;'
+    node = self._ParseImplements(idl_text)
+    self.assertEqual('Error', node.GetClass())
+    error_message = node.GetName()
+    self.assertEqual('Unexpected keyword "implements" after "]".',
+                     error_message)
 
 
 if __name__ == '__main__':

@@ -1910,7 +1910,7 @@ TEST_P(HttpServerPropertiesManagerTest, UpdateCacheWithPrefs) {
   std::unique_ptr<base::Value> server_value = base::JSONReader::Read(
       "{"
       "\"broken_alternative_services\":["
-      "{\"broken_count\":1,\"broken_until\":\"" +
+      "{\"broken_until\":\"" +
       expiration_str +
       "\","
       "\"host\":\"www.google.com\",\"port\":1234,\"protocol_str\":\"h2\"},"
@@ -2052,7 +2052,7 @@ TEST_P(HttpServerPropertiesManagerTest, UpdateCacheWithPrefs) {
 
   // If an entry is already in cache, the broken count in the prefs should
   // overwrite the one in the cache.
-  // |pref_broken_service| should have broken-count 1 from prefs.
+  // |prefs_broken_service| should have broken-count 1 from prefs.
   // |cached_recently_broken_service| should have broken-count 3 from prefs.
   // |cached_broken_service| should have broken-count 2 from prefs.
   // |cached_broken_service2| should have broken-count 1 from being marked
@@ -2068,8 +2068,10 @@ TEST_P(HttpServerPropertiesManagerTest, UpdateCacheWithPrefs) {
       cached_broken_service));
   EXPECT_TRUE(http_server_props_manager_->WasAlternativeServiceRecentlyBroken(
       cached_broken_service2));
-  // Make sure |pref_broken_service| has the right expiration delay when marked
-  // broken.
+  // Make sure |prefs_broken_service| has the right expiration delay when marked
+  // broken. Since |prefs_broken_service| had no broken_count specified in the
+  // prefs, a broken_count value of 1 should have been assumed by
+  // |http_server_props_manager_|.
   {
     TestMockTimeTaskRunner::ScopedContext scoped_context(net_test_task_runner_);
     http_server_props_manager_->MarkAlternativeServiceBroken(

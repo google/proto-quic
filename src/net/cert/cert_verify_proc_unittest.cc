@@ -303,29 +303,6 @@ INSTANTIATE_TEST_CASE_P(,
                         testing::ValuesIn(kAllCertVerifiers),
                         VerifyProcTypeToName);
 
-// TODO(rsleevi): Reenable this test once comodo.chaim.pem is no longer
-// expired, http://crbug.com/502818
-TEST_P(CertVerifyProcInternalTest, DISABLED_EVVerification) {
-  if (!SupportsEV()) {
-    LOG(INFO) << "Skipping test as EV verification is not yet supported";
-    return;
-  }
-
-  scoped_refptr<X509Certificate> comodo_chain = CreateCertificateChainFromFile(
-      GetTestCertsDirectory(), "comodo.chain.pem",
-      X509Certificate::FORMAT_PEM_CERT_SEQUENCE);
-  ASSERT_TRUE(comodo_chain);
-  ASSERT_EQ(2U, comodo_chain->GetIntermediateCertificates().size());
-
-  scoped_refptr<CRLSet> crl_set(CRLSet::ForTesting(false, NULL, ""));
-  CertVerifyResult verify_result;
-  int flags = CertVerifier::VERIFY_EV_CERT;
-  int error = Verify(comodo_chain.get(), "comodo.com", flags, crl_set.get(),
-                     CertificateList(), &verify_result);
-  EXPECT_THAT(error, IsOk());
-  EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_IS_EV);
-}
-
 // Tests that a certificate is recognized as EV, when the valid EV policy OID
 // for the trust anchor is the second candidate EV oid in the target
 // certificate. This is a regression test for crbug.com/705285.

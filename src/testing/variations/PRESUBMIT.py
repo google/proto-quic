@@ -239,7 +239,7 @@ def CheckChangeOnCommit(input_api, output_api):
 def main(argv):
   content = open(argv[1]).read()
   pretty = PrettyPrint(content)
-  open(argv[1],'w').write(pretty)
+  open(argv[1], 'wb').write(pretty)
 
 if __name__ == "__main__":
   sys.exit(main(sys.argv))

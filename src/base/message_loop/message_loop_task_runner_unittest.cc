@@ -82,7 +82,7 @@ class MessageLoopTaskRunnerTest : public testing::Test {
 
   static void RecordLoopAndQuit(scoped_refptr<LoopRecorder> recorder) {
     recorder->RecordRun();
-    MessageLoop::current()->QuitWhenIdle();
+    RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 
   void UnblockTaskThread() { thread_sync_.Signal(); }

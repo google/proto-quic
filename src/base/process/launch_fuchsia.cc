@@ -116,15 +116,12 @@ Process LaunchProcess(const std::vector<std::string>& argv,
   else
     to_clone |= LP_CLONE_ENVIRON;
 
-  if (!options.fds_to_remap)
+  if (options.fds_to_remap.empty())
     to_clone |= LP_CLONE_MXIO_STDIO;
   launchpad_clone(lp, to_clone);
 
-  if (options.fds_to_remap) {
-    for (const auto& src_target : *options.fds_to_remap) {
-      launchpad_clone_fd(lp, src_target.first, src_target.second);
-    }
-  }
+  for (const auto& src_target : options.fds_to_remap)
+    launchpad_clone_fd(lp, src_target.first, src_target.second);
 
   mx_handle_t proc;
   const char* errmsg;
@@ -161,8 +158,10 @@ bool GetAppOutputAndError(const std::vector<std::string>& argv,
 bool GetAppOutputWithExitCode(const CommandLine& cl,
                               std::string* output,
                               int* exit_code) {
-  bool result = GetAppOutputInternal(cl.argv(), false, output, exit_code);
-  return result && *exit_code == EXIT_SUCCESS;
+  // Contrary to GetAppOutput(), |true| return here means that the process was
+  // launched and the exit code was waited upon successfully, but not
+  // necessarily that the exit code was EXIT_SUCCESS.
+  return GetAppOutputInternal(cl.argv(), false, output, exit_code);
 }
 
 }  // namespace base

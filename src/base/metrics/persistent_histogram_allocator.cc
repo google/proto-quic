@@ -17,6 +17,7 @@
 #include "base/metrics/histogram.h"
 #include "base/metrics/histogram_base.h"
 #include "base/metrics/histogram_samples.h"
+#include "base/metrics/metrics_hashes.h"
 #include "base/metrics/persistent_sample_map.h"
 #include "base/metrics/sparse_histogram.h"
 #include "base/metrics/statistics_recorder.h"
@@ -280,23 +281,29 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::GetHistogram(
   // count data (while these must reference the persistent counts) and always
   // add it to the local list of known histograms (while these may be simple
   // references to histograms in other processes).
-  PersistentHistogramData* histogram_data =
+  PersistentHistogramData* data =
       memory_allocator_->GetAsObject<PersistentHistogramData>(ref);
-  size_t length = memory_allocator_->GetAllocSize(ref);
+  const size_t length = memory_allocator_->GetAllocSize(ref);
 
-  // Check that metadata is reasonable: name is NUL terminated and non-empty,
+  // Check that metadata is reasonable: name is null-terminated and non-empty,
   // ID fields have been loaded with a hash of the name (0 is considered
   // unset/invalid).
-  if (!histogram_data ||
-      reinterpret_cast<char*>(histogram_data)[length - 1] != '\0' ||
-      histogram_data->name[0] == '\0' ||
-      histogram_data->samples_metadata.id == 0 ||
-      histogram_data->logged_metadata.id == 0) {
+  if (!data || data->name[0] == '\0' ||
+      reinterpret_cast<char*>(data)[length - 1] != '\0' ||
+      data->samples_metadata.id == 0 || data->logged_metadata.id == 0 ||
+      // Note: Sparse histograms use |id + 1| in |logged_metadata|.
+      (data->logged_metadata.id != data->samples_metadata.id &&
+       data->logged_metadata.id != data->samples_metadata.id + 1) ||
+      // Most non-matching values happen due to truncated names. Ideally, we
+      // could just verify the name length based on the overall alloc length,
+      // but that doesn't work because the allocated block may have been
+      // aligned to the next boundary value.
+      HashMetricName(data->name) != data->samples_metadata.id) {
     RecordCreateHistogramResult(CREATE_HISTOGRAM_INVALID_METADATA);
     NOTREACHED();
     return nullptr;
   }
-  return CreateHistogram(histogram_data);
+  return CreateHistogram(data);
 }
 
 std::unique_ptr<HistogramBase> PersistentHistogramAllocator::AllocateHistogram(
@@ -679,11 +686,11 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::CreateHistogram(
     DCHECK_EQ(histogram_type, histogram->GetHistogramType());
     histogram->SetFlags(histogram_flags);
     RecordCreateHistogramResult(CREATE_HISTOGRAM_SUCCESS);
+    histogram->ValidateHistogramContents(true, 0);
   } else {
     RecordCreateHistogramResult(CREATE_HISTOGRAM_UNKNOWN_TYPE);
   }
 
-  histogram->ValidateHistogramContents();
   return histogram;
 }
 
@@ -771,7 +778,7 @@ bool GlobalHistogramAllocator::CreateWithFile(
   }
   if (!mmfile->IsValid() ||
       !FilePersistentMemoryAllocator::IsFileAcceptable(*mmfile, true)) {
-    NOTREACHED();
+    NOTREACHED() << file_path;
     return false;
   }
 

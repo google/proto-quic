@@ -536,6 +536,10 @@ void QuicConnection::OnVersionNegotiationPacket(
     return;
   }
 
+  if (FLAGS_quic_reloadable_flag_quic_to_backend_multi_version) {
+    server_supported_versions_ = packet.versions;
+  }
+
   if (!SelectMutualVersion(packet.versions)) {
     CloseConnection(
         QUIC_INVALID_VERSION,
@@ -549,7 +553,9 @@ void QuicConnection::OnVersionNegotiationPacket(
 
   QUIC_DLOG(INFO) << ENDPOINT
                   << "Negotiated version: " << QuicVersionToString(version());
-  server_supported_versions_ = packet.versions;
+  if (!FLAGS_quic_reloadable_flag_quic_to_backend_multi_version) {
+    server_supported_versions_ = packet.versions;
+  }
   version_negotiation_state_ = NEGOTIATION_IN_PROGRESS;
   RetransmitUnackedPackets(ALL_UNACKED_RETRANSMISSION);
 }

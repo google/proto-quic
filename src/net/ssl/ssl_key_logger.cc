@@ -14,6 +14,8 @@
 #include "base/macros.h"
 #include "base/sequence_checker.h"
 #include "base/sequenced_task_runner.h"
+#include "base/task_scheduler/post_task.h"
+#include "base/task_scheduler/task_traits.h"
 
 namespace net {
 
@@ -21,11 +23,11 @@ namespace net {
 // blocking file operations.
 class SSLKeyLogger::Core {
  public:
-  Core() { sequence_checker_.DetachFromSequence(); }
-  ~Core() { DCHECK(sequence_checker_.CalledOnValidSequence()); }
+  Core() { DETACH_FROM_SEQUENCE(sequence_checker_); }
+  ~Core() { DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_); }
 
   void OpenFile(const base::FilePath& path) {
-    DCHECK(sequence_checker_.CalledOnValidSequence());
+    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
     DCHECK(!file_);
     file_.reset(base::OpenFile(path, "a"));
     if (!file_)
@@ -33,7 +35,7 @@ class SSLKeyLogger::Core {
   }
 
   void WriteLine(const std::string& line) {
-    DCHECK(sequence_checker_.CalledOnValidSequence());
+    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
     if (!file_)
       return;
     fprintf(file_.get(), "%s\n", line.c_str());
@@ -42,15 +44,16 @@ class SSLKeyLogger::Core {
 
  private:
   base::ScopedFILE file_;
-  base::SequenceChecker sequence_checker_;
+  SEQUENCE_CHECKER(sequence_checker_);
 
   DISALLOW_COPY_AND_ASSIGN(Core);
 };
 
-SSLKeyLogger::SSLKeyLogger(
-    const base::FilePath& path,
-    const scoped_refptr<base::SequencedTaskRunner>& task_runner)
-    : task_runner_(task_runner), core_(new Core) {
+SSLKeyLogger::SSLKeyLogger(const base::FilePath& path) : core_(new Core) {
+  // The user explicitly asked for debugging information, so these tasks block
+  // shutdown to avoid dropping some log entries.
+  task_runner_ = base::CreateSequencedTaskRunnerWithTraits(
+      {base::MayBlock(), base::TaskShutdownBehavior::BLOCK_SHUTDOWN});
   task_runner_->PostTask(
       FROM_HERE,
       base::Bind(&Core::OpenFile, base::Unretained(core_.get()), path));

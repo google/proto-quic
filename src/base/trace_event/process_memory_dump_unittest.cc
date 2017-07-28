@@ -23,6 +23,10 @@
 #include <sys/mman.h>
 #endif
 
+#if defined(OS_IOS)
+#include "base/ios/ios_util.h"
+#endif
+
 namespace base {
 namespace trace_event {
 
@@ -425,6 +429,53 @@ TEST(ProcessMemoryDumpTest, CountResidentBytes) {
       ProcessMemoryDump::CountResidentBytes(memory2, kVeryLargeMemorySize);
   ASSERT_EQ(res2, kVeryLargeMemorySize);
   Unmap(memory2, kVeryLargeMemorySize);
+}
+
+TEST(ProcessMemoryDumpTest, CountResidentBytesInSharedMemory) {
+#if defined(OS_IOS)
+  // TODO(crbug.com/748410): Reenable this test.
+  if (!base::ios::IsRunningOnIOS10OrLater()) {
+    return;
+  }
+#endif
+
+  const size_t page_size = ProcessMemoryDump::GetSystemPageSize();
+
+  // Allocate few page of dirty memory and check if it is resident.
+  const size_t size1 = 5 * page_size;
+  SharedMemory shared_memory1;
+  shared_memory1.CreateAndMapAnonymous(size1);
+  memset(shared_memory1.memory(), 0, size1);
+  base::Optional<size_t> res1 =
+      ProcessMemoryDump::CountResidentBytesInSharedMemory(shared_memory1);
+  ASSERT_TRUE(res1.has_value());
+  ASSERT_EQ(res1.value(), size1);
+  shared_memory1.Unmap();
+  shared_memory1.Close();
+
+  // Allocate a large memory segment (> 8Mib).
+  const size_t kVeryLargeMemorySize = 15 * 1024 * 1024;
+  SharedMemory shared_memory2;
+  shared_memory2.CreateAndMapAnonymous(kVeryLargeMemorySize);
+  memset(shared_memory2.memory(), 0, kVeryLargeMemorySize);
+  base::Optional<size_t> res2 =
+      ProcessMemoryDump::CountResidentBytesInSharedMemory(shared_memory2);
+  ASSERT_TRUE(res2.has_value());
+  ASSERT_EQ(res2.value(), kVeryLargeMemorySize);
+  shared_memory2.Unmap();
+  shared_memory2.Close();
+
+  // Allocate a large memory segment, but touch about half of all pages.
+  const size_t kTouchedMemorySize = 7 * 1024 * 1024;
+  SharedMemory shared_memory3;
+  shared_memory3.CreateAndMapAnonymous(kVeryLargeMemorySize);
+  memset(shared_memory3.memory(), 0, kTouchedMemorySize);
+  base::Optional<size_t> res3 =
+      ProcessMemoryDump::CountResidentBytesInSharedMemory(shared_memory3);
+  ASSERT_TRUE(res3.has_value());
+  ASSERT_EQ(res3.value(), kTouchedMemorySize);
+  shared_memory3.Unmap();
+  shared_memory3.Close();
 }
 #endif  // defined(COUNT_RESIDENT_BYTES_SUPPORTED)
 

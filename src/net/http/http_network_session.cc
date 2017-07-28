@@ -45,7 +45,7 @@ namespace net {
 
 namespace {
 
-base::StaticAtomicSequenceNumber g_next_shard_id;
+base::AtomicSequenceNumber g_next_shard_id;
 
 ClientSocketPoolManager* CreateSocketPoolManager(
     HttpNetworkSession::SocketPoolType pool_type,
@@ -92,6 +92,10 @@ SettingsMap AddDefaultHttp2Settings(SettingsMap http2_settings) {
   if (it == http2_settings.end())
     http2_settings[SETTINGS_INITIAL_WINDOW_SIZE] = kSpdyStreamMaxRecvWindowSize;
 
+  it = http2_settings.find(SETTINGS_MAX_HEADER_LIST_SIZE);
+  if (it == http2_settings.end())
+    http2_settings[SETTINGS_MAX_HEADER_LIST_SIZE] = kSpdyMaxHeaderListSize;
+
   return http2_settings;
 }
 
@@ -117,8 +121,6 @@ HttpNetworkSession::Params::Params()
       quic_close_sessions_on_ip_change(false),
       quic_idle_connection_timeout_seconds(kIdleConnectionTimeoutSeconds),
       quic_reduced_ping_timeout_seconds(kPingTimeoutSecs),
-      quic_packet_reader_yield_after_duration_milliseconds(
-          kQuicYieldAfterDurationMilliseconds),
       quic_migrate_sessions_on_network_change(false),
       quic_migrate_sessions_early(false),
       quic_allow_server_migration(false),
@@ -194,7 +196,6 @@ HttpNetworkSession::HttpNetworkSession(const Params& params,
           params.mark_quic_broken_when_network_blackholes,
           params.quic_idle_connection_timeout_seconds,
           params.quic_reduced_ping_timeout_seconds,
-          params.quic_packet_reader_yield_after_duration_milliseconds,
           params.quic_migrate_sessions_on_network_change,
           params.quic_migrate_sessions_early,
           params.quic_allow_server_migration,
@@ -331,10 +332,6 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
                    params_.quic_idle_connection_timeout_seconds);
   dict->SetInteger("reduced_ping_timeout_seconds",
                    params_.quic_reduced_ping_timeout_seconds);
-  dict->SetInteger(
-      "packet_reader_yield_after_duration_milliseconds",
-      params_.quic_packet_reader_yield_after_duration_milliseconds);
-
   dict->SetBoolean("mark_quic_broken_when_network_blackholes",
                    params_.mark_quic_broken_when_network_blackholes);
   dict->SetBoolean("retry_without_alt_svc_on_quic_errors",

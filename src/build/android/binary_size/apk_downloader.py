@@ -15,7 +15,7 @@ sys.path.append(os.path.join(host_paths.DIR_SOURCE_ROOT, 'build'))
 import find_depot_tools  # pylint: disable=import-error,unused-import
 import download_from_google_storage
 
-CURRENT_MILESTONE = '60'
+CURRENT_MILESTONE = '61'
 DEFAULT_BUCKET = 'gs://chromium-android-tools/apks'
 DEFAULT_DOWNLOAD_PATH = os.path.join(os.path.dirname(__file__), 'apks')
 DEFAULT_BUILDER = 'Android_Builder'

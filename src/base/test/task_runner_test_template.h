@@ -173,10 +173,10 @@ REGISTER_TYPED_TEST_CASE_P(TaskRunnerTest, Basic, Delayed);
 
 namespace test {
 
-// Calls RunsTasksOnCurrentThread() on |task_runner| and expects it to
+// Calls RunsTasksInCurrentSequence() on |task_runner| and expects it to
 // equal |expected_value|.
-void ExpectRunsTasksOnCurrentThread(bool expected_value,
-                                    TaskRunner* task_runner);
+void ExpectRunsTasksInCurrentSequence(bool expected_value,
+                                      TaskRunner* task_runner);
 
 }  // namespace test
 
@@ -186,10 +186,10 @@ class TaskRunnerAffinityTest : public TaskRunnerTest<TaskRunnerTestDelegate> {};
 TYPED_TEST_CASE_P(TaskRunnerAffinityTest);
 
 // Post a bunch of tasks to the task runner as well as to a separate
-// thread, each checking the value of RunsTasksOnCurrentThread(),
+// thread, each checking the value of RunsTasksInCurrentSequence(),
 // which should return true for the tasks posted on the task runner
 // and false for the tasks posted on the separate thread.
-TYPED_TEST_P(TaskRunnerAffinityTest, RunsTasksOnCurrentThread) {
+TYPED_TEST_P(TaskRunnerAffinityTest, RunsTasksInCurrentSequence) {
   std::map<int, int> expected_task_run_counts;
 
   Thread thread("Non-task-runner thread");
@@ -201,11 +201,11 @@ TYPED_TEST_P(TaskRunnerAffinityTest, RunsTasksOnCurrentThread) {
   // the non-task-runner thread.
   for (int i = 0; i < 20; ++i) {
     const Closure& ith_task_runner_task = this->task_tracker_->WrapTask(
-        Bind(&test::ExpectRunsTasksOnCurrentThread, true,
+        Bind(&test::ExpectRunsTasksInCurrentSequence, true,
              base::RetainedRef(task_runner)),
         i);
     const Closure& ith_non_task_runner_task = this->task_tracker_->WrapTask(
-        Bind(&test::ExpectRunsTasksOnCurrentThread, false,
+        Bind(&test::ExpectRunsTasksInCurrentSequence, false,
              base::RetainedRef(task_runner)),
         i);
     for (int j = 0; j < i + 1; ++j) {
@@ -224,7 +224,7 @@ TYPED_TEST_P(TaskRunnerAffinityTest, RunsTasksOnCurrentThread) {
 
 // TaskRunnerAffinityTest tests that the TaskRunner implementation
 // can determine if tasks will never be run on a specific thread.
-REGISTER_TYPED_TEST_CASE_P(TaskRunnerAffinityTest, RunsTasksOnCurrentThread);
+REGISTER_TYPED_TEST_CASE_P(TaskRunnerAffinityTest, RunsTasksInCurrentSequence);
 
 }  // namespace base
 

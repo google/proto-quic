@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/c++/c++.gni")
+import("//build/config/sysroot.gni")
 
 config("c++flags") {
   if (use_custom_libcxx) {
@@ -38,11 +39,25 @@ config("c++flags") {
       "m",
     ]
 
-    if (!is_mac) {
+    if (!is_mac && !is_fuchsia) {
       libs += [
         "gcc_s",
         "rt",
       ]
+    } else if (is_fuchsia) {
+      # TODO(thakis): Once Fuchsia's libclang_rt.builtin no longer has upstream
+      # patches, we might want to make tools/clang/scripts/update.py build it
+      # and bundle it with the clang package instead of using the library from
+      # the SDK, https://crbug.com/724204
+      # If clang grows a flag like -nodefaultlibs++, then this here should use
+      # -resource-dir instead.
+      # Note: Intentionally 5.0.0 instead of $clang_version because the clang
+      # version of the toolchain_libs directory in the Fuchsia SDK can be
+      # different from the version of Chromium's clang.
+      lib_dirs = [ "$fuchsia_sdk/toolchain_libs/clang/5.0.0/lib/fuchsia" ]
+
+      # TODO(fuchsia): We probably want to support more archs one day.
+      libs += [ "clang_rt.builtins-x86_64" ]
     }
 
     if (is_mac && using_sanitizer) {

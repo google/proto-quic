@@ -209,11 +209,3 @@ class ToughAdCasesPageSet(story.StorySet):
         y_scroll_distance_multiplier=0.25))
     self.AddStory(AdPage('http://androidpolice.com', self, scroll=scroll,
         wait_for_interactive_or_better=True))
-
-
-class ScrollingToughAdCasesPageSet(ToughAdCasesPageSet):
-  """Pages for measuring scrolling performance with advertising content."""
-
-  def __init__(self):
-    super(ScrollingToughAdCasesPageSet, self).__init__(
-        scroll=True)

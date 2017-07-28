@@ -212,42 +212,40 @@ Process LaunchProcess(const string16& cmdline,
   win::StartupInformation startup_info_wrapper;
   STARTUPINFO* startup_info = startup_info_wrapper.startup_info();
 
-  bool inherit_handles = options.inherit_handles;
+  bool inherit_handles = options.inherit_mode == LaunchOptions::Inherit::kAll;
   DWORD flags = 0;
-  if (options.handles_to_inherit) {
-    if (options.handles_to_inherit->empty()) {
-      inherit_handles = false;
-    } else {
-      if (options.handles_to_inherit->size() >
-              std::numeric_limits<DWORD>::max() / sizeof(HANDLE)) {
-        DLOG(ERROR) << "Too many handles to inherit.";
-        return Process();
-      }
+  if (!options.handles_to_inherit.empty()) {
+    DCHECK_EQ(options.inherit_mode, LaunchOptions::Inherit::kSpecific);
 
-      // Ensure the handles can be inherited.
-      for (HANDLE handle : *options.handles_to_inherit) {
-        BOOL result = SetHandleInformation(handle, HANDLE_FLAG_INHERIT,
-                                           HANDLE_FLAG_INHERIT);
-        PCHECK(result);
-      }
-
-      if (!startup_info_wrapper.InitializeProcThreadAttributeList(1)) {
-        DPLOG(ERROR);
-        return Process();
-      }
-
-      if (!startup_info_wrapper.UpdateProcThreadAttribute(
-              PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
-              const_cast<HANDLE*>(&options.handles_to_inherit->at(0)),
-              static_cast<DWORD>(options.handles_to_inherit->size() *
-                  sizeof(HANDLE)))) {
-        DPLOG(ERROR);
-        return Process();
-      }
-
-      inherit_handles = true;
-      flags |= EXTENDED_STARTUPINFO_PRESENT;
+    if (options.handles_to_inherit.size() >
+        std::numeric_limits<DWORD>::max() / sizeof(HANDLE)) {
+      DLOG(ERROR) << "Too many handles to inherit.";
+      return Process();
     }
+
+    // Ensure the handles can be inherited.
+    for (HANDLE handle : options.handles_to_inherit) {
+      BOOL result = SetHandleInformation(handle, HANDLE_FLAG_INHERIT,
+                                         HANDLE_FLAG_INHERIT);
+      PCHECK(result);
+    }
+
+    if (!startup_info_wrapper.InitializeProcThreadAttributeList(1)) {
+      DPLOG(ERROR);
+      return Process();
+    }
+
+    if (!startup_info_wrapper.UpdateProcThreadAttribute(
+            PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+            const_cast<HANDLE*>(&options.handles_to_inherit[0]),
+            static_cast<DWORD>(options.handles_to_inherit.size() *
+                               sizeof(HANDLE)))) {
+      DPLOG(ERROR);
+      return Process();
+    }
+
+    inherit_handles = true;
+    flags |= EXTENDED_STARTUPINFO_PRESENT;
   }
 
   if (options.empty_desktop_name)

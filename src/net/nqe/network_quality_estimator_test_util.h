@@ -5,6 +5,8 @@
 #ifndef NET_NQE_NETWORK_QUALITY_ESTIMATOR_TEST_UTIL_H_
 #define NET_NQE_NETWORK_QUALITY_ESTIMATOR_TEST_UTIL_H_
 
+#include <stdint.h>
+
 #include <map>
 #include <memory>
 #include <string>
@@ -77,12 +79,6 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
   const GURL GetRedirectURL() const;
 
   void set_effective_connection_type(EffectiveConnectionType type) {
-    // Callers should not set effective connection type along with the
-    // lower-layer metrics.
-    DCHECK(!start_time_null_http_rtt_ && !recent_http_rtt_ &&
-           !start_time_null_transport_rtt_ && !recent_transport_rtt_ &&
-           !start_time_null_downlink_throughput_kbps_ &&
-           !recent_downlink_throughput_kbps_);
     effective_connection_type_ = type;
   }
 
@@ -125,9 +121,6 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
       RTTAndThroughputEstimatesObserver* observer) const override;
 
   void set_start_time_null_http_rtt(const base::TimeDelta& http_rtt) {
-    // Callers should not set effective connection type along with the
-    // lower-layer metrics.
-    DCHECK(!effective_connection_type_ && !recent_effective_connection_type_);
     start_time_null_http_rtt_ = http_rtt;
   }
 
@@ -144,9 +137,6 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
                         base::TimeDelta* rtt) const override;
 
   void set_start_time_null_transport_rtt(const base::TimeDelta& transport_rtt) {
-    // Callers should not set effective connection type along with the
-    // lower-layer metrics.
-    DCHECK(!effective_connection_type_ && !recent_effective_connection_type_);
     start_time_null_transport_rtt_ = transport_rtt;
   }
 
@@ -167,9 +157,6 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
 
   void set_start_time_null_downlink_throughput_kbps(
       int32_t downlink_throughput_kbps) {
-    // Callers should not set effective connection type along with the
-    // lower-layer metrics.
-    DCHECK(!effective_connection_type_ && !recent_effective_connection_type_);
     start_time_null_downlink_throughput_kbps_ = downlink_throughput_kbps;
   }
 
@@ -209,6 +196,12 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
   void set_rand_double(double rand_double) { rand_double_ = rand_double; }
 
   double RandDouble() const override;
+
+  void set_bandwidth_delay_product_kbits(int32_t value) {
+    bandwidth_delay_product_kbits_ = value;
+  }
+
+  base::Optional<int32_t> GetBandwidthDelayProductKbits() const override;
 
   // Returns the number of entries in |net_log_| that have type set to |type|.
   int GetEntriesCount(NetLogEventType type) const;
@@ -279,6 +272,10 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
   base::Optional<base::TimeDelta> rtt_estimate_internal_;
 
   double rand_double_;
+
+  // If set, GetBandwidthDelayProductKbits() would return its set value.
+  // Otherwise, the base implementation is called.
+  base::Optional<int32_t> bandwidth_delay_product_kbits_;
 
   LocalHttpTestServer embedded_test_server_;
 

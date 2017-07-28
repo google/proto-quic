@@ -27,7 +27,7 @@ class DnsConfigServiceTest : public testing::Test {
   void OnConfigChanged(const DnsConfig& config) {
     last_config_ = config;
     if (quit_on_config_)
-      base::MessageLoop::current()->QuitWhenIdle();
+      base::RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 
  protected:

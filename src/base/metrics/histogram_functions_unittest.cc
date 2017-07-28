@@ -47,7 +47,7 @@ TEST(HistogramFunctionsTest, HistogramEnumeration) {
   // Verify the overflow & underflow bucket exists.
   UMA_HISTOGRAM_ENUMERATION(
       histogram, static_cast<int>(UMA_HISTOGRAM_TESTING_ENUM_THIRD) + 10,
-      UMA_HISTOGRAM_TESTING_ENUM_THIRD);
+      static_cast<int>(UMA_HISTOGRAM_TESTING_ENUM_THIRD));
   tester.ExpectBucketCount(
       histogram, static_cast<int>(UMA_HISTOGRAM_TESTING_ENUM_THIRD) + 1, 1);
   tester.ExpectTotalCount(histogram, 2);

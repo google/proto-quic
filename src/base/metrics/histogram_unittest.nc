@@ -50,6 +50,13 @@ void WontCompile() {
   UMA_HISTOGRAM_ENUMERATION("", TypeA::A, TypeA::A);
 }
 
+#elif defined(NCTEST_SAMPLE_NOT_ENUM)  // [r'static_assert failed "Unexpected: \|boundary\| is enum, but \|sample\| is not."']
+
+void WontCompile() {
+  enum TypeA { A };
+  UMA_HISTOGRAM_ENUMERATION("", 0, TypeA::A);
+}
+
 #elif defined(NCTEST_FUNCTION_INT)  // [r"Non enum passed to UmaHistogramEnumeration"]
 
 void WontCompile() {

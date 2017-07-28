@@ -95,15 +95,11 @@ void TcpCubicSenderBase::SetFromConfig(const QuicConfig& config,
   }
 }
 
-void TcpCubicSenderBase::ResumeConnectionState(
-    const CachedNetworkParameters& cached_network_params,
-    bool max_bandwidth_resumption) {
-  QuicBandwidth bandwidth = QuicBandwidth::FromBytesPerSecond(
-      max_bandwidth_resumption
-          ? cached_network_params.max_bandwidth_estimate_bytes_per_second()
-          : cached_network_params.bandwidth_estimate_bytes_per_second());
-  QuicTime::Delta rtt =
-      QuicTime::Delta::FromMilliseconds(cached_network_params.min_rtt_ms());
+void TcpCubicSenderBase::AdjustNetworkParameters(QuicBandwidth bandwidth,
+                                                 QuicTime::Delta rtt) {
+  if (bandwidth.IsZero() || rtt.IsZero()) {
+    return;
+  }
 
   SetCongestionWindowFromBandwidthAndRtt(bandwidth, rtt);
 }

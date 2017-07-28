@@ -75,7 +75,7 @@ class DiskCacheTestWithCache : public DiskCacheTest {
   DiskCacheTestWithCache();
   ~DiskCacheTestWithCache() override;
 
-  void CreateBackend(uint32_t flags, base::Thread* thread);
+  void CreateBackend(uint32_t flags);
 
   void InitCache();
   void SimulateCrash();
@@ -189,7 +189,6 @@ class DiskCacheTestWithCache : public DiskCacheTest {
   void InitMemoryCache();
   void InitDiskCache();
 
-  base::Thread cache_thread_;
   DISALLOW_COPY_AND_ASSIGN(DiskCacheTestWithCache);
 };
 

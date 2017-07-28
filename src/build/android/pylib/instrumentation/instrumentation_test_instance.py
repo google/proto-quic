@@ -17,10 +17,12 @@ from pylib.base import test_instance
 from pylib.constants import host_paths
 from pylib.instrumentation import test_result
 from pylib.instrumentation import instrumentation_parser
+from pylib.symbols import stack_symbolizer
 from pylib.utils import dexdump
 from pylib.utils import instrumentation_tracing
 from pylib.utils import proguard
 from pylib.utils import shared_preference_utils
+
 
 with host_paths.SysPath(host_paths.BUILD_COMMON_PATH):
   import unittest_util # pylint: disable=import-error
@@ -445,6 +447,7 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     self._initializeTestCoverageAttributes(args)
 
     self._store_tombstones = False
+    self._symbolizer = None
     self._initializeTombstonesAttributes(args)
 
     self._gs_results_bucket = None
@@ -626,6 +629,9 @@ class InstrumentationTestInstance(test_instance.TestInstance):
 
   def _initializeTombstonesAttributes(self, args):
     self._store_tombstones = args.store_tombstones
+    self._symbolizer = stack_symbolizer.Symbolizer(
+        self.apk_under_test.path if self.apk_under_test else None,
+        args.enable_relocation_packing)
 
   def _initializeLogAttributes(self, args):
     self._gs_results_bucket = args.gs_results_bucket
@@ -717,6 +723,10 @@ class InstrumentationTestInstance(test_instance.TestInstance):
   @property
   def suite(self):
     return self._suite
+
+  @property
+  def symbolizer(self):
+    return self._symbolizer
 
   @property
   def test_apk(self):
@@ -848,4 +858,4 @@ class InstrumentationTestInstance(test_instance.TestInstance):
 
   #override
   def TearDown(self):
-    pass
+    self.symbolizer.CleanUp()

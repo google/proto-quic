@@ -21,11 +21,9 @@ SSLClientSocket::SSLClientSocket()
       stapled_ocsp_response_received_(false) {}
 
 // static
-void SSLClientSocket::SetSSLKeyLogFile(
-    const base::FilePath& path,
-    const scoped_refptr<base::SequencedTaskRunner>& task_runner) {
+void SSLClientSocket::SetSSLKeyLogFile(const base::FilePath& path) {
 #if !defined(OS_NACL)
-  SSLClientSocketImpl::SetSSLKeyLogFile(path, task_runner);
+  SSLClientSocketImpl::SetSSLKeyLogFile(path);
 #else
   NOTIMPLEMENTED();
 #endif

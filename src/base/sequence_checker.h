@@ -67,9 +67,12 @@ namespace base {
 // above macros) to get the right version for your build configuration.
 class SequenceCheckerDoNothing {
  public:
+  SequenceCheckerDoNothing() = default;
   bool CalledOnValidSequence() const WARN_UNUSED_RESULT { return true; }
-
   void DetachFromSequence() {}
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(SequenceCheckerDoNothing);
 };
 
 #if DCHECK_IS_ON()

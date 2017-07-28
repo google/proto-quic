@@ -200,9 +200,10 @@ class MemoryDumpManagerTest : public testing::Test {
     MemoryDumpRequestArgs request_args{test_guid, dump_type, level_of_detail};
 
     // The signature of the callback delivered by MemoryDumpManager is:
-    // void ProcessMemoryDumpCallback(uint64_t dump_guid,
-    //                                bool success,
-    //                                const Optional<MemoryDumpCallbackResult>&)
+    // void ProcessMemoryDumpCallback(
+    //     uint64_t dump_guid,
+    //     bool success,
+    //     const ProcessMemoryDumpsMap& process_dumps&)
     // The extra arguments prepended to the |callback| below (the ones with the
     // "curried_" prefix) are just passed from the Bind(). This is just to get
     // around the limitation of Bind() in supporting only capture-less lambdas.
@@ -458,7 +459,7 @@ TEST_F(MemoryDumpManagerTest, RespectTaskRunnerAffinity) {
         .Times(i)
         .WillRepeatedly(Invoke(
             [task_runner](const MemoryDumpArgs&, ProcessMemoryDump*) -> bool {
-              EXPECT_TRUE(task_runner->RunsTasksOnCurrentThread());
+              EXPECT_TRUE(task_runner->RunsTasksInCurrentSequence());
               return true;
             }));
   }

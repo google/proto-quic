@@ -51,6 +51,11 @@ class BASE_EXPORT FieldTrialParamAssociator {
   // shared memory.
   void ClearAllParamsForTesting();
 
+  // Clears a single field trial param.
+  // Note: this does NOT remove the param in shared memory.
+  void ClearParamsForTesting(const std::string& trial_name,
+                             const std::string& group_name);
+
   // Clears the internal field_trial_params_ mapping.
   void ClearAllCachedParamsForTesting();
 

@@ -124,9 +124,10 @@ static void RecordChromiumAndroidLinkerBrowserHistogram(
                             MAX_BROWSER_HISTOGRAM_CODE);
 
   // Record the device support for loading a library directly from the APK file.
-  UMA_HISTOGRAM_ENUMERATION("ChromiumAndroidLinker.LibraryLoadFromApkStatus",
-                            library_load_from_apk_status,
-                            LIBRARY_LOAD_FROM_APK_STATUS_CODES_MAX);
+  UMA_HISTOGRAM_ENUMERATION(
+      "ChromiumAndroidLinker.LibraryLoadFromApkStatus",
+      static_cast<LibraryLoadFromApkStatusCodes>(library_load_from_apk_status),
+      LIBRARY_LOAD_FROM_APK_STATUS_CODES_MAX);
 
   // Record how long it took to load the shared libraries.
   UMA_HISTOGRAM_TIMES("ChromiumAndroidLinker.BrowserLoadTime",

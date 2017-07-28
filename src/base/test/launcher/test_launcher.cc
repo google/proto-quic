@@ -20,7 +20,6 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
-#include "base/message_loop/message_loop.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/process/kill.h"
 #include "base/process/launch.h"
@@ -392,6 +391,9 @@ void DoLaunchChildTestProcess(
 
   LaunchOptions options;
 #if defined(OS_WIN)
+  options.inherit_mode = test_launch_options.inherit_mode;
+  options.handles_to_inherit = test_launch_options.handles_to_inherit;
+
   win::ScopedHandle handle;
 
   if (redirect_stdio) {
@@ -399,21 +401,14 @@ void DoLaunchChildTestProcess(
                           FILE_SHARE_READ | FILE_SHARE_DELETE, nullptr,
                           OPEN_EXISTING, FILE_ATTRIBUTE_TEMPORARY, NULL));
     CHECK(handle.IsValid());
-    options.inherit_handles = true;
     options.stdin_handle = INVALID_HANDLE_VALUE;
     options.stdout_handle = handle.Get();
     options.stderr_handle = handle.Get();
-  }
-
-  if (test_launch_options.inherit_handles) {
-    if (!options.inherit_handles) {
-      options.inherit_handles = true;
-      options.stdin_handle = nullptr;
-      options.stdout_handle = nullptr;
-      options.stderr_handle = nullptr;
-    }
-    DCHECK(!options.handles_to_inherit);
-    options.handles_to_inherit = test_launch_options.handles_to_inherit;
+    // See LaunchOptions.stdout_handle comments for why this compares against
+    // FILE_TYPE_CHAR.
+    if (options.inherit_mode == base::LaunchOptions::Inherit::kSpecific &&
+        GetFileType(handle.Get()) != FILE_TYPE_CHAR)
+      options.handles_to_inherit.push_back(handle.Get());
   }
 
 #elif defined(OS_POSIX)
@@ -422,22 +417,17 @@ void DoLaunchChildTestProcess(
   options.kill_on_parent_death = true;
 #endif  // defined(OS_LINUX)
 
-  FileHandleMappingVector fds_mapping;
   ScopedFD output_file_fd;
 
+  options.fds_to_remap = test_launch_options.fds_to_remap;
   if (redirect_stdio) {
     output_file_fd.reset(open(output_file.value().c_str(), O_RDWR));
     CHECK(output_file_fd.is_valid());
 
-    fds_mapping.push_back(std::make_pair(output_file_fd.get(), STDOUT_FILENO));
-    fds_mapping.push_back(std::make_pair(output_file_fd.get(), STDERR_FILENO));
-    options.fds_to_remap = &fds_mapping;
-  }
-  if (test_launch_options.fds_to_remap) {
-    fds_mapping.insert(fds_mapping.end(),
-                       test_launch_options.fds_to_remap->begin(),
-                       test_launch_options.fds_to_remap->end());
-    options.fds_to_remap = &fds_mapping;
+    options.fds_to_remap.push_back(
+        std::make_pair(output_file_fd.get(), STDOUT_FILENO));
+    options.fds_to_remap.push_back(
+        std::make_pair(output_file_fd.get(), STDERR_FILENO));
   }
 #endif
 
@@ -483,6 +473,11 @@ const char kGTestRunDisabledTestsFlag[] = "gtest_also_run_disabled_tests";
 const char kGTestOutputFlag[] = "gtest_output";
 
 TestLauncherDelegate::~TestLauncherDelegate() {}
+
+TestLauncher::LaunchOptions::LaunchOptions() = default;
+TestLauncher::LaunchOptions::LaunchOptions(const LaunchOptions& other) =
+    default;
+TestLauncher::LaunchOptions::~LaunchOptions() = default;
 
 TestLauncher::TestLauncher(TestLauncherDelegate* launcher_delegate,
                            size_t parallel_jobs)
@@ -1066,7 +1061,7 @@ void TestLauncher::RunTestIteration() {
       CommandLine::ForCurrentProcess()->HasSwitch(kGTestBreakOnFailure);
   if (cycles_ == 0 ||
       (stop_on_failure && test_success_count_ != test_finished_count_)) {
-    MessageLoop::current()->QuitWhenIdle();
+    RunLoop::QuitCurrentWhenIdleDeprecated();
     return;
   }
 

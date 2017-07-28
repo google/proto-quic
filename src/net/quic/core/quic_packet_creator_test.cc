@@ -199,9 +199,9 @@ class QuicPacketCreatorTest : public QuicTestWithParam<TestParams> {
 
   // Returns the number of bytes consumed by the non-data fields of a stream
   // frame, assuming it is the last frame in the packet
-  size_t GetStreamFrameOverhead() {
-    return QuicFramer::GetMinStreamFrameSize(kGetNthClientInitiatedStreamId1,
-                                             kOffset, true);
+  size_t GetStreamFrameOverhead(QuicVersion version) {
+    return QuicFramer::GetMinStreamFrameSize(
+        version, kGetNthClientInitiatedStreamId1, kOffset, true);
   }
 
   QuicIOVector MakeIOVectorFromStringPiece(QuicStringPiece s) {
@@ -424,7 +424,8 @@ TEST_P(QuicPacketCreatorTest, DoNotRetransmitPendingPadding) {
 
 TEST_P(QuicPacketCreatorTest, ReserializeFramesWithFullPacketAndPadding) {
   const size_t overhead = GetPacketHeaderOverhead(client_framer_.version()) +
-                          GetEncryptionOverhead() + GetStreamFrameOverhead();
+                          GetEncryptionOverhead() +
+                          GetStreamFrameOverhead(client_framer_.version());
   size_t capacity = kDefaultMaxPacketSize - overhead;
   for (int delta = -5; delta <= 0; ++delta) {
     string data(capacity + delta, 'A');
@@ -526,7 +527,8 @@ TEST_P(QuicPacketCreatorTest, CreateAllFreeBytesForStreamFrames) {
                           GetEncryptionOverhead();
   for (size_t i = overhead; i < overhead + 100; ++i) {
     creator_.SetMaxPacketLength(i);
-    const bool should_have_room = i > overhead + GetStreamFrameOverhead();
+    const bool should_have_room =
+        i > overhead + GetStreamFrameOverhead(client_framer_.version());
     ASSERT_EQ(should_have_room, creator_.HasRoomForStreamFrame(
                                     kGetNthClientInitiatedStreamId1, kOffset));
     if (should_have_room) {
@@ -550,7 +552,8 @@ TEST_P(QuicPacketCreatorTest, StreamFrameConsumption) {
   creator_.set_encryption_level(ENCRYPTION_FORWARD_SECURE);
   // Compute the total overhead for a single frame in packet.
   const size_t overhead = GetPacketHeaderOverhead(client_framer_.version()) +
-                          GetEncryptionOverhead() + GetStreamFrameOverhead();
+                          GetEncryptionOverhead() +
+                          GetStreamFrameOverhead(client_framer_.version());
   size_t capacity = kDefaultMaxPacketSize - overhead;
   // Now, test various sizes around this size.
   for (int delta = -5; delta <= 5; ++delta) {
@@ -578,7 +581,8 @@ TEST_P(QuicPacketCreatorTest, StreamFrameConsumption) {
 TEST_P(QuicPacketCreatorTest, CryptoStreamFramePacketPadding) {
   // Compute the total overhead for a single frame in packet.
   const size_t overhead = GetPacketHeaderOverhead(client_framer_.version()) +
-                          GetEncryptionOverhead() + GetStreamFrameOverhead();
+                          GetEncryptionOverhead() +
+                          GetStreamFrameOverhead(client_framer_.version());
   ASSERT_GT(kMaxPacketSize, overhead);
   size_t capacity = kDefaultMaxPacketSize - overhead;
   // Now, test various sizes around this size.
@@ -615,7 +619,8 @@ TEST_P(QuicPacketCreatorTest, NonCryptoStreamFramePacketNonPadding) {
   creator_.set_encryption_level(ENCRYPTION_FORWARD_SECURE);
   // Compute the total overhead for a single frame in packet.
   const size_t overhead = GetPacketHeaderOverhead(client_framer_.version()) +
-                          GetEncryptionOverhead() + GetStreamFrameOverhead();
+                          GetEncryptionOverhead() +
+                          GetStreamFrameOverhead(client_framer_.version());
   ASSERT_GT(kDefaultMaxPacketSize, overhead);
   size_t capacity = kDefaultMaxPacketSize - overhead;
   // Now, test various sizes around this size.
@@ -1006,7 +1011,8 @@ TEST_P(QuicPacketCreatorTest, ConsumeDataAndRandomPadding) {
   size_t length = GetPacketHeaderOverhead(client_framer_.version()) +
                   GetEncryptionOverhead() +
                   QuicFramer::GetMinStreamFrameSize(
-                      kCryptoStreamId, 0, /*last_frame_in_packet=*/false) +
+                      client_framer_.version(), kCryptoStreamId, 0,
+                      /*last_frame_in_packet=*/false) +
                   kStreamFramePayloadSize + 1;
   creator_.SetMaxPacketLength(length);
   creator_.AddPendingPadding(kMaxNumRandomPaddingBytes);

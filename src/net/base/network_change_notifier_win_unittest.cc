@@ -72,7 +72,7 @@ class TestIPAddressObserver : public NetworkChangeNotifier::IPAddressObserver {
 };
 
 bool ExitMessageLoopAndReturnFalse() {
-  base::MessageLoop::current()->QuitWhenIdle();
+  base::RunLoop::QuitCurrentWhenIdleDeprecated();
   return false;
 }
 
@@ -176,14 +176,15 @@ class NetworkChangeNotifierWinTest : public testing::Test {
     EXPECT_FALSE(network_change_notifier_.is_watching());
     EXPECT_LT(0, network_change_notifier_.sequential_failures());
 
+    base::RunLoop run_loop;
+
     EXPECT_CALL(test_ip_address_observer_, OnIPAddressChanged())
         .Times(1)
-        .WillOnce(Invoke(base::MessageLoop::current(),
-                         &base::MessageLoop::QuitWhenIdle));
+        .WillOnce(Invoke(&run_loop, &base::RunLoop::QuitWhenIdle));
     EXPECT_CALL(network_change_notifier_, WatchForAddressChangeInternal())
         .Times(1).WillOnce(Return(true));
 
-    base::RunLoop().Run();
+    run_loop.Run();
 
     EXPECT_TRUE(network_change_notifier_.is_watching());
     EXPECT_EQ(0, network_change_notifier_.sequential_failures());

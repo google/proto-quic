@@ -79,7 +79,7 @@ class QuitDelegate : public net::URLFetcherDelegate {
 
   // net::URLFetcherDelegate implementation.
   void OnURLFetchComplete(const net::URLFetcher* source) override {
-    base::MessageLoop::current()->QuitWhenIdle();
+    base::RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 
   void OnURLFetchDownloadProgress(const net::URLFetcher* source,

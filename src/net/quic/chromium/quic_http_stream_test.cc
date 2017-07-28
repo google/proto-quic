@@ -1142,6 +1142,82 @@ TEST_P(QuicHttpStreamTest, SendPostRequest) {
   EXPECT_EQ(static_cast<int>(strlen(kResponseBody)),
             stream_->ReadResponseBody(read_buffer_.get(), read_buffer_->size(),
                                       callback_.callback()));
+  EXPECT_EQ(0,
+            stream_->ReadResponseBody(read_buffer_.get(), read_buffer_->size(),
+                                      callback_.callback()));
+
+  EXPECT_TRUE(stream_->IsResponseBodyComplete());
+  EXPECT_TRUE(AtEof());
+
+  // QuicHttpStream::GetTotalSent/ReceivedBytes currently only includes the
+  // headers and payload.
+  EXPECT_EQ(static_cast<int64_t>(spdy_request_headers_frame_length +
+                                 strlen(kUploadData)),
+            stream_->GetTotalSentBytes());
+  EXPECT_EQ(static_cast<int64_t>(spdy_response_headers_frame_length +
+                                 strlen(kResponseBody)),
+            stream_->GetTotalReceivedBytes());
+}
+
+TEST_P(QuicHttpStreamTest, SendPostRequestAndReceiveSoloFin) {
+  SetRequest("POST", "/", DEFAULT_PRIORITY);
+  size_t spdy_request_headers_frame_length;
+  QuicStreamOffset header_stream_offset = 0;
+  AddWrite(ConstructInitialSettingsPacket(&header_stream_offset));
+  AddWrite(InnerConstructRequestHeadersPacket(
+      2, GetNthClientInitiatedStreamId(0), kIncludeVersion, !kFin,
+      DEFAULT_PRIORITY, &spdy_request_headers_frame_length,
+      &header_stream_offset));
+  AddWrite(ConstructClientDataPacket(3, kIncludeVersion, kFin, 0, kUploadData));
+  AddWrite(ConstructClientAckPacket(4, 3, 1, 1));
+
+  Initialize();
+
+  std::vector<std::unique_ptr<UploadElementReader>> element_readers;
+  element_readers.push_back(base::MakeUnique<UploadBytesElementReader>(
+      kUploadData, strlen(kUploadData)));
+  upload_data_stream_ =
+      base::MakeUnique<ElementsUploadDataStream>(std::move(element_readers), 0);
+  request_.method = "POST";
+  request_.url = GURL("https://www.example.org/");
+  request_.upload_data_stream = upload_data_stream_.get();
+  ASSERT_THAT(request_.upload_data_stream->Init(CompletionCallback(),
+                                                NetLogWithSource()),
+              IsOk());
+
+  EXPECT_EQ(OK,
+            stream_->InitializeStream(&request_, DEFAULT_PRIORITY,
+                                      net_log_.bound(), callback_.callback()));
+  EXPECT_EQ(OK,
+            stream_->SendRequest(headers_, &response_, callback_.callback()));
+
+  // Ack both packets in the request.
+  ProcessPacket(ConstructServerAckPacket(1, 0, 0, 0));
+
+  // Send the response headers (but not the body).
+  SetResponse("200 OK", string());
+  size_t spdy_response_headers_frame_length;
+  ProcessPacket(ConstructResponseHeadersPacket(
+      2, !kFin, &spdy_response_headers_frame_length));
+
+  // The headers have already arrived.
+  EXPECT_THAT(stream_->ReadResponseHeaders(callback_.callback()), IsOk());
+  ASSERT_TRUE(response_.headers.get());
+  EXPECT_EQ(200, response_.headers->response_code());
+  EXPECT_TRUE(response_.headers->HasHeaderValue("Content-Type", "text/plain"));
+
+  // Send the response body.
+  const char kResponseBody[] = "Hello world!";
+  ProcessPacket(ConstructServerDataPacket(3, false, !kFin, 0, kResponseBody));
+  // Since the body has already arrived, this should return immediately.
+  EXPECT_EQ(static_cast<int>(strlen(kResponseBody)),
+            stream_->ReadResponseBody(read_buffer_.get(), read_buffer_->size(),
+                                      callback_.callback()));
+  ProcessPacket(ConstructServerDataPacket(4, false, kFin,
+                                          arraysize(kResponseBody) - 1, ""));
+  EXPECT_EQ(0,
+            stream_->ReadResponseBody(read_buffer_.get(), read_buffer_->size(),
+                                      callback_.callback()));
 
   EXPECT_TRUE(stream_->IsResponseBodyComplete());
   EXPECT_TRUE(AtEof());

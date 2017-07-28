@@ -35,8 +35,6 @@ class NinjaBuilder(cr.Builder):
       CR_GOMA_CC=os.path.join('{GOMA_DIR}', 'gomacc'),
       CR_GOMA_CTL=os.path.join('{GOMA_DIR}', 'goma_ctl.py'),
       GOMA_DIR='{CR_GOMA_DIR}',
-      GYP_DEF_gomadir='{CR_GOMA_DIR}',
-      GYP_DEF_use_goma=1,
       NINJA_JOBS=multiprocessing.cpu_count() * 10,
   )
   # A placeholder for the system detected configuration

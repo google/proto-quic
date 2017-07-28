@@ -1652,6 +1652,22 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="Arc.Launcher.Search.OpenPlayStore.InstantApps">
+  <owner>hejq@chromium.com</owner>
+  <description>
+    Recorded when the user opens the an instant app from a Play Store app search
+    query.
+  </description>
+</action>
+
+<action name="Arc.Launcher.Search.OpenPlayStore.UninstalledApps">
+  <owner>hejq@chromium.com</owner>
+  <description>
+    Recorded when the user opens the installing page of a Play Store app search
+    result.
+  </description>
+</action>
+
 <action name="AutoDetectChange">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
@@ -16108,6 +16124,66 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="SoftwareReporter.PromptDialog.LogsPermissionCheckbox_Disabled">
+  <owner>alito@chromium.org</owner>
+  <description>
+    The user clicked the logs upload permission checkbox and disabled logs
+    uploading.
+  </description>
+</action>
+
+<action name="SoftwareReporter.PromptDialog.LogsPermissionCheckbox_Enabled">
+  <owner>alito@chromium.org</owner>
+  <description>
+    The user clicked the logs upload permission checkbox and enabled logs
+    uploading.
+  </description>
+</action>
+
+<action name="SoftwareReporter.PromptDialog_Accepted">
+  <owner>alito@chromium.org</owner>
+  <description>The user accepted the Chrome Cleaner prompt.</description>
+</action>
+
+<action name="SoftwareReporter.PromptDialog_Canceled">
+  <owner>alito@chromium.org</owner>
+  <description>
+    The user clicked the cancel button in the Chrome Cleaner prompt dialog.
+  </description>
+</action>
+
+<action name="SoftwareReporter.PromptDialog_ClosedWithoutUserInteraction">
+  <owner>alito@chromium.org</owner>
+  <description>
+    The Chrome Cleaner prompt dialog was closed without any user interaction.
+    This can happen, for example, if something goes wrong with the Chrome
+    Cleaner IPC or if the user interacts with the Chrome Cleaner webui page from
+    another browser window.
+  </description>
+</action>
+
+<action name="SoftwareReporter.PromptDialog_DetailsButtonClicked">
+  <owner>alito@chromium.org</owner>
+  <description>
+    The user clicked the 'Details' button in the Chrome Cleaner prompt dialog.
+  </description>
+</action>
+
+<action name="SoftwareReporter.PromptDialog_Dismissed">
+  <owner>alito@chromium.org</owner>
+  <description>
+    The user dismissed the Chrome Cleaner prompt dialog, for example by clicking
+    the x in the top right corner or pressing the Escape key.
+  </description>
+</action>
+
+<action name="SoftwareReporter.PromptDialog_Shown">
+  <owner>alito@chromium.org</owner>
+  <description>
+    The Chrome Cleaner prompt dialog was shown to the user.
+  </description>
+</action>
+
 <action name="StackedTab_DragActiveTab">
   <owner>bruthig@chromium.org</owner>
   <owner>tdanderson@chromium.org</owner>
@@ -17357,6 +17433,14 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="Tray_ImeMenu_Opened">
+  <owner>omrilio@chromium.org</owner>
+  <owner>minch@chromium.org</owner>
+  <description>
+    Counts the number of times the ime menu in shelf was opened.
+  </description>
+</action>
+
 <action name="Tray_LockScreen">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
@@ -17397,6 +17481,46 @@ should be able to be added at any place in this file.
 <action name="Tray_ShutDown">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="Tray_SwipeToClose_Successful">
+  <owner>omrilio@chromium.org</owner>
+  <owner>minch@chromium.org</owner>
+  <description>
+    Records when the user swipes on the tray bubble (ImeTrayBubble,
+    SystemTrayBubble, WebNotificationTrayBubble, PaletteTrayBubble) in an
+    attempt to close it and succeeded ultimately.
+  </description>
+</action>
+
+<action name="Tray_SwipeToClose_Unsuccessful">
+  <owner>omrilio@chromium.org</owner>
+  <owner>minch@chromium.org</owner>
+  <description>
+    Records when the user swipes on the status area tray bubble (ImeTrayBubble,
+    SystemTrayBubble, WebNotificationBubble, PaletteTrayBubble) in an attempt to
+    close it but failed ultimately.
+  </description>
+</action>
+
+<action name="Tray_SwipeToOpen_Successful">
+  <owner>omrilio@chromium.org</owner>
+  <owner>minch@chromium.org</owner>
+  <description>
+    Records when the user swipes on the status area tray (ImeTray, SystemTray,
+    WebNotificationTray, PaletteTray) in an attempt to open the associated
+    bubble and succeeded ultimately.
+  </description>
+</action>
+
+<action name="Tray_SwipeToOpen_Unsuccessful">
+  <owner>omrilio@chromium.org</owner>
+  <owner>minch@chromium.org</owner>
+  <description>
+    Records when the user swipes on the status area tray (ImeTray, SystemTray,
+    WebNotificationTray, PaletteTray) in an attempt to open the associated
+    bubble but failed ultimately.
+  </description>
 </action>
 
 <action name="Underline">

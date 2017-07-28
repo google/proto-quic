@@ -27,7 +27,7 @@ std::string BattOrFinder::FindBattOr() {
   std::unique_ptr<device::SerialDeviceEnumerator> serial_device_enumerator =
       device::SerialDeviceEnumerator::Create();
 
-  std::vector<device::serial::DeviceInfoPtr> devices =
+  std::vector<device::mojom::SerialDeviceInfoPtr> devices =
       serial_device_enumerator->GetDevices();
 
   std::string switch_specified_path =

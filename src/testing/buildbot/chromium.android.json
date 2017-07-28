@@ -1637,13 +1637,13 @@
           "can_use_on_swarming_builders": true,
           "dimension_sets": [
             {
-              "android_devices": "6",
+              "android_devices": "1",
               "device_os": "MMB29Q",
               "device_type": "bullhead"
             }
           ],
-          "hard_timeout": 1200,
-          "shards": 1
+          "hard_timeout": 1500,
+          "shards": 15
         }
       }
     ]

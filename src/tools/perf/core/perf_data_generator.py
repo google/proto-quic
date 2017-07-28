@@ -30,6 +30,22 @@ from py_utils import discover
 from core.sharding_map_generator import load_benchmark_sharding_map
 
 
+# TODO(rnephew): Remove when no tests disable using
+# expectations.PermanentlyDisableBenchmark()
+ANDROID_BOT_TO_DEVICE_TYPE_MAP = {
+  'Android Swarming N5X Tester': 'Nexus 5X',
+  'Android Nexus5X Perf': 'Nexus 5X',
+  'Android Nexus5 Perf': 'Nexus 5',
+  'Android Nexus6 Perf': 'Nexus 6',
+  'Android Nexus7v2 Perf': 'Nexus 7',
+  'Android One Perf': 'W6210 (4560MMX_b fingerprint)',
+  'Android Nexus5X WebView Perf': 'Nexus 5X',
+  'Android Nexus6 WebView Tester': 'Nexus 6',
+}
+
+SVELTE_DEVICE_LIST = ['W6210 (4560MMX_b fingerprint)']
+
+
 def add_builder(waterfall, name, additional_compile_targets=None):
   waterfall['builders'][name] = added = {}
   if additional_compile_targets:
@@ -578,7 +594,10 @@ def generate_isolate_script_entry(swarming_dimensions, test_args,
       'ignore_task_failure': ignore_task_failure,
       'io_timeout': 3600,
       'dimension_sets': swarming_dimensions,
+      'upload_test_results': False,
     }
+    if step_name in BENCHMARKS_TO_UPLOAD_TO_FLAKINESS_DASHBOARD:
+      result['swarming']['upload_test_results'] = True
   return result
 
 
@@ -588,8 +607,7 @@ BENCHMARKS_TO_UPLOAD_TO_FLAKINESS_DASHBOARD = ['system_health.common_desktop',
                                                'system_health.memory_mobile']
 
 
-def generate_telemetry_test(swarming_dimensions,
-      benchmark_name, browser, for_fyi_waterfall=False):
+def generate_telemetry_test(swarming_dimensions, benchmark_name, browser):
   # The step name must end in 'test' or 'tests' in order for the
   # results to automatically show up on the flakiness dashboard.
   # (At least, this was true some time ago.) Continue to use this
@@ -605,8 +623,7 @@ def generate_telemetry_test(swarming_dimensions,
   # When this is enabled on more than just windows machines we will need
   # --device=android
 
-  if (for_fyi_waterfall and
-      benchmark_name in BENCHMARKS_TO_UPLOAD_TO_FLAKINESS_DASHBOARD):
+  if benchmark_name in BENCHMARKS_TO_UPLOAD_TO_FLAKINESS_DASHBOARD:
     test_args.append('--output-format=json-test-results')
 
   ignore_task_failure = False
@@ -681,10 +698,65 @@ def ShouldBenchmarkBeScheduled(benchmark, platform):
 
   return True
 
+
+# TODO(rnephew): Remove when no tests disable using
+# expectations.PermanentlyDisableBenchmark()
+def ShouldBenchmarksBeScheduledViaStoryExpectations(
+    benchmark, name, os_name, browser_name):
+  # StoryExpectations uses finder_options.browser_type, platform.GetOSName,
+  # platform.GetDeviceTypeName, and platform.IsSvelte to determine if the
+  # the expectation test condition is true and the test should be disabled.
+  # This class is used as a placeholder for finder_options and platform since
+  # we do not have enough information to create those objection.
+  class ExpectationData(object):
+    def __init__(self, browser_type, os_name, device_type_name):
+      self._browser_type = browser_type
+      self._os_name = os_name
+      self._is_svelte = False
+      if os_name == 'android' and device_type_name in SVELTE_DEVICE_LIST:
+        self._is_svelte = True
+      self._device_type_name = device_type_name
+
+    def GetOSName(self):
+      return self._os_name
+
+    def GetDeviceTypeName(self):
+      return self._device_type_name if self._device_type_name else ''
+
+    @property
+    def browser_type(self):
+      return self._browser_type
+
+    def IsSvelte(self):
+      return self._is_svelte
+
+  # OS names are the exact OS names. We need ExpectationData to return OS names
+  # that are consistent with platform_backend in telemetry to work.
+  def sanitize_os_name(os_name):
+    lower_name = os_name.lower()
+    if 'win' in lower_name:
+      return 'win'
+    if 'mac' in lower_name:
+      return 'mac'
+    if 'android' in lower_name:
+      return 'android'
+    if 'ubuntu' in lower_name or 'linux' in lower_name:
+      return 'linux'
+    if lower_name == 'skynet':
+      print ('OS name appears to be for testing purposes. If this is in error '
+             'file a bug.')
+      return 'TEST'
+    raise TypeError('Unknown OS name detected.')
+
+  device_type_name = ANDROID_BOT_TO_DEVICE_TYPE_MAP.get(name)
+  os_name = sanitize_os_name(os_name)
+  e = ExpectationData(browser_name, os_name, device_type_name)
+  return not benchmark().GetExpectations().IsBenchmarkDisabled(e, e)
+
+
 def generate_telemetry_tests(name, tester_config, benchmarks,
                              benchmark_sharding_map,
-                             benchmark_ref_build_blacklist,
-                             for_fyi_waterfall=False):
+                             benchmark_ref_build_blacklist):
   isolated_scripts = []
   # First determine the browser that you need based on the tester
   browser_name = ''
@@ -720,8 +792,14 @@ def generate_telemetry_tests(name, tester_config, benchmarks,
       swarming_dimensions.append(get_swarming_dimension(
           dimension, device))
 
+    # TODO(rnephew): Remove when no tests disable using
+    # expectations.PermanentlyDisableBenchmark()
+    if not ShouldBenchmarksBeScheduledViaStoryExpectations(
+        benchmark, name, swarming_dimensions[0]['os'], browser_name):
+      continue
+
     test = generate_telemetry_test(
-      swarming_dimensions, benchmark.Name(), browser_name, for_fyi_waterfall)
+      swarming_dimensions, benchmark.Name(), browser_name)
     isolated_scripts.append(test)
     # Now create another executable for this benchmark on the reference browser
     # if it is not blacklisted from running on the reference browser.
@@ -729,7 +807,7 @@ def generate_telemetry_tests(name, tester_config, benchmarks,
     if not tester_config.get('replace_system_webview', False) and (
         benchmark.Name() not in benchmark_ref_build_blacklist):
       reference_test = generate_telemetry_test(
-        swarming_dimensions, benchmark.Name(),'reference', for_fyi_waterfall)
+        swarming_dimensions, benchmark.Name(),'reference')
       isolated_scripts.append(reference_test)
 
   return isolated_scripts
@@ -804,7 +882,7 @@ def generate_all_tests(waterfall):
     # Generate benchmarks
     isolated_scripts = generate_telemetry_tests(
         name, config, all_benchmarks, benchmark_sharding_map,
-        BENCHMARK_REF_BUILD_BLACKLIST, waterfall['name']=='chromium.perf.fyi')
+        BENCHMARK_REF_BUILD_BLACKLIST)
     # Generate swarmed non-telemetry tests if present
     if config['swarming_dimensions'][0].get('perf_tests', False):
       isolated_scripts += generate_cplusplus_isolate_script_test(

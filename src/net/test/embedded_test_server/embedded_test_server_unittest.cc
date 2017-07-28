@@ -163,7 +163,7 @@ class EmbeddedTestServerTest
   void OnURLFetchComplete(const URLFetcher* source) override {
     ++num_responses_received_;
     if (num_responses_received_ == num_responses_expected_)
-      base::MessageLoop::current()->QuitWhenIdle();
+      base::RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 
   // Waits until the specified number of responses are received.
@@ -609,7 +609,7 @@ class EmbeddedTestServerThreadingTestDelegate
 
   // URLFetcherDelegate override.
   void OnURLFetchComplete(const URLFetcher* source) override {
-    base::MessageLoop::current()->QuitWhenIdle();
+    base::RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 
  private:

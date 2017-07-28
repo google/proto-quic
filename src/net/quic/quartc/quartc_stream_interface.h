@@ -23,8 +23,8 @@ class QUIC_EXPORT_PRIVATE QuartcStreamInterface {
   // The QUIC stream ID.
   virtual uint32_t stream_id() = 0;
 
-  // The amount of data buffered by the QuicConnection.
-  virtual uint64_t buffered_amount() = 0;
+  // The amount of data sent on this stream.
+  virtual uint64_t bytes_written() = 0;
 
   // Return true if the FIN has been sent. Used by the outgoing streams to
   // determine if all the data has been sent
@@ -42,11 +42,23 @@ class QUIC_EXPORT_PRIVATE QuartcStreamInterface {
     bool fin;
   };
 
-  // Sends data reliably and in-order, buffering if necessary until Close() is
-  // called.
+  // Sends data reliably and in-order.  Returns the amount sent.
+  // Does not buffer data.
   virtual void Write(const char* data,
                      size_t size,
                      const WriteParameters& param) = 0;
+
+  // Marks this stream as finished writing.  Asynchronously sends a FIN and
+  // closes the write-side.  The stream will no longer call OnCanWrite().
+  // It is not necessary to call FinishWriting() if the last call to Write()
+  // sends a FIN.
+  virtual void FinishWriting() = 0;
+
+  // Marks this stream as finished reading.  Further incoming data is discarded.
+  // The stream will no longer call OnReceived().
+  // It is never necessary to call FinishReading().  The read-side closes when a
+  // FIN is received, regardless of whether FinishReading() has been called.
+  virtual void FinishReading() = 0;
 
   // Once Close is called, no more data can be sent, all buffered data will be
   // dropped and no data will be retransmitted.
@@ -58,19 +70,21 @@ class QUIC_EXPORT_PRIVATE QuartcStreamInterface {
    public:
     virtual ~Delegate() {}
 
-    // Called when the stream receives the date.
+    // Called when the stream receives the data.  Called with |size| == 0 after
+    // all stream data has been delivered.
     virtual void OnReceived(QuartcStreamInterface* stream,
                             const char* data,
                             size_t size) = 0;
 
     // Called when the stream is closed, either locally or by the remote
-    // endpoint.
+    // endpoint.  Streams close when (a) fin bits are both sent and received,
+    // (b) Close() is called, or (c) the stream is reset.
     // TODO(zhihuang) Creates a map from the integer error_code to WebRTC native
     // error code.
     virtual void OnClose(QuartcStreamInterface* stream) = 0;
 
-    // Called when buffered_amount() decreases.
-    virtual void OnBufferedAmountDecrease(QuartcStreamInterface* stream) = 0;
+    // Called when more data may be written to a stream.
+    virtual void OnCanWrite(QuartcStreamInterface* stream) = 0;
   };
 
   // The |delegate| is not owned by QuartcStream.

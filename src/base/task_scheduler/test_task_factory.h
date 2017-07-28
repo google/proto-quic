@@ -25,8 +25,8 @@ namespace test {
 
 // A TestTaskFactory posts tasks to a TaskRunner and verifies that they run as
 // expected. Generates a test failure when:
-// - The RunsTasksOnCurrentThread() method of the TaskRunner returns false on a
-//   thread on which a Task is run.
+// - The RunsTasksInCurrentSequence() method of the TaskRunner returns false on
+//   a thread on which a Task is run.
 // - The TaskRunnerHandles set in the context of the task don't match what's
 //   expected for the tested ExecutionMode.
 // - The ExecutionMode of the TaskRunner is SEQUENCED or SINGLE_THREADED and

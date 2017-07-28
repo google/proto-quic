@@ -42,7 +42,7 @@ void RunAndDeleteFlag(OnceClosure closure, const CancellationFlag* flag) {
 }
 
 void RunOrPostToTaskRunner(TaskRunner* task_runner, OnceClosure closure) {
-  if (task_runner->RunsTasksOnCurrentThread())
+  if (task_runner->RunsTasksInCurrentSequence())
     std::move(closure).Run();
   else
     task_runner->PostTask(FROM_HERE, std::move(closure));

@@ -18,10 +18,15 @@
 
 // Step 1: forward declarations.
 namespace {
-const char kInputStreamClassPath[] = "java/io/InputStream";
+const char kClassPath_java_io_InputStream[] = "java/io/InputStream";
 // Leaking this jclass as we cannot use LazyInstance from some threads.
-base::subtle::AtomicWord g_InputStream_clazz __attribute__((unused)) = 0;
-#define InputStream_clazz(env) base::android::LazyGetClass(env, kInputStreamClassPath, &g_InputStream_clazz)
+base::subtle::AtomicWord g_java_io_InputStream_clazz __attribute__((unused)) =
+    0;
+
+inline jclass java_io_InputStream_clazz(JNIEnv* env) {
+  return base::android::LazyGetClass(env, kClassPath_java_io_InputStream,
+      &g_java_io_InputStream_clazz);
+}
 
 }  // namespace
 
@@ -29,20 +34,20 @@ namespace JNI_InputStream {
 
 // Step 2: method stubs.
 
-static base::subtle::AtomicWord g_InputStream_available = 0;
+static base::subtle::AtomicWord g_java_io_InputStream_available = 0;
 static jint Java_InputStream_available(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) __attribute__ ((unused));
 static jint Java_InputStream_available(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      InputStream_clazz(env), 0);
+      java_io_InputStream_clazz(env), 0);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, InputStream_clazz(env),
+      env, java_io_InputStream_clazz(env),
       "available",
       "()I",
-      &g_InputStream_available);
+      &g_java_io_InputStream_available);
 
   jint ret =
       env->CallIntMethod(obj.obj(),
@@ -51,61 +56,61 @@ static jint Java_InputStream_available(JNIEnv* env, const
   return ret;
 }
 
-static base::subtle::AtomicWord g_InputStream_close = 0;
+static base::subtle::AtomicWord g_java_io_InputStream_close = 0;
 static void Java_InputStream_close(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) __attribute__ ((unused));
 static void Java_InputStream_close(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      InputStream_clazz(env));
+      java_io_InputStream_clazz(env));
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, InputStream_clazz(env),
+      env, java_io_InputStream_clazz(env),
       "close",
       "()V",
-      &g_InputStream_close);
+      &g_java_io_InputStream_close);
 
      env->CallVoidMethod(obj.obj(),
           method_id);
   jni_generator::CheckException(env);
 }
 
-static base::subtle::AtomicWord g_InputStream_mark = 0;
+static base::subtle::AtomicWord g_java_io_InputStream_mark = 0;
 static void Java_InputStream_mark(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj, JniIntWrapper p0) __attribute__
     ((unused));
 static void Java_InputStream_mark(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj, JniIntWrapper p0) {
   CHECK_CLAZZ(env, obj.obj(),
-      InputStream_clazz(env));
+      java_io_InputStream_clazz(env));
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, InputStream_clazz(env),
+      env, java_io_InputStream_clazz(env),
       "mark",
       "(I)V",
-      &g_InputStream_mark);
+      &g_java_io_InputStream_mark);
 
      env->CallVoidMethod(obj.obj(),
           method_id, as_jint(p0));
   jni_generator::CheckException(env);
 }
 
-static base::subtle::AtomicWord g_InputStream_markSupported = 0;
+static base::subtle::AtomicWord g_java_io_InputStream_markSupported = 0;
 static jboolean Java_InputStream_markSupported(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) __attribute__ ((unused));
 static jboolean Java_InputStream_markSupported(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      InputStream_clazz(env), false);
+      java_io_InputStream_clazz(env), false);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, InputStream_clazz(env),
+      env, java_io_InputStream_clazz(env),
       "markSupported",
       "()Z",
-      &g_InputStream_markSupported);
+      &g_java_io_InputStream_markSupported);
 
   jboolean ret =
       env->CallBooleanMethod(obj.obj(),
@@ -114,20 +119,20 @@ static jboolean Java_InputStream_markSupported(JNIEnv* env, const
   return ret;
 }
 
-static base::subtle::AtomicWord g_InputStream_readI = 0;
+static base::subtle::AtomicWord g_java_io_InputStream_readI = 0;
 static jint Java_InputStream_readI(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) __attribute__ ((unused));
 static jint Java_InputStream_readI(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      InputStream_clazz(env), 0);
+      java_io_InputStream_clazz(env), 0);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, InputStream_clazz(env),
+      env, java_io_InputStream_clazz(env),
       "read",
       "()I",
-      &g_InputStream_readI);
+      &g_java_io_InputStream_readI);
 
   jint ret =
       env->CallIntMethod(obj.obj(),
@@ -136,7 +141,7 @@ static jint Java_InputStream_readI(JNIEnv* env, const
   return ret;
 }
 
-static base::subtle::AtomicWord g_InputStream_readI_AB = 0;
+static base::subtle::AtomicWord g_java_io_InputStream_readI_AB = 0;
 static jint Java_InputStream_readI_AB(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj, const
     base::android::JavaRefOrBare<jbyteArray>& p0) __attribute__ ((unused));
@@ -144,14 +149,14 @@ static jint Java_InputStream_readI_AB(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj, const
     base::android::JavaRefOrBare<jbyteArray>& p0) {
   CHECK_CLAZZ(env, obj.obj(),
-      InputStream_clazz(env), 0);
+      java_io_InputStream_clazz(env), 0);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, InputStream_clazz(env),
+      env, java_io_InputStream_clazz(env),
       "read",
       "([B)I",
-      &g_InputStream_readI_AB);
+      &g_java_io_InputStream_readI_AB);
 
   jint ret =
       env->CallIntMethod(obj.obj(),
@@ -160,7 +165,7 @@ static jint Java_InputStream_readI_AB(JNIEnv* env, const
   return ret;
 }
 
-static base::subtle::AtomicWord g_InputStream_readI_AB_I_I = 0;
+static base::subtle::AtomicWord g_java_io_InputStream_readI_AB_I_I = 0;
 static jint Java_InputStream_readI_AB_I_I(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj, const
     base::android::JavaRefOrBare<jbyteArray>& p0,
@@ -172,14 +177,14 @@ static jint Java_InputStream_readI_AB_I_I(JNIEnv* env, const
     JniIntWrapper p1,
     JniIntWrapper p2) {
   CHECK_CLAZZ(env, obj.obj(),
-      InputStream_clazz(env), 0);
+      java_io_InputStream_clazz(env), 0);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, InputStream_clazz(env),
+      env, java_io_InputStream_clazz(env),
       "read",
       "([BII)I",
-      &g_InputStream_readI_AB_I_I);
+      &g_java_io_InputStream_readI_AB_I_I);
 
   jint ret =
       env->CallIntMethod(obj.obj(),
@@ -188,41 +193,41 @@ static jint Java_InputStream_readI_AB_I_I(JNIEnv* env, const
   return ret;
 }
 
-static base::subtle::AtomicWord g_InputStream_reset = 0;
+static base::subtle::AtomicWord g_java_io_InputStream_reset = 0;
 static void Java_InputStream_reset(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) __attribute__ ((unused));
 static void Java_InputStream_reset(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      InputStream_clazz(env));
+      java_io_InputStream_clazz(env));
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, InputStream_clazz(env),
+      env, java_io_InputStream_clazz(env),
       "reset",
       "()V",
-      &g_InputStream_reset);
+      &g_java_io_InputStream_reset);
 
      env->CallVoidMethod(obj.obj(),
           method_id);
   jni_generator::CheckException(env);
 }
 
-static base::subtle::AtomicWord g_InputStream_skip = 0;
+static base::subtle::AtomicWord g_java_io_InputStream_skip = 0;
 static jlong Java_InputStream_skip(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj, jlong p0) __attribute__
     ((unused));
 static jlong Java_InputStream_skip(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj, jlong p0) {
   CHECK_CLAZZ(env, obj.obj(),
-      InputStream_clazz(env), 0);
+      java_io_InputStream_clazz(env), 0);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, InputStream_clazz(env),
+      env, java_io_InputStream_clazz(env),
       "skip",
       "(J)J",
-      &g_InputStream_skip);
+      &g_java_io_InputStream_skip);
 
   jlong ret =
       env->CallLongMethod(obj.obj(),
@@ -231,23 +236,23 @@ static jlong Java_InputStream_skip(JNIEnv* env, const
   return ret;
 }
 
-static base::subtle::AtomicWord g_InputStream_Constructor = 0;
+static base::subtle::AtomicWord g_java_io_InputStream_Constructor = 0;
 static base::android::ScopedJavaLocalRef<jobject>
     Java_InputStream_Constructor(JNIEnv* env) __attribute__ ((unused));
 static base::android::ScopedJavaLocalRef<jobject>
     Java_InputStream_Constructor(JNIEnv* env) {
-  CHECK_CLAZZ(env, InputStream_clazz(env),
-      InputStream_clazz(env), NULL);
+  CHECK_CLAZZ(env, java_io_InputStream_clazz(env),
+      java_io_InputStream_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, InputStream_clazz(env),
+      env, java_io_InputStream_clazz(env),
       "<init>",
       "()V",
-      &g_InputStream_Constructor);
+      &g_java_io_InputStream_Constructor);
 
   jobject ret =
-      env->NewObject(InputStream_clazz(env),
+      env->NewObject(java_io_InputStream_clazz(env),
           method_id);
   jni_generator::CheckException(env);
   return base::android::ScopedJavaLocalRef<jobject>(env, ret);

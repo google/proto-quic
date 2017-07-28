@@ -196,6 +196,9 @@ components/rappor/rappor_parameters.h.
 
 <rappor-metric name="Autofill.CardUploadNotOfferedConflictingNames"
     type="ETLD_PLUS_ONE">
+  <obsolete>
+    No longer being logged.
+  </obsolete>
   <owner>mathp@chromium.org</owner>
   <summary>
     The eTLD+1 of a URL for which there was an attempted upload of a credit card
@@ -205,6 +208,9 @@ components/rappor/rappor_parameters.h.
 
 <rappor-metric name="Autofill.CardUploadNotOfferedNoAddress"
     type="ETLD_PLUS_ONE">
+  <obsolete>
+    No longer being logged.
+  </obsolete>
   <owner>mathp@chromium.org</owner>
   <summary>
     The eTLD+1 of a URL for which there was an attempted upload of a credit card
@@ -213,6 +219,9 @@ components/rappor/rappor_parameters.h.
 </rappor-metric>
 
 <rappor-metric name="Autofill.CardUploadNotOfferedNoCvc" type="ETLD_PLUS_ONE">
+  <obsolete>
+    No longer being logged.
+  </obsolete>
   <owner>mathp@chromium.org</owner>
   <summary>
     The eTLD+1 of a URL for which there was an attempted upload of a credit card
@@ -221,6 +230,9 @@ components/rappor/rappor_parameters.h.
 </rappor-metric>
 
 <rappor-metric name="Autofill.CardUploadNotOfferedNoName" type="ETLD_PLUS_ONE">
+  <obsolete>
+    No longer being logged.
+  </obsolete>
   <owner>mathp@chromium.org</owner>
   <summary>
     The eTLD+1 of a URL for which there was an attempted upload of a credit card
@@ -230,6 +242,9 @@ components/rappor/rappor_parameters.h.
 
 <rappor-metric name="Autofill.HighNumberOfHeuristicMismatches"
     type="ETLD_PLUS_ONE">
+  <obsolete>
+    No longer being logged.
+  </obsolete>
   <owner>mathp@chromium.org</owner>
   <summary>
     The eTLD+1 of a URL for which there was a high number of mismatches for the
@@ -239,6 +254,9 @@ components/rappor/rappor_parameters.h.
 
 <rappor-metric name="Autofill.HighNumberOfServerMismatches"
     type="ETLD_PLUS_ONE">
+  <obsolete>
+    No longer being logged.
+  </obsolete>
   <owner>mathp@chromium.org</owner>
   <summary>
     The eTLD+1 of a URL for which there was a high number of mismatches for the
@@ -248,6 +266,9 @@ components/rappor/rappor_parameters.h.
 
 <rappor-metric name="Autofill.QueryResponseHasNoServerDataForForm"
     type="ETLD_PLUS_ONE">
+  <obsolete>
+    No longer being logged.
+  </obsolete>
   <owner>mathp@chromium.org</owner>
   <summary>
     The eTLD+1 of a URL for which there was a server query response for which

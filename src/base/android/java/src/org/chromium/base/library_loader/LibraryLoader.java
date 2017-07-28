@@ -7,6 +7,7 @@ package org.chromium.base.library_loader;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.AsyncTask;
+import android.os.StrictMode;
 import android.os.SystemClock;
 
 import org.chromium.base.CommandLine;
@@ -47,6 +48,9 @@ public class LibraryLoader {
 
     // Guards all access to the libraries
     private static final Object sLock = new Object();
+
+    // SharedPreferences key for "don't prefetch libraries" flag
+    private static final String DONT_PREFETCH_LIBRARIES_KEY = "dont_prefetch_libraries";
 
     // The singleton instance of NativeLibraryPreloader.
     private static NativeLibraryPreloader sLibraryPreloader;
@@ -193,6 +197,37 @@ public class LibraryLoader {
         }
     }
 
+    /**
+     * Disables prefetching for subsequent runs. The value comes from "DontPrefetchLibraries"
+     * finch experiment, and is pushed on every run. I.e. the effect of the finch experiment
+     * lags by one run, which is the best we can do considering that prefetching happens way
+     * before finch is initialized. Note that since LibraryLoader is in //base, it can't depend
+     * on ChromeFeatureList, and has to rely on external code pushing the value.
+     *
+     * @param dontPrefetch whether not to prefetch libraries
+     */
+    public static void setDontPrefetchLibrariesOnNextRuns(boolean dontPrefetch) {
+        ContextUtils.getAppSharedPreferences()
+                .edit()
+                .putBoolean(DONT_PREFETCH_LIBRARIES_KEY, dontPrefetch)
+                .apply();
+    }
+
+    /**
+     * @return whether not to prefetch libraries (see setDontPrefetchLibrariesOnNextRun()).
+     */
+    private static boolean isNotPrefetchingLibraries() {
+        // This might be the first time getAppSharedPreferences() is used, so relax strict mode
+        // to allow disk reads.
+        StrictMode.ThreadPolicy oldPolicy = StrictMode.allowThreadDiskReads();
+        try {
+            return ContextUtils.getAppSharedPreferences().getBoolean(
+                    DONT_PREFETCH_LIBRARIES_KEY, false);
+        } finally {
+            StrictMode.setThreadPolicy(oldPolicy);
+        }
+    }
+
     /** Prefetches the native libraries in a background thread.
      *
      * Launches an AsyncTask that, through a short-lived forked process, reads a
@@ -203,6 +238,8 @@ public class LibraryLoader {
      * detrimental to the startup time.
      */
     public void asyncPrefetchLibrariesToMemory() {
+        if (isNotPrefetchingLibraries()) return;
+
         final boolean coldStart = mPrefetchLibraryHasBeenCalled.compareAndSet(false, true);
         new AsyncTask<Void, Void, Void>() {
             @Override

@@ -9,6 +9,7 @@
 
 #include "base/containers/flat_tree.h"
 #include "base/logging.h"
+#include "base/template_util.h"
 
 namespace base {
 
@@ -37,6 +38,7 @@ struct GetKeyFromValuePairFirst {
 //  - Low overhead, especially for smaller maps.
 //  - Performance is good for more workloads than you might expect (see
 //    overview link above).
+//  - Supports C++14 map interface.
 //
 // CONS
 //
@@ -94,33 +96,34 @@ struct GetKeyFromValuePairFirst {
 //   const_reverse_iterator crend() const;
 //
 // Insert and accessor functions:
-//   Mapped&              operator[](const Key&);
-//   Mapped&              operator[](Key&&);
-//   pair<iterator, bool> insert(const pair<Key, Mapped>&);
-//   pair<iterator, bool> insert(pair<Key, Mapped>&&);
+//   Mapped&              operator[](const key_type&);
+//   Mapped&              operator[](key_type&&);
+//   pair<iterator, bool> insert(const value_type&);
+//   pair<iterator, bool> insert(value_type&&);
 //   void                 insert(InputIterator first, InputIterator last,
 //                               FlatContainerDupes);
 //   pair<iterator, bool> emplace(Args&&...);
 //   iterator             emplace_hint(const_iterator, Args&&...);
 //
 // Erase functions:
+//   iterator erase(iterator);
 //   iterator erase(const_iterator);
 //   iterator erase(const_iterator first, const_iterator& last);
-//   size_t   erase(const Key& key)
+//   template <class K> size_t erase(const K& key)
 //
 // Comparators (see std::map documentation).
 //   key_compare   key_comp() const;
 //   value_compare value_comp() const;
 //
 // Search functions:
-//   size_t                   count(const Key&) const;
-//   iterator                 find(const Key&);
-//   const_iterator           find(const Key&) const;
-//   pair<iterator, iterator> equal_range(Key&)
-//   iterator                 lower_bound(const Key&);
-//   const_iterator           lower_bound(const Key&) const;
-//   iterator                 upper_bound(const Key&);
-//   const_iterator           upper_bound(const Key&) const;
+//   template <typename K> size_t                   count(const K&) const;
+//   template <typename K> iterator                 find(const K&);
+//   template <typename K> const_iterator           find(const K&) const;
+//   template <typename K> pair<iterator, iterator> equal_range(const K&);
+//   template <typename K> iterator                 lower_bound(const K&);
+//   template <typename K> const_iterator           lower_bound(const K&) const;
+//   template <typename K> iterator                 upper_bound(const K&);
+//   template <typename K> const_iterator           upper_bound(const K&) const;
 //
 // General functions:
 //   void swap(flat_map&&)
@@ -133,7 +136,7 @@ struct GetKeyFromValuePairFirst {
 //   bool operator>=(const flat_map&, const flat_map);
 //   bool operator<=(const flat_map&, const flat_map);
 //
-template <class Key, class Mapped, class Compare = std::less<Key>>
+template <class Key, class Mapped, class Compare = ::base::less>
 // Meets the requirements of Container, AssociativeContainer,
 // ReversibleContainer.
 // Requires: Key is Movable, Compare is a StrictWeakOrdering on Key.

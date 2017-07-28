@@ -6,24 +6,12 @@ from telemetry.page import shared_page_state
 from telemetry import story
 
 
-class BrowserStartupSharedState(shared_page_state.SharedPageState):
-  """Shared state that restarts the browser for every single story."""
-
-  def __init__(self, test, finder_options, story_set):
-    super(BrowserStartupSharedState, self).__init__(
-        test, finder_options, story_set)
-
-  def DidRunStory(self, results):
-    super(BrowserStartupSharedState, self).DidRunStory(results)
-    self._StopBrowser()
-
-
 class StartedPage(page_module.Page):
 
   def __init__(self, url, page_set):
     super(StartedPage, self).__init__(
         url=url, page_set=page_set, startup_url=url,
-        shared_page_state_class=BrowserStartupSharedState,
+        shared_page_state_class=shared_page_state.SharedPageState,
         name=url)
     self.archive_data_file = 'data/startup_pages.json'
 

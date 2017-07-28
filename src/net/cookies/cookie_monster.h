@@ -354,21 +354,39 @@ class NET_EXPORT CookieMonster : public CookieStore {
   };
 
   // Used to populate a histogram for cookie setting in the "delete equivalent"
-  // step. Measures total attempts to delete an equivalent cookie as well as if
-  // a cookie is found to delete, if a cookie is skipped because it is secure,
-  // and if it is skipped for being secure but would have been deleted
-  // otherwise. The last two are only possible if strict secure cookies is
-  // turned on and if an insecure origin attempts to a set a cookie where a
-  // cookie with the same name and secure attribute already exists.
+  // step. Measures total attempts to delete an equivalent cookie, and
+  // categorizes the outcome.
   //
-  // Enum for UMA. Do no reorder or remove entries. New entries must be place
-  // directly before COOKIE_DELETE_EQUIVALENT_LAST_ENTRY and histograms.xml must
-  // be updated accordingly.
+  // * COOKIE_DELETE_EQUIVALENT_ATTEMPT is incremented each time a cookie is
+  //   set, causing the equivalent deletion algorithm to execute.
+  //
+  // * COOKIE_DELETE_EQUIVALENT_SKIPPING_SECURE is incremented when a non-secure
+  //   cookie is ignored because an equivalent, but secure, cookie already
+  //   exists.
+  //
+  // * COOKIE_DELETE_EQUIVALENT_WOULD_HAVE_DELETED is incremented when a cookie
+  //   is skipped due to `secure` rules (e.g. whenever
+  //   COOKIE_DELETE_EQUIVALENT_SKIPPING_SECURE is incremented), but would have
+  //   caused a deletion without those rules.
+  //
+  //   TODO(mkwst): Now that we've shipped strict secure cookie checks, we don't
+  //   need this value anymore.
+  //
+  // * COOKIE_DELETE_EQUIVALENT_FOUND is incremented each time an equivalent
+  //   cookie is found (and deleted).
+  //
+  // * COOKIE_DELETE_EQUIVALENT_FOUND_WITH_SAME_VALUE is incremented each time
+  //   an equivalent cookie that also shared the same value with the new cookie
+  //   is found (and deleted).
+  //
+  // Please do not reorder or remove entries. New entries must be added to the
+  // end of the list, just before COOKIE_DELETE_EQUIVALENT_LAST_ENTRY.
   enum CookieDeleteEquivalent {
     COOKIE_DELETE_EQUIVALENT_ATTEMPT = 0,
     COOKIE_DELETE_EQUIVALENT_FOUND,
     COOKIE_DELETE_EQUIVALENT_SKIPPING_SECURE,
     COOKIE_DELETE_EQUIVALENT_WOULD_HAVE_DELETED,
+    COOKIE_DELETE_EQUIVALENT_FOUND_WITH_SAME_VALUE,
     COOKIE_DELETE_EQUIVALENT_LAST_ENTRY
   };
 
@@ -785,6 +803,11 @@ class NET_EXPORT CookieMonster::PersistentCookieStore
 
   // Instructs the store to not discard session only cookies on shutdown.
   virtual void SetForceKeepSessionState() = 0;
+
+  // Sets a callback that will be run before the store flushes.  If |callback|
+  // performs any async operations, the store will not wait for those to finish
+  // before flushing.
+  virtual void SetBeforeFlushCallback(base::RepeatingClosure callback) = 0;
 
   // Flushes the store and posts |callback| when complete. |callback| may be
   // NULL.

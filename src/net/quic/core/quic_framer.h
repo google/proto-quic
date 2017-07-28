@@ -188,7 +188,8 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   bool ProcessPacket(const QuicEncryptedPacket& packet);
 
   // Largest size in bytes of all stream frame fields without the payload.
-  static size_t GetMinStreamFrameSize(QuicStreamId stream_id,
+  static size_t GetMinStreamFrameSize(QuicVersion version,
+                                      QuicStreamId stream_id,
                                       QuicStreamOffset offset,
                                       bool last_frame_in_packet);
   // Size in bytes of all ack frame fields without the missing packets or ack
@@ -214,7 +215,8 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   // Size in bytes required to serialize the stream id.
   static size_t GetStreamIdSize(QuicStreamId stream_id);
   // Size in bytes required to serialize the stream offset.
-  static size_t GetStreamOffsetSize(QuicStreamOffset offset);
+  static size_t GetStreamOffsetSize(QuicVersion version,
+                                    QuicStreamOffset offset);
   // Size in bytes required for a serialized version negotiation packet
   static size_t GetVersionNegotiationPacketSize(size_t number_versions);
 

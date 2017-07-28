@@ -58,8 +58,6 @@ constexpr TimeDelta kReclaimTimeForDetachTests =
 constexpr TimeDelta kExtraTimeToWaitForDetach =
     TimeDelta::FromSeconds(1);
 
-using StandbyThreadPolicy = SchedulerWorkerPoolParams::StandbyThreadPolicy;
-
 class TaskSchedulerWorkerPoolImplTest
     : public testing::TestWithParam<test::ExecutionMode> {
  protected:
@@ -88,8 +86,8 @@ class TaskSchedulerWorkerPoolImplTest
 
   void StartWorkerPool(TimeDelta suggested_reclaim_time, size_t num_workers) {
     ASSERT_TRUE(worker_pool_);
-    worker_pool_->Start(SchedulerWorkerPoolParams(
-        StandbyThreadPolicy::LAZY, num_workers, suggested_reclaim_time));
+    worker_pool_->Start(
+        SchedulerWorkerPoolParams(num_workers, suggested_reclaim_time));
   }
 
   void CreateAndStartWorkerPool(TimeDelta suggested_reclaim_time,
@@ -158,7 +156,7 @@ class ThreadPostingTasks : public SimpleThread {
 
  private:
   void Run() override {
-    EXPECT_FALSE(factory_.task_runner()->RunsTasksOnCurrentThread());
+    EXPECT_FALSE(factory_.task_runner()->RunsTasksInCurrentSequence());
 
     for (size_t i = 0; i < kNumTasksPostedPerThread; ++i) {
       if (wait_before_post_task_ ==
@@ -342,12 +340,12 @@ TEST_P(TaskSchedulerWorkerPoolImplTest, PostDelayedTask) {
             TimeDelta::FromMilliseconds(250) + TestTimeouts::tiny_timeout());
 }
 
-// Verify that the RunsTasksOnCurrentThread() method of a SEQUENCED TaskRunner
+// Verify that the RunsTasksInCurrentSequence() method of a SEQUENCED TaskRunner
 // returns false when called from a task that isn't part of the sequence. Note:
-// Tests that use TestTaskFactory already verify that RunsTasksOnCurrentThread()
-// returns true when appropriate so this method complements it to get full
-// coverage of that method.
-TEST_P(TaskSchedulerWorkerPoolImplTest, SequencedRunsTasksOnCurrentThread) {
+// Tests that use TestTaskFactory already verify that
+// RunsTasksInCurrentSequence() returns true when appropriate so this method
+// complements it to get full coverage of that method.
+TEST_P(TaskSchedulerWorkerPoolImplTest, SequencedRunsTasksInCurrentSequence) {
   auto task_runner =
       CreateTaskRunnerWithExecutionMode(worker_pool_.get(), GetParam());
   auto sequenced_task_runner =
@@ -360,7 +358,7 @@ TEST_P(TaskSchedulerWorkerPoolImplTest, SequencedRunsTasksOnCurrentThread) {
       BindOnce(
           [](scoped_refptr<TaskRunner> sequenced_task_runner,
              WaitableEvent* task_ran) {
-            EXPECT_FALSE(sequenced_task_runner->RunsTasksOnCurrentThread());
+            EXPECT_FALSE(sequenced_task_runner->RunsTasksInCurrentSequence());
             task_ran->Signal();
           },
           sequenced_task_runner, Unretained(&task_ran)));
@@ -759,7 +757,10 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBeforeDetach) {
 
   // Verify that counts were recorded to the histogram as expected.
   const auto* histogram = worker_pool_->num_tasks_before_detach_histogram();
-  EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(0));
+  // Note: There'll be a thread that detaches after running no tasks. This
+  // thread was the one created to maintain an idle thread after posting the
+  // task via |task_runner_for_top_idle|.
+  EXPECT_EQ(1, histogram->SnapshotSamples()->GetCount(0));
   EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(1));
   EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(2));
   EXPECT_EQ(1, histogram->SnapshotSamples()->GetCount(3));
@@ -769,20 +770,6 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBeforeDetach) {
   EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(10));
 }
 
-TEST(TaskSchedulerWorkerPoolStandbyPolicyTest, InitLazy) {
-  TaskTracker task_tracker;
-  DelayedTaskManager delayed_task_manager;
-  delayed_task_manager.Start(make_scoped_refptr(new TestSimpleTaskRunner));
-  auto worker_pool = MakeUnique<SchedulerWorkerPoolImpl>(
-      "LazyPolicyWorkerPool", ThreadPriority::NORMAL, &task_tracker,
-      &delayed_task_manager);
-  worker_pool->Start(SchedulerWorkerPoolParams(StandbyThreadPolicy::LAZY, 8U,
-                                               TimeDelta::Max()));
-  ASSERT_TRUE(worker_pool);
-  EXPECT_EQ(0U, worker_pool->NumberOfAliveWorkersForTesting());
-  worker_pool->JoinForTesting();
-}
-
 TEST(TaskSchedulerWorkerPoolStandbyPolicyTest, InitOne) {
   TaskTracker task_tracker;
   DelayedTaskManager delayed_task_manager;
@@ -790,10 +777,60 @@ TEST(TaskSchedulerWorkerPoolStandbyPolicyTest, InitOne) {
   auto worker_pool = MakeUnique<SchedulerWorkerPoolImpl>(
       "OnePolicyWorkerPool", ThreadPriority::NORMAL, &task_tracker,
       &delayed_task_manager);
-  worker_pool->Start(SchedulerWorkerPoolParams(StandbyThreadPolicy::ONE, 8U,
-                                               TimeDelta::Max()));
+  worker_pool->Start(SchedulerWorkerPoolParams(8U, TimeDelta::Max()));
   ASSERT_TRUE(worker_pool);
   EXPECT_EQ(1U, worker_pool->NumberOfAliveWorkersForTesting());
+  worker_pool->JoinForTesting();
+}
+
+// Verify the SchedulerWorkerPoolImpl keeps at least one idle standby thread,
+// capacity permitting.
+TEST(TaskSchedulerWorkerPoolStandbyPolicyTest, VerifyStandbyThread) {
+  constexpr size_t worker_capacity = 3;
+
+  TaskTracker task_tracker;
+  DelayedTaskManager delayed_task_manager;
+  delayed_task_manager.Start(MakeRefCounted<TestSimpleTaskRunner>());
+  auto worker_pool = MakeUnique<SchedulerWorkerPoolImpl>(
+      "StandbyThreadWorkerPool", ThreadPriority::NORMAL, &task_tracker,
+      &delayed_task_manager);
+  worker_pool->Start(
+      SchedulerWorkerPoolParams(worker_capacity, kReclaimTimeForDetachTests));
+  ASSERT_TRUE(worker_pool);
+  EXPECT_EQ(1U, worker_pool->NumberOfAliveWorkersForTesting());
+
+  auto task_runner =
+      worker_pool->CreateTaskRunnerWithTraits({WithBaseSyncPrimitives()});
+
+  WaitableEvent thread_running(WaitableEvent::ResetPolicy::AUTOMATIC,
+                               WaitableEvent::InitialState::NOT_SIGNALED);
+  WaitableEvent thread_continue(WaitableEvent::ResetPolicy::MANUAL,
+                                WaitableEvent::InitialState::NOT_SIGNALED);
+
+  RepeatingClosure closure = BindRepeating(
+      [](WaitableEvent* thread_running, WaitableEvent* thread_continue) {
+        thread_running->Signal();
+        thread_continue->Wait();
+      },
+      Unretained(&thread_running), Unretained(&thread_continue));
+
+  // There should be one idle thread until we reach worker capacity
+  for (size_t i = 0; i < worker_capacity; ++i) {
+    EXPECT_EQ(i + 1, worker_pool->NumberOfAliveWorkersForTesting());
+    task_runner->PostTask(FROM_HERE, closure);
+    thread_running.Wait();
+  }
+
+  // There should not be an extra idle thread if it means going above capacity
+  EXPECT_EQ(worker_capacity, worker_pool->NumberOfAliveWorkersForTesting());
+
+  thread_continue.Signal();
+  // Give time for a worker to detach. Verify that the pool attempts to keep one
+  // idle active worker.
+  PlatformThread::Sleep(kReclaimTimeForDetachTests + kExtraTimeToWaitForDetach);
+  EXPECT_EQ(1U, worker_pool->NumberOfAliveWorkersForTesting());
+
+  worker_pool->DisallowWorkerDetachmentForTesting();
   worker_pool->JoinForTesting();
 }
 

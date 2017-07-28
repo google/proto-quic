@@ -18,6 +18,7 @@
 #include "base/memory/ref_counted.h"
 #include "base/run_loop.h"
 #include "base/sequenced_task_runner.h"
+#include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/task_scheduler/post_task.h"
 #include "base/test/scoped_task_environment.h"
@@ -424,6 +425,34 @@ TEST_F(SQLitePersistentCookieStoreTest, DISABLED_TestLoadCookiesForKey) {
   ASSERT_EQ(cookies_loaded.find("foo.bar") != cookies_loaded.end(), true);
   ASSERT_EQ(cookies_loaded.find("www.bbb.com") != cookies_loaded.end(), true);
   cookies_.clear();
+}
+
+TEST_F(SQLitePersistentCookieStoreTest, TestBeforeFlushCallback) {
+  InitializeStore(false, false);
+
+  struct Counter {
+    int count = 0;
+    void increment() { count++; }
+  };
+
+  Counter counter;
+  store_->SetBeforeFlushCallback(
+      base::Bind(&Counter::increment, base::Unretained(&counter)));
+
+  // The implementation of SQLitePersistentCookieStore::Backend flushes changes
+  // after 30s or 512 pending operations. Add 512 cookies to the store to test
+  // that the callback gets called when SQLitePersistentCookieStore internally
+  // flushes its store.
+  for (int i = 0; i < 512; i++) {
+    // Each cookie needs a unique timestamp for creation_utc (see DB schema).
+    base::Time t = base::Time::Now() + base::TimeDelta::FromMicroseconds(i);
+    AddCookie(base::StringPrintf("%d", i), "foo", "example.com", "/", t);
+  }
+
+  NetTestSuite::GetScopedTaskEnvironment()->RunUntilIdle();
+  EXPECT_GT(counter.count, 0);
+
+  DestroyStore();
 }
 
 // Test that we can force the database to be written by calling Flush().

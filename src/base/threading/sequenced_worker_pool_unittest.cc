@@ -81,7 +81,7 @@ class DestructionDeadlockChecker
  protected:
   virtual ~DestructionDeadlockChecker() {
     // This method should not deadlock.
-    pool_->RunsTasksOnCurrentThread();
+    pool_->RunsTasksInCurrentSequence();
   }
 
  private:
@@ -245,7 +245,6 @@ class SequencedWorkerPoolTest
   void SetUp() override {
     if (RedirectedToTaskScheduler()) {
       const SchedulerWorkerPoolParams worker_pool_params(
-          SchedulerWorkerPoolParams::StandbyThreadPolicy::LAZY,
           static_cast<int>(kNumWorkerThreads), TimeDelta::Max());
       TaskScheduler::Create("SequencedWorkerPoolTest");
       TaskScheduler::GetInstance()->Start(
@@ -884,16 +883,16 @@ void VerifyRunsTasksOnCurrentThread(
     scoped_refptr<TaskRunner> test_negative_task_runner,
     SequencedWorkerPool* pool,
     SequencedWorkerPool* unused_pool) {
-  EXPECT_TRUE(test_positive_task_runner->RunsTasksOnCurrentThread());
-  EXPECT_FALSE(test_negative_task_runner->RunsTasksOnCurrentThread());
-  EXPECT_TRUE(pool->RunsTasksOnCurrentThread());
+  EXPECT_TRUE(test_positive_task_runner->RunsTasksInCurrentSequence());
+  EXPECT_FALSE(test_negative_task_runner->RunsTasksInCurrentSequence());
+  EXPECT_TRUE(pool->RunsTasksInCurrentSequence());
 
   // Tasks posted to different SequencedWorkerPools may run on the same
   // TaskScheduler threads.
   if (redirected_to_task_scheduler)
-    EXPECT_TRUE(unused_pool->RunsTasksOnCurrentThread());
+    EXPECT_TRUE(unused_pool->RunsTasksInCurrentSequence());
   else
-    EXPECT_FALSE(unused_pool->RunsTasksOnCurrentThread());
+    EXPECT_FALSE(unused_pool->RunsTasksInCurrentSequence());
 }
 
 // Verify correctness of the RunsTasksOnCurrentThread() method on
@@ -909,11 +908,11 @@ TEST_P(SequencedWorkerPoolTest, RunsTasksOnCurrentThread) {
 
   SequencedWorkerPoolOwner unused_pool_owner(2, "unused_pool");
 
-  EXPECT_FALSE(pool()->RunsTasksOnCurrentThread());
-  EXPECT_FALSE(sequenced_task_runner_1->RunsTasksOnCurrentThread());
-  EXPECT_FALSE(sequenced_task_runner_2->RunsTasksOnCurrentThread());
-  EXPECT_FALSE(unsequenced_task_runner->RunsTasksOnCurrentThread());
-  EXPECT_FALSE(unused_pool_owner.pool()->RunsTasksOnCurrentThread());
+  EXPECT_FALSE(pool()->RunsTasksInCurrentSequence());
+  EXPECT_FALSE(sequenced_task_runner_1->RunsTasksInCurrentSequence());
+  EXPECT_FALSE(sequenced_task_runner_2->RunsTasksInCurrentSequence());
+  EXPECT_FALSE(unsequenced_task_runner->RunsTasksInCurrentSequence());
+  EXPECT_FALSE(unused_pool_owner.pool()->RunsTasksInCurrentSequence());
 
   // From a task posted to |sequenced_task_runner_1|:
   // - sequenced_task_runner_1->RunsTasksOnCurrentThread() returns true.

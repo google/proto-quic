@@ -31,14 +31,18 @@ common_sources = [
 static_library("common") {
   sources = common_sources
   public_configs = [ ":includes" ]
-  deps = [ ":headers" ]
+  deps = [
+    ":headers",
+  ]
 }
 
 static_library("common_no_dictionary_data") {
   sources = common_sources
   public_configs = [ ":includes" ]
-  deps = [ ":headers" ]
-  defines = ["BROTLI_EXTERNAL_DICTIONARY_DATA"]
+  deps = [
+    ":headers",
+  ]
+  defines = [ "BROTLI_EXTERNAL_DICTIONARY_DATA" ]
 }
 
 dec_sources = [
@@ -58,8 +62,12 @@ dec_sources = [
 static_library("dec") {
   sources = dec_sources
   public_configs = [ ":includes" ]
-  public_deps = [ ":headers" ]
-  deps = [ ":common" ]
+  public_deps = [
+    ":headers",
+  ]
+  deps = [
+    ":common",
+  ]
 
   configs -= [ "//build/config/compiler:chromium_code" ]
   configs += [ "//build/config/compiler:no_chromium_code" ]
@@ -72,8 +80,12 @@ static_library("dec") {
 static_library("dec_no_dictionary_data") {
   sources = dec_sources
   public_configs = [ ":includes" ]
-  public_deps = [ ":headers" ]
-  deps = [ ":common_no_dictionary_data" ]
+  public_deps = [
+    ":headers",
+  ]
+  deps = [
+    ":common_no_dictionary_data",
+  ]
 
   configs -= [ "//build/config/compiler:chromium_code" ]
   configs += [ "//build/config/compiler:no_chromium_code" ]

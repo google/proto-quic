@@ -9,6 +9,8 @@
 #include "base/single_thread_task_runner.h"
 #include "base/time/tick_clock.h"
 #include "base/time/time.h"
+#include "net/base/address_list.h"
+#include "net/base/ip_address.h"
 
 namespace net {
 
@@ -18,7 +20,9 @@ namespace internal {
 
 SocketWatcher::SocketWatcher(
     SocketPerformanceWatcherFactory::Protocol protocol,
+    const AddressList& address_list,
     base::TimeDelta min_notification_interval,
+    bool allow_rtt_private_address,
     scoped_refptr<base::SingleThreadTaskRunner> task_runner,
     OnUpdatedRTTAvailableCallback updated_rtt_observation_callback,
     base::TickClock* tick_clock)
@@ -26,6 +30,9 @@ SocketWatcher::SocketWatcher(
       task_runner_(std::move(task_runner)),
       updated_rtt_observation_callback_(updated_rtt_observation_callback),
       rtt_notifications_minimum_interval_(min_notification_interval),
+      run_rtt_callback_(allow_rtt_private_address ||
+                        (!address_list.empty() &&
+                         !address_list.front().address().IsReserved())),
       tick_clock_(tick_clock) {
   DCHECK(tick_clock_);
 }
@@ -38,8 +45,9 @@ bool SocketWatcher::ShouldNotifyUpdatedRTT() const {
   // Do not allow incoming notifications if the last notification was more
   // recent than |rtt_notifications_minimum_interval_| ago. This helps in
   // reducing the overhead of obtaining the RTT values.
-  return tick_clock_->NowTicks() - last_rtt_notification_ >=
-         rtt_notifications_minimum_interval_;
+  return run_rtt_callback_ &&
+         tick_clock_->NowTicks() - last_rtt_notification_ >=
+             rtt_notifications_minimum_interval_;
 }
 
 void SocketWatcher::OnUpdatedRTTAvailable(const base::TimeDelta& rtt) {

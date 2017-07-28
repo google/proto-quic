@@ -5255,6 +5255,16 @@ TEST_P(QuicConnectionTest, CloseConnectionForStatelessReject) {
                               ConnectionCloseBehavior::SILENT_CLOSE);
 }
 
+// Regression test for b/63620844.
+TEST_P(QuicConnectionTest, FailedToWriteHandshakePacket) {
+  FLAGS_quic_reloadable_flag_quic_clear_packet_before_handed_over = true;
+  SimulateNextPacketTooLarge();
+  EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_PACKET_WRITE_ERROR, _,
+                                           ConnectionCloseSource::FROM_SELF))
+      .Times(1);
+  connection_.SendCryptoStreamData();
+}
+
 }  // namespace
 }  // namespace test
 }  // namespace net

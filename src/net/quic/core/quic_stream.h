@@ -239,6 +239,12 @@ class QUIC_EXPORT_PRIVATE QuicStream : public StreamNotifierInterface {
   // Does not send a FIN.  May cause the stream to be closed.
   virtual void CloseWriteSide();
 
+  // Close the read side of the socket.  May cause the stream to be closed.
+  // Subclasses and consumers should use StopReading to terminate reading early
+  // if expecting a FIN. Can be used directly by subclasses if not expecting a
+  // FIN.
+  void CloseReadSide();
+
   bool fin_buffered() const { return fin_buffered_; }
 
   const QuicSession* session() const { return session_; }
@@ -259,10 +265,6 @@ class QUIC_EXPORT_PRIVATE QuicStream : public StreamNotifierInterface {
  private:
   friend class test::QuicStreamPeer;
   friend class QuicStreamUtils;
-
-  // Close the read side of the socket.  May cause the stream to be closed.
-  // Subclasses and consumers should use StopReading to terminate reading early.
-  void CloseReadSide();
 
   // Subclasses and consumers should use reading_stopped.
   bool read_side_closed() const { return read_side_closed_; }

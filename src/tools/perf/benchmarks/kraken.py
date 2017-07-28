@@ -16,8 +16,6 @@ from telemetry import story
 from telemetry.value import list_of_scalar_values
 from telemetry.value import scalar
 
-from metrics import power
-
 
 DESCRIPTIONS = {
     'ai-astar':
@@ -75,24 +73,12 @@ class _KrakenMeasurement(legacy_page_test.LegacyPageTest):
 
   def __init__(self):
     super(_KrakenMeasurement, self).__init__()
-    self._power_metric = None
 
-  def CustomizeBrowserOptions(self, options):
-    power.PowerMetric.CustomizeBrowserOptions(options)
-
-  def WillStartBrowser(self, platform):
-    self._power_metric = power.PowerMetric(platform)
-
-  def DidNavigateToPage(self, page, tab):
-    self._power_metric.Start(page, tab)
 
   def ValidateAndMeasurePage(self, page, tab, results):
     tab.WaitForJavaScriptCondition(
         'document.title.indexOf("Results") != -1', timeout=700)
     tab.WaitForDocumentReadyStateToBeComplete()
-
-    self._power_metric.Stop(page, tab)
-    self._power_metric.AddResults(tab, results)
 
     result_dict = json.loads(tab.EvaluateJavaScript("""
         var formElement = document.getElementsByTagName("input")[0];

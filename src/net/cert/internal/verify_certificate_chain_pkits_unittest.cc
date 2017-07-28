@@ -5,7 +5,7 @@
 #include "net/cert/internal/verify_certificate_chain.h"
 
 #include "net/cert/internal/parsed_certificate.h"
-#include "net/cert/internal/signature_policy.h"
+#include "net/cert/internal/simple_path_builder_delegate.h"
 #include "net/cert/internal/trust_store.h"
 #include "net/der/input.h"
 #include "third_party/boringssl/src/include/openssl/pool.h"
@@ -42,13 +42,13 @@ class VerifyCertificateChainPkitsTestDelegate {
           << parsing_errors.ToDebugString();
     }
 
-    SimpleSignaturePolicy signature_policy(1024);
+    SimplePathBuilderDelegate path_builder_delegate(1024);
 
     std::set<der::Input> user_constrained_policy_set;
 
     CertPathErrors path_errors;
     VerifyCertificateChain(
-        input_chain, CertificateTrust::ForTrustAnchor(), &signature_policy,
+        input_chain, CertificateTrust::ForTrustAnchor(), &path_builder_delegate,
         info.time, KeyPurpose::ANY_EKU, info.initial_explicit_policy,
         info.initial_policy_set, info.initial_policy_mapping_inhibit,
         info.initial_inhibit_any_policy, &user_constrained_policy_set,

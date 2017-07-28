@@ -11,10 +11,9 @@
 #include "net/quic/test_tools/simulator/simulator.h"
 #include "net/quic/test_tools/simulator/switch.h"
 
-
-using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::_;
 
 namespace net {
 namespace simulator {
@@ -39,6 +38,15 @@ class QuicEndpointTest : public QuicTest {
   std::unique_ptr<SymmetricLink> Link(Endpoint* a, Endpoint* b) {
     return QuicMakeUnique<SymmetricLink>(a, b, kDefaultBandwidth,
                                          kDefaultPropagationDelay);
+  }
+
+  std::unique_ptr<SymmetricLink> CustomLink(Endpoint* a,
+                                            Endpoint* b,
+                                            uint64_t extra_rtt_ms) {
+    return QuicMakeUnique<SymmetricLink>(
+        a, b, kDefaultBandwidth,
+        kDefaultPropagationDelay +
+            QuicTime::Delta::FromMilliseconds(extra_rtt_ms));
   }
 };
 
@@ -159,9 +167,11 @@ TEST_F(QuicEndpointTest, Competition) {
       "Endpoint D",
       {endpoint_d_a.get(), endpoint_d_b.get(), endpoint_d_c.get()});
 
-  auto link_a = Link(endpoint_a.get(), switch_.port(1));
-  auto link_b = Link(endpoint_b.get(), switch_.port(2));
-  auto link_c = Link(endpoint_c.get(), switch_.port(3));
+  // Create links with slightly different RTTs in order to avoid pathological
+  // side-effects of packets entering the queue at the exactly same time.
+  auto link_a = CustomLink(endpoint_a.get(), switch_.port(1), 0);
+  auto link_b = CustomLink(endpoint_b.get(), switch_.port(2), 1);
+  auto link_c = CustomLink(endpoint_c.get(), switch_.port(3), 2);
   auto link_d = Link(&endpoint_d, switch_.port(4));
 
   endpoint_a->AddBytesToTransfer(2 * 1024 * 1024);

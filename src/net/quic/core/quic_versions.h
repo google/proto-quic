@@ -33,11 +33,8 @@ enum QuicVersion {
                          // endian. Dot not ack acks. Send a connection level
                          // WINDOW_UPDATE every 20 sent packets which do not
                          // contain retransmittable frames.
-  QUIC_VERSION_40 = 40,  // Initial packet number is randomly chosen from
-                         // [0:2^31], WINDOW_UPDATE for connection flow control
-                         // advertises value in 1024-byte units, WINDOW_UPDATE
-                         // splits into MAX_DATA and MAX_STREAM_DATA, BLOCKED
-                         // frame split into BLOCKED and STREAM_BLOCKED frames
+  QUIC_VERSION_40 = 40,  // RST_STREAM and STREAM_FRAME frame match IETF format.
+  QUIC_VERSION_41 = 41,  // Use IETF packet header format.
 
   // IMPORTANT: if you are adding to this list, follow the instructions at
   // http://sites/quic/adding-and-removing-versions
@@ -51,7 +48,7 @@ enum QuicVersion {
 // IMPORTANT: if you are adding to this list, follow the instructions at
 // http://sites/quic/adding-and-removing-versions
 static const QuicVersion kSupportedQuicVersions[] = {
-    QUIC_VERSION_40, QUIC_VERSION_39, QUIC_VERSION_38,
+    QUIC_VERSION_41, QUIC_VERSION_40, QUIC_VERSION_39, QUIC_VERSION_38,
     QUIC_VERSION_37, QUIC_VERSION_36, QUIC_VERSION_35};
 
 typedef std::vector<QuicVersion> QuicVersionVector;

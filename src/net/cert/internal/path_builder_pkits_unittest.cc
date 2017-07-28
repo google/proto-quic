@@ -8,7 +8,7 @@
 #include "net/cert/internal/cert_issuer_source_static.h"
 #include "net/cert/internal/parse_certificate.h"
 #include "net/cert/internal/parsed_certificate.h"
-#include "net/cert/internal/signature_policy.h"
+#include "net/cert/internal/simple_path_builder_delegate.h"
 #include "net/cert/internal/trust_store_in_memory.h"
 #include "net/cert/internal/verify_certificate_chain.h"
 #include "net/der/input.h"
@@ -56,11 +56,11 @@ class PathBuilderPkitsTestDelegate {
 
     scoped_refptr<ParsedCertificate> target_cert(certs.back());
 
-    SimpleSignaturePolicy signature_policy(1024);
+    SimplePathBuilderDelegate path_builder_delegate(1024);
 
     CertPathBuilder::Result result;
     CertPathBuilder path_builder(
-        std::move(target_cert), &trust_store, &signature_policy, info.time,
+        std::move(target_cert), &trust_store, &path_builder_delegate, info.time,
         KeyPurpose::ANY_EKU, info.initial_explicit_policy,
         info.initial_policy_set, info.initial_policy_mapping_inhibit,
         info.initial_inhibit_any_policy, &result);

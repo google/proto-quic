@@ -216,6 +216,26 @@ SerializedPacket::SerializedPacket(QuicPacketNumber packet_number,
 
 SerializedPacket::SerializedPacket(const SerializedPacket& other) = default;
 
+SerializedPacket& SerializedPacket::operator=(const SerializedPacket& other) =
+    default;
+
+SerializedPacket::SerializedPacket(SerializedPacket&& other)
+    : encrypted_buffer(other.encrypted_buffer),
+      encrypted_length(other.encrypted_length),
+      has_crypto_handshake(other.has_crypto_handshake),
+      num_padding_bytes(other.num_padding_bytes),
+      packet_number(other.packet_number),
+      packet_number_length(other.packet_number_length),
+      encryption_level(other.encryption_level),
+      has_ack(other.has_ack),
+      has_stop_waiting(other.has_stop_waiting),
+      transmission_type(other.transmission_type),
+      original_packet_number(other.original_packet_number),
+      largest_acked(other.largest_acked) {
+  retransmittable_frames.swap(other.retransmittable_frames);
+  listeners.swap(other.listeners);
+}
+
 SerializedPacket::~SerializedPacket() {}
 
 void ClearSerializedPacket(SerializedPacket* serialized_packet) {

@@ -61,6 +61,7 @@ class NewMockPersistentCookieStore
   MOCK_METHOD1(AddCookie, void(const CanonicalCookie& cc));
   MOCK_METHOD1(UpdateCookieAccessTime, void(const CanonicalCookie& cc));
   MOCK_METHOD1(DeleteCookie, void(const CanonicalCookie& cc));
+  MOCK_METHOD1(SetBeforeFlushCallback, void(base::RepeatingClosure));
   virtual void Flush(base::OnceClosure callback) {
     if (!callback.is_null())
       base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
@@ -2480,6 +2481,7 @@ class FlushablePersistentStore : public CookieMonster::PersistentCookieStore {
   void UpdateCookieAccessTime(const CanonicalCookie&) override {}
   void DeleteCookie(const CanonicalCookie&) override {}
   void SetForceKeepSessionState() override {}
+  void SetBeforeFlushCallback(base::RepeatingClosure callback) override {}
 
   void Flush(base::OnceClosure callback) override {
     ++flush_count_;
@@ -2509,19 +2511,6 @@ class CallbackCounter : public base::RefCountedThreadSafe<CallbackCounter> {
   ~CallbackCounter() {}
 
   volatile int callback_count_;
-};
-
-class FlushCountingChannelIDStore : public DefaultChannelIDStore {
- public:
-  FlushCountingChannelIDStore()
-      : DefaultChannelIDStore(nullptr), flush_count_(0) {}
-
-  void Flush() override { flush_count_++; }
-
-  int flush_count() { return flush_count_; }
-
- private:
-  int flush_count_;
 };
 
 }  // namespace
@@ -2578,39 +2567,18 @@ TEST_F(CookieMonsterTest, FlushStore) {
   ASSERT_EQ(3, counter->callback_count());
 }
 
-TEST_F(CookieMonsterTest, FlushChannelIDs) {
-  // |channel_id_service| owns |channel_id_store|.
-  FlushCountingChannelIDStore* channel_id_store =
-      new FlushCountingChannelIDStore();
+TEST_F(CookieMonsterTest, SetBeforeFlushCallbackIsCalled) {
   std::unique_ptr<ChannelIDService> channel_id_service(
-      new ChannelIDService(channel_id_store));
+      new ChannelIDService(nullptr));
 
-  scoped_refptr<FlushablePersistentStore> store(new FlushablePersistentStore());
+  scoped_refptr<NewMockPersistentCookieStore> store(
+      new NewMockPersistentCookieStore());
+
+  // SetBeforeFlushCallback should be called in both the c'tor and d'tor.
+  EXPECT_CALL(*store, SetBeforeFlushCallback(testing::_)).Times(2);
+
   std::unique_ptr<CookieMonster> cm(
       new CookieMonster(store.get(), nullptr, channel_id_service.get()));
-  EXPECT_EQ(0, channel_id_store->flush_count());
-
-  // Before initialization, FlushStore() doesn't propagate to the
-  // ChannelIDStore.
-  cm->FlushStore(base::Closure());
-  base::RunLoop().RunUntilIdle();
-
-  EXPECT_EQ(0, channel_id_store->flush_count());
-
-  // After initialization, FlushStore() propagates to the ChannelIDStore.
-  GetAllCookies(cm.get());  // Force init.
-  cm->FlushStore(base::Closure());
-  base::RunLoop().RunUntilIdle();
-
-  EXPECT_EQ(1, channel_id_store->flush_count());
-
-  // If there is no persistent store, then a ChannelIDStore won't be notified.
-  cm.reset(new CookieMonster(nullptr, nullptr, channel_id_service.get()));
-  GetAllCookies(cm.get());  // Force init.
-  cm->FlushStore(base::Closure());
-  base::RunLoop().RunUntilIdle();
-
-  EXPECT_EQ(1, channel_id_store->flush_count());
 }
 
 TEST_F(CookieMonsterTest, SetAllCookies) {
@@ -2955,6 +2923,9 @@ TEST_F(CookieMonsterTest, CookieDeleteEquivalentHistogramTest) {
   histograms.ExpectBucketCount(cookie_source_histogram,
                                CookieMonster::COOKIE_DELETE_EQUIVALENT_FOUND,
                                1);
+  histograms.ExpectBucketCount(
+      cookie_source_histogram,
+      CookieMonster::COOKIE_DELETE_EQUIVALENT_FOUND_WITH_SAME_VALUE, 0);
 
   // Set a secure cookie from a secure origin that matches the name of an
   // already existing cookie and is not equivalent.
@@ -2964,6 +2935,20 @@ TEST_F(CookieMonsterTest, CookieDeleteEquivalentHistogramTest) {
   histograms.ExpectBucketCount(cookie_source_histogram,
                                CookieMonster::COOKIE_DELETE_EQUIVALENT_ATTEMPT,
                                7);
+
+  // Set a cookie that matches both the name and value of an already existing
+  // cookie.
+  EXPECT_TRUE(SetCookie(cm.get(), https_www_foo_.url(), "A=D; secure"));
+  histograms.ExpectTotalCount(cookie_source_histogram, 14);
+  histograms.ExpectBucketCount(cookie_source_histogram,
+                               CookieMonster::COOKIE_DELETE_EQUIVALENT_ATTEMPT,
+                               8);
+  histograms.ExpectBucketCount(cookie_source_histogram,
+                               CookieMonster::COOKIE_DELETE_EQUIVALENT_FOUND,
+                               2);
+  histograms.ExpectBucketCount(
+      cookie_source_histogram,
+      CookieMonster::COOKIE_DELETE_EQUIVALENT_FOUND_WITH_SAME_VALUE, 1);
 }
 
 TEST_F(CookieMonsterTest, SetSecureCookies) {

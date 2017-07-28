@@ -207,7 +207,8 @@ def _CopyUCRTRuntime(target_dir, source_dir, target_cpu, dll_pattern, suffix):
   win_sdk_dir = os.path.normpath(
       os.environ.get('WINDOWSSDKDIR',
                      'C:\\Program Files (x86)\\Windows Kits\\10'))
-  ucrt_dll_dirs = os.path.join(win_sdk_dir, r'Redist\ucrt\DLLs', target_cpu)
+  ucrt_dll_dirs = os.path.join(win_sdk_dir, 'Redist', 'ucrt', 'DLLs',
+                               target_cpu)
   ucrt_files = glob.glob(os.path.join(ucrt_dll_dirs, 'api-ms-win-*.dll'))
   assert len(ucrt_files) > 0
   for ucrt_src_file in ucrt_files:

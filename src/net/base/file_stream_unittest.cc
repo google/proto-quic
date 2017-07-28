@@ -568,7 +568,7 @@ class TestWriteReadCompletionCallback {
     result_ = *total_bytes_written_;
     have_result_ = true;
     if (waiting_for_result_)
-      base::MessageLoop::current()->QuitWhenIdle();
+      base::RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 
   int result_;
@@ -677,7 +677,7 @@ class TestWriteCloseCompletionCallback {
     result_ = *total_bytes_written_;
     have_result_ = true;
     if (waiting_for_result_)
-      base::MessageLoop::current()->QuitWhenIdle();
+      base::RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 
   int result_;

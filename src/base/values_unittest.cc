@@ -1177,29 +1177,6 @@ TEST(ValuesTest, Equals) {
   EXPECT_NE(dv, *copy);
 }
 
-TEST(ValuesTest, StaticEquals) {
-  auto null1 = MakeUnique<Value>();
-  auto null2 = MakeUnique<Value>();
-  EXPECT_TRUE(Value::Equals(null1.get(), null2.get()));
-  EXPECT_TRUE(Value::Equals(NULL, NULL));
-
-  std::unique_ptr<Value> i42(new Value(42));
-  std::unique_ptr<Value> j42(new Value(42));
-  std::unique_ptr<Value> i17(new Value(17));
-  EXPECT_TRUE(Value::Equals(i42.get(), i42.get()));
-  EXPECT_TRUE(Value::Equals(j42.get(), i42.get()));
-  EXPECT_TRUE(Value::Equals(i42.get(), j42.get()));
-  EXPECT_FALSE(Value::Equals(i42.get(), i17.get()));
-  EXPECT_FALSE(Value::Equals(i42.get(), NULL));
-  EXPECT_FALSE(Value::Equals(NULL, i42.get()));
-
-  // NULL and MakeUnique<Value>() are intentionally different: We need
-  // support for NULL as a return value for "undefined" without caring for
-  // ownership of the pointer.
-  EXPECT_FALSE(Value::Equals(null1.get(), NULL));
-  EXPECT_FALSE(Value::Equals(NULL, null1.get()));
-}
-
 TEST(ValuesTest, Comparisons) {
   // Test None Values.
   Value null1;

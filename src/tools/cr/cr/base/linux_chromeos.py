@@ -14,7 +14,6 @@ class LinuxChromeOSPlatform(cr.Platform):
   ACTIVE = cr.Config.From(
       CR_BINARY=os.path.join('{CR_BUILD_DIR}', '{CR_BUILD_TARGET}'),
       CHROME_DEVEL_SANDBOX='/usr/local/sbin/chrome-devel-sandbox',
-      GYP_DEF_chromeos=1,
       GN_ARG_target_os='"chromeos"',
   )
 

@@ -107,7 +107,7 @@ void MessageLoopHelper::TimerExpired() {
   CHECK_LE(callbacks_called_, num_callbacks_);
   if (callbacks_called_ == num_callbacks_) {
     completed_ = true;
-    base::MessageLoop::current()->QuitWhenIdle();
+    base::RunLoop::QuitCurrentWhenIdleDeprecated();
   } else {
     // Not finished yet. See if we have to abort.
     if (last_ == callbacks_called_)
@@ -115,7 +115,7 @@ void MessageLoopHelper::TimerExpired() {
     else
       last_ = callbacks_called_;
     if (40 == num_iterations_)
-      base::MessageLoop::current()->QuitWhenIdle();
+      base::RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 }
 

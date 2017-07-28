@@ -7,7 +7,6 @@
 #include <algorithm>
 
 #include "base/logging.h"
-#include "net/spdy/chromium/spdy_flags.h"
 #include "net/spdy/core/hpack/hpack_constants.h"
 #include "net/spdy/core/hpack/hpack_static_table.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"

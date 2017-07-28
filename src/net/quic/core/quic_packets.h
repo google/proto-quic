@@ -214,6 +214,8 @@ struct QUIC_EXPORT_PRIVATE SerializedPacket {
                    bool has_ack,
                    bool has_stop_waiting);
   SerializedPacket(const SerializedPacket& other);
+  SerializedPacket& operator=(const SerializedPacket& other);
+  SerializedPacket(SerializedPacket&& other);
   ~SerializedPacket();
 
   // Not owned.

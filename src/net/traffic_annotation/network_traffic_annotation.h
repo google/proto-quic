@@ -34,6 +34,10 @@ namespace net {
 // Defined types for network traffic annotation tags.
 struct NetworkTrafficAnnotationTag {
   const int32_t unique_id_hash_code;
+
+  bool operator==(const NetworkTrafficAnnotationTag& other) const {
+    return unique_id_hash_code == other.unique_id_hash_code;
+  }
 };
 struct PartialNetworkTrafficAnnotationTag {
   const int32_t unique_id_hash_code;
@@ -61,7 +65,8 @@ struct PartialNetworkTrafficAnnotationTag {
 // |unique_id| should be a string that uniquely identifies this annotation
 // across all of Chromium source code. |unique_id| should be kept unchanged
 // as long as possible as its hashed value will be used for differnt logging,
-// debugging, or auditing tasks.
+// debugging, or auditing tasks. Unique ids should include only alphanumeric
+// characters and underline.
 // |proto| is a text-encoded NetworkTrafficAnnotation protobuf (see
 // tools/traffic_annotation/traffic_annotation.proto)
 //
@@ -208,7 +213,12 @@ struct MutableNetworkTrafficAnnotationTag {
 
   int32_t unique_id_hash_code;
 
+  bool operator==(const MutableNetworkTrafficAnnotationTag& other) const {
+    return unique_id_hash_code == other.unique_id_hash_code;
+  }
+
   explicit operator NetworkTrafficAnnotationTag() const {
+    CHECK_NE(unique_id_hash_code, TRAFFIC_ANNOTATION_UNINITIALIZED);
     return NetworkTrafficAnnotationTag({unique_id_hash_code});
   }
 };
@@ -241,6 +251,7 @@ struct MutablePartialNetworkTrafficAnnotationTag {
   int32_t unique_id_hash_code;
 
   explicit operator PartialNetworkTrafficAnnotationTag() const {
+    CHECK_NE(unique_id_hash_code, TRAFFIC_ANNOTATION_UNINITIALIZED);
     return PartialNetworkTrafficAnnotationTag({unique_id_hash_code});
   }
 #endif  // !defined(NDEBUG) || defined(DCHECK_ALWAYS_ON)

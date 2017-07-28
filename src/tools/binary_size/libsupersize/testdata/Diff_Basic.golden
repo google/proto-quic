@@ -9,6 +9,7 @@ New Metadata:
 Section Sizes (Total=0 bytes (0 bytes)):
     .bss: 0 bytes (0 bytes) (not included in totals)
     .data: 0 bytes (0 bytes) (0.0%)
+    .data.rel.ro: 0 bytes (0 bytes) (0.0%)
     .rel.dyn: 0 bytes (0 bytes) (0.0%)
     .rodata: 0 bytes (0 bytes) (0.0%)
     .text: 0 bytes (0 bytes) (0.0%)
@@ -17,7 +18,6 @@ Other section sizes:
     .ARM.attributes: 0 bytes (0 bytes)
     .ARM.exidx: 0 bytes (0 bytes)
     .ARM.extab: 0 bytes (0 bytes)
-    .data.rel.ro: 0 bytes (0 bytes)
     .data.rel.ro.local: 0 bytes (0 bytes)
     .dynamic: 0 bytes (0 bytes)
     .dynstr: 0 bytes (0 bytes)
@@ -45,9 +45,10 @@ Changed files:
   base/page_allocator.cc
 
 Showing 41 symbols (aliases not grouped for diffs) with total pss: 10 bytes
-.text=10 bytes   .rodata=0 bytes    .data*=0 bytes    .bss=0 bytes    total=10 bytes
+.text=10 bytes   .rodata=0 bytes    .data.rel.ro=0 bytes    .data=0 bytes    .bss=0 bytes    total=10 bytes  
 Number of unique paths: 9
 
+Section Legend: t=.text, r=.rodata, R=.data.rel.ro, d=.data, b=.bss
 Index | Running Total | Section@Address | ...
 ------------------------------------------------------------
 ~ 0)         10 (100.0%) t@0x28d964   +10 (28->38)  num_aliases=1
@@ -62,7 +63,7 @@ Index | Running Total | Section@Address | ...
 = 3)         10 (100.0%) r@Group      +0 (2637617->2637617)  count=2
                source_path= 	object_path=
                flags={}  name=** merge strings
-= 4)         10 (100.0%) d@0x2ddc608  +0 (0->0)  num_aliases=1
+= 4)         10 (100.0%) R@0x2ddc608  +0 (0->0)  num_aliases=1
                source_path= 	object_path=
                flags={}  name=** symbol gap 0 (end of section)
 = 5)         10 (100.0%) d@0x2dffd88  +0 (0->0)  num_aliases=1
@@ -74,13 +75,13 @@ Index | Running Total | Section@Address | ...
 = 7)         10 (100.0%) r@Group      +0 (0->0)  count=2
                source_path= 	object_path=
                flags={}  name=** symbol gaps
-= 8)         10 (100.0%) d@0x2cd84e0  +0 (16->16)  num_aliases=1
+= 8)         10 (100.0%) R@0x2cd84e0  +0 (16->16)  num_aliases=1
                source_path= 	object_path=third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libcontroller_api_impl.a_controller_api_impl.o
                flags={}  name=.Lswitch.table.45
-= 9)         10 (100.0%) d@0x2c176f0  +0 (56->56)  num_aliases=1
+= 9)         10 (100.0%) R@0x2c176f0  +0 (56->56)  num_aliases=1
                source_path=third_party/icu/ucnv_ext.c 	object_path=third_party/icu/icuuc/ucnv_ext.o
                flags={}  name=ChromeMainDelegate [vtable]
-= 10)        10 (100.0%) d@0x2cd8500  +0 (56->56)  num_aliases=1
+= 10)        10 (100.0%) R@0x2cd8500  +0 (56->56)  num_aliases=1
                source_path=third_party/paint.cc 	object_path=third_party/WebKit.a/PaintChunker.o
                flags={}  name=ChromeMainDelegateAndroid [vtable]
 = 11)        10 (100.0%) r@0x284e370  +0 (40->40)  num_aliases=1
@@ -123,10 +124,10 @@ Index | Running Total | Section@Address | ...
                source_path=third_party/container.c 	object_path=third_party/WebKit.a/ContiguousContainer.o
                flags={}  name=blink::PaintChunker::releasePaintChunks
                     full_name=blink::PaintChunker::releasePaintChunks()
-= 23)        10 (100.0%) d@0x2c17728  +0 (24->24)  num_aliases=1
+= 23)        10 (100.0%) R@0x2c17728  +0 (24->24)  num_aliases=1
                source_path=third_party/icu/ucnv_ext.c 	object_path=third_party/icu/icuuc/ucnv_ext.o
                flags={}  name=chrome::mojom::FieldTrialRecorder [vtable]
-= 24)        10 (100.0%) d@0x2c17740  +0 (789904->789904)  num_aliases=1
+= 24)        10 (100.0%) R@0x2c17740  +0 (789904->789904)  num_aliases=1
                source_path=third_party/container.c 	object_path=third_party/WebKit.a/ContiguousContainer.o
                flags={}  name=chrome::mojom::FieldTrialRecorderProxy [vtable]
 = 25)        10 (100.0%) r@0x284e398  +0 (32->32)  num_aliases=1
@@ -148,13 +149,13 @@ Index | Running Total | Section@Address | ...
 = 30)        10 (100.0%) r@0x28f3450  +0 (48->48)  num_aliases=1
                source_path=third_party/paint.cc 	object_path=third_party/WebKit.a/PaintChunker.o
                flags={}  name=kAnimationFrameTimeHistogramClassPath
-= 31)        10 (100.0%) d@0x2cd8550  +0 (12->12)  num_aliases=1
+= 31)        10 (100.0%) R@0x2cd8550  +0 (12->12)  num_aliases=1
                source_path=base/page_allocator.cc 	object_path=base/base/page_allocator.o
                flags={}  name=kMethodsAnimationFrameTimeHistogram
-= 32)        10 (100.0%) d@0x2cd84f0  +0 (8->8)  num_aliases=1
+= 32)        10 (100.0%) R@0x2cd84f0  +0 (8->8)  num_aliases=1
                source_path= 	object_path=third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libport_android_jni.a_jni_utils.o
                flags={}  name=kSystemClassPrefixes
-= 33)        10 (100.0%) d@0x2cd8538  +0 (24->24)  num_aliases=1
+= 33)        10 (100.0%) R@0x2cd8538  +0 (24->24)  num_aliases=1
                source_path=base/page_allocator.cc 	object_path=base/base/page_allocator.o
                flags={}  name=mojo::MessageReceiver [vtable]
 = 34)        10 (100.0%) t@0x28f000   +0 (448->448)  num_aliases=1

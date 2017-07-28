@@ -18,7 +18,6 @@
 
 namespace net {
 
-class CryptoHandshakeMessage;
 class QuicSession;
 
 // Crypto handshake messages in QUIC take place over a reserved stream with the
@@ -78,33 +77,6 @@ class QUIC_EXPORT_PRIVATE QuicCryptoStream : public QuicStream {
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicCryptoStream);
-};
-
-class QUIC_EXPORT_PRIVATE QuicCryptoHandshaker
-    : public CryptoFramerVisitorInterface {
- public:
-  QuicCryptoHandshaker(QuicCryptoStream* stream, QuicSession* session);
-
-  ~QuicCryptoHandshaker() override;
-
-  // Sends |message| to the peer.
-  // TODO(wtc): return a success/failure status.
-  void SendHandshakeMessage(const CryptoHandshakeMessage& message);
-
-  void OnError(CryptoFramer* framer) override;
-  void OnHandshakeMessage(const CryptoHandshakeMessage& message) override;
-
-  CryptoMessageParser* crypto_message_parser();
-
- private:
-  QuicSession* session() { return session_; }
-
-  QuicCryptoStream* stream_;
-  QuicSession* session_;
-
-  CryptoFramer crypto_framer_;
-
-  DISALLOW_COPY_AND_ASSIGN(QuicCryptoHandshaker);
 };
 
 }  // namespace net

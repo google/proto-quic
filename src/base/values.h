@@ -240,12 +240,6 @@ class BASE_EXPORT Value {
   // TODO(crbug.com/646113): Delete this and migrate callsites.
   bool Equals(const Value* other) const;
 
-  // Compares if two Value objects have equal contents. Can handle NULLs.
-  // NULLs are considered equal but different from Value(Value::Type::NONE).
-  // DEPRECATED, use operator==(const Value& lhs, const Value& rhs) instead.
-  // TODO(crbug.com/646113): Delete this and migrate callsites.
-  static bool Equals(const Value* a, const Value* b);
-
  protected:
   // TODO(crbug.com/646113): Make these private once DictionaryValue and
   // ListValue are properly inlined.

@@ -15,6 +15,7 @@
 #include "net/quic/core/quic_connection_stats.h"
 #include "net/quic/core/quic_pending_retransmission.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flag_utils.h"
 #include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_map_util.h"
@@ -174,8 +175,14 @@ void QuicSentPacketManager::ResumeConnectionState(
         std::max(kMinInitialRoundTripTimeUs,
                  std::min(kMaxInitialRoundTripTimeUs, initial_rtt_us)));
   }
-  send_algorithm_->ResumeConnectionState(cached_network_params,
-                                         max_bandwidth_resumption);
+
+  QuicBandwidth bandwidth = QuicBandwidth::FromBytesPerSecond(
+      max_bandwidth_resumption
+          ? cached_network_params.max_bandwidth_estimate_bytes_per_second()
+          : cached_network_params.bandwidth_estimate_bytes_per_second());
+  QuicTime::Delta rtt =
+      QuicTime::Delta::FromMilliseconds(cached_network_params.min_rtt_ms());
+  send_algorithm_->AdjustNetworkParameters(bandwidth, rtt);
 }
 
 void QuicSentPacketManager::SetNumOpenStreams(size_t num_streams) {
@@ -289,6 +296,8 @@ void QuicSentPacketManager::MaybeInvokeCongestionEvent(
 
 void QuicSentPacketManager::HandleAckForSentPackets(
     const QuicAckFrame& ack_frame) {
+  const bool skip_unackable_packets_early =
+      FLAGS_quic_reloadable_flag_quic_handle_acks;
   // Go through the packets we have not received an ack for and see if this
   // incoming_ack shows they've been seen by the peer.
   QuicTime::Delta ack_delay_time = ack_frame.ack_delay_time;
@@ -299,7 +308,9 @@ void QuicSentPacketManager::HandleAckForSentPackets(
       // These packets are still in flight.
       break;
     }
-
+    if (skip_unackable_packets_early && it->is_unackable) {
+      continue;
+    }
     if (!ack_frame.packets.Contains(packet_number)) {
       // Packet is still missing.
       continue;
@@ -314,7 +325,7 @@ void QuicSentPacketManager::HandleAckForSentPackets(
     // packet, then inform the caller.
     if (it->in_flight) {
       packets_acked_.push_back(std::make_pair(packet_number, it->bytes_sent));
-    } else if (!it->is_unackable) {
+    } else if (skip_unackable_packets_early || !it->is_unackable) {
       // Packets are marked unackable after they've been acked once.
       largest_newly_acked_ = packet_number;
     }

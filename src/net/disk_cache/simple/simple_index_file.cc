@@ -24,7 +24,6 @@
 #include "net/disk_cache/simple/simple_index.h"
 #include "net/disk_cache/simple/simple_synchronous_entry.h"
 #include "net/disk_cache/simple/simple_util.h"
-#include "third_party/zlib/zlib.h"
 
 using base::File;
 
@@ -43,9 +42,7 @@ const int64_t kMaxIndexFileSizeBytes =
     kMaxEntriesInIndex * (8 + EntryMetadata::kOnDiskSizeBytes);
 
 uint32_t CalculatePickleCRC(const base::Pickle& pickle) {
-  return crc32(crc32(0, Z_NULL, 0),
-               reinterpret_cast<const Bytef*>(pickle.payload()),
-               pickle.payload_size());
+  return simple_util::Crc32(pickle.payload(), pickle.payload_size());
 }
 
 // Used in histograms. Please only add new values at the end.
@@ -348,19 +345,18 @@ bool SimpleIndexFile::IndexMetadata::CheckIndexMetadata() {
 }
 
 SimpleIndexFile::SimpleIndexFile(
-    const scoped_refptr<base::SingleThreadTaskRunner>& cache_thread,
+    const scoped_refptr<base::SequencedTaskRunner>& cache_runner,
     const scoped_refptr<base::TaskRunner>& worker_pool,
     net::CacheType cache_type,
     const base::FilePath& cache_directory)
-    : cache_thread_(cache_thread),
+    : cache_runner_(cache_runner),
       worker_pool_(worker_pool),
       cache_type_(cache_type),
       cache_directory_(cache_directory),
       index_file_(cache_directory_.AppendASCII(kIndexDirectory)
                       .AppendASCII(kIndexFileName)),
       temp_index_file_(cache_directory_.AppendASCII(kIndexDirectory)
-                           .AppendASCII(kTempIndexFileName)) {
-}
+                           .AppendASCII(kTempIndexFileName)) {}
 
 SimpleIndexFile::~SimpleIndexFile() {}
 
@@ -388,9 +384,9 @@ void SimpleIndexFile::WriteToDisk(SimpleIndex::IndexWriteToDiskReason reason,
                  cache_type_, cache_directory_, index_file_, temp_index_file_,
                  base::Passed(&pickle), start, app_on_background);
   if (callback.is_null())
-    cache_thread_->PostTask(FROM_HERE, task);
+    cache_runner_->PostTask(FROM_HERE, task);
   else
-    cache_thread_->PostTaskAndReply(FROM_HERE, task, callback);
+    cache_runner_->PostTaskAndReply(FROM_HERE, task, callback);
 }
 
 // static

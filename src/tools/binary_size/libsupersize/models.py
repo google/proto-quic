@@ -45,14 +45,27 @@ METADATA_GN_ARGS = 'gn_args'
 METADATA_TOOL_PREFIX = 'tool_prefix'  # Path relative to SRC_ROOT.
 
 
-SECTION_TO_SECTION_NAME = {
-    'b': '.bss',
-    'd': '.data',
-    'r': '.rodata',
-    't': '.text',
-}
 # Used by SymbolGroup when they contain a mix of sections.
 SECTION_NAME_MULTIPLE = '.*'
+
+SECTION_NAME_TO_SECTION = {
+    '.bss': 'b',
+    '.data': 'd',
+    '.data.rel.ro.local': 'R',
+    '.data.rel.ro': 'R',
+    '.rodata': 'r',
+    '.text': 't',
+    SECTION_NAME_MULTIPLE: '*',
+}
+
+SECTION_TO_SECTION_NAME = collections.OrderedDict((
+    ('t', '.text'),
+    ('r', '.rodata'),
+    ('R', '.data.rel.ro'),
+    ('d', '.data'),
+    ('b', '.bss'),
+))
+
 
 FLAG_ANONYMOUS = 1
 FLAG_STARTUP = 2
@@ -61,6 +74,7 @@ FLAG_REL = 8
 FLAG_REL_LOCAL = 16
 FLAG_GENERATED_SOURCE = 32
 FLAG_CLONE = 64
+
 
 DIFF_STATUS_UNCHANGED = 0
 DIFF_STATUS_CHANGED = 1
@@ -162,9 +176,15 @@ class BaseSymbol(object):
   def section(self):
     """Returns the one-letter section.
 
-    E.g. If section_name == '.rodata', then section == 'r'.
+    Mappings:
+      'b': '.bss'
+      'd': '.data'
+      'R': '.data.rel.ro'
+      'r': '.rodata'
+      't': '.text'
     """
-    return self.section_name[1]
+    # Fallback to section_name if there is no short-form defined.
+    return SECTION_NAME_TO_SECTION.get(self.section_name, self.section_name)
 
   @property
   def size_without_padding(self):
@@ -633,12 +653,14 @@ class SymbolGroup(BaseSymbol):
     return self.Filter(lambda s: s.pss >= min_pss)
 
   def WhereInSection(self, section):
-    if len(section) == 1:
-      ret = self.Filter(lambda s: s.section == section)
-      ret.section_name = SECTION_TO_SECTION_NAME[section]
-    else:
+    """|section| can be section_name ('.bss'), or section chars ('bdr')."""
+    if section.startswith('.'):
       ret = self.Filter(lambda s: s.section_name == section)
       ret.section_name = section
+    else:
+      ret = self.Filter(lambda s: s.section in section)
+      if section in SECTION_TO_SECTION_NAME:
+        ret.section_name = SECTION_TO_SECTION_NAME[section]
     return ret
 
   def WhereIsTemplate(self):

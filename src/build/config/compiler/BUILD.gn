@@ -451,19 +451,21 @@ config("compiler") {
     cflags += [ "-fdebug-prefix-map=$absolute_path=." ]
   }
 
-  # C++11 compiler flags setup.
+  # C11/C++11 compiler flags setup.
   # ---------------------------
   if (is_linux || is_android || (is_nacl && is_clang) || current_os == "aix") {
-    # gnu++11 instead of c++11 is needed because some code uses typeof() (a
-    # GNU extension).
+    # gnu11/gnu++11 instead of c11/c++11 is needed because some code uses typeof()
+    # (a GNU extension).
     # TODO(thakis): Eventually switch this to c++11 instead,
     # http://crbug.com/427584
+    cflags_c += [ "-std=gnu11" ]
     cflags_cc += [ "-std=gnu++11" ]
   } else if (!is_win && !is_nacl) {
-    # TODO(mcgrathr) - the NaCl GCC toolchain doesn't support either gnu++11
-    # or c++11; we technically don't need this toolchain any more, but there
+    # TODO(mcgrathr) - the NaCl GCC toolchain doesn't support either gnu11/gnu++11
+    # or c11/c++11; we technically don't need this toolchain any more, but there
     # are still a few buildbots using it, so until those are turned off
     # we need the !is_nacl clause and the (is_nacl && is_clang) clause, above.
+    cflags_c += [ "-std=c11" ]
     cflags_cc += [ "-std=c++11" ]
   }
 
@@ -481,7 +483,8 @@ config("compiler") {
   # TODO(pcc): Make this conditional on is_official_build rather than on gn
   # flags for specific features.
   if (!is_debug && (allow_posix_link_time_opt || is_cfi) && !is_nacl) {
-    assert(use_lld || is_chromeos, "gold plugin only supported with ChromeOS")
+    assert(use_lld || target_os == "chromeos",
+           "gold plugin only supported with ChromeOS")
 
     if (use_thin_lto) {
       cflags += [ "-flto=thin" ]
@@ -1730,7 +1733,13 @@ config("symbols") {
         cflags += [ "-fno-standalone-debug" ]
       }
     } else {
-      cflags = [ "-g2" ]
+      cflags = []
+      if (target_cpu == "arm") {
+        # dump_syms has issues with dwarf4 on arm, https://crbug.com/744956
+        # TODO(thakis): Remove this again once dump_syms is fixed.
+        cflags += [ "-gdwarf-3" ]
+      }
+      cflags += [ "-g2" ]
     }
     if (use_debug_fission) {
       cflags += [ "-gsplit-dwarf" ]
@@ -1764,7 +1773,13 @@ config("minimal_symbols") {
     cflags = []
     ldflags = [ "/DEBUG" ]
   } else {
-    cflags = [ "-g1" ]
+    cflags = []
+    if (target_cpu == "arm") {
+      # dump_syms has issues with dwarf4 on arm, https://crbug.com/744956
+      # TODO(thakis): Remove this again once dump_syms is fixed.
+      cflags += [ "-gdwarf-3" ]
+    }
+    cflags += [ "-g1" ]
     if (is_android) {
       # Android defaults to symbol_level=1 builds in production builds
       # (https://crbug.com/648948), but clang, unlike gcc, doesn't emit

@@ -28,6 +28,7 @@ class HttpTransactionFactory;
 class HttpUserAgentSettings;
 class NetLog;
 class NetworkDelegate;
+class NetworkErrorLoggingDelegate;
 class ProxyDelegate;
 class ProxyService;
 class ReportingService;
@@ -87,6 +88,10 @@ class NET_EXPORT URLRequestContextStorage {
       std::unique_ptr<ReportingService> reporting_service);
 #endif  // BUILDFLAG(ENABLE_REPORTING)
 
+  void set_network_error_logging_delegate(
+      std::unique_ptr<NetworkErrorLoggingDelegate>
+          network_error_logging_delegate);
+
   // Everything else can be access through the URLRequestContext, but this
   // cannot.  Having an accessor for it makes usage a little cleaner.
   HttpNetworkSession* http_network_session() const {
@@ -127,6 +132,7 @@ class NET_EXPORT URLRequestContextStorage {
 #if BUILDFLAG(ENABLE_REPORTING)
   std::unique_ptr<ReportingService> reporting_service_;
 #endif  // BUILDFLAG(ENABLE_REPORTING)
+  std::unique_ptr<NetworkErrorLoggingDelegate> network_error_logging_delegate_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestContextStorage);
 };

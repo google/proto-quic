@@ -48,6 +48,8 @@ class Smoothness(legacy_page_test.LegacyPageTest):
         'webkit.console', 'blink.console', 'benchmark', 'trace_event_overhead']
     category_filter = chrome_trace_category_filter.ChromeTraceCategoryFilter(
         ','.join(custom_categories))
+    if self.options and self.options.extra_chrome_categories:
+      category_filter.AddFilterString(self.options.extra_chrome_categories)
 
     options = timeline_based_measurement.Options(category_filter)
     options.config.enable_platform_display_trace = True

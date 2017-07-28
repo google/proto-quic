@@ -3,3 +3,4 @@
 // found in the LICENSE file.
 
 interface org.chromium.net.test.IEmbeddedTestServerImpl;
+interface org.chromium.net.test.IConnectionListener;

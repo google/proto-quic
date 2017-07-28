@@ -805,8 +805,7 @@ class MockSendAlgorithm : public SendAlgorithmInterface {
   MOCK_CONST_METHOD0(InRecovery, bool());
   MOCK_CONST_METHOD0(GetSlowStartThreshold, QuicByteCount());
   MOCK_CONST_METHOD0(GetCongestionControlType, CongestionControlType());
-  MOCK_METHOD2(ResumeConnectionState,
-               void(const CachedNetworkParameters&, bool));
+  MOCK_METHOD2(AdjustNetworkParameters, void(QuicBandwidth, QuicTime::Delta));
   MOCK_METHOD1(OnApplicationLimited, void(QuicByteCount));
 
  private:
@@ -1024,6 +1023,8 @@ void ExpectApproxEq(T expected, T actual, float relative_margin) {
 template <typename T>
 QuicHeaderList AsHeaderList(const T& container) {
   QuicHeaderList l;
+  // No need to enforce header list size limits again in this handler.
+  l.set_max_header_list_size(UINT_MAX);
   l.OnHeaderBlockStart();
   size_t total_size = 0;
   for (auto p : container) {

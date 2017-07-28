@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "base/memory/ptr_util.h"
+#include "base/memory/shared_memory.h"
 #include "base/memory/shared_memory_tracker.h"
 #include "base/process/process_metrics.h"
 #include "base/strings/stringprintf.h"
@@ -86,7 +87,7 @@ size_t ProcessMemoryDump::CountResidentBytes(void* start_address,
   const size_t kMaxChunkSize = 8 * 1024 * 1024;
   size_t max_vec_size =
       GetSystemPageCount(std::min(mapped_size, kMaxChunkSize), page_size);
-#if defined(OS_MACOSX) || defined(OS_IOS)
+#if defined(OS_MACOSX)
   std::unique_ptr<char[]> vec(new char[max_vec_size]);
 #elif defined(OS_WIN)
   std::unique_ptr<PSAPI_WORKING_SET_EX_INFORMATION[]> vec(
@@ -100,8 +101,7 @@ size_t ProcessMemoryDump::CountResidentBytes(void* start_address,
     const size_t chunk_size = std::min(mapped_size - offset, kMaxChunkSize);
     const size_t page_count = GetSystemPageCount(chunk_size, page_size);
     size_t resident_page_count = 0;
-
-#if defined(OS_MACOSX) || defined(OS_IOS)
+#if defined(OS_MACOSX)
     // mincore in MAC does not fail with EAGAIN.
     failure =
         !!mincore(reinterpret_cast<void*>(chunk_start), chunk_size, vec.get());
@@ -155,6 +155,34 @@ size_t ProcessMemoryDump::CountResidentBytes(void* start_address,
   }
   return total_resident_size;
 }
+
+// static
+base::Optional<size_t> ProcessMemoryDump::CountResidentBytesInSharedMemory(
+    const SharedMemory& shared_memory) {
+#if defined(OS_MACOSX) && !defined(OS_IOS)
+  // On macOS, use mach_vm_region instead of mincore for performance
+  // (crbug.com/742042).
+  mach_vm_size_t dummy_size = 0;
+  mach_vm_address_t address =
+      reinterpret_cast<mach_vm_address_t>(shared_memory.memory());
+  vm_region_top_info_data_t info;
+  MachVMRegionResult result =
+      GetTopInfo(mach_task_self(), &dummy_size, &address, &info);
+  if (result == MachVMRegionResult::Error) {
+    LOG(ERROR) << "CountResidentBytesInSharedMemory failed. The resident size "
+                  "is invalid";
+    return base::Optional<size_t>();
+  }
+
+  size_t resident_size =
+      info.private_pages_resident + info.shared_pages_resident;
+  return resident_size * PAGE_SIZE;
+#else
+  return CountResidentBytes(shared_memory.memory(),
+                            shared_memory.mapped_size());
+#endif  // defined(OS_MACOSX) && !defined(OS_IOS)
+}
+
 #endif  // defined(COUNT_RESIDENT_BYTES_SUPPORTED)
 
 ProcessMemoryDump::ProcessMemoryDump(
@@ -315,18 +343,6 @@ void ProcessMemoryDump::TakeAllDumpsFrom(ProcessMemoryDump* other) {
 }
 
 void ProcessMemoryDump::AsValueInto(TracedValue* value) const {
-  if (has_process_totals_) {
-    value->BeginDictionary("process_totals");
-    process_totals_.AsValueInto(value);
-    value->EndDictionary();
-  }
-
-  if (has_process_mmaps_) {
-    value->BeginDictionary("process_mmaps");
-    process_mmaps_.AsValueInto(value);
-    value->EndDictionary();
-  }
-
   if (allocator_dumps_.size() > 0) {
     value->BeginDictionary("allocators");
     for (const auto& allocator_dump_it : allocator_dumps_)

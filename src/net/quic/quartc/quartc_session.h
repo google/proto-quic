@@ -72,6 +72,8 @@ class QUIC_EXPORT_PRIVATE QuartcSession
 
   void CancelStream(QuicStreamId stream_id) override;
 
+  QuartcSessionStats GetStats() override;
+
   void SetDelegate(QuartcSessionInterface::Delegate* session_delegate) override;
 
   void OnTransportCanWrite() override;

@@ -49,7 +49,7 @@ constexpr net::NetworkTrafficAnnotationTag kTrafficAnnotation =
           destination: OTHER
         }
         policy {
-          cookies_allowed: true
+          cookies_allowed: YES
           cookies_store: "user or per-app cookie store"
           setting: "These requests cannot be disabled."
           policy_exception_justification:

@@ -9,6 +9,7 @@
 #include "base/android/jni_android.h"
 #include "base/android/jni_string.h"
 #include "base/message_loop/message_loop.h"
+#include "base/run_loop.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/thread_restrictions.h"
 #include "jni/JavaHandlerThread_jni.h"
@@ -81,7 +82,7 @@ void JavaHandlerThread::StartMessageLoop() {
 }
 
 void JavaHandlerThread::StopMessageLoop() {
-  static_cast<MessageLoopForUI*>(message_loop_.get())->QuitWhenIdle();
+  base::RunLoop::QuitCurrentWhenIdleDeprecated();
 }
 
 } // namespace android

@@ -69,8 +69,6 @@ def _ParseArgs(args):
   parser.add_option('--resource-zip-out',
                     help='Path for output zipped resources.')
 
-  parser.add_option('--R-dir',
-                    help='directory to hold generated R.java.')
   parser.add_option('--srcjar-out',
                     help='Path to srcjar to contain generated R.java.')
   parser.add_option('--r-text-out',
@@ -126,9 +124,6 @@ def _ParseArgs(args):
       'resource_zip_out',
       )
   build_utils.CheckOptions(options, parser, required=required_options)
-
-  if (options.R_dir is None) == (options.srcjar_out is None):
-    raise Exception('Exactly one of --R-dir or --srcjar-out must be specified.')
 
   options.resource_dirs = build_utils.ParseGnList(options.resource_dirs)
   options.dependencies_res_zips = (
@@ -507,10 +502,7 @@ def _OnStaleMd5(options):
       CombineZips([options.resource_zip_out] + dep_zips,
                   options.all_resources_zip_out)
 
-    if options.R_dir:
-      build_utils.DeleteDirectory(options.R_dir)
-      shutil.copytree(srcjar_dir, options.R_dir)
-    else:
+    if options.srcjar_out:
       build_utils.ZipDir(options.srcjar_out, srcjar_dir)
 
     if options.r_text_out:
@@ -570,8 +562,6 @@ def main(args):
       input_paths=input_paths,
       input_strings=input_strings,
       output_paths=output_paths,
-      # TODO(agrieve): Remove R_dir when it's no longer used (used only by GYP).
-      force=options.R_dir,
       depfile_deps=depfile_deps)
 
 

@@ -243,7 +243,7 @@ TEST_F(TrafficAnnotationAuditorTest, AnnotationDeserialization) {
     EXPECT_EQ(annotation.proto.source().function(), "OnGetTokenSuccess");
     EXPECT_EQ(annotation.proto.source().line(), 166);
     EXPECT_EQ(annotation.proto.semantics().sender(), "Supervised Users");
-    EXPECT_EQ(annotation.proto.policy().cookies_allowed(), false);
+    EXPECT_EQ(annotation.proto.policy().cookies_allowed(), 1);
   }
 }
 

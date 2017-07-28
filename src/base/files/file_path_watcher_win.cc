@@ -81,7 +81,7 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate,
 };
 
 FilePathWatcherImpl::~FilePathWatcherImpl() {
-  DCHECK(!task_runner() || task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(!task_runner() || task_runner()->RunsTasksInCurrentSequence());
   if (was_deleted_ptr_)
     *was_deleted_ptr_ = true;
 }
@@ -117,7 +117,7 @@ void FilePathWatcherImpl::Cancel() {
     return;
   }
 
-  DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(task_runner()->RunsTasksInCurrentSequence());
   set_cancelled();
 
   if (handle_ != INVALID_HANDLE_VALUE)
@@ -127,7 +127,7 @@ void FilePathWatcherImpl::Cancel() {
 }
 
 void FilePathWatcherImpl::OnObjectSignaled(HANDLE object) {
-  DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(task_runner()->RunsTasksInCurrentSequence());
   DCHECK_EQ(object, handle_);
   DCHECK(!was_deleted_ptr_);
 

@@ -880,7 +880,7 @@ class HostResolverImpl::ProcTask
       RESOLVE_SPECULATIVE_FAIL,
       RESOLVE_MAX,  // Bounding value.
     };
-    int category = RESOLVE_MAX;  // Illegal value for later DCHECK only.
+    Category category = RESOLVE_MAX;  // Illegal value for later DCHECK only.
 
     base::TimeDelta duration = base::TimeTicks::Now() - start_time;
     if (error == OK) {
@@ -1817,12 +1817,8 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
 
     bool did_complete = (entry.error() != ERR_NETWORK_CHANGED) &&
                         (entry.error() != ERR_HOST_RESOLVER_QUEUE_TOO_LARGE);
-    if (did_complete) {
+    if (did_complete)
       resolver_->CacheResult(key_, entry, ttl);
-      // Erase any previous cache hit callbacks, since a new DNS request went
-      // out since they were set.
-      resolver_->cache_hit_callbacks_.erase(key_);
-    }
 
     // Complete all of the requests that were attached to the job and
     // detach them.
@@ -1833,7 +1829,6 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
       // Update the net log and notify registered observers.
       LogFinishRequest(req->source_net_log(), req->info(), entry.error());
       if (did_complete) {
-        resolver_->MaybeAddCacheHitCallback(key_, req->info());
         // Record effective total time from creation to completion.
         RecordTotalTime(had_dns_config_, req->info().is_speculative(),
                         base::TimeTicks::Now() - req->request_time());
@@ -1962,26 +1957,11 @@ int HostResolverImpl::Resolve(const RequestInfo& info,
   DCHECK_EQ(false, callback.is_null());
   DCHECK(out_req);
 
-  IPAddress ip_address;
-  IPAddress* ip_address_ptr = nullptr;
-  if (ip_address.AssignFromIPLiteral(info.hostname())) {
-    ip_address_ptr = &ip_address;
-  } else {
-    // Check that the caller supplied a valid hostname to resolve.
-    if (!IsValidDNSDomain(info.hostname()))
-      return ERR_NAME_NOT_RESOLVED;
-  }
-
   LogStartRequest(source_net_log, info);
 
-  // Build a key that identifies the request in the cache and in the
-  // outstanding jobs map.
-  Key key = GetEffectiveKeyForRequest(info, ip_address_ptr, source_net_log);
-
-  int rv = ResolveHelper(key, info, ip_address_ptr, addresses, false, nullptr,
-                         source_net_log);
+  Key key;
+  int rv = ResolveHelper(info, false, nullptr, source_net_log, addresses, &key);
   if (rv != ERR_DNS_CACHE_MISS) {
-    MaybeAddCacheHitCallback(key, info);
     LogFinishRequest(source_net_log, info, rv);
     RecordTotalTime(HaveDnsConfig(), info.is_speculative(), base::TimeDelta());
     return rv;
@@ -2085,13 +2065,26 @@ void HostResolverImpl::SetHaveOnlyLoopbackAddresses(bool result) {
   }
 }
 
-int HostResolverImpl::ResolveHelper(const Key& key,
-                                    const RequestInfo& info,
-                                    const IPAddress* ip_address,
-                                    AddressList* addresses,
+int HostResolverImpl::ResolveHelper(const RequestInfo& info,
                                     bool allow_stale,
                                     HostCache::EntryStaleness* stale_info,
-                                    const NetLogWithSource& source_net_log) {
+                                    const NetLogWithSource& source_net_log,
+                                    AddressList* addresses,
+                                    Key* key) {
+  IPAddress ip_address;
+  IPAddress* ip_address_ptr = nullptr;
+  if (ip_address.AssignFromIPLiteral(info.hostname())) {
+    ip_address_ptr = &ip_address;
+  } else {
+    // Check that the caller supplied a valid hostname to resolve.
+    if (!IsValidDNSDomain(info.hostname()))
+      return ERR_NAME_NOT_RESOLVED;
+  }
+
+  // Build a key that identifies the request in the cache and in the
+  // outstanding jobs map.
+  *key = GetEffectiveKeyForRequest(info, ip_address_ptr, source_net_log);
+
   DCHECK(allow_stale == !!stale_info);
   // The result of |getaddrinfo| for empty hosts is inconsistent across systems.
   // On Windows it gives the default interface's address, whereas on Linux it
@@ -2102,28 +2095,27 @@ int HostResolverImpl::ResolveHelper(const Key& key,
   }
 
   int net_error = ERR_UNEXPECTED;
-  if (ResolveAsIP(key, info, ip_address, &net_error, addresses)) {
+  if (ResolveAsIP(*key, info, ip_address_ptr, &net_error, addresses)) {
     MakeNotStale(stale_info);
     return net_error;
   }
-  if (ServeFromCache(key, info, &net_error, addresses, allow_stale,
+  if (ServeFromCache(*key, info, &net_error, addresses, allow_stale,
                      stale_info)) {
     source_net_log.AddEvent(NetLogEventType::HOST_RESOLVER_IMPL_CACHE_HIT,
                             addresses->CreateNetLogCallback());
     // |ServeFromCache()| will set |*stale_info| as needed.
-    RunCacheHitCallbacks(key, info);
     return net_error;
   }
   // TODO(szym): Do not do this if nsswitch.conf instructs not to.
   // http://crbug.com/117655
-  if (ServeFromHosts(key, info, addresses)) {
+  if (ServeFromHosts(*key, info, addresses)) {
     source_net_log.AddEvent(NetLogEventType::HOST_RESOLVER_IMPL_HOSTS_HIT,
                             addresses->CreateNetLogCallback());
     MakeNotStale(stale_info);
     return OK;
   }
 
-  if (ServeLocalhost(key, info, addresses)) {
+  if (ServeLocalhost(*key, info, addresses)) {
     MakeNotStale(stale_info);
     return OK;
   }
@@ -2140,15 +2132,9 @@ int HostResolverImpl::ResolveFromCache(const RequestInfo& info,
   // Update the net log and notify registered observers.
   LogStartRequest(source_net_log, info);
 
-  IPAddress ip_address;
-  IPAddress* ip_address_ptr = nullptr;
-  if (ip_address.AssignFromIPLiteral(info.hostname()))
-    ip_address_ptr = &ip_address;
+  Key key;
+  int rv = ResolveHelper(info, false, nullptr, source_net_log, addresses, &key);
 
-  Key key = GetEffectiveKeyForRequest(info, ip_address_ptr, source_net_log);
-
-  int rv = ResolveHelper(key, info, ip_address_ptr, addresses, false, nullptr,
-                         source_net_log);
   LogFinishRequest(source_net_log, info, rv);
   return rv;
 }
@@ -2194,15 +2180,9 @@ int HostResolverImpl::ResolveStaleFromCache(
   // Update the net log and notify registered observers.
   LogStartRequest(source_net_log, info);
 
-  IPAddress ip_address;
-  IPAddress* ip_address_ptr = nullptr;
-  if (ip_address.AssignFromIPLiteral(info.hostname()))
-    ip_address_ptr = &ip_address;
-
-  Key key = GetEffectiveKeyForRequest(info, ip_address_ptr, source_net_log);
-
-  int rv = ResolveHelper(key, info, ip_address_ptr, addresses, true, stale_info,
-                         source_net_log);
+  Key key;
+  int rv =
+      ResolveHelper(info, true, stale_info, source_net_log, addresses, &key);
   LogFinishRequest(source_net_log, info, rv);
   return rv;
 }
@@ -2518,10 +2498,8 @@ void HostResolverImpl::OnIPAddressChanged() {
   last_ipv6_probe_time_ = base::TimeTicks();
   // Abandon all ProbeJobs.
   probe_weak_ptr_factory_.InvalidateWeakPtrs();
-  if (cache_.get()) {
+  if (cache_.get())
     cache_->OnNetworkChange();
-    cache_hit_callbacks_.clear();
-  }
 #if defined(OS_POSIX) && !defined(OS_MACOSX) && !defined(OS_ANDROID)
   RunLoopbackProbeJob();
 #endif
@@ -2579,10 +2557,8 @@ void HostResolverImpl::UpdateDNSConfig(bool config_changed) {
     // have to expire our internal cache :( Note that OS level DNS caches, such
     // as NSCD's cache should be dropped automatically by the OS when
     // resolv.conf changes so we don't need to do anything to clear that cache.
-    if (cache_.get()) {
+    if (cache_.get())
       cache_->OnNetworkChange();
-      cache_hit_callbacks_.clear();
-    }
 
     // Life check to bail once |this| is deleted.
     base::WeakPtr<HostResolverImpl> self = weak_ptr_factory_.GetWeakPtr();
@@ -2626,28 +2602,6 @@ void HostResolverImpl::OnDnsTaskResolve(int net_error) {
   UMA_HISTOGRAM_BOOLEAN("AsyncDNS.DnsClientEnabled", false);
   UMA_HISTOGRAM_SPARSE_SLOWLY("AsyncDNS.DnsClientDisabledReason",
                               std::abs(net_error));
-}
-
-void HostResolverImpl::OnCacheEntryEvicted(const HostCache::Key& key,
-                                           const HostCache::Entry& entry) {
-  cache_hit_callbacks_.erase(key);
-}
-
-void HostResolverImpl::MaybeAddCacheHitCallback(const HostCache::Key& key,
-                                                const RequestInfo& info) {
-  const RequestInfo::CacheHitCallback& callback = info.cache_hit_callback();
-  if (callback.is_null())
-    return;
-  cache_hit_callbacks_[key].push_back(callback);
-}
-
-void HostResolverImpl::RunCacheHitCallbacks(const HostCache::Key& key,
-                                            const RequestInfo& info) {
-  auto it = cache_hit_callbacks_.find(key);
-  if (it == cache_hit_callbacks_.end())
-    return;
-  for (auto& callback : it->second)
-    callback.Run(info);
 }
 
 void HostResolverImpl::SetDnsClient(std::unique_ptr<DnsClient> dns_client) {

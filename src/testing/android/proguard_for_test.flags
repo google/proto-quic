@@ -23,6 +23,13 @@
     *;
 }
 
+# Keep any enum's value and valueOf method since they are reflectively called
+# from JUnit4 runner
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
 # We have some "library class WebView depends on program class SslCertificate"
 # warnings, and they don't affect us.
 -dontwarn android.webkit.WebView*

@@ -128,7 +128,7 @@ TestMockTimeTaskRunner::TestOrderedPendingTask::operator=(
 // TestMockTimeTaskRunner -----------------------------------------------------
 
 // TODO(gab): This should also set the SequenceToken for the current thread.
-// Ref. TestMockTimeTaskRunner::RunsTasksOnCurrentThread().
+// Ref. TestMockTimeTaskRunner::RunsTasksInCurrentSequence().
 TestMockTimeTaskRunner::ScopedContext::ScopedContext(
     scoped_refptr<TestMockTimeTaskRunner> scope)
     : on_destroy_(ThreadTaskRunnerHandle::OverrideForTesting(scope)) {

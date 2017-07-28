@@ -12,7 +12,6 @@ windows_manifest("default_exe_manifest") {
     common_controls_manifest,
     default_compatibility_manifest,
   ]
-  type = "exe"
 }
 
 if (is_win) {

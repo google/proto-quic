@@ -13,7 +13,9 @@ group("stack_py") {
   sources = _py_files
   data = sources
 
-  data += ["${android_tool_prefix}addr2line",
-           "${android_tool_prefix}objdump",
-           "${android_tool_prefix}c++filt"]
+  data += [
+    "${android_tool_prefix}addr2line",
+    "${android_tool_prefix}objdump",
+    "${android_tool_prefix}c++filt",
+  ]
 }

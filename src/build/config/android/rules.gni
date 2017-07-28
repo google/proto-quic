@@ -717,7 +717,10 @@ if (enable_java_templates) {
   #     both shared_resources and normal application.
   #   r_text_file: (optional) path to pre-generated R.txt to be used when
   #     generating R.java instead of resource-based aapt-generated one.
-
+  #   create_srcjar: If false, does not create an R.java file. Needed only for
+  #     prebuilts that have R.txt files that do not match their res/
+  #     (Play Services).
+  #
   # Example:
   #   android_resources("foo_resources") {
   #     deps = [":foo_strings_grd"]
@@ -730,38 +733,47 @@ if (enable_java_templates) {
   #     resource_dirs = ["res_overrides"]
   #   }
   template("android_resources") {
-    set_sources_assignment_filter([])
     forward_variables_from(invoker, [ "testonly" ])
 
-    assert(defined(invoker.resource_dirs))
-
-    base_path = "$target_gen_dir/$target_name"
+    _base_path = "$target_gen_dir/$target_name"
 
     # JUnit tests use resource zip files. These must not be put in gen/
     # directory or they will not be available to tester bots.
     _resources_zip_rebased_path = rebase_path(target_gen_dir, root_gen_dir)
-    zip_path = "${root_out_dir}/resource_zips/${_resources_zip_rebased_path}/${target_name}.resources.zip"
-    srcjar_path = base_path + ".srcjar"
-    r_text_out_path = base_path + "_R.txt"
-    build_config = base_path + ".build_config"
+    _zip_path = "${root_out_dir}/resource_zips/${_resources_zip_rebased_path}/${target_name}.resources.zip"
+    _r_text_out_path = _base_path + "_R.txt"
+    _build_config = _base_path + ".build_config"
+    _build_config_target_name = "${target_name}__build_config"
 
-    build_config_target_name = "${target_name}__build_config"
-    process_resources_target_name = "${target_name}__process_resources"
-    final_target_name = target_name
+    if (!defined(invoker.create_srcjar) || invoker.create_srcjar) {
+      _srcjar_path = _base_path + ".srcjar"
+    }
 
-    write_build_config(build_config_target_name) {
+    write_build_config(_build_config_target_name) {
       type = "android_resources"
-      forward_variables_from(invoker,
-                             [
-                               "android_manifest",
-                               "custom_package",
-                             ])
-      resource_dirs = []
-      if (defined(invoker.resource_dirs)) {
-        resource_dirs += invoker.resource_dirs
-      }
+      build_config = _build_config
+      resources_zip = _zip_path
+
+      resource_dirs = invoker.resource_dirs
       if (defined(invoker.generated_resource_dirs)) {
         resource_dirs += invoker.generated_resource_dirs
+      }
+
+      if (defined(_srcjar_path)) {
+        forward_variables_from(invoker,
+                               [
+                                 "android_manifest",
+                                 "custom_package",
+                               ])
+
+        # No package means resources override their deps.
+        if (defined(custom_package) || defined(android_manifest)) {
+          r_text = _r_text_out_path
+        } else {
+          assert(defined(invoker.deps),
+                 "Must specify deps when custom_package is omitted.")
+        }
+        srcjar = _srcjar_path
       }
 
       if (defined(invoker.deps)) {
@@ -772,20 +784,9 @@ if (enable_java_templates) {
           invoker.android_manifest_dep,
         ]
       }
-
-      # No package means resources override their deps.
-      if (defined(custom_package) || defined(android_manifest)) {
-        r_text = r_text_out_path
-      } else {
-        assert(defined(invoker.deps),
-               "Must specify deps when custom_package is omitted.")
-      }
-
-      resources_zip = zip_path
-      srcjar = srcjar_path
     }
 
-    process_resources(process_resources_target_name) {
+    process_resources(target_name) {
       forward_variables_from(invoker,
                              [
                                "app_as_shared_lib",
@@ -801,13 +802,20 @@ if (enable_java_templates) {
       if (!defined(deps)) {
         deps = []
       }
-      deps += [ ":$build_config_target_name" ]
+      deps += [ ":$_build_config_target_name" ]
       if (defined(invoker.android_manifest_dep)) {
         deps += [ invoker.android_manifest_dep ]
       }
 
+      build_config = _build_config
+      zip_path = _zip_path
+      r_text_out_path = _r_text_out_path
+
       if (defined(invoker.r_text_file)) {
         r_text_in_path = invoker.r_text_file
+      }
+      if (defined(_srcjar_path)) {
+        srcjar_path = _srcjar_path
       }
 
       # Always generate R.onResourcesLoaded() method, it is required for
@@ -817,13 +825,6 @@ if (enable_java_templates) {
       if (!defined(android_manifest)) {
         android_manifest = "//build/android/AndroidManifest.xml"
       }
-    }
-
-    group(final_target_name) {
-      forward_variables_from(invoker, [ "visibility" ])
-      public_deps = [
-        ":${target_name}__process_resources",
-      ]
     }
   }
 
@@ -1843,6 +1844,11 @@ if (enable_java_templates) {
       if (_proguard_enabled) {
         proguard_info = "$_proguard_output_jar_path.info"
       }
+      if (_enable_relocation_packing) {
+        enable_relocation_packing = "1"
+      } else {
+        enable_relocation_packing = "0"
+      }
 
       # Don't depend on the runtime_deps target in order to avoid having to
       # build the native libraries just to create the .build_config file.
@@ -1862,6 +1868,7 @@ if (enable_java_templates) {
     android_manifest_target = "${_template_name}__merge_manifests"
     action(android_manifest_target) {
       script = "//build/android/gyp/merge_manifest.py"
+      depfile = "$target_gen_dir/$target_name.d"
 
       sources = [
         _android_root_manifest,
@@ -1872,6 +1879,8 @@ if (enable_java_templates) {
       ]
 
       args = [
+        "--depfile",
+        rebase_path(depfile, root_build_dir),
         "--build-vars",
         rebase_path(android_build_vars, root_build_dir),
         "--root-manifest",
@@ -2942,6 +2951,7 @@ if (enable_java_templates) {
   #   ignore_assets: Whether to ignore assets found in the .aar.
   #   ignore_manifest: Whether to ignore merging of AndroidManifest.xml.
   #   ignore_native_libraries: Whether to ignore .so files found in the .aar.
+  #   create_srcjar: If false, does not create an R.java file.
   #   TODO(jbudorick@): remove this arguments after crbug.com/522043 is fixed.
   #   requires_android: Whether this target can only be used for compiling Android related targets.
   #
@@ -3031,7 +3041,11 @@ if (enable_java_templates) {
     if (_scanned_files.resources != [] || _scanned_files.has_r_text_file) {
       _res_target_name = "${target_name}__res"
       android_resources(_res_target_name) {
-        forward_variables_from(invoker, [ "deps" ])
+        forward_variables_from(invoker,
+                               [
+                                 "create_srcjar",
+                                 "deps",
+                               ])
         if (!defined(deps)) {
           deps = []
         }

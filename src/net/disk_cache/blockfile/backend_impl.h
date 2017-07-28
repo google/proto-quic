@@ -265,6 +265,9 @@ class NET_EXPORT_PRIVATE BackendImpl : public Backend {
   // Ensures the index is flushed to disk (a no-op on platforms with mmap).
   void FlushIndex();
 
+  // Ensures that the private cache thread completes work.
+  static void FlushForTesting();
+
   // Backend implementation.
   net::CacheType GetCacheType() const override;
   int32_t GetEntryCount() const override;

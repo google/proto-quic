@@ -58,6 +58,43 @@ namespace base {
 
 namespace {
 
+// Overrides PATH environment variable to |value| for the lifetime of this
+// class. Upon destruction, the previous value is restored.
+class ScopedPathOverride {
+ public:
+  ScopedPathOverride(const std::string& value);
+  ~ScopedPathOverride();
+
+  base::Environment* GetEnv() { return environment_.get(); }
+  bool IsOverridden() { return overridden_; }
+
+ private:
+  static const char kPath[];
+  std::unique_ptr<base::Environment> environment_;
+  bool overridden_;
+  bool was_set_;
+  std::string old_value_;
+};
+
+const char ScopedPathOverride::kPath[] = "PATH";
+
+ScopedPathOverride::ScopedPathOverride(const std::string& value)
+    : environment_(base::Environment::Create()),
+      overridden_(false),
+      was_set_(false) {
+  was_set_ = environment_->GetVar(kPath, &old_value_);
+  overridden_ = environment_->SetVar(kPath, value);
+}
+
+ScopedPathOverride::~ScopedPathOverride() {
+  if (overridden_) {
+    if (was_set_)
+      environment_->SetVar(kPath, old_value_);
+    else
+      environment_->UnSetVar(kPath);
+  }
+}
+
 // To test that NormalizeFilePath() deals with NTFS reparse points correctly,
 // we need functions to create and delete reparse points.
 #if defined(OS_WIN)
@@ -870,7 +907,6 @@ TEST_F(FileUtilTest, ChangeDirectoryPermissionsAndEnumerate) {
 
 TEST_F(FileUtilTest, ExecutableExistsInPath) {
   // Create two directories that we will put in our PATH
-  const char kPath[] = "PATH";
   const FilePath::CharType kDir1[] = FPL("dir1");
   const FilePath::CharType kDir2[] = FPL("dir2");
 
@@ -879,9 +915,8 @@ TEST_F(FileUtilTest, ExecutableExistsInPath) {
   ASSERT_TRUE(CreateDirectory(dir1));
   ASSERT_TRUE(CreateDirectory(dir2));
 
-  std::unique_ptr<Environment> env(base::Environment::Create());
-
-  ASSERT_TRUE(env->SetVar(kPath, dir1.value() + ":" + dir2.value()));
+  ScopedPathOverride scoped_env(dir1.value() + ":" + dir2.value());
+  ASSERT_TRUE(scoped_env.IsOverridden());
 
   const FilePath::CharType kRegularFileName[] = FPL("regular_file");
   const FilePath::CharType kExeFileName[] = FPL("exe");
@@ -902,9 +937,9 @@ TEST_F(FileUtilTest, ExecutableExistsInPath) {
   ASSERT_TRUE(SetPosixFilePermissions(dir1.Append(kExeFileName),
                                       FILE_PERMISSION_EXECUTE_BY_USER));
 
-  EXPECT_TRUE(ExecutableExistsInPath(env.get(), kExeFileName));
-  EXPECT_FALSE(ExecutableExistsInPath(env.get(), kRegularFileName));
-  EXPECT_FALSE(ExecutableExistsInPath(env.get(), kDneFileName));
+  EXPECT_TRUE(ExecutableExistsInPath(scoped_env.GetEnv(), kExeFileName));
+  EXPECT_FALSE(ExecutableExistsInPath(scoped_env.GetEnv(), kRegularFileName));
+  EXPECT_FALSE(ExecutableExistsInPath(scoped_env.GetEnv(), kDneFileName));
 }
 
 #endif  // !defined(OS_FUCHSIA) && defined(OS_POSIX)

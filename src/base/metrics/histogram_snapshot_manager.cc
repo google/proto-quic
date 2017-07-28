@@ -45,13 +45,13 @@ HistogramSnapshotManager::~HistogramSnapshotManager() {
 }
 
 void HistogramSnapshotManager::PrepareDelta(HistogramBase* histogram) {
-  histogram->ValidateHistogramContents();
+  histogram->ValidateHistogramContents(true, 0);
   PrepareSamples(histogram, histogram->SnapshotDelta());
 }
 
 void HistogramSnapshotManager::PrepareFinalDelta(
     const HistogramBase* histogram) {
-  histogram->ValidateHistogramContents();
+  histogram->ValidateHistogramContents(true, 0);
   PrepareSamples(histogram, histogram->SnapshotFinalDelta());
 }
 
@@ -105,15 +105,11 @@ void HistogramSnapshotManager::PrepareSamples(
   if (corruption) {
     DLOG(ERROR) << "Histogram: \"" << histogram->histogram_name()
                 << "\" has data corruption: " << corruption;
-    histogram_flattener_->InconsistencyDetected(
-        static_cast<HistogramBase::Inconsistency>(corruption));
     // Don't record corrupt data to metrics services.
     const uint32_t old_corruption = sample_info->inconsistencies;
     if (old_corruption == (corruption | old_corruption))
       return;  // We've already seen this corruption for this histogram.
     sample_info->inconsistencies |= corruption;
-    histogram_flattener_->UniqueInconsistencyDetected(
-        static_cast<HistogramBase::Inconsistency>(corruption));
     return;
   }
 

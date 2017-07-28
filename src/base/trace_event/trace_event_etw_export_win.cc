@@ -30,21 +30,6 @@
 #include "base/trace_event/etw_manifest/chrome_events_win.h"  // NOLINT
 
 namespace {
-// Typedefs for use with GetProcAddress
-typedef ULONG(__stdcall* tEventRegister)(LPCGUID ProviderId,
-                                         PENABLECALLBACK EnableCallback,
-                                         PVOID CallbackContext,
-                                         PREGHANDLE RegHandle);
-typedef ULONG(__stdcall* tEventWrite)(REGHANDLE RegHandle,
-                                      PCEVENT_DESCRIPTOR EventDescriptor,
-                                      ULONG UserDataCount,
-                                      PEVENT_DATA_DESCRIPTOR UserData);
-typedef ULONG(__stdcall* tEventUnregister)(REGHANDLE RegHandle);
-
-tEventRegister EventRegisterProc = nullptr;
-tEventWrite EventWriteProc = nullptr;
-tEventUnregister EventUnregisterProc = nullptr;
-
 // |kFilteredEventGroupNames| contains the event categories that can be
 // exported individually. These categories can be enabled by passing the correct
 // keyword when starting the trace. A keyword is a 64-bit flag and we attribute
@@ -98,38 +83,6 @@ const size_t kNumberOfCategories = ARRAYSIZE(kFilteredEventGroupNames) + 2U;
 
 }  // namespace
 
-// Redirector function for EventRegister. Called by macros in
-// chrome_events_win.h
-ULONG EVNTAPI EventRegister(LPCGUID ProviderId,
-                            PENABLECALLBACK EnableCallback,
-                            PVOID CallbackContext,
-                            PREGHANDLE RegHandle) {
-  if (EventRegisterProc)
-    return EventRegisterProc(ProviderId, EnableCallback, CallbackContext,
-                             RegHandle);
-  *RegHandle = 0;
-  return 0;
-}
-
-// Redirector function for EventWrite. Called by macros in
-// chrome_events_win.h
-ULONG EVNTAPI EventWrite(REGHANDLE RegHandle,
-                         PCEVENT_DESCRIPTOR EventDescriptor,
-                         ULONG UserDataCount,
-                         PEVENT_DATA_DESCRIPTOR UserData) {
-  if (EventWriteProc)
-    return EventWriteProc(RegHandle, EventDescriptor, UserDataCount, UserData);
-  return 0;
-}
-
-// Redirector function for EventUnregister. Called by macros in
-// chrome_events_win.h
-ULONG EVNTAPI EventUnregister(REGHANDLE RegHandle) {
-  if (EventUnregisterProc)
-    return EventUnregisterProc(RegHandle);
-  return 0;
-}
-
 namespace base {
 namespace trace_event {
 
@@ -159,21 +112,9 @@ class TraceEventETWExport::ETWKeywordUpdateThread
 
 TraceEventETWExport::TraceEventETWExport()
     : etw_export_enabled_(false), etw_match_any_keyword_(0ULL) {
-  // Find Advapi32.dll. This should always succeed.
-  HMODULE AdvapiDLL = ::LoadLibraryW(L"Advapi32.dll");
-  if (AdvapiDLL) {
-    // Try to find the ETW functions. This will fail on XP.
-    EventRegisterProc = reinterpret_cast<tEventRegister>(
-        ::GetProcAddress(AdvapiDLL, "EventRegister"));
-    EventWriteProc = reinterpret_cast<tEventWrite>(
-        ::GetProcAddress(AdvapiDLL, "EventWrite"));
-    EventUnregisterProc = reinterpret_cast<tEventUnregister>(
-        ::GetProcAddress(AdvapiDLL, "EventUnregister"));
-
-    // Register the ETW provider. If registration fails then the event logging
-    // calls will fail (on XP this call will do nothing).
-    EventRegisterChrome();
-  }
+  // Register the ETW provider. If registration fails then the event logging
+  // calls will fail.
+  EventRegisterChrome();
 
   // Make sure to initialize the map with all the group names. Subsequent
   // modifications will be made by the background thread and only affect the
@@ -234,7 +175,7 @@ void TraceEventETWExport::AddEvent(
     const char* name,
     unsigned long long id,
     int num_args,
-    const char** arg_names,
+    const char* const* arg_names,
     const unsigned char* arg_types,
     const unsigned long long* arg_values,
     const std::unique_ptr<ConvertableToTraceFormat>* convertable_values) {

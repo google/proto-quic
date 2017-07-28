@@ -86,7 +86,7 @@ double GetWeightMultiplierPerSecond(
 bool GetPersistentCacheReadingEnabled(
     const std::map<std::string, std::string>& params) {
   if (GetStringValueForVariationParamWithDefaultValue(
-          params, "persistent_cache_reading_enabled", "false") != "true") {
+          params, "persistent_cache_reading_enabled", "true") != "true") {
     return false;
   }
   return true;

@@ -157,7 +157,8 @@ bool QuicPacketCreator::ConsumeData(QuicStreamId id,
 
 bool QuicPacketCreator::HasRoomForStreamFrame(QuicStreamId id,
                                               QuicStreamOffset offset) {
-  return BytesFree() > QuicFramer::GetMinStreamFrameSize(id, offset, true);
+  return BytesFree() > QuicFramer::GetMinStreamFrameSize(framer_->version(), id,
+                                                         offset, true);
 }
 
 // static
@@ -172,7 +173,7 @@ size_t QuicPacketCreator::StreamFramePacketOverhead(
                              include_diversification_nonce,
                              packet_number_length) +
          // Assumes this is a stream with a single lone packet.
-         QuicFramer::GetMinStreamFrameSize(1u, offset, true);
+         QuicFramer::GetMinStreamFrameSize(version, 1u, offset, true);
 }
 
 void QuicPacketCreator::CreateStreamFrame(QuicStreamId id,
@@ -190,7 +191,8 @@ void QuicPacketCreator::CreateStreamFrame(QuicStreamId id,
   QUIC_BUG_IF(!HasRoomForStreamFrame(id, offset))
       << "No room for Stream frame, BytesFree: " << BytesFree()
       << " MinStreamFrameSize: "
-      << QuicFramer::GetMinStreamFrameSize(id, offset, true);
+      << QuicFramer::GetMinStreamFrameSize(framer_->version(), id, offset,
+                                           true);
 
   if (iov_offset == iov.total_length) {
     QUIC_BUG_IF(!fin) << "Creating a stream frame with no data or fin.";
@@ -202,7 +204,7 @@ void QuicPacketCreator::CreateStreamFrame(QuicStreamId id,
 
   const size_t data_size = iov.total_length - iov_offset;
   size_t min_frame_size = QuicFramer::GetMinStreamFrameSize(
-      id, offset, /* last_frame_in_packet= */ true);
+      framer_->version(), id, offset, /* last_frame_in_packet= */ true);
   size_t bytes_consumed =
       std::min<size_t>(BytesFree() - min_frame_size, data_size);
 
@@ -270,8 +272,8 @@ void QuicPacketCreator::Flush() {
     return;
   }
 
-  QUIC_CACHELINE_ALIGNED char seralized_packet_buffer[kMaxPacketSize];
-  SerializePacket(seralized_packet_buffer, kMaxPacketSize);
+  QUIC_CACHELINE_ALIGNED char serialized_packet_buffer[kMaxPacketSize];
+  SerializePacket(serialized_packet_buffer, kMaxPacketSize);
   OnSerializedPacket();
 }
 
@@ -285,8 +287,15 @@ void QuicPacketCreator::OnSerializedPacket() {
     return;
   }
 
-  delegate_->OnSerializedPacket(&packet_);
+  if (!FLAGS_quic_reloadable_flag_quic_clear_packet_before_handed_over) {
+    delegate_->OnSerializedPacket(&packet_);
+    ClearPacket();
+    return;
+  }
+  QUIC_FLAG_COUNT(quic_reloadable_flag_quic_clear_packet_before_handed_over);
+  SerializedPacket packet(std::move(packet_));
   ClearPacket();
+  delegate_->OnSerializedPacket(&packet);
 }
 
 void QuicPacketCreator::ClearPacket() {
@@ -329,7 +338,7 @@ void QuicPacketCreator::CreateAndSerializeStreamFrame(
       << "Creating a stream frame with no data or fin.";
   const size_t remaining_data_size = iov.total_length - iov_offset;
   const size_t min_frame_size = QuicFramer::GetMinStreamFrameSize(
-      id, stream_offset, /* last_frame_in_packet= */ true);
+      framer_->version(), id, stream_offset, /* last_frame_in_packet= */ true);
   const size_t available_size =
       max_plaintext_size_ - writer.length() - min_frame_size;
   const size_t bytes_consumed =

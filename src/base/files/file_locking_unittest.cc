@@ -11,6 +11,7 @@
 #include "base/test/test_timeouts.h"
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/multiprocess_func_list.h"
 
@@ -214,6 +215,8 @@ TEST_F(FileLockingTest, UnlockOnExit) {
   ASSERT_EQ(File::FILE_OK, lock_file_.Unlock());
 }
 
+// Flaky under Android ASAN (http://crbug.com/747518)
+#if !(defined(OS_ANDROID) && defined(ADDRESS_SANITIZER))
 // Test that killing the process releases the lock.  This should cover crashing.
 TEST_F(FileLockingTest, UnlockOnTerminate) {
   // The child will wait for an exit which never arrives.
@@ -224,3 +227,4 @@ TEST_F(FileLockingTest, UnlockOnTerminate) {
   ASSERT_EQ(File::FILE_OK, lock_file_.Lock());
   ASSERT_EQ(File::FILE_OK, lock_file_.Unlock());
 }
+#endif

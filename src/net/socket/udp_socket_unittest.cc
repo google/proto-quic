@@ -12,6 +12,7 @@
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/threading/thread_task_runner_handle.h"
+#include "build/build_config.h"
 #include "net/base/io_buffer.h"
 #include "net/base/ip_address.h"
 #include "net/base/ip_endpoint.h"
@@ -55,10 +56,9 @@ class UDPSocketTest : public PlatformTest {
 
     int rv = socket->RecvFrom(
         buffer_.get(), kMaxRead, &recv_from_address_, callback.callback());
-    if (rv == ERR_IO_PENDING)
-      rv = callback.WaitForResult();
+    rv = callback.GetResult(rv);
     if (rv < 0)
-      return std::string();  // error!
+      return std::string();
     return std::string(buffer_->data(), rv);
   }
 
@@ -85,8 +85,7 @@ class UDPSocketTest : public PlatformTest {
     while (buffer->BytesRemaining()) {
       int rv = socket->SendTo(
           buffer.get(), buffer->BytesRemaining(), address, callback.callback());
-      if (rv == ERR_IO_PENDING)
-        rv = callback.WaitForResult();
+      rv = callback.GetResult(rv);
       if (rv <= 0)
         return bytes_sent > 0 ? bytes_sent : rv;
       bytes_sent += rv;
@@ -99,10 +98,9 @@ class UDPSocketTest : public PlatformTest {
     TestCompletionCallback callback;
 
     int rv = socket->Read(buffer_.get(), kMaxRead, callback.callback());
-    if (rv == ERR_IO_PENDING)
-      rv = callback.WaitForResult();
+    rv = callback.GetResult(rv);
     if (rv < 0)
-      return std::string();  // error!
+      return std::string();
     return std::string(buffer_->data(), rv);
   }
 
@@ -120,8 +118,7 @@ class UDPSocketTest : public PlatformTest {
     while (buffer->BytesRemaining()) {
       int rv = socket->Write(
           buffer.get(), buffer->BytesRemaining(), callback.callback());
-      if (rv == ERR_IO_PENDING)
-        rv = callback.WaitForResult();
+      rv = callback.GetResult(rv);
       if (rv <= 0)
         return bytes_sent > 0 ? bytes_sent : rv;
       bytes_sent += rv;
@@ -166,20 +163,18 @@ void UDPSocketTest::ConnectTest(bool use_nonblocking_io) {
   std::string simple_message("hello world!");
 
   // Setup the server to listen.
-  IPEndPoint bind_address;
-  CreateUDPAddress("127.0.0.1", kPort, &bind_address);
+  IPEndPoint server_address;
+  CreateUDPAddress("127.0.0.1", kPort, &server_address);
   TestNetLog server_log;
   std::unique_ptr<UDPServerSocket> server(
       new UDPServerSocket(&server_log, NetLogSource()));
   if (use_nonblocking_io)
     server->UseNonBlockingIO();
   server->AllowAddressReuse();
-  int rv = server->Listen(bind_address);
+  int rv = server->Listen(server_address);
   ASSERT_THAT(rv, IsOk());
 
   // Setup the client.
-  IPEndPoint server_address;
-  CreateUDPAddress("127.0.0.1", kPort, &server_address);
   TestNetLog client_log;
   std::unique_ptr<UDPClientSocket> client(
       new UDPClientSocket(DatagramSocket::DEFAULT_BIND, RandIntCallback(),
@@ -196,7 +191,7 @@ void UDPSocketTest::ConnectTest(bool use_nonblocking_io) {
 
   // Server waits for message.
   std::string str = RecvFromSocket(server.get());
-  DCHECK(simple_message == str);
+  EXPECT_EQ(simple_message, str);
 
   // Server echoes reply.
   rv = SendToSocket(server.get(), simple_message);
@@ -204,7 +199,7 @@ void UDPSocketTest::ConnectTest(bool use_nonblocking_io) {
 
   // Client waits for response.
   str = ReadSocket(client.get());
-  DCHECK(simple_message == str);
+  EXPECT_EQ(simple_message, str);
 
   // Test asynchronous read. Server waits for message.
   base::RunLoop run_loop;
@@ -279,18 +274,17 @@ TEST_F(UDPSocketTest, ConnectNonBlocking) {
 }
 #endif
 
-#if defined(OS_MACOSX)
-// UDPSocketPrivate_Broadcast is disabled for OSX because it requires
-// root permissions on OSX 10.7+.
-TEST_F(UDPSocketTest, DISABLED_Broadcast) {
-#elif defined(OS_ANDROID)
-// Disabled for Android because devices attached to testbots don't have default
-// network, so broadcasting to 255.255.255.255 returns error -109 (Address not
-// reachable). crbug.com/139144.
-TEST_F(UDPSocketTest, DISABLED_Broadcast) {
+#if defined(OS_MACOSX) || defined(OS_ANDROID) || defined(OS_FUCHSIA)
+// - MacOS: requires root permissions on OSX 10.7+.
+// - Android: devices attached to testbots don't have default network, so
+// broadcasting to 255.255.255.255 returns error -109 (Address not reachable).
+// crbug.com/139144.
+// - Fuchsia: TODO(fuchsia): broadcast support is not implemented yet.
+#define MAYBE_LocalBroadcast DISABLED_LocalBroadcast
 #else
-TEST_F(UDPSocketTest, Broadcast) {
+#define MAYBE_LocalBroadcast LocalBroadcast
 #endif
+TEST_F(UDPSocketTest, MAYBE_LocalBroadcast) {
   const uint16_t kPort = 9999;
   std::string first_message("first message"), second_message("second message");
 
@@ -443,26 +437,25 @@ TEST_F(UDPSocketTest, VerifyConnectBindsAddr) {
   std::string foreign_message("BAD MESSAGE TO GET!!");
 
   // Setup the first server to listen.
-  IPEndPoint bind_address;
-  CreateUDPAddress("127.0.0.1", kPort1, &bind_address);
+  IPEndPoint server1_address;
+  CreateUDPAddress("127.0.0.1", kPort1, &server1_address);
   UDPServerSocket server1(NULL, NetLogSource());
   server1.AllowAddressReuse();
-  int rv = server1.Listen(bind_address);
+  int rv = server1.Listen(server1_address);
   ASSERT_THAT(rv, IsOk());
 
   // Setup the second server to listen.
-  CreateUDPAddress("127.0.0.1", kPort2, &bind_address);
+  IPEndPoint server2_address;
+  CreateUDPAddress("127.0.0.1", kPort2, &server2_address);
   UDPServerSocket server2(NULL, NetLogSource());
   server2.AllowAddressReuse();
-  rv = server2.Listen(bind_address);
+  rv = server2.Listen(server2_address);
   ASSERT_THAT(rv, IsOk());
 
   // Setup the client, connected to server 1.
-  IPEndPoint server_address;
-  CreateUDPAddress("127.0.0.1", kPort1, &server_address);
   UDPClientSocket client(DatagramSocket::DEFAULT_BIND, RandIntCallback(), NULL,
                          NetLogSource());
-  rv = client.Connect(server_address);
+  rv = client.Connect(server1_address);
   EXPECT_THAT(rv, IsOk());
 
   // Client sends to server1.
@@ -471,7 +464,7 @@ TEST_F(UDPSocketTest, VerifyConnectBindsAddr) {
 
   // Server1 waits for message.
   std::string str = RecvFromSocket(&server1);
-  DCHECK(simple_message == str);
+  EXPECT_EQ(simple_message, str);
 
   // Get the client's address.
   IPEndPoint client_address;
@@ -490,7 +483,7 @@ TEST_F(UDPSocketTest, VerifyConnectBindsAddr) {
 
   // Client waits for response.
   str = ReadSocket(&client);
-  DCHECK(simple_message == str);
+  EXPECT_EQ(simple_message, str);
 }
 
 TEST_F(UDPSocketTest, ClientGetLocalPeerAddresses) {
@@ -636,10 +629,12 @@ TEST_F(UDPSocketTest, CloseWithPendingRead) {
   EXPECT_FALSE(callback.have_result());
 }
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(OS_FUCHSIA)
 // Some Android devices do not support multicast socket.
 // The ones supporting multicast need WifiManager.MulitcastLock to enable it.
 // http://goo.gl/jjAk9
+//
+// TODO(fuchsia): Multicast is not implemented on Fuchsia yet.
 #define MAYBE_JoinMulticastGroup DISABLED_JoinMulticastGroup
 #else
 #define MAYBE_JoinMulticastGroup JoinMulticastGroup

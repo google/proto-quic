@@ -18,10 +18,14 @@
 
 // Step 1: forward declarations.
 namespace {
-const char kHashSetClassPath[] = "java/util/HashSet";
+const char kClassPath_java_util_HashSet[] = "java/util/HashSet";
 // Leaking this jclass as we cannot use LazyInstance from some threads.
-base::subtle::AtomicWord g_HashSet_clazz __attribute__((unused)) = 0;
-#define HashSet_clazz(env) base::android::LazyGetClass(env, kHashSetClassPath, &g_HashSet_clazz)
+base::subtle::AtomicWord g_java_util_HashSet_clazz __attribute__((unused)) = 0;
+
+inline jclass java_util_HashSet_clazz(JNIEnv* env) {
+  return base::android::LazyGetClass(env, kClassPath_java_util_HashSet,
+      &g_java_util_HashSet_clazz);
+}
 
 }  // namespace
 
@@ -29,20 +33,20 @@ namespace JNI_HashSet {
 
 // Step 2: method stubs.
 
-static base::subtle::AtomicWord g_HashSet_dummy = 0;
+static base::subtle::AtomicWord g_java_util_HashSet_dummy = 0;
 static void Java_HashSet_dummy(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) __attribute__ ((unused));
 static void Java_HashSet_dummy(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      HashSet_clazz(env));
+      java_util_HashSet_clazz(env));
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, HashSet_clazz(env),
+      env, java_util_HashSet_clazz(env),
       "dummy",
       "()V",
-      &g_HashSet_dummy);
+      &g_java_util_HashSet_dummy);
 
      env->CallVoidMethod(obj.obj(),
           method_id);

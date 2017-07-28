@@ -39,6 +39,9 @@ namespace base {
 
 namespace {
 
+// TODO(asvitkine): Remove this after crbug/736675.
+char g_last_logged_histogram_name[256] = {0};
+
 bool ReadHistogramArguments(PickleIterator* iter,
                             std::string* histogram_name,
                             int* flags,
@@ -351,12 +354,10 @@ uint32_t Histogram::FindCorruption(const HistogramSamples& samples) const {
     if (delta != delta64)
       delta = INT_MAX;  // Flag all giant errors as INT_MAX.
     if (delta > 0) {
-      UMA_HISTOGRAM_COUNTS("Histogram.InconsistentCountHigh", delta);
       if (delta > kCommonRaceBasedCountMismatch)
         inconsistencies |= COUNT_HIGH_ERROR;
     } else {
       DCHECK_GT(0, delta);
-      UMA_HISTOGRAM_COUNTS("Histogram.InconsistentCountLow", -delta);
       if (-delta > kCommonRaceBasedCountMismatch)
         inconsistencies |= COUNT_LOW_ERROR;
     }
@@ -462,6 +463,9 @@ void Histogram::AddCount(int value, int count) {
   DCHECK_EQ(0, ranges(0));
   DCHECK_EQ(kSampleType_MAX, ranges(bucket_count()));
 
+  strlcpy(g_last_logged_histogram_name, histogram_name().c_str(),
+          sizeof(g_last_logged_histogram_name));
+
   if (value > kSampleType_MAX - 1)
     value = kSampleType_MAX - 1;
   if (value < 0)
@@ -532,7 +536,8 @@ void Histogram::WriteAscii(std::string* output) const {
   WriteAsciiImpl(true, "\n", output);
 }
 
-void Histogram::ValidateHistogramContents() const {
+bool Histogram::ValidateHistogramContents(bool crash_if_invalid,
+                                          int corrupted_count) const {
   enum Fields : int {
     kBucketRangesField,
     kUnloggedSamplesField,
@@ -556,17 +561,21 @@ void Histogram::ValidateHistogramContents() const {
   if (flags() == 0)
     bad_fields |= 1 << kFlagsField;
 
+  const bool is_valid = (bad_fields & ~(1 << kFlagsField)) == 0;
+  if (is_valid || !crash_if_invalid)
+    return is_valid;
+
   // Abort if a problem is found (except "flags", which could legally be zero).
-  if ((bad_fields & ~(1 << kFlagsField)) != 0) {
-    const std::string debug_string =
-        base::StringPrintf("%s/%" PRIu32, histogram_name().c_str(), bad_fields);
+  const std::string debug_string = base::StringPrintf(
+      "%s/%" PRIu32 "/%d/%s", histogram_name().c_str(), bad_fields,
+      corrupted_count, g_last_logged_histogram_name);
 #if !defined(OS_NACL)
-    // Temporary for https://crbug.com/736675.
-    base::debug::ScopedCrashKey crash_key("bad_histogram", debug_string);
+  // Temporary for https://crbug.com/736675.
+  base::debug::ScopedCrashKey crash_key("bad_histogram", debug_string);
 #endif
-    CHECK(false) << debug_string;
-    debug::Alias(&bad_fields);
-  }
+  CHECK(false) << debug_string;
+  debug::Alias(&bad_fields);
+  return false;
 }
 
 bool Histogram::SerializeInfoImpl(Pickle* pickle) const {

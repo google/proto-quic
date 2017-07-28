@@ -211,6 +211,29 @@ TEST_F(OutOfMemoryDeathTest, AlignedRealloc) {
       value_ = _aligned_realloc(NULL, test_size_, 8);
     }, testing::ExitedWithCode(kExitCode), kOomRegex);
 }
+
+namespace {
+
+constexpr uint32_t kUnhandledExceptionExitCode = 0xBADA55;
+
+// This unhandled exception filter exits the process with an exit code distinct
+// from the exception code. This is to verify that the out of memory new handler
+// causes an unhandled exception.
+LONG WINAPI ExitingUnhandledExceptionFilter(EXCEPTION_POINTERS* ExceptionInfo) {
+  _exit(kUnhandledExceptionExitCode);
+}
+
+}  // namespace
+
+TEST_F(OutOfMemoryDeathTest, NewHandlerGeneratesUnhandledException) {
+  ASSERT_EXIT(
+      {
+        SetUpInDeathAssert();
+        SetUnhandledExceptionFilter(&ExitingUnhandledExceptionFilter);
+        value_ = new char[test_size_];
+      },
+      testing::ExitedWithCode(kUnhandledExceptionExitCode), kOomRegex);
+}
 #endif  // defined(OS_WIN)
 
 // OS X and Android have no 2Gb allocation limit.

@@ -72,6 +72,14 @@ void FieldTrialParamAssociator::ClearAllParamsForTesting() {
   FieldTrialList::ClearParamsFromSharedMemoryForTesting();
 }
 
+void FieldTrialParamAssociator::ClearParamsForTesting(
+    const std::string& trial_name,
+    const std::string& group_name) {
+  AutoLock scoped_lock(lock_);
+  const FieldTrialKey key(trial_name, group_name);
+  field_trial_params_.erase(key);
+}
+
 void FieldTrialParamAssociator::ClearAllCachedParamsForTesting() {
   AutoLock scoped_lock(lock_);
   field_trial_params_.clear();

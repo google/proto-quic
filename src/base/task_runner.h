@@ -70,12 +70,6 @@ class BASE_EXPORT TaskRunner
                                OnceClosure task,
                                base::TimeDelta delay) = 0;
 
-  // Drepecated: favor RunsTasksInCurrentSequence().
-  // TODO(http://crbug.com/665062): mass redirect callers and remove this.
-  bool RunsTasksOnCurrentThread() const {
-    return RunsTasksInCurrentSequence();
-  }
-
   // Returns true iff tasks posted to this TaskRunner are sequenced
   // with this call.
   //

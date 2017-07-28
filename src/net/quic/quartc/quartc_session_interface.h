@@ -16,6 +16,12 @@
 
 namespace net {
 
+// Structure holding stats exported by a QuartcSession.
+struct QUIC_EXPORT_PRIVATE QuartcSessionStats {
+  // Bandwidth estimate in bits per second.
+  int64_t bandwidth_estimate_bits_per_second;
+};
+
 // Given a PacketTransport, provides a way to send and receive separate streams
 // of reliable, in-order, encrypted data. For example, this can build on top of
 // a WebRTC IceTransport for sending and receiving data over QUIC.
@@ -57,6 +63,9 @@ class QUIC_EXPORT_PRIVATE QuartcSessionInterface {
   // the caller) owns the streams.  Streams may finish and be deleted before the
   // caller tries to cancel them, rendering the caller's pointers invalid.
   virtual void CancelStream(QuicStreamId stream_id) = 0;
+
+  // Gets stats associated with this Quartc session.
+  virtual QuartcSessionStats GetStats() = 0;
 
   // Send and receive packets, like a virtual UDP socket. For example, this
   // could be implemented by WebRTC's IceTransport.

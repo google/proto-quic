@@ -78,19 +78,9 @@ class ClampedNumeric {
   ClampedNumeric& operator^=(const Src rhs);
 
   constexpr ClampedNumeric operator-() const {
-    return ClampedNumeric<T>(
-        // The negation of two's complement int min is int min, so we can
-        // check and just add one to prevent overflow in the constexpr case.
-        // We use an optimized code path for a known run-time variable.
-        std::is_signed<T>::value
-            ? (MustTreatAsConstexpr(value_)
-                   ? ((std::is_floating_point<T>::value ||
-                       NegateWrapper(value_) !=
-                           std::numeric_limits<T>::lowest())
-                          ? NegateWrapper(value_)
-                          : std::numeric_limits<T>::max())
-                   : ClampedSubOp<T, T>::template Do<T>(T(0), value_))
-            : T(0));  // Clamped unsigned negation is always zero.
+    // The negation of two's complement int min is int min, so that's the
+    // only overflow case where we will saturate.
+    return ClampedNumeric<T>(SaturatedNegWrapper(value_));
   }
 
   constexpr ClampedNumeric operator~() const {
@@ -175,6 +165,11 @@ class ClampedNumeric {
     return saturated_cast<typename ArithmeticOrUnderlyingEnum<Dst>::type>(
         value_);
   }
+
+  // This method extracts the raw integer value without saturating it to the
+  // destination type as the conversion operator does. This is useful when
+  // e.g. assigning to an auto type or passing as a deduced template parameter.
+  constexpr T RawValue() const { return value_; }
 
  private:
   T value_;

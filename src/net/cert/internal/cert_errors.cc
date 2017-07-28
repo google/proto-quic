@@ -130,6 +130,12 @@ CertErrors* CertPathErrors::GetErrorsForCert(size_t cert_index) {
   return &cert_errors_[cert_index];
 }
 
+const CertErrors* CertPathErrors::GetErrorsForCert(size_t cert_index) const {
+  if (cert_index >= cert_errors_.size())
+    return nullptr;
+  return &cert_errors_[cert_index];
+}
+
 CertErrors* CertPathErrors::GetOtherErrors() {
   return &other_errors_;
 }

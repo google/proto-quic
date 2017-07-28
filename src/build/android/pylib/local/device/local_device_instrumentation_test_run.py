@@ -72,9 +72,8 @@ RENDER_TEST_FEATURE_ANNOTATION = 'RenderTest'
 # This needs to be kept in sync with formatting in |RenderUtils.imageName|
 RE_RENDER_IMAGE_NAME = re.compile(
       r'(?P<test_class>\w+)\.'
-      r'(?P<description>\w+)\.'
-      r'(?P<device_model>\w+)\.'
-      r'(?P<orientation>port|land)\.png')
+      r'(?P<description>[-\w]+)\.'
+      r'(?P<device_model_sdk>[-\w]+)\.png')
 
 @contextlib.contextmanager
 def _LogTestEndpoints(device, test_name):
@@ -539,7 +538,8 @@ class LocalDeviceInstrumentationTestRun(
                 device,
                 resolve_all_tombstones=True,
                 include_stack_symbols=False,
-                wipe_tombstones=True)
+                wipe_tombstones=True,
+                tombstone_symbolizer=self._test_instance.symbolizer)
             stream_name = 'tombstones_%s_%s' % (
                 time.strftime('%Y%m%dT%H%M%S-UTC', time.gmtime()),
                 device.serial)
@@ -679,8 +679,13 @@ class LocalDeviceInstrumentationTestRun(
           result.SetLink(failure_filename, html_results_link)
 
   #override
-  def _ShouldRetry(self, test):
-    if 'RetryOnFailure' in test.get('annotations', {}):
+  def _ShouldRetry(self, test, result):
+    def not_run(res):
+      if isinstance(res, list):
+        return any(not_run(r) for r in res)
+      return res.GetType() == base_test_result.ResultType.NOTRUN
+
+    if 'RetryOnFailure' in test.get('annotations', {}) or not_run(result):
       return True
 
     # TODO(jbudorick): Remove this log message once @RetryOnFailure has been

@@ -617,9 +617,9 @@ int SpdyStream::OnDataSent(size_t frame_size) {
   CHECK(io_state_ == STATE_OPEN ||
         io_state_ == STATE_HALF_CLOSED_REMOTE) << io_state_;
 
-  size_t frame_payload_size = frame_size - session_->GetDataFrameMinimumSize();
+  size_t frame_payload_size = frame_size - kDataFrameMinimumSize;
 
-  CHECK_GE(frame_size, session_->GetDataFrameMinimumSize());
+  CHECK_GE(frame_size, kDataFrameMinimumSize);
   CHECK_LE(frame_payload_size, session_->GetDataFrameMaximumPayload());
 
   send_bytes_ += frame_payload_size;
@@ -855,10 +855,8 @@ void SpdyStream::QueueNextDataFrame() {
   if (!data_buffer)
     return;
 
-  DCHECK_GE(data_buffer->GetRemainingSize(),
-            session_->GetDataFrameMinimumSize());
-  size_t payload_size =
-      data_buffer->GetRemainingSize() - session_->GetDataFrameMinimumSize();
+  DCHECK_GE(data_buffer->GetRemainingSize(), kDataFrameMinimumSize);
+  size_t payload_size = data_buffer->GetRemainingSize() - kDataFrameMinimumSize;
   DCHECK_LE(payload_size, session_->GetDataFrameMaximumPayload());
 
   // Send window size is based on payload size, so nothing to do if this is

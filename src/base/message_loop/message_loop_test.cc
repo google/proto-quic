@@ -75,7 +75,7 @@ class Foo : public RefCounted<Foo> {
 void SlowFunc(TimeDelta pause, int* quit_counter) {
     PlatformThread::Sleep(pause);
     if (--(*quit_counter) == 0)
-      MessageLoop::current()->QuitWhenIdle();
+      base::RunLoop::QuitCurrentWhenIdleDeprecated();
 }
 
 // This function records the time when Run was called in a Time object, which is
@@ -112,8 +112,7 @@ void RunTest_PostTask(MessagePumpFactory factory) {
       FROM_HERE, BindOnce(&Foo::Test2Mixed, foo, a, &d));
   // After all tests, post a message that will shut down the message loop
   ThreadTaskRunnerHandle::Get()->PostTask(
-      FROM_HERE,
-      BindOnce(&MessageLoop::QuitWhenIdle, Unretained(MessageLoop::current())));
+      FROM_HERE, BindOnce(&RunLoop::QuitCurrentWhenIdleDeprecated));
 
   // Now kick things off
   RunLoop().Run();
@@ -133,10 +132,9 @@ void RunTest_PostDelayedTask_Basic(MessagePumpFactory factory) {
   int num_tasks = 1;
   TimeTicks run_time;
 
+  TimeTicks time_before_run = TimeTicks::Now();
   loop.task_runner()->PostDelayedTask(
       FROM_HERE, BindOnce(&RecordRunTimeFunc, &run_time, &num_tasks), kDelay);
-
-  TimeTicks time_before_run = TimeTicks::Now();
   RunLoop().Run();
   TimeTicks time_after_run = TimeTicks::Now();
 
@@ -361,7 +359,7 @@ void NestingFunc(int* depth) {
     MessageLoop::current()->SetNestableTasksAllowed(true);
     RunLoop().Run();
   }
-  MessageLoop::current()->QuitWhenIdle();
+  base::RunLoop::QuitCurrentWhenIdleDeprecated();
 }
 
 void RunTest_Nesting(MessagePumpFactory factory) {
@@ -469,7 +467,7 @@ void RecursiveFunc(TaskList* order, int cookie, int depth,
 
 void QuitFunc(TaskList* order, int cookie) {
   order->RecordStart(QUITMESSAGELOOP, cookie);
-  MessageLoop::current()->QuitWhenIdle();
+  base::RunLoop::QuitCurrentWhenIdleDeprecated();
   order->RecordEnd(QUITMESSAGELOOP, cookie);
 }
 void RunTest_RecursiveDenial1(MessagePumpFactory factory) {
@@ -676,7 +674,7 @@ void FuncThatRuns(TaskList* order, int cookie, RunLoop* run_loop) {
 }
 
 void FuncThatQuitsNow() {
-  MessageLoop::current()->QuitNow();
+  base::RunLoop::QuitCurrentDeprecated();
 }
 // Tests RunLoopQuit only quits the corresponding MessageLoop::Run.
 void RunTest_QuitNow(MessagePumpFactory factory) {
@@ -970,7 +968,7 @@ void PostNTasksThenQuit(int posts_remaining) {
     ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, BindOnce(&PostNTasksThenQuit, posts_remaining - 1));
   } else {
-    MessageLoop::current()->QuitWhenIdle();
+    base::RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 }
 

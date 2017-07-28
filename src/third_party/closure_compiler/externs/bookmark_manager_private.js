@@ -90,8 +90,9 @@ chrome.bookmarkManagerPrivate.startDrag = function(idList, isFromTouch) {};
  * @param {string} parentId The ID of the folder that the drop was made
  * @param {number=} index The index of the position to drop at. If left out the
  * dropped items will be placed at the end of the existing children
+ * @param {Function=} callback
  */
-chrome.bookmarkManagerPrivate.drop = function(parentId, index) {};
+chrome.bookmarkManagerPrivate.drop = function(parentId, index, callback) {};
 
 /**
  * Retrieves a bookmark hierarchy from the given node.  If the node id is

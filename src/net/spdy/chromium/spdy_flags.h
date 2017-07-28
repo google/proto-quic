@@ -9,8 +9,6 @@
 
 namespace net {
 
-NET_EXPORT_PRIVATE extern bool FLAGS_use_nested_spdy_framer_decoder;
-
 }  // namespace net
 
 #endif  // NET_SPDY_CHROMIUM_SPDY_FLAGS_H_

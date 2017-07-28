@@ -33,7 +33,7 @@ void SimpleConnectionListener::ReadFromSocket(const StreamSocket& socket,
                                               int rv) {}
 
 void SimpleConnectionListener::WaitForConnections() {
-  EXPECT_TRUE(run_loop_task_runner_->RunsTasksOnCurrentThread());
+  EXPECT_TRUE(run_loop_task_runner_->RunsTasksInCurrentSequence());
   run_loop_.Run();
 }
 

@@ -12,11 +12,10 @@
 import argparse
 import datetime
 import logging
-import multiprocessing
 import os
-import re
-import subprocess
 import sys
+
+from multiprocessing.pool import ThreadPool
 
 import devil_chromium
 
@@ -25,6 +24,7 @@ from devil.android import device_errors
 from devil.android import device_utils
 from devil.utils import run_tests_helper
 from pylib import constants
+from pylib.symbols import stack_symbolizer
 
 
 _TZ_UTC = {'TZ': 'UTC'}
@@ -96,51 +96,9 @@ def _EraseTombstone(device, tombstone_file):
       as_root=True, check_return=True)
 
 
-def _DeviceAbiToArch(device_abi):
-  # The order of this list is significant to find the more specific match (e.g.,
-  # arm64) before the less specific (e.g., arm).
-  arches = ['arm64', 'arm', 'x86_64', 'x86_64', 'x86', 'mips']
-  for arch in arches:
-    if arch in device_abi:
-      return arch
-  raise RuntimeError('Unknown device ABI: %s' % device_abi)
-
-
-def _ResolveSymbols(tombstone_data, include_stack, device_abi):
-  """Run the stack tool for given tombstone input.
-
-  Args:
-    tombstone_data: a list of strings of tombstone data.
-    include_stack: boolean whether to include stack data in output.
-    device_abi: the default ABI of the device which generated the tombstone.
-
-  Yields:
-    A string for each line of resolved stack output.
-  """
-  # Check if the tombstone data has an ABI listed, if so use this in preference
-  # to the device's default ABI.
-  for line in tombstone_data:
-    found_abi = re.search('ABI: \'(.+?)\'', line)
-    if found_abi:
-      device_abi = found_abi.group(1)
-  arch = _DeviceAbiToArch(device_abi)
-  if not arch:
-    return
-
-  stack_tool = os.path.join(os.path.dirname(__file__), '..', '..',
-                            'third_party', 'android_platform', 'development',
-                            'scripts', 'stack')
-  cmd = [stack_tool, '--arch', arch, '--output-directory',
-         constants.GetOutDirectory()]
-  proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-  output = proc.communicate(input='\n'.join(tombstone_data))[0]
-  for line in output.split('\n'):
-    if not include_stack and 'Stack Data:' in line:
-      break
-    yield line
-
-
-def _ResolveTombstone(tombstone):
+def _ResolveTombstone(args):
+  tombstone = args[0]
+  tombstone_symbolizer = args[1]
   lines = []
   lines += [tombstone['file'] + ' created on ' + str(tombstone['time']) +
             ', about this long ago: ' +
@@ -148,26 +106,31 @@ def _ResolveTombstone(tombstone):
             ' Device: ' + tombstone['serial'])]
   logging.info('\n'.join(lines))
   logging.info('Resolving...')
-  lines += _ResolveSymbols(tombstone['data'], tombstone['stack'],
-                           tombstone['device_abi'])
+  lines += tombstone_symbolizer.ExtractAndResolveNativeStackTraces(
+      tombstone['data'],
+      tombstone['device_abi'],
+      tombstone['stack'])
   return lines
 
 
-def _ResolveTombstones(jobs, tombstones):
+def _ResolveTombstones(jobs, tombstones, tombstone_symbolizer):
   """Resolve a list of tombstones.
 
   Args:
-    jobs: the number of jobs to use with multiprocess.
+    jobs: the number of jobs to use with multithread.
     tombstones: a list of tombstones.
   """
   if not tombstones:
     logging.warning('No tombstones to resolve.')
     return []
+  tombstone_symbolizer.UnzipAPKIfNecessary()
   if len(tombstones) == 1:
-    data = [_ResolveTombstone(tombstones[0])]
+    data = [_ResolveTombstone([tombstones[0], tombstone_symbolizer])]
   else:
-    pool = multiprocessing.Pool(processes=jobs)
-    data = pool.map(_ResolveTombstone, tombstones)
+    pool = ThreadPool(jobs)
+    data = pool.map(
+        _ResolveTombstone,
+        [[tombstone, tombstone_symbolizer] for tombstone in tombstones])
   resolved_tombstones = []
   for tombstone in data:
     resolved_tombstones.extend(tombstone)
@@ -236,7 +199,9 @@ def ClearAllTombstones(device):
 
 
 def ResolveTombstones(device, resolve_all_tombstones, include_stack_symbols,
-                      wipe_tombstones, jobs=4):
+                      wipe_tombstones, jobs=4,
+                      apk_under_test=None, enable_relocation_packing=None,
+                      tombstone_symbolizer=None):
   """Resolve tombstones in the device.
 
   Args:
@@ -253,7 +218,11 @@ def ResolveTombstones(device, resolve_all_tombstones, include_stack_symbols,
                             _GetTombstonesForDevice(device,
                                                     resolve_all_tombstones,
                                                     include_stack_symbols,
-                                                    wipe_tombstones))
+                                                    wipe_tombstones),
+                            (tombstone_symbolizer
+                             or stack_symbolizer.Symbolizer(
+                                apk_under_test,
+                                enable_relocation_packing)))
 
 
 def main():

@@ -63,6 +63,7 @@
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_config_service.h"
 #include "net/url_request/http_user_agent_settings.h"
+#include "net/url_request/network_error_logging_delegate.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_error_job.h"
@@ -172,6 +173,24 @@ void LogChannelIDAndCookieStores(const GURL& url,
                             EPHEMERALITY_MAX);
 }
 
+void LogCookieAgeForNonSecureRequest(const net::CookieList& cookie_list,
+                                     const net::URLRequest& request) {
+  base::Time oldest = base::Time::Max();
+  for (const auto& cookie : cookie_list)
+    oldest = std::min(cookie.CreationDate(), oldest);
+  base::TimeDelta delta = base::Time::Now() - oldest;
+
+  if (net::registry_controlled_domains::SameDomainOrHost(
+          request.url(), request.first_party_for_cookies(),
+          net::registry_controlled_domains::INCLUDE_PRIVATE_REGISTRIES)) {
+    UMA_HISTOGRAM_COUNTS_1000("Cookie.AgeForNonSecureSameSiteRequest",
+                              delta.InDays());
+  } else {
+    UMA_HISTOGRAM_COUNTS_1000("Cookie.AgeForNonSecureCrossSiteRequest",
+                              delta.InDays());
+  }
+}
+
 }  // namespace
 
 namespace net {
@@ -201,6 +220,7 @@ URLRequestJob* URLRequestHttpJob::Factory(URLRequest* request,
     if (hsts && hsts->ShouldUpgradeToSSL(url.host())) {
       GURL::Replacements replacements;
       replacements.SetSchemeStr(
+
           url.SchemeIs(url::kHttpScheme) ? url::kHttpsScheme : url::kWssScheme);
       return new URLRequestRedirectJob(
           request, network_delegate, url.ReplaceComponents(replacements),
@@ -368,6 +388,7 @@ void URLRequestHttpJob::NotifyHeadersComplete() {
   ProcessPublicKeyPinsHeader();
   ProcessExpectCTHeader();
   ProcessReportToHeader();
+  ProcessNetworkErrorLoggingHeader();
 
   // Handle the server notification of a new SDCH dictionary.
   SdchManager* sdch_manager(request()->context()->sdch_manager());
@@ -725,6 +746,9 @@ void URLRequestHttpJob::AddCookieHeaderAndStart() {
 
 void URLRequestHttpJob::SetCookieHeaderAndStart(const CookieList& cookie_list) {
   if (!cookie_list.empty() && CanGetCookies(cookie_list)) {
+    if (!request_info_.url.SchemeIsCryptographic())
+      LogCookieAgeForNonSecureRequest(cookie_list, *request_);
+
     request_info_.extra_headers.SetHeader(
         HttpRequestHeaders::kCookie, CookieStore::BuildCookieLine(cookie_list));
     // Disable privacy mode as we are sending cookies anyway.
@@ -887,6 +911,30 @@ void URLRequestHttpJob::ProcessReportToHeader() {
 
   service->ProcessHeader(request_info_.url.GetOrigin(), value);
 #endif  // BUILDFLAG(ENABLE_REPORTING)
+}
+
+void URLRequestHttpJob::ProcessNetworkErrorLoggingHeader() {
+  DCHECK(response_info_);
+
+  HttpResponseHeaders* headers = GetResponseHeaders();
+  std::string value;
+  if (!headers->GetNormalizedHeader(NetworkErrorLoggingDelegate::kHeaderName,
+                                    &value)) {
+    return;
+  }
+
+  NetworkErrorLoggingDelegate* delegate =
+      request_->context()->network_error_logging_delegate();
+  if (!delegate)
+    return;
+
+  // Only accept Report-To headers on HTTPS connections that have no
+  // certificate errors.
+  const SSLInfo& ssl_info = response_info_->ssl_info;
+  if (!ssl_info.is_valid() || IsCertStatusError(ssl_info.cert_status))
+    return;
+
+  delegate->OnHeader(url::Origin(request_info_.url), value);
 }
 
 void URLRequestHttpJob::OnStartCompleted(int result) {

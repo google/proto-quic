@@ -54,11 +54,8 @@ unit tests.
      All files are from the src/test/testdada directory in
      https://code.google.com/p/certificate-transparency/
 
-- comodo.chain.pem : A certificate chain for www.comodo.com which should be
-     recognised as EV. Expires Jun 20 2015.
-
 - twitter-chain.pem : A certificate chain for twitter.com which should be
-     valid. Expires May 9 2016.
+     valid albeit expired.
 
 - tripadvisor-verisign-chain.pem: A certificate chain for www.tripadvisor.com
   issued by VeriSign Class 3 Public Primary Certification Authority - G5.

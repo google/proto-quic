@@ -21,6 +21,28 @@
       }
     ]
   },
+  "Android Tests with Tracing": {
+    "instrumentation_tests": [
+      {
+        "args": [
+          "--trace-all"
+        ],
+        "test": "chrome_public_test_apk"
+      },
+      {
+        "args": [
+          "--trace-all"
+        ],
+        "test": "chrome_sync_shell_test_apk"
+      },
+      {
+        "args": [
+          "--trace-all"
+        ],
+        "test": "content_shell_test_apk"
+      }
+    ]
+  },
   "Jelly Bean Tester": {
     "gtest_tests": [
       {

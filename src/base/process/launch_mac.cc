@@ -112,21 +112,19 @@ Process LaunchProcessPosixSpawn(const std::vector<std::string>& argv,
   // open stdin to /dev/null and inherit stdout and stderr.
   bool inherit_stdout = true, inherit_stderr = true;
   bool null_stdin = true;
-  if (options.fds_to_remap) {
-    for (const auto& dup2_pair : *options.fds_to_remap) {
-      if (dup2_pair.second == STDIN_FILENO) {
-        null_stdin = false;
-      } else if (dup2_pair.second == STDOUT_FILENO) {
-        inherit_stdout = false;
-      } else if (dup2_pair.second == STDERR_FILENO) {
-        inherit_stderr = false;
-      }
+  for (const auto& dup2_pair : options.fds_to_remap) {
+    if (dup2_pair.second == STDIN_FILENO) {
+      null_stdin = false;
+    } else if (dup2_pair.second == STDOUT_FILENO) {
+      inherit_stdout = false;
+    } else if (dup2_pair.second == STDERR_FILENO) {
+      inherit_stderr = false;
+    }
 
-      if (dup2_pair.first == dup2_pair.second) {
-        file_actions.Inherit(dup2_pair.second);
-      } else {
-        file_actions.Dup2(dup2_pair.first, dup2_pair.second);
-      }
+    if (dup2_pair.first == dup2_pair.second) {
+      file_actions.Inherit(dup2_pair.second);
+    } else {
+      file_actions.Dup2(dup2_pair.first, dup2_pair.second);
     }
   }
 

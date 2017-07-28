@@ -291,7 +291,6 @@ KNOWN_NON_IOS_LIBRARIES = set([
     os.path.join('third_party', 'libevent'),
     os.path.join('third_party', 'libjpeg'),
     os.path.join('third_party', 'libusb'),
-    os.path.join('third_party', 'libva'),
     os.path.join('third_party', 'libxslt'),
     os.path.join('third_party', 'lss'),
     os.path.join('third_party', 'lzma_sdk'),

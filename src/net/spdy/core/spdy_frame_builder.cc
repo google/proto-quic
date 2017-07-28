@@ -81,7 +81,7 @@ bool SpdyFrameBuilder::BeginNewFrame(const SpdyFramer& framer,
   success &= WriteUInt8(raw_frame_type);
   success &= WriteUInt8(flags);
   success &= WriteUInt32(stream_id);
-  DCHECK_EQ(framer.GetDataFrameMinimumSize(), length_);
+  DCHECK_EQ(kDataFrameMinimumSize, length_);
   return success;
 }
 
@@ -92,16 +92,19 @@ bool SpdyFrameBuilder::BeginNewFrame(const SpdyFramer& framer,
                                      size_t length) {
   uint8_t raw_frame_type = SerializeFrameType(type);
   DCHECK(IsDefinedFrameType(raw_frame_type));
+  DCHECK_EQ(0u, stream_id & ~kStreamIdMask);
+  SPDY_BUG_IF(framer.GetFrameMaximumSize() < length_)
+      << "Frame length  " << length_
+      << " is longer than the maximum allowed length.";
   return BeginNewFrameInternal(framer, raw_frame_type, flags, stream_id,
                                length);
 }
 
-bool SpdyFrameBuilder::BeginNewExtensionFrame(const SpdyFramer& framer,
+bool SpdyFrameBuilder::BeginNewUncheckedFrame(const SpdyFramer& framer,
                                               uint8_t raw_frame_type,
                                               uint8_t flags,
                                               SpdyStreamId stream_id,
                                               size_t length) {
-  DCHECK(!IsDefinedFrameType(raw_frame_type));
   return BeginNewFrameInternal(framer, raw_frame_type, flags, stream_id,
                                length);
 }
@@ -111,11 +114,8 @@ bool SpdyFrameBuilder::BeginNewFrameInternal(const SpdyFramer& framer,
                                              uint8_t flags,
                                              SpdyStreamId stream_id,
                                              size_t length) {
-  DCHECK_EQ(0u, stream_id & ~kStreamIdMask);
+  DCHECK_EQ(length, length & kLengthMask);
   bool success = true;
-  SPDY_BUG_IF(framer.GetFrameMaximumSize() < length_)
-      << "Frame length  " << length_
-      << " is longer than the maximum allowed length.";
 
   offset_ += length_;
   length_ = 0;
@@ -124,21 +124,8 @@ bool SpdyFrameBuilder::BeginNewFrameInternal(const SpdyFramer& framer,
   success &= WriteUInt8(raw_frame_type);
   success &= WriteUInt8(flags);
   success &= WriteUInt32(stream_id);
-  DCHECK_EQ(framer.GetDataFrameMinimumSize(), length_);
+  DCHECK_EQ(kDataFrameMinimumSize, length_);
   return success;
-}
-
-bool SpdyFrameBuilder::WriteStringPiece16(const SpdyStringPiece& value) {
-  if (value.size() > 0xffff) {
-    DCHECK(false) << "Tried to write string with length > 16bit.";
-    return false;
-  }
-
-  if (!WriteUInt16(static_cast<uint16_t>(value.size()))) {
-    return false;
-  }
-
-  return WriteBytes(value.data(), static_cast<uint16_t>(value.size()));
 }
 
 bool SpdyFrameBuilder::WriteStringPiece32(const SpdyStringPiece& value) {

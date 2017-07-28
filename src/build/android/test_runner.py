@@ -50,6 +50,13 @@ _DEVIL_STATIC_CONFIG_FILE = os.path.abspath(os.path.join(
     host_paths.DIR_SOURCE_ROOT, 'build', 'android', 'devil_config.json'))
 
 
+def _RealPath(arg):
+  if arg.startswith('//'):
+    arg = os.path.abspath(os.path.join(host_paths.DIR_SOURCE_ROOT,
+                                       arg[2:].replace('/', os.sep)))
+  return os.path.realpath(arg)
+
+
 def AddTestLauncherOptions(parser):
   """Adds arguments mirroring //base/test/launcher.
 
@@ -392,6 +399,11 @@ def AddInstrumentationTestOptions(parser):
       '--render-results-directory',
       dest='render_results_dir',
       help='Directory to pull render test result images off of the device to.')
+  parser.add_argument(
+      '--enable-relocation-packing',
+      dest='enable_relocation_packing',
+      action='store_true',
+      help='Whether relocation packing is enabled.')
   def package_replacement(arg):
     split_arg = arg.split(',')
     if len(split_arg) != 2:
@@ -420,7 +432,7 @@ def AddInstrumentationTestOptions(parser):
       help='Capture screenshots of test failures')
   parser.add_argument(
       '--shared-prefs-file',
-      dest='shared_prefs_file', type=os.path.realpath,
+      dest='shared_prefs_file', type=_RealPath,
       help='The relative path to a file containing JSON list of shared '
            'preference files to edit and how to do so. Example list: '
            '[{'
@@ -774,13 +786,19 @@ def RunTestsInPlatformMode(args):
   # result for each test run in that iteration.
   all_iteration_results = []
 
+  global_results_tags = set()
+
   @contextlib.contextmanager
   def write_json_file():
     try:
       yield
+    except Exception:
+      global_results_tags.add('UNRELIABLE_RESULTS')
+      raise
     finally:
       json_results.GenerateJsonResultsFile(
-          all_raw_results, args.json_results_file)
+          all_raw_results, args.json_results_file,
+          global_tags=list(global_results_tags))
 
   json_writer = contextlib_ext.Optional(
       write_json_file(),

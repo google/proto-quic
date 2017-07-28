@@ -316,7 +316,7 @@ FilePathWatcherImpl::FilePathWatcherImpl()
     : recursive_(false), weak_factory_(this) {}
 
 FilePathWatcherImpl::~FilePathWatcherImpl() {
-  DCHECK(!task_runner() || task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(!task_runner() || task_runner()->RunsTasksInCurrentSequence());
 }
 
 void FilePathWatcherImpl::OnFilePathChanged(InotifyReader::Watch fired_watch,
@@ -324,7 +324,7 @@ void FilePathWatcherImpl::OnFilePathChanged(InotifyReader::Watch fired_watch,
                                             bool created,
                                             bool deleted,
                                             bool is_dir) {
-  DCHECK(!task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(!task_runner()->RunsTasksInCurrentSequence());
 
   // This method is invoked on the Inotify thread. Switch to task_runner() to
   // access |watches_| safely. Use a WeakPtr to prevent the callback from
@@ -342,7 +342,7 @@ void FilePathWatcherImpl::OnFilePathChangedOnOriginSequence(
     bool created,
     bool deleted,
     bool is_dir) {
-  DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(task_runner()->RunsTasksInCurrentSequence());
   DCHECK(!watches_.empty());
   DCHECK(HasValidWatchVector());
 
@@ -451,7 +451,7 @@ void FilePathWatcherImpl::Cancel() {
     return;
   }
 
-  DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(task_runner()->RunsTasksInCurrentSequence());
   DCHECK(!is_cancelled());
 
   set_cancelled();
@@ -467,7 +467,7 @@ void FilePathWatcherImpl::Cancel() {
 void FilePathWatcherImpl::UpdateWatches() {
   // Ensure this runs on the task_runner() exclusively in order to avoid
   // concurrency issues.
-  DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(task_runner()->RunsTasksInCurrentSequence());
   DCHECK(HasValidWatchVector());
 
   // Walk the list of watches and update them as we go.

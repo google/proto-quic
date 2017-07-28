@@ -137,7 +137,7 @@ class BASE_EXPORT WeakReference {
 
   WeakReference(WeakReference&& other);
   WeakReference(const WeakReference& other);
-  WeakReference& operator=(WeakReference&& other) = default;
+  WeakReference& operator=(WeakReference&& other);
   WeakReference& operator=(const WeakReference& other) = default;
 
   uintptr_t is_valid() const { return flag_->IsValid(); }

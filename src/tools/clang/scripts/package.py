@@ -267,8 +267,6 @@ def main():
                  'lib/clang/*/lib/darwin/*.osx.a',
                  ])
   elif sys.platform.startswith('linux'):
-    # Copy the libstdc++.so.6 we linked Clang against so it can run.
-    want.append('lib/libstdc++.so.6')
     # Add llvm-ar and lld for LTO.
     want.append('bin/llvm-ar')
     want.append('bin/lld')
@@ -284,7 +282,6 @@ def main():
   elif sys.platform == 'win32':
     want.extend(['lib/clang/*/lib/windows/clang_rt.asan*.dll',
                  'lib/clang/*/lib/windows/clang_rt.asan*.lib',
-                 'lib/clang/*/include_sanitizer/*',
                  ])
 
   for root, dirs, files in os.walk(LLVM_RELEASE_DIR):

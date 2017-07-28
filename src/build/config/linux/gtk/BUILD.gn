@@ -17,6 +17,7 @@ assert(is_linux, "This file should only be referenced on Linux")
 group("gtk") {
   visibility = [
     "//chrome/test:interactive_ui_tests",
+    "//examples:peerconnection_client",
     "//gpu/gles2_conform_support:gles2_conform_test_windowless",
     "//remoting/host",
     "//remoting/host/linux",

@@ -100,6 +100,27 @@ class BASE_EXPORT RefCountedBase {
     return ref_count_ == 0;
   }
 
+  // Returns true if it is safe to read or write the object, from a thread
+  // safety standpoint. Should be DCHECK'd from the methods of RefCounted
+  // classes if there is a danger of objects being shared across threads.
+  //
+  // This produces fewer false positives than adding a separate SequenceChecker
+  // into the subclass, because it automatically detaches from the sequence when
+  // the reference count is 1 (and never fails if there is only one reference).
+  //
+  // This means unlike a separate SequenceChecker, it will permit a singly
+  // referenced object to be passed between threads (not holding a reference on
+  // the sending thread), but will trap if the sending thread holds onto a
+  // reference, or if the object is accessed from multiple threads
+  // simultaneously.
+  bool IsOnValidSequence() const {
+#if DCHECK_IS_ON()
+    return ref_count_ <= 1 || CalledOnValidSequence();
+#else
+    return true;
+#endif
+  }
+
  private:
   template <typename U>
   friend scoped_refptr<U> base::AdoptRef(U*);
@@ -243,7 +264,9 @@ class BASE_EXPORT ScopedAllowCrossThreadRefCountAccess final {
 // to trap unsafe cross thread usage. A subclass instance of RefCounted can be
 // passed to another execution sequence only when its ref count is 1. If the ref
 // count is more than 1, the RefCounted class verifies the ref updates are made
-// on the same execution sequence as the previous ones.
+// on the same execution sequence as the previous ones. The subclass can also
+// manually call IsOnValidSequence to trap other non-thread-safe accesses; see
+// the documentation for that method.
 //
 //
 // The reference count starts from zero by default, and we intended to migrate

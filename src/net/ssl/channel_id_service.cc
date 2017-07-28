@@ -35,7 +35,7 @@ namespace net {
 
 namespace {
 
-base::StaticAtomicSequenceNumber g_next_id;
+base::AtomicSequenceNumber g_next_id;
 
 // Used by the GetDomainBoundCertResult histogram to record the final
 // outcome of each GetChannelID or GetOrCreateChannelID call.

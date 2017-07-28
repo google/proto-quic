@@ -53,7 +53,12 @@ class SocketWatcherFactory : public SocketPerformanceWatcherFactory {
 
   // SocketPerformanceWatcherFactory implementation:
   std::unique_ptr<SocketPerformanceWatcher> CreateSocketPerformanceWatcher(
-      const Protocol protocol) override;
+      const Protocol protocol,
+      const AddressList& address_list) override;
+
+  void SetUseLocalHostRequestsForTesting(bool use_localhost_requests) {
+    allow_rtt_private_address_ = use_localhost_requests;
+  }
 
  private:
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
@@ -61,6 +66,10 @@ class SocketWatcherFactory : public SocketPerformanceWatcherFactory {
   // Minimum interval betweeen consecutive notifications to the socket watchers
   // created by this factory.
   const base::TimeDelta min_notification_interval_;
+
+  // True if socket watchers constructed by this factory can use the RTT from
+  // the sockets that are connected to the private addresses.
+  bool allow_rtt_private_address_;
 
   // Called every time a new RTT observation is available.
   OnUpdatedRTTAvailableCallback updated_rtt_observation_callback_;

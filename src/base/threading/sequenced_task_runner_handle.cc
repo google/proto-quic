@@ -51,13 +51,17 @@ scoped_refptr<SequencedTaskRunner> SequencedTaskRunnerHandle::Get() {
   // sequenced task, return a SequencedTaskRunner for it.
   scoped_refptr<SequencedWorkerPool> pool =
       SequencedWorkerPool::GetWorkerPoolForCurrentThread();
-  DCHECK(pool);
+  // Note if you hit this: the problem isn't the lack of a |pool|, it's the lack
+  // of a sequenced context above. The |pool| is just the last desperate attempt
+  // at finding such a context from the deprecated SequencedWorkerPool.
+  DCHECK(pool) << "Error: This caller requires a sequenced context (i.e. the "
+                  "current task needs to run from a SequencedTaskRunner).";
   SequencedWorkerPool::SequenceToken sequence_token =
       SequencedWorkerPool::GetSequenceTokenForCurrentThread();
   DCHECK(sequence_token.IsValid());
   scoped_refptr<SequencedTaskRunner> sequenced_task_runner(
       pool->GetSequencedTaskRunner(sequence_token));
-  DCHECK(sequenced_task_runner->RunsTasksOnCurrentThread());
+  DCHECK(sequenced_task_runner->RunsTasksInCurrentSequence());
   return sequenced_task_runner;
 }
 
@@ -71,13 +75,13 @@ bool SequencedTaskRunnerHandle::IsSet() {
 SequencedTaskRunnerHandle::SequencedTaskRunnerHandle(
     scoped_refptr<SequencedTaskRunner> task_runner)
     : task_runner_(std::move(task_runner)) {
-  DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(task_runner_->RunsTasksInCurrentSequence());
   DCHECK(!SequencedTaskRunnerHandle::IsSet());
   lazy_tls_ptr.Pointer()->Set(this);
 }
 
 SequencedTaskRunnerHandle::~SequencedTaskRunnerHandle() {
-  DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(task_runner_->RunsTasksInCurrentSequence());
   DCHECK_EQ(lazy_tls_ptr.Pointer()->Get(), this);
   lazy_tls_ptr.Pointer()->Set(nullptr);
 }

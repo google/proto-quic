@@ -33,6 +33,23 @@ class BASE_EXPORT HistogramSnapshotManager {
   explicit HistogramSnapshotManager(HistogramFlattener* histogram_flattener);
   virtual ~HistogramSnapshotManager();
 
+  // TODO(asvitkine): Remove this after crbug/736675.
+  template <class ForwardHistogramIterator>
+  void ValidateAllHistograms(ForwardHistogramIterator begin,
+                             ForwardHistogramIterator end) {
+    HistogramBase* last_invalid_histogram = nullptr;
+    int invalid_count = 0;
+    for (ForwardHistogramIterator it = begin; it != end; ++it) {
+      const bool is_valid = (*it)->ValidateHistogramContents(false, 0);
+      if (!is_valid) {
+        ++invalid_count;
+        last_invalid_histogram = *it;
+      }
+    }
+    if (last_invalid_histogram)
+      last_invalid_histogram->ValidateHistogramContents(true, invalid_count);
+  }
+
   // Snapshot all histograms, and ask |histogram_flattener_| to record the
   // delta. |flags_to_set| is used to set flags for each histogram.
   // |required_flags| is used to select histograms to be recorded.
@@ -44,6 +61,7 @@ class BASE_EXPORT HistogramSnapshotManager {
                      ForwardHistogramIterator end,
                      HistogramBase::Flags flags_to_set,
                      HistogramBase::Flags required_flags) {
+    ValidateAllHistograms(begin, end);
     for (ForwardHistogramIterator it = begin; it != end; ++it) {
       (*it)->SetFlags(flags_to_set);
       if (((*it)->flags() & required_flags) == required_flags)

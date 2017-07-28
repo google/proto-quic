@@ -537,18 +537,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
     return pooled_aliases_;
   }
 
-  size_t GetDataFrameMinimumSize() const {
-    return buffered_spdy_framer_->GetDataFrameMinimumSize();
-  }
-
-  size_t GetFrameHeaderSize() const {
-    return buffered_spdy_framer_->GetFrameHeaderSize();
-  }
-
-  size_t GetFrameMinimumSize() const {
-    return buffered_spdy_framer_->GetFrameMinimumSize();
-  }
-
   size_t GetFrameMaximumSize() const {
     return buffered_spdy_framer_->GetFrameMaximumSize();
   }
@@ -816,10 +804,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // and process any pending stream requests before deleting it.  Note
   // that |stream| may hold the last reference to the session.
   void DeleteStream(std::unique_ptr<SpdyStream> stream, int status);
-
-  // Returns the stream id of the push stream if it is not claimed yet, or 0
-  // otherwise.
-  SpdyStreamId GetStreamIdForPush(const GURL& url);
 
   // Check if we have a pending pushed-stream for this url
   // Returns the stream if found (and returns it from the pending

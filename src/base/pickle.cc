@@ -12,6 +12,7 @@
 #include "base/bits.h"
 #include "base/macros.h"
 #include "base/numerics/safe_conversions.h"
+#include "base/numerics/safe_math.h"
 #include "build/build_config.h"
 
 namespace base {
@@ -74,11 +75,10 @@ inline const char* PickleIterator::GetReadPointerAndAdvance(
     int num_elements,
     size_t size_element) {
   // Check for int32_t overflow.
-  int64_t num_bytes = static_cast<int64_t>(num_elements) * size_element;
-  int num_bytes32 = static_cast<int>(num_bytes);
-  if (num_bytes != static_cast<int64_t>(num_bytes32))
+  int num_bytes;
+  if (!CheckMul(num_elements, size_element).AssignIfValid(&num_bytes))
     return NULL;
-  return GetReadPointerAndAdvance(num_bytes32);
+  return GetReadPointerAndAdvance(num_bytes);
 }
 
 bool PickleIterator::ReadBool(bool* result) {
@@ -427,13 +427,9 @@ bool Pickle::PeekNext(size_t header_size,
   if (length < header_size)
     return false;
 
-  if (hdr->payload_size > std::numeric_limits<size_t>::max() - header_size) {
-    // If payload_size causes an overflow, we return maximum possible
-    // pickle size to indicate that.
-    *pickle_size = std::numeric_limits<size_t>::max();
-  } else {
-    *pickle_size = header_size + hdr->payload_size;
-  }
+  // If payload_size causes an overflow, we return maximum possible
+  // pickle size to indicate that.
+  *pickle_size = ClampAdd(header_size, hdr->payload_size);
   return true;
 }
 

@@ -241,13 +241,9 @@ bool MessageLoop::IsType(Type type) const {
   return type_ == type;
 }
 
-static void QuitCurrentWhenIdle() {
-  MessageLoop::current()->QuitWhenIdle();
-}
-
 // static
 Closure MessageLoop::QuitWhenIdleClosure() {
-  return Bind(&QuitCurrentWhenIdle);
+  return Bind(&RunLoop::QuitCurrentWhenIdleDeprecated);
 }
 
 void MessageLoop::SetNestableTasksAllowed(bool allowed) {

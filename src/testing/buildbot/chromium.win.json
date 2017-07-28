@@ -489,12 +489,6 @@
           "shards": 2
         }
       }
-    ],
-    "scripts": [
-      {
-        "name": "nacl_integration",
-        "script": "nacl_integration.py"
-      }
     ]
   },
   "Win10 Tests x64": {
@@ -1060,12 +1054,6 @@
         },
         "test": "sbox_validation_tests"
       }
-    ],
-    "scripts": [
-      {
-        "name": "nacl_integration",
-        "script": "nacl_integration.py"
-      }
     ]
   },
   "Win7 Tests (1)": {
@@ -1594,12 +1582,6 @@
           "can_use_on_swarming_builders": true,
           "shards": 2
         }
-      }
-    ],
-    "scripts": [
-      {
-        "name": "nacl_integration",
-        "script": "nacl_integration.py"
       }
     ]
   },

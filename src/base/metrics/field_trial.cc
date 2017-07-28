@@ -1112,6 +1112,11 @@ FieldTrialList::GetAllFieldTrialsFromPersistentAllocator(
 }
 
 // static
+bool FieldTrialList::IsGlobalSetForTesting() {
+  return global_ != nullptr;
+}
+
+// static
 std::string FieldTrialList::SerializeSharedMemoryHandleMetadata(
     const SharedMemoryHandle& shm) {
   std::stringstream ss;

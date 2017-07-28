@@ -431,7 +431,6 @@ void SimpleIndex::UpdateEntryIteratorSize(
 void SimpleIndex::MergeInitializingSet(
     std::unique_ptr<SimpleIndexLoadResult> load_result) {
   DCHECK(io_thread_checker_.CalledOnValidThread());
-  DCHECK(load_result->did_load);
 
   EntrySet* index_file_entries = &load_result->entries;
 

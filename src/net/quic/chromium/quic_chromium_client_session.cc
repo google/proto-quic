@@ -1037,16 +1037,6 @@ int QuicChromiumClientSession::GetNumSentClientHellos() const {
   return crypto_stream_->num_sent_client_hellos();
 }
 
-QuicStreamId QuicChromiumClientSession::GetStreamIdForPush(
-    const GURL& pushed_url) {
-  QuicClientPromisedInfo* promised_info =
-      QuicClientSessionBase::GetPromisedByUrl(pushed_url.spec());
-  if (!promised_info)
-    return 0;
-
-  return promised_info->id();
-}
-
 bool QuicChromiumClientSession::CanPool(const std::string& hostname,
                                         PrivacyMode privacy_mode) const {
   DCHECK(connection()->connected());

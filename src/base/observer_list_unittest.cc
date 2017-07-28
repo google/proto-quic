@@ -512,7 +512,7 @@ class SequenceVerificationObserver : public Foo {
   ~SequenceVerificationObserver() override = default;
 
   void Observe(int x) override {
-    called_on_valid_sequence_ = task_runner_->RunsTasksOnCurrentThread();
+    called_on_valid_sequence_ = task_runner_->RunsTasksInCurrentSequence();
   }
 
   bool called_on_valid_sequence() const { return called_on_valid_sequence_; }

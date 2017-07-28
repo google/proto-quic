@@ -461,6 +461,7 @@ be describing additional metrics about the same event.
 
 <event name="LocalNetworkRequests">
   <owner>uthakore@chromium.org</owner>
+  <owner>invernizzi@chromium.org</owner>
   <summary>
     Metrics that describe the resource request behavior of pages for which
     navigation successfully commits. A separate entry is generated for every
@@ -622,6 +623,7 @@ be describing additional metrics about the same event.
 
 <event name="PageDomainInfo">
   <owner>uthakore@chromium.org</owner>
+  <owner>invernizzi@chromium.org</owner>
   <summary>
     Metrics that describe the domain of pages that successfully commit. One
     event is generated per page load that commits. Currently associated with

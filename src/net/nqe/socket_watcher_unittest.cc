@@ -8,6 +8,8 @@
 #include "base/test/simple_test_tick_clock.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
+#include "net/base/address_list.h"
+#include "net/base/ip_address.h"
 #include "net/socket/socket_performance_watcher.h"
 #include "net/socket/socket_performance_watcher_factory.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -28,8 +30,18 @@ TEST(NetworkQualitySocketWatcherTest, NotificationsThrottled) {
   base::SimpleTestTickClock tick_clock;
   tick_clock.SetNowTicks(base::TimeTicks::Now());
 
+  // Use a public IP address so that the socket watcher runs the RTT callback.
+  IPAddressList ip_list;
+  IPAddress ip_address;
+  ASSERT_TRUE(ip_address.AssignFromIPLiteral("157.0.0.1"));
+  ip_list.push_back(ip_address);
+  AddressList address_list =
+      AddressList::CreateFromIPAddressList(ip_list, "canonical.example.com");
+
   SocketWatcher socket_watcher(SocketPerformanceWatcherFactory::PROTOCOL_QUIC,
-                               base::TimeDelta::FromMilliseconds(2000),
+                               address_list,
+
+                               base::TimeDelta::FromMilliseconds(2000), false,
                                base::ThreadTaskRunnerHandle::Get(),
                                base::Bind(OnUpdatedRTTAvailable), &tick_clock);
 
@@ -46,6 +58,41 @@ TEST(NetworkQualitySocketWatcherTest, NotificationsThrottled) {
   // 2000 msec more than the last time |socket_watcher| received a notification.
   tick_clock.Advance(base::TimeDelta::FromMilliseconds(1000));
   EXPECT_TRUE(socket_watcher.ShouldNotifyUpdatedRTT());
+}
+
+TEST(NetworkQualitySocketWatcherTest, PrivateAddressRTTNotNotified) {
+  base::SimpleTestTickClock tick_clock;
+  tick_clock.SetNowTicks(base::TimeTicks::Now());
+
+  const struct {
+    std::string ip_address;
+    bool expect_should_notify_rtt;
+  } tests[] = {
+      {"157.0.0.1", true},    {"127.0.0.1", false},
+      {"192.168.0.1", false}, {"::1", false},
+      {"0.0.0.0", false},     {"2607:f8b0:4006:819::200e", true},
+  };
+
+  for (const auto& test : tests) {
+    IPAddressList ip_list;
+    IPAddress ip_address;
+    ASSERT_TRUE(ip_address.AssignFromIPLiteral(test.ip_address));
+    ip_list.push_back(ip_address);
+    AddressList address_list =
+        AddressList::CreateFromIPAddressList(ip_list, "canonical.example.com");
+
+    SocketWatcher socket_watcher(
+        SocketPerformanceWatcherFactory::PROTOCOL_QUIC, address_list,
+        base::TimeDelta::FromMilliseconds(2000), false,
+        base::ThreadTaskRunnerHandle::Get(), base::Bind(OnUpdatedRTTAvailable),
+        &tick_clock);
+
+    EXPECT_EQ(test.expect_should_notify_rtt,
+              socket_watcher.ShouldNotifyUpdatedRTT());
+    socket_watcher.OnUpdatedRTTAvailable(base::TimeDelta::FromSeconds(10));
+
+    EXPECT_FALSE(socket_watcher.ShouldNotifyUpdatedRTT());
+  }
 }
 
 }  // namespace

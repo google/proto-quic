@@ -16,10 +16,10 @@
 #include "net/http/http_response_info.h"
 #include "net/url_request/url_request_context.h"
 
-#define VIEW_CACHE_HEAD \
-  "<html><meta charset=\"utf-8\">" \
-  "<meta http-equiv=\"Content-Security-Policy\" " \
-  "  content=\"object-src 'none'; script-src 'none' 'unsafe-eval'\">" \
+#define VIEW_CACHE_HEAD                                 \
+  "<html><meta charset=\"utf-8\">"                      \
+  "<meta http-equiv=\"Content-Security-Policy\" "       \
+  "  content=\"object-src 'none'; script-src 'none'\">" \
   "<body><table>"
 
 #define VIEW_CACHE_TAIL \

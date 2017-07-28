@@ -356,7 +356,7 @@ if (target_cpu == "x86") {
     }
   }
 
-  msvc_toolchain("clang_x86") {
+  msvc_toolchain("win_clang_x86") {
     environment = "environment.x86"
     prefix = rebase_path("$clang_base_path/bin", root_build_dir)
     cl = "${goma_prefix}$prefix/${clang_cl}"
@@ -393,7 +393,7 @@ template("win_x64_toolchains") {
     }
   }
 
-  msvc_toolchain("clang_" + target_name) {
+  msvc_toolchain("win_clang_" + target_name) {
     environment = "environment.x64"
     prefix = rebase_path("$clang_base_path/bin", root_build_dir)
     cl = "${goma_prefix}$prefix/${clang_cl}"

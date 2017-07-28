@@ -30,6 +30,7 @@
 
 namespace base {
 class SingleThreadTaskRunner;
+class SequencedTaskRunner;
 class TaskRunner;
 }
 
@@ -216,7 +217,7 @@ class NET_EXPORT_PRIVATE SimpleBackendImpl : public Backend,
   const base::FilePath path_;
   const net::CacheType cache_type_;
   std::unique_ptr<SimpleIndex> index_;
-  const scoped_refptr<base::SingleThreadTaskRunner> cache_thread_;
+  const scoped_refptr<base::SequencedTaskRunner> cache_runner_;
   scoped_refptr<base::TaskRunner> worker_pool_;
 
   int orig_max_size_;

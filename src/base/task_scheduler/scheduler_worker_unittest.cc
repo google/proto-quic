@@ -30,6 +30,8 @@
 
 #if defined(OS_WIN)
 #include <objbase.h>
+
+#include "base/win/com_init_check_hook.h"
 #endif
 
 using testing::_;
@@ -931,7 +933,13 @@ TEST(TaskSchedulerWorkerTest, BackwardCompatibilityEnabled) {
 
   // The call to CoInitializeEx() should have returned S_FALSE to indicate that
   // the COM library was already initialized on the thread.
+  // See SchedulerWorker::Thread::ThreadMain for why we expect two different
+  // results here.
+#if defined(COM_INIT_CHECK_HOOK_ENABLED)
+  EXPECT_EQ(S_OK, delegate_raw->coinitialize_hresult());
+#else
   EXPECT_EQ(S_FALSE, delegate_raw->coinitialize_hresult());
+#endif
 
   worker->JoinForTesting();
 }

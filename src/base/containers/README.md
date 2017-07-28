@@ -124,6 +124,77 @@ strategy and the memory access pattern. Assuming items are being linearly added,
 one would expect it to be 3/4 full, so per-item overhead will be 0.25 *
 sizeof(T).
 
+
+flat\_set/flat\_map support a notion of transparent comparisons. Therefore you
+can, for example, lookup base::StringPiece in a set of std::strings without
+constructing a temporary std::string. This functionality is based on C++14
+extensions to std::set/std::map interface.
+
+You can find more information about transparent comparisons here:
+http://en.cppreference.com/w/cpp/utility/functional/less_void
+
+Example, smart pointer set:
+
+```cpp
+// Define a custom comparator.
+struct UniquePtrComparator {
+  // Mark your comparison as transparent.
+  using is_transparent = int;
+
+  template <typename T>
+  bool operator()(const std::unique_ptr<T>& lhs,
+                  const std::unique_ptr<T>& rhs) const {
+    return lhs < rhs;
+  }
+
+  template <typename T>
+  bool operator()(const T* lhs, const std::unique_ptr<T>& rhs) const {
+    return lhs < rhs.get();
+  }
+
+  template <typename T>
+  bool operator()(const std::unique_ptr<T>& lhs, const T* rhs) const {
+    return lhs.get() < rhs;
+  }
+};
+
+// Declare a typedef.
+template <typename T>
+using UniquePtrSet = base::flat_set<std::unique_ptr<T>, UniquePtrComparator>;
+
+// ...
+// Collect data.
+std::vector<std::unique_ptr<int>> ptr_vec;
+ptr_vec.reserve(5);
+std::generate_n(std::back_inserter(ptr_vec), 5, []{
+  return base::MakeUnique<int>(0);
+});
+
+// Construct a set.
+UniquePtrSet<int> ptr_set(std::move(ptr_vec), base::KEEP_FIRST_OF_DUPES);
+
+// Use raw pointers to lookup keys.
+int* ptr = ptr_set.begin()->get();
+EXPECT_TRUE(ptr_set.find(ptr) == ptr_set.begin());
+```
+
+Example flat_map<std\::string, int>:
+
+```cpp
+base::flat_map<std::string, int> str_to_int({{"a", 1}, {"c", 2},{"b", 2}},
+                                            base::KEEP_FIRST_OF_DUPES);
+
+// Does not construct temporary strings.
+str_to_int.find("c")->second = 3;
+str_to_int.erase("c");
+EXPECT_EQ(str_to_int.end(), str_to_int.find("c")->second);
+
+// NOTE: This does construct a temporary string. This happens since if the
+// item is not in the container, then it needs to be constructed, which is
+// something that transparent comparators don't have to guarantee.
+str_to_int["c"] = 3;
+```
+
 ### base::small\_map
 
 A small inline buffer that is brute-force searched that overflows into a full

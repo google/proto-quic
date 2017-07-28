@@ -2,6 +2,11 @@ phajdan.jr@chromium.org
 
 per-file *task_scheduler*=file://base/task_scheduler/OWNERS
 
+# Metrics-related test utilties:
+per-file *histogram_tester*=file://base/metrics/OWNERS
+per-file *scoped_feature_list*=file://base/metrics/OWNERS
+per-file *user_action_tester*=file://base/metrics/OWNERS
+
 # For Android-specific changes:
 per-file *android*=file://base/test/android/OWNERS
 per-file BUILD.gn=file://base/test/android/OWNERS

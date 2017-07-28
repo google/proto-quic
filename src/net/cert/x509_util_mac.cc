@@ -7,7 +7,6 @@
 #include <CommonCrypto/CommonDigest.h>
 
 #include "base/logging.h"
-#include "base/mac/mac_util.h"
 #include "base/strings/sys_string_conversions.h"
 #include "net/cert/x509_certificate.h"
 #include "third_party/apple_apsl/cssmapplePriv.h"
@@ -205,11 +204,7 @@ OSStatus CreateBasicX509Policy(SecPolicyRef* policy) {
 
 OSStatus CreateRevocationPolicies(bool enable_revocation_checking,
                                   CFMutableArrayRef policies) {
-  if (base::mac::IsAtLeastOS10_12()) {
-// SecPolicyCreateRevocation is only on 10.9 or newer. This pragma stops
-// clang from complaining about it.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunguarded-availability"
+  if (__builtin_available(macos 10.12, *)) {
     // On Sierra, it's not possible to disable network revocation checking
     // without also breaking AIA. If revocation checking isn't explicitly
     // enabled, just don't add a revocation policy.
@@ -231,7 +226,6 @@ OSStatus CreateRevocationPolicies(bool enable_revocation_checking,
       return errSecNoPolicyModule;
     CFArrayAppendValue(policies, revocation_policy);
     CFRelease(revocation_policy);
-#pragma clang diagnostic pop
     return noErr;
   }
   OSStatus status = noErr;

@@ -30,7 +30,7 @@ const MessageLoop::Type testing_message_loops[] = {
 };
 
 void QuitWhenSignaled(WaitableEvent* event) {
-  MessageLoop::current()->QuitWhenIdle();
+  RunLoop::QuitCurrentWhenIdleDeprecated();
 }
 
 class DecrementCountContainer {

@@ -90,7 +90,7 @@ constexpr bool CanDetectCompileTimeConstant() {
   return false;
 }
 template <typename T>
-constexpr bool IsCompileTimeConstant(const T v) {
+constexpr bool IsCompileTimeConstant(const T) {
   return false;
 }
 #endif

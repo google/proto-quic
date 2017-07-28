@@ -67,8 +67,12 @@ class SmoothnessTop25(_Smoothness):
       def SetExpectations(self):
         self.DisableStory('http://www.cnn.com', [story_module.expectations.ALL],
                           'crbug.com/528474')
-        self.DisableStory('http://www.amazon.com', [story_module.expectations.ALL],
+        self.DisableStory('http://www.amazon.com',
+                          [story_module.expectations.ALL],
                           'crbug.com/667432')
+        self.DisableStory('https://mail.google.com/mail/',
+                          [story_module.expectations.ALL_WIN],
+                          'crbug.com/750147')
     return StoryExpectations()
 
 
@@ -686,34 +690,6 @@ class SmoothnessToughAdCases(_Smoothness):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
         pass # Nothing.
-    return StoryExpectations()
-
-
-# http://crbug.com/522619 (mac/win)
-# http://crbug.com/683247 (android/linux)
-@benchmark.Disabled('win', 'mac', 'android', 'linux')
-@benchmark.Owner(emails=['skyostil@chromium.org'])
-class SmoothnessScrollingToughAdCases(_Smoothness):
-  """Measures rendering statistics while scrolling advertisements."""
-  page_set = page_sets.ScrollingToughAdCasesPageSet
-
-  @classmethod
-  def ShouldDisable(cls, possible_browser):  # http://crbug.com/597656
-    return (possible_browser.browser_type == 'reference' and
-            possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X')
-
-  @classmethod
-  def Name(cls):
-    return 'smoothness.scrolling_tough_ad_cases'
-
-  def GetExpectations(self):
-    class StoryExpectations(story_module.expectations.StoryExpectations):
-      def SetExpectations(self):
-        self.DisableStory(
-            'http://time.com/3977891/donald-trump-debate-republican/',
-            [story_module.expectations.ALL], 'crbug.com/520509')
-        self.DisableStory(
-            'http://m.tmz.com', [story_module.expectations.ALL], 'crbug.com/597656')
     return StoryExpectations()
 
 

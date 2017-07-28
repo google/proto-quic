@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "net/log/test_net_log.h"
+#include "net/spdy/chromium/spdy_test_util_common.h"
 #include "net/spdy/platform/api/spdy_string.h"
 #include "net/spdy/platform/api/spdy_string_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -20,7 +21,8 @@ namespace test {
 
 class HeaderCoalescerTest : public ::testing::Test {
  public:
-  HeaderCoalescerTest() : header_coalescer_(net_log_.bound()) {}
+  HeaderCoalescerTest()
+      : header_coalescer_(kMaxHeaderListSizeForTest, net_log_.bound()) {}
 
   void ExpectEntry(SpdyStringPiece expected_header_name,
                    SpdyStringPiece expected_header_value,
@@ -62,9 +64,9 @@ TEST_F(HeaderCoalescerTest, EmptyHeaderKey) {
 }
 
 TEST_F(HeaderCoalescerTest, HeaderBlockTooLarge) {
-  // 3 byte key, 256 * 1024 - 40 byte value, 32 byte overhead:
-  // less than 256 * 1024 bytes in total.
-  SpdyString data(256 * 1024 - 40, 'a');
+  // key + value + overhead = 3 + kMaxHeaderListSizeForTest - 40 + 32
+  // = kMaxHeaderListSizeForTest - 5
+  SpdyString data(kMaxHeaderListSizeForTest - 40, 'a');
   header_coalescer_.OnHeader("foo", data);
   EXPECT_FALSE(header_coalescer_.error_seen());
 

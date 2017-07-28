@@ -233,19 +233,21 @@ public class MainActivity extends Activity implements View.OnClickListener {
         String packageName = intent.getStringExtra("package_name");
         if (packageName == null) packageName = DEFAULT_PACKAGE;
         boolean warmup = intent.getBooleanExtra("warmup", false);
+        boolean skipLauncherActivity = intent.getBooleanExtra("skip_launcher_activity", false);
         int delayToMayLaunchUrl = intent.getIntExtra("delay_to_may_launch_url", NONE);
         int delayToLaunchUrl = intent.getIntExtra("delay_to_launch_url", NONE);
         String speculationMode = intent.getStringExtra("speculation_mode");
         if (speculationMode == null) speculationMode = "prerender";
         int timeoutSeconds = intent.getIntExtra("timeout", NONE);
 
-        launchCustomTabs(packageName, speculatedUrl, url, warmup, speculationMode,
-                delayToMayLaunchUrl, delayToLaunchUrl, timeoutSeconds);
+        launchCustomTabs(packageName, speculatedUrl, url, warmup, skipLauncherActivity,
+                speculationMode, delayToMayLaunchUrl, delayToLaunchUrl, timeoutSeconds);
     }
 
     private final class CustomCallback extends CustomTabsCallback {
         private final String mPackageName;
         private final boolean mWarmup;
+        private final boolean mSkipLauncherActivity;
         private final String mSpeculationMode;
         private final int mDelayToMayLaunchUrl;
         private final int mDelayToLaunchUrl;
@@ -254,10 +256,11 @@ public class MainActivity extends Activity implements View.OnClickListener {
         private long mPageLoadFinishedMs = NONE;
         private long mFirstContentfulPaintMs = NONE;
 
-        public CustomCallback(String packageName, boolean warmup, String speculationMode,
-                int delayToMayLaunchUrl, int delayToLaunchUrl) {
+        public CustomCallback(String packageName, boolean warmup, boolean skipLauncherActivity,
+                String speculationMode, int delayToMayLaunchUrl, int delayToLaunchUrl) {
             mPackageName = packageName;
             mWarmup = warmup;
+            mSkipLauncherActivity = skipLauncherActivity;
             mSpeculationMode = speculationMode;
             mDelayToMayLaunchUrl = delayToMayLaunchUrl;
             mDelayToLaunchUrl = delayToLaunchUrl;
@@ -302,9 +305,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
         /** Outputs the available metrics, and die. Unavalaible metrics are set to -1. */
         private void logMetricsAndFinish() {
-            String logLine = (mWarmup ? "1" : "0") + "," + mSpeculationMode + ","
-                    + mDelayToMayLaunchUrl + "," + mDelayToLaunchUrl + "," + mIntentSentMs + ","
-                    + mPageLoadStartedMs + "," + mPageLoadFinishedMs + ","
+            String logLine = (mWarmup ? "1" : "0") + "," + (mSkipLauncherActivity ? "1" : "0") + ","
+                    + mSpeculationMode + "," + mDelayToMayLaunchUrl + "," + mDelayToLaunchUrl + ","
+                    + mIntentSentMs + "," + mPageLoadStartedMs + "," + mPageLoadFinishedMs + ","
                     + mFirstContentfulPaintMs;
             Log.w(TAG, logLine);
             logMemory(mPackageName, "AfterMetrics");
@@ -402,9 +405,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
     }
 
     private void onCustomTabsServiceConnected(CustomTabsClient client, final Uri speculatedUri,
-            final Uri uri, final CustomCallback cb, boolean warmup, String speculationMode,
-            int delayToMayLaunchUrl, final int delayToLaunchUrl, final int timeoutSeconds,
-            final String packageName) {
+            final Uri uri, final CustomCallback cb, boolean warmup, boolean skipLauncherActivity,
+            String speculationMode, int delayToMayLaunchUrl, final int delayToLaunchUrl,
+            final int timeoutSeconds, final String packageName) {
         final CustomTabsSession session = client.newSession(cb);
         final CustomTabsIntent intent = (new CustomTabsIntent.Builder(session)).build();
         logMemory(packageName, "OnServiceConnected");
@@ -441,10 +444,10 @@ public class MainActivity extends Activity implements View.OnClickListener {
     }
 
     private void launchCustomTabs(final String packageName, String speculatedUrl, String url,
-            final boolean warmup, final String speculationMode, final int delayToMayLaunchUrl,
-            final int delayToLaunchUrl, final int timeoutSeconds) {
-        final CustomCallback cb = new CustomCallback(
-                packageName, warmup, speculationMode, delayToMayLaunchUrl, delayToLaunchUrl);
+            final boolean warmup, final boolean skipLauncherActivity, final String speculationMode,
+            final int delayToMayLaunchUrl, final int delayToLaunchUrl, final int timeoutSeconds) {
+        final CustomCallback cb = new CustomCallback(packageName, warmup, skipLauncherActivity,
+                speculationMode, delayToMayLaunchUrl, delayToLaunchUrl);
         final Uri speculatedUri = Uri.parse(speculatedUrl);
         final Uri uri = Uri.parse(url);
         CustomTabsClient.bindCustomTabsService(
@@ -453,8 +456,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
                     public void onCustomTabsServiceConnected(
                             ComponentName name, final CustomTabsClient client) {
                         MainActivity.this.onCustomTabsServiceConnected(client, speculatedUri, uri,
-                                cb, warmup, speculationMode, delayToMayLaunchUrl, delayToLaunchUrl,
-                                timeoutSeconds, packageName);
+                                cb, warmup, skipLauncherActivity, speculationMode,
+                                delayToMayLaunchUrl, delayToLaunchUrl, timeoutSeconds, packageName);
                     }
 
                     @Override

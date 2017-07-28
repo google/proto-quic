@@ -764,7 +764,7 @@ get_file_timestamp () {
 }
 
 # Allow several concurrent debugging sessions
-APP_DATA_DIR=$("$ADB" shell run-as $PACKAGE_NAME /system/bin/sh -c pwd)
+APP_DATA_DIR=$(adb_shell run-as $PACKAGE_NAME /system/bin/sh -c pwd)
 TARGET_GDBSERVER="$APP_DATA_DIR/gdbserver-adb-gdb-$TMP_ID"
 TMP_TARGET_GDBSERVER=/data/local/tmp/gdbserver-adb-gdb-$TMP_ID
 

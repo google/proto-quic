@@ -39,6 +39,9 @@ class NET_EXPORT HostCache {
           address_family(address_family),
           host_resolver_flags(host_resolver_flags) {}
 
+    Key()
+        : address_family(ADDRESS_FAMILY_UNSPECIFIED), host_resolver_flags(0) {}
+
     bool operator<(const Key& other) const {
       // The order of comparisons of |Key| fields is arbitrary, thus
       // |address_family| and |host_resolver_flags| are compared before

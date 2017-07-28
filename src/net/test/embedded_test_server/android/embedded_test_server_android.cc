@@ -20,10 +20,28 @@ using base::android::ScopedJavaLocalRef;
 namespace net {
 namespace test_server {
 
+EmbeddedTestServerAndroid::ConnectionListener::ConnectionListener(
+    EmbeddedTestServerAndroid* test_server_android)
+    : test_server_android_(test_server_android) {}
+
+EmbeddedTestServerAndroid::ConnectionListener::~ConnectionListener() = default;
+
+void EmbeddedTestServerAndroid::ConnectionListener::AcceptedSocket(
+    const StreamSocket& socket) {
+  test_server_android_->AcceptedSocket(static_cast<const void*>(&socket));
+}
+
+void EmbeddedTestServerAndroid::ConnectionListener::ReadFromSocket(
+    const StreamSocket& socket,
+    int rv) {
+  test_server_android_->ReadFromSocket(static_cast<const void*>(&socket));
+}
+
 EmbeddedTestServerAndroid::EmbeddedTestServerAndroid(
     JNIEnv* env,
     const JavaRef<jobject>& jobj)
-    : weak_java_server_(env, jobj), test_server_() {
+    : weak_java_server_(env, jobj), test_server_(), connection_listener_(this) {
+  test_server_.SetConnectionListener(&connection_listener_);
   Java_EmbeddedTestServerImpl_setNativePtr(env, jobj,
                                            reinterpret_cast<intptr_t>(this));
 }
@@ -80,6 +98,18 @@ void EmbeddedTestServerAndroid::ServeFilesFromDirectory(
   const base::FilePath directory(
       base::android::ConvertJavaStringToUTF8(env, jdirectory_path));
   test_server_.ServeFilesFromDirectory(directory);
+}
+
+void EmbeddedTestServerAndroid::AcceptedSocket(const void* socket_id) {
+  JNIEnv* env = base::android::AttachCurrentThread();
+  Java_EmbeddedTestServerImpl_acceptedSocket(
+      env, weak_java_server_.get(env), reinterpret_cast<intptr_t>(socket_id));
+}
+
+void EmbeddedTestServerAndroid::ReadFromSocket(const void* socket_id) {
+  JNIEnv* env = base::android::AttachCurrentThread();
+  Java_EmbeddedTestServerImpl_readFromSocket(
+      env, weak_java_server_.get(env), reinterpret_cast<intptr_t>(socket_id));
 }
 
 void EmbeddedTestServerAndroid::Destroy(JNIEnv* env,

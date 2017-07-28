@@ -6,22 +6,26 @@ git_revision=abc123
 gn_args=var1=true var2="foo"
 map_file_name=../test.map
 tool_prefix=tools/binary_size/libsupersize/testdata/mock_toolchain/
-Section r: has 100.0% of 5927652 bytes accounted for from 10 symbols. 0 bytes are unaccounted for.
-* Padding accounts for 11 bytes (0.0%)
-* 5 placeholders (symbols that start with **) account for 5927509 bytes (100.0%)
-* 0 symbols have shared ownership
-Section b: has 40.3% of 524520 bytes accounted for from 6 symbols. 775936 bytes are unaccounted for.
-* Padding accounts for 196 bytes (0.0%)
-* 0 symbols have shared ownership
-Section d: has 100.0% of 1957016 bytes accounted for from 15 symbols. 0 bytes are unaccounted for.
-* Padding accounts for 16 bytes (0.0%)
-* 2 placeholders (symbols that start with **) account for 1166732 bytes (59.6%)
-* 0 symbols have shared ownership
-Section t: has 100.0% of 35900712 bytes accounted for from 18 symbols. 0 bytes are unaccounted for.
+Section .text: has 100.0% of 35900712 bytes accounted for from 18 symbols. 0 bytes are unaccounted for.
 * Padding accounts for 48 bytes (0.0%)
 * 3 placeholders (symbols that start with **) account for 35830760 bytes (99.8%)
 * Contains 5 aliases, mapped to 2 unique addresses (60 bytes)
 * 1 symbols have shared ownership (12 bytes)
+Section .rodata: has 100.0% of 5927652 bytes accounted for from 10 symbols. 0 bytes are unaccounted for.
+* Padding accounts for 11 bytes (0.0%)
+* 5 placeholders (symbols that start with **) account for 5927509 bytes (100.0%)
+* 0 symbols have shared ownership
+Section .data.rel.ro: has 100.0% of 1065224 bytes accounted for from 4 symbols. 0 bytes are unaccounted for.
+* Padding accounts for 0 bytes (0.0%)
+* 1 placeholders (symbols that start with **) account for 1065132 bytes (100.0%)
+* 0 symbols have shared ownership
+Section .data: has 100.0% of 101768 bytes accounted for from 6 symbols. 0 bytes are unaccounted for.
+* Padding accounts for 0 bytes (0.0%)
+* 1 placeholders (symbols that start with **) account for 101600 bytes (99.8%)
+* 0 symbols have shared ownership
+Section .bss: has 40.3% of 524520 bytes accounted for from 6 symbols. 775936 bytes are unaccounted for.
+* Padding accounts for 196 bytes (0.0%)
+* 0 symbols have shared ownership
 .text@28d900(size_without_padding=16,padding=0,full_name=_GLOBAL__sub_I_page_allocator.cc,object_path=base/base/page_allocator.o,source_path=base/page_allocator.cc,flags={startup},num_aliases=1)
 .text@28d910(size_without_padding=56,padding=0,full_name=_GLOBAL__sub_I_bbr_sender.cc,object_path=base/base/page_allocator.o,source_path=base/page_allocator.cc,flags={startup},num_aliases=1)
 .text@28d948(size_without_padding=28,padding=0,full_name=_GLOBAL__sub_I_pacing_sender.cc,object_path=base/base/page_allocator.o,source_path=base/page_allocator.cc,flags={startup},num_aliases=1)

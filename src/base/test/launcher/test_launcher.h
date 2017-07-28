@@ -20,6 +20,7 @@
 #include "base/test/launcher/test_results_tracker.h"
 #include "base/time/time.h"
 #include "base/timer/timer.h"
+#include "build/build_config.h"
 
 namespace base {
 
@@ -89,13 +90,18 @@ class TestLauncher {
   };
 
   struct LaunchOptions {
+    LaunchOptions();
+    LaunchOptions(const LaunchOptions& other);
+    ~LaunchOptions();
+
     int flags = 0;
-#if defined(OS_WIN)
     // These mirror values in base::LaunchOptions, see it for details.
-    HandlesToInheritVector* handles_to_inherit = nullptr;
-    bool inherit_handles = false;
+#if defined(OS_WIN)
+    base::LaunchOptions::Inherit inherit_mode =
+        base::LaunchOptions::Inherit::kSpecific;
+    base::HandlesToInheritVector handles_to_inherit;
 #elif defined(OS_POSIX)
-    const FileHandleMappingVector* fds_to_remap = nullptr;
+    FileHandleMappingVector fds_to_remap;
 #endif
   };
 

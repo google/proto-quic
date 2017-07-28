@@ -153,7 +153,6 @@
     "type": "script",
     "script": "//chrome/test/vr/perf/latency/run_latency_test.py",
     "args": [
-      "--output-dir=${ISOLATED_OUTDIR}",
       "-v",
     ],
   },
@@ -162,7 +161,6 @@
     "type": "script",
     "script": "//chrome/test/vr/perf/vrcore_fps/run_vrcore_fps_test.py",
     "args": [
-      "--output-dir=${ISOLATED_OUTDIR}",
       "-v",
     ],
   },
@@ -224,6 +222,10 @@
   },
   "cast_crash_unittests": {
     "label": "//chromecast/crash:cast_crash_unittests",
+    "type": "console_test_launcher",
+  },
+  "cast_graphics_unittests": {
+    "label": "//chromecast/graphics:cast_graphics_unittests",
     "type": "console_test_launcher",
   },
   "cast_media_unittests": {
@@ -542,6 +544,13 @@
     "label": "//ios/chrome/test/earl_grey:ios_chrome_integration_egtests",
     "type": "raw",
     "args": [],
+  },
+  "ios_chrome_payments_egtests": {
+    "label": "//ios/chrome/test/earl_grey:ios_chrome_payments_egtests",
+    "type": "raw",
+    "args": [
+      "--enable-features=WebPayments",
+    ],
   },
   "ios_chrome_reading_list_egtests": {
     "label": "//ios/chrome/test/earl_grey:ios_chrome_reading_list_egtests",

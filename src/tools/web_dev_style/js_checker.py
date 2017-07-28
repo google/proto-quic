@@ -33,15 +33,6 @@ class JSChecker(object):
         '    // <if expr="chromeos">\n' +
         '    // </if>\n')
 
-  def ConstCheck(self, i, line):
-    """Check for use of the 'const' keyword."""
-    if self.input_api.re.search(r'\*\s+@const', line):
-      # Probably a JsDoc line
-      return ''
-
-    return self.RegexCheck(i, line, r'(?:^|\s|\()(const)\s',
-        'Use /** @const */ var varName; instead of const varName;')
-
   def EndJsDocCommentCheck(self, i, line):
     msg = 'End JSDoc comments with */ instead of **/'
     def _check(regex):
@@ -128,7 +119,6 @@ class JSChecker(object):
         error_lines += filter(None, [
             self.ChromeSendCheck(i, line),
             self.CommentIfAndIncludeCheck(i, line),
-            self.ConstCheck(i, line),
             self.EndJsDocCommentCheck(i, line),
             self.ExtraDotInGenericCheck(i, line),
             self.InheritDocCheck(i, line),

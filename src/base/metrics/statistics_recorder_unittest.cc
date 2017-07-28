@@ -444,10 +444,12 @@ TEST_P(StatisticsRecorderTest, IterationTest) {
   UninitializeStatisticsRecorder();
   InitializeStatisticsRecorder();
 
+  StatisticsRecorder::ImportGlobalPersistentHistograms();
   StatisticsRecorder::HistogramIterator i3 = StatisticsRecorder::begin(true);
   EXPECT_EQ(use_persistent_histogram_allocator_ ? 2 : 0,
             CountIterableHistograms(&i3));
 
+  StatisticsRecorder::ImportGlobalPersistentHistograms();
   StatisticsRecorder::HistogramIterator i4 = StatisticsRecorder::begin(false);
   EXPECT_EQ(0, CountIterableHistograms(&i4));
 }

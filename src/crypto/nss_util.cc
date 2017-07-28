@@ -135,15 +135,10 @@ class NSPRInitSingleton {
     PR_Init(PR_USER_THREAD, PR_PRIORITY_NORMAL, 0);
   }
 
-  // NOTE(willchan): We don't actually execute this code since we leak NSS to
-  // prevent non-joinable threads from using NSS after it's already been shut
-  // down.
-  ~NSPRInitSingleton() {
-    PL_ArenaFinish();
-    PRStatus prstatus = PR_Cleanup();
-    if (prstatus != PR_SUCCESS)
-      LOG(ERROR) << "PR_Cleanup failed; was NSPR initialized on wrong thread?";
-  }
+  // NOTE(willchan): We don't actually cleanup on destruction since we leak NSS
+  // to prevent non-joinable threads from using NSS after it's already been
+  // shut down.
+  ~NSPRInitSingleton() = delete;
 };
 
 base::LazyInstance<NSPRInitSingleton>::Leaky
@@ -685,32 +680,10 @@ class NSSInitSingleton {
                            0, NSS_USE_ALG_IN_CERT_SIGNATURE);
   }
 
-  // NOTE(willchan): We don't actually execute this code since we leak NSS to
-  // prevent non-joinable threads from using NSS after it's already been shut
-  // down.
-  ~NSSInitSingleton() {
-#if defined(OS_CHROMEOS)
-    chromeos_user_map_.clear();
-#endif
-    tpm_slot_.reset();
-    if (root_) {
-      SECMOD_UnloadUserModule(root_);
-      SECMOD_DestroyModule(root_);
-      root_ = nullptr;
-    }
-    if (chaps_module_) {
-      SECMOD_UnloadUserModule(chaps_module_);
-      SECMOD_DestroyModule(chaps_module_);
-      chaps_module_ = nullptr;
-    }
-
-    SECStatus status = NSS_Shutdown();
-    if (status != SECSuccess) {
-      // We VLOG(1) because this failure is relatively harmless (leaking, but
-      // we're shutting down anyway).
-      VLOG(1) << "NSS_Shutdown failed; see http://crbug.com/4609";
-    }
-  }
+  // NOTE(willchan): We don't actually cleanup on destruction since we leak NSS
+  // to prevent non-joinable threads from using NSS after it's already been
+  // shut down.
+  ~NSSInitSingleton() = delete;
 
   // Load nss's built-in root certs.
   SECMODModule* InitDefaultRootCerts() {

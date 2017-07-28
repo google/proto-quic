@@ -90,6 +90,8 @@ HttpResponseInfo::ConnectionInfo QuicHttpStream::ConnectionInfoFromQuicVersion(
       return HttpResponseInfo::CONNECTION_INFO_QUIC_39;
     case QUIC_VERSION_40:
       return HttpResponseInfo::CONNECTION_INFO_QUIC_40;
+    case QUIC_VERSION_41:
+      return HttpResponseInfo::CONNECTION_INFO_QUIC_41;
   }
   NOTREACHED();
   return HttpResponseInfo::CONNECTION_INFO_QUIC_UNKNOWN_VERSION;
@@ -222,10 +224,12 @@ int QuicHttpStream::SendRequest(const HttpRequestHeaders& request_headers,
     // was being called even if we didn't yet allocate raw_request_body_buf_.
     //   && (request_body_stream_->size() ||
     //       request_body_stream_->is_chunked()))
-    // Use 10 packets as the body buffer size to give enough space to
-    // help ensure we don't often send out partial packets.
-    raw_request_body_buf_ =
-        new IOBufferWithSize(static_cast<size_t>(10 * kMaxPacketSize));
+    // Set the body buffer size to be the size of the body clamped
+    // into the range [10 * kMaxPacketSize, 256 * kMaxPacketSize].
+    // With larger bodies, larger buffers reduce CPU usage.
+    raw_request_body_buf_ = new IOBufferWithSize(static_cast<size_t>(std::max(
+        10 * kMaxPacketSize,
+        std::min(request_body_stream_->size(), 256 * kMaxPacketSize))));
     // The request body buffer is empty at first.
     request_body_buf_ = new DrainableIOBuffer(raw_request_body_buf_.get(), 0);
   }
@@ -296,7 +300,7 @@ int QuicHttpStream::ReadResponseBody(IOBuffer* buf,
 
   // If the stream is already closed, there is no body to read.
   if (stream_->IsDoneReading())
-    return GetResponseStatus();
+    return HandleReadComplete(OK);
 
   int rv = stream_->ReadBody(buf, buf_len,
                              base::Bind(&QuicHttpStream::OnReadBodyComplete,

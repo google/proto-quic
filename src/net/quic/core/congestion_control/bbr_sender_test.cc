@@ -407,7 +407,6 @@ TEST_F(BbrSenderTest, SimpleTransferAckDecimation2) {
             sender_->ExportDebugState().max_bandwidth);
   // TODO(ianswett): Expect 0 packets are lost once BBR no longer measures
   // bandwidth higher than the link rate.
-  EXPECT_FALSE(sender_->ExportDebugState().last_sample_is_app_limited);
   // The margin here is high, because the aggregation greatly increases
   // smoothed rtt.
   EXPECT_GE(kTestRtt * 2, rtt_stats_->smoothed_rtt());
@@ -789,6 +788,72 @@ TEST_F(BbrSenderTest, SimpleTransfer2RTTStartup) {
   EXPECT_FALSE(sender_->ExportDebugState().last_sample_is_app_limited);
 }
 
+// Test exiting STARTUP earlier upon loss due to the LRTT connection option.
+TEST_F(BbrSenderTest, SimpleTransferLRTTStartup) {
+  FLAGS_quic_reloadable_flag_quic_bbr_exit_startup_on_loss = true;
+  CreateDefaultSetup();
+
+  QuicConfig config;
+  QuicTagVector options;
+  options.push_back(kLRTT);
+  QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
+  sender_->SetFromConfig(config, Perspective::IS_SERVER);
+  EXPECT_EQ(3u, sender_->num_startup_rtts());
+
+  // Run until the full bandwidth is reached and check how many rounds it was.
+  bbr_sender_.AddBytesToTransfer(12 * 1024 * 1024);
+  QuicRoundTripCount max_bw_round = 0;
+  QuicBandwidth max_bw(QuicBandwidth::Zero());
+  bool simulator_result = simulator_.RunUntilOrTimeout(
+      [this, &max_bw, &max_bw_round]() {
+        if (max_bw < sender_->ExportDebugState().max_bandwidth) {
+          max_bw = sender_->ExportDebugState().max_bandwidth;
+          max_bw_round = sender_->ExportDebugState().round_trip_count;
+        }
+        return sender_->ExportDebugState().is_at_full_bandwidth;
+      },
+      QuicTime::Delta::FromSeconds(5));
+  ASSERT_TRUE(simulator_result);
+  EXPECT_EQ(BbrSender::DRAIN, sender_->ExportDebugState().mode);
+  EXPECT_EQ(3u, sender_->ExportDebugState().round_trip_count - max_bw_round);
+  EXPECT_EQ(3u, sender_->ExportDebugState().rounds_without_bandwidth_gain);
+  EXPECT_EQ(0u, bbr_sender_.connection()->GetStats().packets_lost);
+  EXPECT_FALSE(sender_->ExportDebugState().last_sample_is_app_limited);
+}
+
+// Test exiting STARTUP earlier upon loss due to the LRTT connection option.
+TEST_F(BbrSenderTest, SimpleTransferLRTTStartupSmallBuffer) {
+  FLAGS_quic_reloadable_flag_quic_bbr_exit_startup_on_loss = true;
+  CreateSmallBufferSetup();
+
+  QuicConfig config;
+  QuicTagVector options;
+  options.push_back(kLRTT);
+  QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
+  sender_->SetFromConfig(config, Perspective::IS_SERVER);
+  EXPECT_EQ(3u, sender_->num_startup_rtts());
+
+  // Run until the full bandwidth is reached and check how many rounds it was.
+  bbr_sender_.AddBytesToTransfer(12 * 1024 * 1024);
+  QuicRoundTripCount max_bw_round = 0;
+  QuicBandwidth max_bw(QuicBandwidth::Zero());
+  bool simulator_result = simulator_.RunUntilOrTimeout(
+      [this, &max_bw, &max_bw_round]() {
+        if (max_bw < sender_->ExportDebugState().max_bandwidth) {
+          max_bw = sender_->ExportDebugState().max_bandwidth;
+          max_bw_round = sender_->ExportDebugState().round_trip_count;
+        }
+        return sender_->ExportDebugState().is_at_full_bandwidth;
+      },
+      QuicTime::Delta::FromSeconds(5));
+  ASSERT_TRUE(simulator_result);
+  EXPECT_EQ(BbrSender::DRAIN, sender_->ExportDebugState().mode);
+  EXPECT_EQ(2u, sender_->ExportDebugState().round_trip_count - max_bw_round);
+  EXPECT_EQ(1u, sender_->ExportDebugState().rounds_without_bandwidth_gain);
+  EXPECT_NE(0u, bbr_sender_.connection()->GetStats().packets_lost);
+  EXPECT_FALSE(sender_->ExportDebugState().last_sample_is_app_limited);
+}
+
 // Test that two BBR flows started slightly apart from each other terminate.
 TEST_F(BbrSenderTest, SimpleCompetition) {
   const QuicByteCount transfer_size = 10 * 1024 * 1024;
@@ -821,11 +886,7 @@ TEST_F(BbrSenderTest, ResumeConnectionState) {
   FLAGS_quic_reloadable_flag_quic_bbr_bandwidth_resumption = true;
   CreateDefaultSetup();
 
-  CachedNetworkParameters params;
-  params.set_bandwidth_estimate_bytes_per_second(
-      kTestLinkBandwidth.ToBytesPerSecond());
-  params.set_min_rtt_ms(kTestRtt.ToMilliseconds());
-  sender_->ResumeConnectionState(params, false);
+  sender_->AdjustNetworkParameters(kTestLinkBandwidth, kTestRtt);
   EXPECT_EQ(kTestLinkBandwidth, sender_->ExportDebugState().max_bandwidth);
   EXPECT_EQ(kTestLinkBandwidth, sender_->BandwidthEstimate());
   ExpectApproxEq(kTestRtt, sender_->ExportDebugState().min_rtt, 0.01f);

@@ -21,11 +21,16 @@ size_t kGoAwayDebugDataMaxSize = 1024;
 
 }  // namespace
 
-BufferedSpdyFramer::BufferedSpdyFramer(const NetLogWithSource& net_log)
+BufferedSpdyFramer::BufferedSpdyFramer(uint32_t max_header_list_size,
+                                       const NetLogWithSource& net_log)
     : spdy_framer_(SpdyFramer::ENABLE_COMPRESSION),
       visitor_(NULL),
       frames_received_(0),
-      net_log_(net_log) {}
+      max_header_list_size_(max_header_list_size),
+      net_log_(net_log) {
+  // Do not bother decoding response header payload above the limit.
+  spdy_framer_.set_max_decode_buffer_size_bytes(max_header_list_size_);
+}
 
 BufferedSpdyFramer::~BufferedSpdyFramer() {
 }
@@ -92,7 +97,8 @@ void BufferedSpdyFramer::OnStreamPadding(SpdyStreamId stream_id, size_t len) {
 
 SpdyHeadersHandlerInterface* BufferedSpdyFramer::OnHeaderFrameStart(
     SpdyStreamId stream_id) {
-  coalescer_ = base::MakeUnique<HeaderCoalescer>(net_log_);
+  coalescer_ =
+      base::MakeUnique<HeaderCoalescer>(max_header_list_size_, net_log_);
   return coalescer_.get();
 }
 
@@ -213,11 +219,6 @@ size_t BufferedSpdyFramer::ProcessInput(const char* data, size_t len) {
 
 void BufferedSpdyFramer::UpdateHeaderDecoderTableSize(uint32_t value) {
   spdy_framer_.UpdateHeaderDecoderTableSize(value);
-}
-
-void BufferedSpdyFramer::set_max_decode_buffer_size_bytes(
-    size_t max_decode_buffer_size_bytes) {
-  spdy_framer_.set_max_decode_buffer_size_bytes(max_decode_buffer_size_bytes);
 }
 
 void BufferedSpdyFramer::Reset() {

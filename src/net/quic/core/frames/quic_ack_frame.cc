@@ -203,12 +203,13 @@ bool PacketNumberQueue::RemoveUpTo(QuicPacketNumber higher) {
   const QuicPacketNumber old_min = Min();
   if (use_deque_) {
     while (!packet_number_deque_.empty()) {
-      if (packet_number_deque_[0].max() < higher) {
+      if (packet_number_deque_.front().max() < higher) {
         packet_number_deque_.pop_front();
-      } else if (packet_number_deque_[0].min() < higher &&
-                 packet_number_deque_[0].max() >= higher) {
-        packet_number_deque_[0].SetMin(higher);
-        if (packet_number_deque_[0].max() == packet_number_deque_[0].min()) {
+      } else if (packet_number_deque_.front().min() < higher &&
+                 packet_number_deque_.front().max() >= higher) {
+        packet_number_deque_.front().SetMin(higher);
+        if (packet_number_deque_.front().max() ==
+            packet_number_deque_.front().min()) {
           packet_number_deque_.pop_front();
         }
         break;
@@ -239,18 +240,25 @@ void PacketNumberQueue::RemoveSmallestInterval() {
 
 bool PacketNumberQueue::Contains(QuicPacketNumber packet_number) const {
   if (use_deque_) {
-    // TODO(lilika): Consider using std::binary_search based on profiles
-    // http://www.cplusplus.com/reference/algorithm/binary_search/
     if (packet_number_deque_.empty()) {
       return false;
     }
-    for (Interval<QuicPacketNumber> interval : packet_number_deque_) {
-      if (packet_number < interval.min()) {
-        return false;
+    int low = 0;
+    int high = packet_number_deque_.size() - 1;
+
+    while (low <= high) {
+      int mid = (low + high) / 2;
+      if (packet_number_deque_[mid].min() > packet_number) {
+        high = mid - 1;
+        continue;
       }
-      if (interval.min() <= packet_number && interval.max() > packet_number) {
-        return true;
+      if (packet_number_deque_[mid].max() <= packet_number) {
+        low = mid + 1;
+        continue;
       }
+      DCHECK(packet_number_deque_[mid].max() > packet_number);
+      DCHECK(packet_number_deque_[mid].min() <= packet_number);
+      return true;
     }
     return false;
   } else {
@@ -269,7 +277,7 @@ bool PacketNumberQueue::Empty() const {
 QuicPacketNumber PacketNumberQueue::Min() const {
   DCHECK(!Empty());
   if (use_deque_) {
-    return packet_number_deque_[0].min();
+    return packet_number_deque_.front().min();
   } else {
     return packet_number_intervals_.begin()->min();
   }
@@ -278,7 +286,7 @@ QuicPacketNumber PacketNumberQueue::Min() const {
 QuicPacketNumber PacketNumberQueue::Max() const {
   DCHECK(!Empty());
   if (use_deque_) {
-    return packet_number_deque_[packet_number_deque_.size() - 1].max() - 1;
+    return packet_number_deque_.back().max() - 1;
   } else {
     return packet_number_intervals_.rbegin()->max() - 1;
   }

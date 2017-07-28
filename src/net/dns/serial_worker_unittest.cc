@@ -66,7 +66,7 @@ class SerialWorkerTest : public testing::Test {
  protected:
   void BreakCallback(const std::string& breakpoint) {
     breakpoint_ = breakpoint;
-    base::MessageLoop::current()->QuitNow();
+    base::RunLoop::QuitCurrentDeprecated();
   }
 
   void BreakNow(const std::string& b) {

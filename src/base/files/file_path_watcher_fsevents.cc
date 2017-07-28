@@ -75,7 +75,7 @@ FilePathWatcherFSEvents::FilePathWatcherFSEvents()
       weak_factory_(this) {}
 
 FilePathWatcherFSEvents::~FilePathWatcherFSEvents() {
-  DCHECK(!task_runner() || task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(!task_runner() || task_runner()->RunsTasksInCurrentSequence());
   DCHECK(callback_.is_null())
       << "Cancel() must be called before FilePathWatcher is destroyed.";
 }
@@ -188,7 +188,7 @@ void FilePathWatcherFSEvents::OnFilePathsChanged(
 void FilePathWatcherFSEvents::DispatchEvents(const std::vector<FilePath>& paths,
                                              const FilePath& target,
                                              const FilePath& resolved_target) {
-  DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(task_runner()->RunsTasksInCurrentSequence());
 
   // Don't issue callbacks after Cancel() has been called.
   if (is_cancelled() || callback_.is_null()) {
@@ -257,7 +257,7 @@ bool FilePathWatcherFSEvents::ResolveTargetPath() {
 }
 
 void FilePathWatcherFSEvents::ReportError(const FilePath& target) {
-  DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(task_runner()->RunsTasksInCurrentSequence());
   if (!callback_.is_null()) {
     callback_.Run(target, true);
   }

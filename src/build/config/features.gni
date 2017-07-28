@@ -29,7 +29,7 @@ declare_args() {
                 !(is_linux && target_cpu == "arm64")
 
   # Non-SFI is not yet supported on mipsel
-  enable_nacl_nonsfi = (current_cpu != "mipsel" && current_cpu != "mips64el")
+  enable_nacl_nonsfi = current_cpu != "mipsel" && current_cpu != "mips64el"
 
   # Enables proprietary codecs and demuxers; e.g. H264, AAC, MP3, and MP4.
   # We always build Google Chrome and Chromecast with proprietary codecs.

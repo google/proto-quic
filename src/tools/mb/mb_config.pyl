@@ -112,6 +112,7 @@
       'Chromium Mac 10.10 MacViews': 'mac_views_browser_release_bot',
       'Chromium Mac 10.11': 'release_bot',
       'Chromium Mac 10.11 Force Mac Toolchain': 'release_bot_mac_new_sdk',
+      'Chromium Mac 10.13': 'release_bot',
       'Chromium Mac 10.9 Goma Canary': 'release_bot',
       'Chromium Mac 10.9 Goma Canary (clobber)': 'release_bot',
       'Chromium Mac 10.9 Goma Canary (dbg)': 'debug_bot',
@@ -253,7 +254,7 @@
       'GPU Win Clang Builder (dbg)': 'gpu_fyi_tests_win_clang_debug_bot',
       'GPU Win x64 Builder': 'gpu_tests_deqp_gles_release_trybot',
       'GPU Win x64 Builder (dbg)': 'gpu_tests_deqp_gles_debug_trybot',
-      'Linux ChromiumOS Builder': 'gpu_fyi_tests_chromeos_x11_cros_release_trybot',
+      'Linux ChromiumOS Builder': 'gpu_fyi_tests_chromeos_cros_release_trybot',
       # This is, confusingly, apparently not actually building ChromiumOS.
       'Linux ChromiumOS Ozone Builder': 'gpu_fyi_tests_ozone_linux_system_gbm_libdrm_release_trybot',
       'Linux GPU TSAN Release': 'gpu_fyi_tests_release_trybot_tsan',
@@ -500,7 +501,7 @@
 
     'tryserver.chromium.angle': {
       'android_angle_rel_ng': 'gpu_tests_deqp_android_release_trybot_arm64',
-      'linux_angle_chromeos_rel_ng': 'gpu_fyi_tests_chromeos_x11_cros_release_trybot',
+      'linux_angle_chromeos_rel_ng': 'gpu_fyi_tests_chromeos_cros_release_trybot',
       'linux_angle_dbg_ng': 'gpu_fyi_tests_debug_trybot',
       'linux_angle_rel_ng': 'gpu_fyi_tests_release_trybot',
       'mac_angle_dbg_ng': 'gpu_fyi_tests_debug_trybot',
@@ -1035,7 +1036,10 @@
     ],
 
     'clang_debug_bot_minimal_symbols_x86': [
-      'clang', 'debug_bot', 'minimal_symbols', 'x86',
+      # Now that the default win bots use clang, use a "clang" bot to make sure
+      # things stay compilable with msvc. TODO(thakis): Having a "clang" bot
+      # check that is very confusing, so rename the bot to "msvc".
+      'no_clang', 'debug_bot', 'minimal_symbols', 'x86',
     ],
 
     'clang_release_bot_minimal_symbols_x86': [
@@ -1043,15 +1047,24 @@
     ],
 
     'clang_minimal_symbols_shared_release_bot_x86_dcheck': [
-      'clang', 'minimal_symbols', 'shared_release_bot', 'x86', 'dcheck_always_on',
+      # Now that the default win bots use clang, use a "clang" bot to make sure
+      # things stay compilable with msvc. TODO(thakis): Having a "clang" bot
+      # check that is very confusing, so rename the bot to "msvc".
+      'no_clang', 'minimal_symbols', 'shared_release_bot', 'x86', 'dcheck_always_on',
     ],
 
     'clang_official_release_bot_minimal_symbols': [
-      'clang', 'official', 'release_bot', 'minimal_symbols',
+      # Now that the default win bots use clang, use a "clang" bot to make sure
+      # things stay compilable with msvc. TODO(thakis): Having a "clang" bot
+      # check that is very confusing, so rename the bot to "msvc".
+      'no_clang', 'official', 'release_bot', 'minimal_symbols',
     ],
 
     'clang_official_release_bot_minimal_symbols_x86': [
-      'clang', 'official', 'release_bot', 'minimal_symbols', 'x86',
+      # Now that the default win bots use clang, use a "clang" bot to make sure
+      # things stay compilable with msvc. TODO(thakis): Having a "clang" bot
+      # check that is very confusing, so rename the bot to "msvc".
+      'no_clang', 'official', 'release_bot', 'minimal_symbols', 'x86',
     ],
 
     'clang_official_optimize_release_bot_minimal_symbols_x86': [
@@ -1067,7 +1080,10 @@
     ],
 
     'clang_shared_release_bot_dcheck': [
-      'clang', 'shared_release_bot', 'dcheck_always_on',
+      # Now that the default win bots use clang, use a "clang" bot to make sure
+      # things stay compilable with msvc. TODO(thakis): Having a "clang" bot
+      # check that is very confusing, so rename the bot to "msvc".
+      'no_clang', 'shared_release_bot', 'dcheck_always_on',
     ],
 
     'clang_tot_asan_lsan_static_release': [
@@ -1218,8 +1234,8 @@
       'debug_trybot', 'x86',
     ],
 
-    'gpu_fyi_tests_chromeos_x11_cros_release_trybot': [
-      'gpu_fyi_tests', 'chromeos', 'x11_cros', 'release_trybot',
+    'gpu_fyi_tests_chromeos_cros_release_trybot': [
+      'gpu_fyi_tests', 'chromeos', 'release_trybot',
     ],
 
     'gpu_fyi_tests_debug_trybot': [
@@ -1526,7 +1542,10 @@
     ],
 
     'win_clang_debug_bot': [
-      'clang', 'debug_bot', 'minimal_symbols',
+      # Now that the default win bots use clang, use a "clang" bot to make sure
+      # things stay compilable with msvc. TODO(thakis): Having a "clang" bot
+      # check that is very confusing, so rename the bot to "msvc".
+      'no_clang', 'debug_bot', 'minimal_symbols',
     ],
 
     'windows_analyze': [
@@ -1895,7 +1914,8 @@
     },
 
     'syzyasan': {
-      'gn_args': 'is_syzyasan=true',
+      # TODO(thakis): Figure out SyzyASan + clang story.
+      'gn_args': 'is_syzyasan=true is_clang=false',
     },
 
     'thin_lto': {
@@ -1942,11 +1962,6 @@
 
     'win_analyze': {
       'gn_args': 'use_vs_code_analysis=true',
-    },
-
-    'x11_cros': {
-      # When use_ozone=false then use_x11=true.
-      'gn_args': 'use_ozone=false',
     },
 
     'x64': {

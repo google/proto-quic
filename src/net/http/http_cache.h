@@ -37,7 +37,6 @@
 class GURL;
 
 namespace base {
-class SingleThreadTaskRunner;
 namespace trace_event {
 class ProcessMemoryDump;
 }
@@ -87,14 +86,12 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory {
   // A default backend factory for the common use cases.
   class NET_EXPORT DefaultBackend : public BackendFactory {
    public:
-    // |path| is the destination for any files used by the backend, and
-    // |thread| is the thread where disk operations should take place. If
+    // |path| is the destination for any files used by the backend. If
     // |max_bytes| is  zero, a default value will be calculated automatically.
     DefaultBackend(CacheType type,
                    BackendType backend_type,
                    const base::FilePath& path,
-                   int max_bytes,
-                   const scoped_refptr<base::SingleThreadTaskRunner>& thread);
+                   int max_bytes);
     ~DefaultBackend() override;
 
     // Returns a factory for an in-memory cache.
@@ -110,7 +107,6 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory {
     BackendType backend_type_;
     const base::FilePath path_;
     int max_bytes_;
-    scoped_refptr<base::SingleThreadTaskRunner> thread_;
   };
 
   // The number of minutes after a resource is prefetched that it can be used
@@ -478,7 +474,10 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory {
   // Returns true if any transactions in the ActiveEntry depend on this
   // transaction to complete writing to the cache.
   bool HasDependentTransactions(ActiveEntry* entry,
-                                Transaction* transaction,
+                                Transaction* transaction) const;
+
+  // Check the sanity of response code for a writer transaction.
+  bool IsValidResponseForWriter(Transaction* transaction,
                                 bool is_partial) const;
 
   // Returns true if a transaction is currently writing the response body.

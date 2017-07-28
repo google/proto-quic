@@ -26,8 +26,8 @@ sys.path.append(os.path.join(_SRC_PATH, 'build', 'android'))
 import devil_chromium
 
 
-_KEYS = ['url', 'warmup', 'speculation_mode', 'delay_to_may_launch_url',
-         'delay_to_launch_url', 'cold']
+_KEYS = ['url', 'warmup', 'skip_launcher_activity', 'speculation_mode',
+         'delay_to_may_launch_url', 'delay_to_launch_url', 'cold']
 
 
 def _ParseConfiguration(filename):
@@ -41,6 +41,7 @@ def _ParseConfiguration(filename):
   {
     "url": "https://www.android.com",
     "warmup": [false, true],
+    "skip_launcher_activity": true,
     "speculation_mode": "speculative_prefetch",
     "delay_to_may_launch_url": [-1, 1000],
     "delay_to_launch_url": [-1, 1000],

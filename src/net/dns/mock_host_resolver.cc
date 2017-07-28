@@ -304,9 +304,9 @@ void RuleBasedHostResolverProc::AddIPLiteralRule(
       HOST_RESOLVER_DEFAULT_FAMILY_SET_DUE_TO_NO_IPV6;
   if (!canonical_name.empty())
     flags |= HOST_RESOLVER_CANONNAME;
+
   Rule rule(Rule::kResolverTypeIPLiteral, host_pattern,
-            ADDRESS_FAMILY_UNSPECIFIED, flags, ip_literal, canonical_name,
-            0);
+            ADDRESS_FAMILY_UNSPECIFIED, flags, ip_literal, canonical_name, 0);
   AddRuleInternal(rule);
 }
 
@@ -417,10 +417,26 @@ int RuleBasedHostResolverProc::Resolve(const std::string& host,
                                         address_family,
                                         host_resolver_flags,
                                         addrlist, os_error);
-        case Rule::kResolverTypeIPLiteral:
-          return ParseAddressList(effective_host,
-                                  r->canonical_name,
-                                  addrlist);
+        case Rule::kResolverTypeIPLiteral: {
+          AddressList raw_addr_list;
+          int result = ParseAddressList(
+              effective_host,
+              !r->canonical_name.empty() ? r->canonical_name : host,
+              &raw_addr_list);
+          // Filter out addresses with the wrong family.
+          *addrlist = AddressList();
+          for (const auto& address : raw_addr_list) {
+            if (address_family == ADDRESS_FAMILY_UNSPECIFIED ||
+                address_family == address.GetFamily()) {
+              addrlist->push_back(address);
+            }
+          }
+          addrlist->set_canonical_name(raw_addr_list.canonical_name());
+
+          if (result == OK && addrlist->empty())
+            return ERR_NAME_NOT_RESOLVED;
+          return result;
+        }
         default:
           NOTREACHED();
           return ERR_UNEXPECTED;
@@ -435,13 +451,32 @@ RuleBasedHostResolverProc::~RuleBasedHostResolverProc() {
 }
 
 void RuleBasedHostResolverProc::AddRuleInternal(const Rule& rule) {
+  Rule fixed_rule = rule;
+  // SystemResolverProc expects valid DNS addresses.
+  // So for kResolverTypeSystem rules:
+  // * If the replacement is an IP address, switch to an IP literal rule.
+  // * If it's a non-empty invalid domain name, switch to a fail rule (Empty
+  // domain names mean use a direct lookup).
+  if (fixed_rule.resolver_type == Rule::kResolverTypeSystem) {
+    IPAddress ip_address;
+    bool valid_address = ip_address.AssignFromIPLiteral(fixed_rule.replacement);
+    if (valid_address) {
+      fixed_rule.resolver_type = Rule::kResolverTypeIPLiteral;
+    } else if (!fixed_rule.replacement.empty() &&
+               !IsValidDNSDomain(fixed_rule.replacement)) {
+      // TODO(mmenke): Can this be replaced with a DCHECK instead?
+      fixed_rule.resolver_type = Rule::kResolverTypeFail;
+    }
+  }
+
   CHECK(modifications_allowed_);
   base::AutoLock lock(rule_lock_);
-  rules_.push_back(rule);
+  rules_.push_back(fixed_rule);
 }
 
 RuleBasedHostResolverProc* CreateCatchAllHostResolverProc() {
   RuleBasedHostResolverProc* catchall = new RuleBasedHostResolverProc(NULL);
+  // Note that IPv6 lookups fail.
   catchall->AddIPLiteralRule("*", "127.0.0.1", "localhost");
 
   // Next add a rules-based layer the use controls.

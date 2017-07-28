@@ -47,7 +47,7 @@ class BASE_EXPORT TraceEventETWExport {
       const char* name,
       unsigned long long id,
       int num_args,
-      const char** arg_names,
+      const char* const* arg_names,
       const unsigned char* arg_types,
       const unsigned long long* arg_values,
       const std::unique_ptr<ConvertableToTraceFormat>* convertable_values);
