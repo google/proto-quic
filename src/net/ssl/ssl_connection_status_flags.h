@@ -35,7 +35,7 @@ enum {
 // NOTE: the SSL version enum constants must be between 0 and
 // SSL_CONNECTION_VERSION_MASK, inclusive. These values are persisted to disk
 // and used in UMA, so they must remain stable.
-enum {
+enum SSLVersion {
   SSL_CONNECTION_VERSION_UNKNOWN = 0,  // Unknown SSL version.
   SSL_CONNECTION_VERSION_SSL2 = 1,
   SSL_CONNECTION_VERSION_SSL3 = 2,
@@ -53,9 +53,10 @@ inline uint16_t SSLConnectionStatusToCipherSuite(int connection_status) {
   return static_cast<uint16_t>(connection_status);
 }
 
-inline int SSLConnectionStatusToVersion(int connection_status) {
-  return (connection_status >> SSL_CONNECTION_VERSION_SHIFT) &
-         SSL_CONNECTION_VERSION_MASK;
+inline SSLVersion SSLConnectionStatusToVersion(int connection_status) {
+  return static_cast<SSLVersion>(
+      (connection_status >> SSL_CONNECTION_VERSION_SHIFT) &
+      SSL_CONNECTION_VERSION_MASK);
 }
 
 inline void SSLConnectionStatusSetCipherSuite(uint16_t cipher_suite,

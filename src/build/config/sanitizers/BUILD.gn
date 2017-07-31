@@ -39,11 +39,6 @@ group("deps") {
       "//tools/valgrind/asan/",
       "$clang_base_path/bin/llvm-symbolizer${exe}",
     ]
-    if (is_linux) {
-      # llvm-symbolizer needs this.
-      data += [ "$clang_base_path/lib/libstdc++.so.6" ]
-    }
-
     if (use_prebuilt_instrumented_libraries ||
         use_locally_built_instrumented_libraries) {
       deps += [ "//third_party/instrumented_libraries:deps" ]

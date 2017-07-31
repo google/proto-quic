@@ -32,6 +32,7 @@ The following command can be used to match certificates and their key hashes:
   * [6115f06a338a649e61585210e76f2ece3989bca65a62b066040cd7c5f408edd0.pem](excluded/6115f06a338a649e61585210e76f2ece3989bca65a62b066040cd7c5f408edd0.pem)
   * [904fb5a437754b1b32b80ebae7416db63d05f56a9939720b7c8e3dcc54f6a3d1.pem](excluded/904fb5a437754b1b32b80ebae7416db63d05f56a9939720b7c8e3dcc54f6a3d1.pem)
   * [ac2b922ecfd5e01711772fea8ed372de9d1e2245fce3f57a9cdbec77296a424b.pem](excluded/ac2b922ecfd5e01711772fea8ed372de9d1e2245fce3f57a9cdbec77296a424b.pem)
+  * [a4fe7c7f15155f3f0aef7aaa83cf6e06deb97ca3f909df920ac1490882d488ed.pem](excluded/a4fe7c7f15155f3f0aef7aaa83cf6e06deb97ca3f909df920ac1490882d488ed.pem)
 
 ### Google
 

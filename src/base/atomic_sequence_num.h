@@ -28,10 +28,6 @@ class AtomicSequenceNumber {
   DISALLOW_COPY_AND_ASSIGN(AtomicSequenceNumber);
 };
 
-// TODO(tzik): Replace all usage of StaticAtomicSequenceNumber with
-// AtomicSequenceNumber, and remove this alias.
-using StaticAtomicSequenceNumber = AtomicSequenceNumber;
-
 }  // namespace base
 
 #endif  // BASE_ATOMIC_SEQUENCE_NUM_H_

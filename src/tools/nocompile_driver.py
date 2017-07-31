@@ -18,7 +18,6 @@ import ast
 import os
 import re
 import select
-import shlex
 import subprocess
 import sys
 import time
@@ -86,7 +85,9 @@ def ValidateInput(parallelism, sourcefile_path, cflags, resultfile_path):
   """Make sure the arguments being passed in are sane."""
   assert parallelism >= 1
   assert type(sourcefile_path) is str
-  assert type(cflags) is str
+  assert type(cflags) is list
+  for flag in cflags:
+    assert(type(flag) is str)
   assert type(resultfile_path) is str
 
 
@@ -182,8 +183,7 @@ def StartTest(sourcefile_path, cflags, config):
 
   Args:
     sourcefile_path: The path to the source file.
-    cflags: A string with all the CFLAGS to give to gcc. This string will be
-            split by shelex so be careful with escaping.
+    cflags: An array of strings with all the CFLAGS to give to gcc.
     config: A dictionary describing the test.  See ExtractTestConfigs
       for a description of the config format.
 
@@ -215,7 +215,7 @@ def StartTest(sourcefile_path, cflags, config):
   cmdline = [os.path.join(os.path.dirname(os.path.realpath(__file__)),
                           '../third_party/llvm-build/Release+Asserts/bin',
                           'clang++')]
-  cmdline.extend(shlex.split(cflags))
+  cmdline.extend(cflags)
   name = config['name']
   expectations = config['expectations']
   if expectations is not None:
@@ -396,8 +396,8 @@ def CompleteAtLeastOneTest(executing_tests):
 
 
 def main():
-  if len(sys.argv) != 5:
-    print ('Usage: %s <parallelism> <sourcefile> <cflags> <resultfile>' %
+  if len(sys.argv) < 5 or sys.argv[4] != '--':
+    print ('Usage: %s <parallelism> <sourcefile> <resultfile> -- <cflags...>' %
            sys.argv[0])
     sys.exit(1)
 
@@ -408,8 +408,8 @@ def main():
 
   parallelism = int(sys.argv[1])
   sourcefile_path = sys.argv[2]
-  cflags = sys.argv[3]
-  resultfile_path = sys.argv[4]
+  resultfile_path = sys.argv[3]
+  cflags = sys.argv[5:]
 
   timings = {'started': time.time()}
 
@@ -433,9 +433,10 @@ def main():
   executing_tests = {}
   finished_tests = []
 
+  cflags.extend(['-MMD', '-MF', resultfile_path + '.d', '-MT', resultfile_path])
   test = StartTest(
       sourcefile_path,
-      cflags + ' -MMD -MF %s.d -MT %s' % (resultfile_path, resultfile_path),
+      cflags,
       { 'name': 'NCTEST_SANITY',
         'suite_name': suite_name,
         'expectations': None,

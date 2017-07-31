@@ -293,7 +293,7 @@ int TransportConnectJob::DoTransportConnect() {
   if (socket_performance_watcher_factory_) {
     socket_performance_watcher =
         socket_performance_watcher_factory_->CreateSocketPerformanceWatcher(
-            SocketPerformanceWatcherFactory::PROTOCOL_TCP);
+            SocketPerformanceWatcherFactory::PROTOCOL_TCP, addresses_);
   }
   transport_socket_ = client_socket_factory_->CreateTransportClientSocket(
       addresses_, std::move(socket_performance_watcher), net_log().net_log(),
@@ -374,16 +374,18 @@ void TransportConnectJob::DoIPv6FallbackTransportConnect() {
   DCHECK(!fallback_transport_socket_.get());
   DCHECK(!fallback_addresses_.get());
 
+  fallback_addresses_.reset(new AddressList(addresses_));
+  MakeAddressListStartWithIPv4(fallback_addresses_.get());
+
   // Create a |SocketPerformanceWatcher|, and pass the ownership.
   std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher;
   if (socket_performance_watcher_factory_) {
     socket_performance_watcher =
         socket_performance_watcher_factory_->CreateSocketPerformanceWatcher(
-            SocketPerformanceWatcherFactory::PROTOCOL_TCP);
+            SocketPerformanceWatcherFactory::PROTOCOL_TCP,
+            *fallback_addresses_);
   }
 
-  fallback_addresses_.reset(new AddressList(addresses_));
-  MakeAddressListStartWithIPv4(fallback_addresses_.get());
   fallback_transport_socket_ =
       client_socket_factory_->CreateTransportClientSocket(
           *fallback_addresses_, std::move(socket_performance_watcher),

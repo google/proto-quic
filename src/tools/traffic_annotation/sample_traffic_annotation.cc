@@ -24,7 +24,7 @@ void network_traffic_annotation_template() {
           destination: WEBSITE/GOOGLE_OWNED_SERVICE/OTHER
         }
         policy {
-          cookies_allowed: false/true
+          cookies_allowed: NO/YES
           cookies_store: "..."
           setting: "..."
           chrome_policy {
@@ -58,7 +58,7 @@ void network_traffic_annotation_sample() {
           destination: GOOGLE_OWNED_SERVICE
         }
         policy {
-          cookies_allowed: false
+          cookies_allowed: NO
           setting:
             "You can enable or disable this feature via 'Use a web service to "
             "help resolve spelling errors.' in Chrome's settings under "
@@ -157,7 +157,7 @@ void GetBitmap(
                                             partial_traffic_annotation,
                                             R"(
               policy {
-                cookies_allowed: true
+                cookies_allowed: YES
                 cookies_store: "user"
               })");
   url_fetcher_ = net::URLFetcher::Create(url, net::URLFetcher::GET, this,
@@ -213,7 +213,8 @@ void UploadLog(const bool& uma_service_type) {
   const GURL &url,
       net::PartialNetworkTrafficAnnotationTag partial_traffic_annotation =
           net::DefinePartialNetworkTrafficAnnotation(
-              "net_metrics_report", "metrics_report_based_on_service_type", R"(
+              "net_metrics_report", "metrics_report_based_on_service_type",
+              R"(
         semantics {
           trigger:
             "Reports are automatically generated on startup and at intervals "
@@ -223,7 +224,7 @@ void UploadLog(const bool& uma_service_type) {
           destination: GOOGLE_OWNED_SERVICE
         }
         policy {
-          cookies_allowed: false
+          cookies_allowed: NO
           setting:
             "Users can enable or disable this feature by disabling "
             "'Automatically send usage statistics and crash reports to Google' "

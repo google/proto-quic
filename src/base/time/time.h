@@ -129,6 +129,8 @@ class BASE_EXPORT TimeDelta {
   // when deserializing a |TimeDelta| structure, using a value known to be
   // compatible. It is not provided as a constructor because the integer type
   // may be unclear from the perspective of a caller.
+  //
+  // DEPRECATED - Do not use in new code. http://crbug.com/634507
   static TimeDelta FromInternalValue(int64_t delta) { return TimeDelta(delta); }
 
   // Returns the maximum time delta, which should be greater than any reasonable
@@ -145,6 +147,8 @@ class BASE_EXPORT TimeDelta {
   // use this and do arithmetic on it, as it is more error prone than using the
   // provided operators.
   // For serializing, use FromInternalValue to reconstitute.
+  //
+  // DEPRECATED - Do not use in new code. http://crbug.com/634507
   int64_t ToInternalValue() const { return delta_; }
 
   // Returns the magnitude (absolute value) of this TimeDelta.
@@ -355,7 +359,17 @@ class TimeBase {
   // For serializing only. Use FromInternalValue() to reconstitute. Please don't
   // use this and do arithmetic on it, as it is more error prone than using the
   // provided operators.
+  //
+  // DEPRECATED - Do not use in new code. http://crbug.com/634507
   int64_t ToInternalValue() const { return us_; }
+
+  // The amount of time since the origin (or "zero") point. This is a syntactic
+  // convenience to aid in code readability, mainly for debugging/testing use
+  // cases.
+  //
+  // Warning: While the Time subclass has a fixed origin point, the origin for
+  // the other subclasses can vary each time the application is restarted.
+  TimeDelta since_origin() const { return TimeDelta::FromMicroseconds(us_); }
 
   TimeClass& operator=(TimeClass other) {
     us_ = other.us_;
@@ -407,6 +421,8 @@ class TimeBase {
   // when deserializing a |TimeClass| structure, using a value known to be
   // compatible. It is not provided as a constructor because the integer type
   // may be unclear from the perspective of a caller.
+  //
+  // DEPRECATED - Do not use in new code. http://crbug.com/634507
   static TimeClass FromInternalValue(int64_t us) { return TimeClass(us); }
 
  protected:

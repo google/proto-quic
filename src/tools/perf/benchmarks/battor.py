@@ -31,10 +31,6 @@ class _BattOrBenchmark(perf_benchmark.PerfBenchmark):
   def ShouldDisable(cls, possible_browser):
     return not possible_browser.platform.HasBattOrConnected()
 
-  @classmethod
-  def ShouldTearDownStateAfterEachStoryRun(cls):
-    return True
-
 
 @benchmark.Enabled('mac')
 @benchmark.Owner(emails=['charliea@chromium.org'])

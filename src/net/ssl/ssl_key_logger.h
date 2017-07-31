@@ -25,9 +25,8 @@ namespace net {
 class SSLKeyLogger {
  public:
   // Creates a new SSLKeyLogger which writes to |path|, scheduling write
-  // operations on |task_runner|.
-  SSLKeyLogger(const base::FilePath& path,
-               const scoped_refptr<base::SequencedTaskRunner>& task_runner);
+  // operations in the background.
+  explicit SSLKeyLogger(const base::FilePath& path);
   ~SSLKeyLogger();
 
   // Writes |line| followed by a newline. This may be called by multiple threads

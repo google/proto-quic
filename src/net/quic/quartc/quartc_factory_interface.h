@@ -63,10 +63,6 @@ struct QuartcFactoryConfig {
   // The clock used by QuartcAlarms. Implemented by the Quartc user. Owned by
   // the user, and needs to stay alive for as long as the QuartcFactory exists.
   QuartcClockInterface* clock = nullptr;
-  // If create_at_exit_manager = true, an AtExitManager will be created and
-  // owned by the QuartcFactory. In some scenarios, such as unit tests, this
-  // value could be false and no AtExitManager will be created.
-  bool create_at_exit_manager = true;
 };
 
 // Creates a new instance of QuartcFactoryInterface.

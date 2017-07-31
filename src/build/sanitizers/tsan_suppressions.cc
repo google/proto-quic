@@ -265,6 +265,10 @@ char kTSanDefaultSuppressions[] =
     //
     "race:third_party/harfbuzz-ng/src/*\n"
 
+    // TODO(asvitkine): Remove these after crbug/736675.
+    "race:base::Histogram::AddCount\n"
+    "race:AddCount\n"
+
     // End of suppressions.
     ;  // Please keep this semicolon.
 

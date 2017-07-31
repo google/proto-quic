@@ -18,20 +18,32 @@
 
 // Step 1: forward declarations.
 namespace {
-const char kTestJniClassPath[] = "org/chromium/TestJni";
-const char kInfoBarClassPath[] = "org/chromium/TestJni$InfoBar";
+const char kClassPath_org_chromium_TestJni[] = "org/chromium/TestJni";
+const char kClassPath_org_chromium_TestJni_00024InfoBar[] =
+    "org/chromium/TestJni$InfoBar";
 // Leaking this jclass as we cannot use LazyInstance from some threads.
-base::subtle::AtomicWord g_TestJni_clazz __attribute__((unused)) = 0;
-#define TestJni_clazz(env) base::android::LazyGetClass(env, kTestJniClassPath, &g_TestJni_clazz)
+base::subtle::AtomicWord g_org_chromium_TestJni_clazz __attribute__((unused)) =
+    0;
+
+inline jclass org_chromium_TestJni_clazz(JNIEnv* env) {
+  return base::android::LazyGetClass(env, kClassPath_org_chromium_TestJni,
+      &g_org_chromium_TestJni_clazz);
+}
 // Leaking this jclass as we cannot use LazyInstance from some threads.
-base::subtle::AtomicWord g_InfoBar_clazz __attribute__((unused)) = 0;
-#define InfoBar_clazz(env) base::android::LazyGetClass(env, kInfoBarClassPath, &g_InfoBar_clazz)
+base::subtle::AtomicWord g_org_chromium_TestJni_00024InfoBar_clazz
+    __attribute__((unused)) = 0;
+
+inline jclass org_chromium_TestJni_00024InfoBar_clazz(JNIEnv* env) {
+  return base::android::LazyGetClass(env,
+      kClassPath_org_chromium_TestJni_00024InfoBar,
+      &g_org_chromium_TestJni_00024InfoBar_clazz);
+}
 
 }  // namespace
 
 // Step 2: method stubs.
 
-static base::subtle::AtomicWord g_TestJni_showConfirmInfoBar = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_showConfirmInfoBar = 0;
 static base::android::ScopedJavaLocalRef<jobject>
     Java_TestJni_showConfirmInfoBar(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj, JniIntWrapper nativeInfoBar,
@@ -40,11 +52,11 @@ static base::android::ScopedJavaLocalRef<jobject>
     const base::android::JavaRefOrBare<jstring>& title,
     const base::android::JavaRefOrBare<jobject>& icon) {
   CHECK_CLAZZ(env, obj.obj(),
-      TestJni_clazz(env), NULL);
+      org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "showConfirmInfoBar",
 "("
 "I"
@@ -54,7 +66,7 @@ static base::android::ScopedJavaLocalRef<jobject>
 "Landroid/graphics/Bitmap;"
 ")"
 "Lorg/chromium/Foo$InnerClass;",
-      &g_TestJni_showConfirmInfoBar);
+      &g_org_chromium_TestJni_showConfirmInfoBar);
 
   jobject ret =
       env->CallObjectMethod(obj.obj(),
@@ -64,7 +76,7 @@ static base::android::ScopedJavaLocalRef<jobject>
   return base::android::ScopedJavaLocalRef<jobject>(env, ret);
 }
 
-static base::subtle::AtomicWord g_TestJni_showAutoLoginInfoBar = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_showAutoLoginInfoBar = 0;
 static base::android::ScopedJavaLocalRef<jobject>
     Java_TestJni_showAutoLoginInfoBar(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj, JniIntWrapper nativeInfoBar,
@@ -72,11 +84,11 @@ static base::android::ScopedJavaLocalRef<jobject>
     const base::android::JavaRefOrBare<jstring>& account,
     const base::android::JavaRefOrBare<jstring>& args) {
   CHECK_CLAZZ(env, obj.obj(),
-      TestJni_clazz(env), NULL);
+      org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "showAutoLoginInfoBar",
 "("
 "I"
@@ -85,7 +97,7 @@ static base::android::ScopedJavaLocalRef<jobject>
 "Ljava/lang/String;"
 ")"
 "Lorg/chromium/Foo$InnerClass;",
-      &g_TestJni_showAutoLoginInfoBar);
+      &g_org_chromium_TestJni_showAutoLoginInfoBar);
 
   jobject ret =
       env->CallObjectMethod(obj.obj(),
@@ -95,38 +107,38 @@ static base::android::ScopedJavaLocalRef<jobject>
   return base::android::ScopedJavaLocalRef<jobject>(env, ret);
 }
 
-static base::subtle::AtomicWord g_InfoBar_dismiss = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_00024InfoBar_dismiss = 0;
 static void Java_InfoBar_dismiss(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      InfoBar_clazz(env));
+      org_chromium_TestJni_00024InfoBar_clazz(env));
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, InfoBar_clazz(env),
+      env, org_chromium_TestJni_00024InfoBar_clazz(env),
       "dismiss",
 "("
 ")"
 "V",
-      &g_InfoBar_dismiss);
+      &g_org_chromium_TestJni_00024InfoBar_dismiss);
 
      env->CallVoidMethod(obj.obj(),
           method_id);
   jni_generator::CheckException(env);
 }
 
-static base::subtle::AtomicWord g_TestJni_shouldShowAutoLogin = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_shouldShowAutoLogin = 0;
 static jboolean Java_TestJni_shouldShowAutoLogin(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& view,
     const base::android::JavaRefOrBare<jstring>& realm,
     const base::android::JavaRefOrBare<jstring>& account,
     const base::android::JavaRefOrBare<jstring>& args) {
-  CHECK_CLAZZ(env, TestJni_clazz(env),
-      TestJni_clazz(env), false);
+  CHECK_CLAZZ(env, org_chromium_TestJni_clazz(env),
+      org_chromium_TestJni_clazz(env), false);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_STATIC>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "shouldShowAutoLogin",
 "("
 "Landroid/view/View;"
@@ -135,39 +147,40 @@ static jboolean Java_TestJni_shouldShowAutoLogin(JNIEnv* env, const
 "Ljava/lang/String;"
 ")"
 "Z",
-      &g_TestJni_shouldShowAutoLogin);
+      &g_org_chromium_TestJni_shouldShowAutoLogin);
 
   jboolean ret =
-      env->CallStaticBooleanMethod(TestJni_clazz(env),
+      env->CallStaticBooleanMethod(org_chromium_TestJni_clazz(env),
           method_id, view.obj(), realm.obj(), account.obj(), args.obj());
   jni_generator::CheckException(env);
   return ret;
 }
 
-static base::subtle::AtomicWord g_TestJni_openUrl = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_openUrl = 0;
 static base::android::ScopedJavaLocalRef<jobject> Java_TestJni_openUrl(JNIEnv*
     env, const base::android::JavaRefOrBare<jstring>& url) {
-  CHECK_CLAZZ(env, TestJni_clazz(env),
-      TestJni_clazz(env), NULL);
+  CHECK_CLAZZ(env, org_chromium_TestJni_clazz(env),
+      org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_STATIC>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "openUrl",
 "("
 "Ljava/lang/String;"
 ")"
 "Ljava/io/InputStream;",
-      &g_TestJni_openUrl);
+      &g_org_chromium_TestJni_openUrl);
 
   jobject ret =
-      env->CallStaticObjectMethod(TestJni_clazz(env),
+      env->CallStaticObjectMethod(org_chromium_TestJni_clazz(env),
           method_id, url.obj());
   jni_generator::CheckException(env);
   return base::android::ScopedJavaLocalRef<jobject>(env, ret);
 }
 
-static base::subtle::AtomicWord g_TestJni_activateHardwareAcceleration = 0;
+static base::subtle::AtomicWord
+    g_org_chromium_TestJni_activateHardwareAcceleration = 0;
 static void Java_TestJni_activateHardwareAcceleration(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj, jboolean activated,
     JniIntWrapper iPid,
@@ -175,11 +188,11 @@ static void Java_TestJni_activateHardwareAcceleration(JNIEnv* env, const
     JniIntWrapper iPrimaryID,
     JniIntWrapper iSecondaryID) {
   CHECK_CLAZZ(env, obj.obj(),
-      TestJni_clazz(env));
+      org_chromium_TestJni_clazz(env));
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "activateHardwareAcceleration",
 "("
 "Z"
@@ -189,7 +202,7 @@ static void Java_TestJni_activateHardwareAcceleration(JNIEnv* env, const
 "I"
 ")"
 "V",
-      &g_TestJni_activateHardwareAcceleration);
+      &g_org_chromium_TestJni_activateHardwareAcceleration);
 
      env->CallVoidMethod(obj.obj(),
           method_id, activated, as_jint(iPid), as_jint(iType),
@@ -197,63 +210,63 @@ static void Java_TestJni_activateHardwareAcceleration(JNIEnv* env, const
   jni_generator::CheckException(env);
 }
 
-static base::subtle::AtomicWord g_TestJni_updateStatus = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_updateStatus = 0;
 static jint Java_TestJni_updateStatus(JNIEnv* env, JniIntWrapper status) {
-  CHECK_CLAZZ(env, TestJni_clazz(env),
-      TestJni_clazz(env), 0);
+  CHECK_CLAZZ(env, org_chromium_TestJni_clazz(env),
+      org_chromium_TestJni_clazz(env), 0);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_STATIC>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "updateStatus",
 "("
 "I"
 ")"
 "I",
-      &g_TestJni_updateStatus);
+      &g_org_chromium_TestJni_updateStatus);
 
   jint ret =
-      env->CallStaticIntMethod(TestJni_clazz(env),
+      env->CallStaticIntMethod(org_chromium_TestJni_clazz(env),
           method_id, as_jint(status));
   jni_generator::CheckException(env);
   return ret;
 }
 
-static base::subtle::AtomicWord g_TestJni_uncheckedCall = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_uncheckedCall = 0;
 static void Java_TestJni_uncheckedCall(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj, JniIntWrapper iParam) {
   CHECK_CLAZZ(env, obj.obj(),
-      TestJni_clazz(env));
+      org_chromium_TestJni_clazz(env));
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "uncheckedCall",
 "("
 "I"
 ")"
 "V",
-      &g_TestJni_uncheckedCall);
+      &g_org_chromium_TestJni_uncheckedCall);
 
      env->CallVoidMethod(obj.obj(),
           method_id, as_jint(iParam));
 }
 
-static base::subtle::AtomicWord g_TestJni_returnByteArray = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_returnByteArray = 0;
 static base::android::ScopedJavaLocalRef<jbyteArray>
     Java_TestJni_returnByteArray(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      TestJni_clazz(env), NULL);
+      org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "returnByteArray",
 "("
 ")"
 "[B",
-      &g_TestJni_returnByteArray);
+      &g_org_chromium_TestJni_returnByteArray);
 
   jbyteArray ret =
       static_cast<jbyteArray>(env->CallObjectMethod(obj.obj(),
@@ -262,21 +275,21 @@ static base::android::ScopedJavaLocalRef<jbyteArray>
   return base::android::ScopedJavaLocalRef<jbyteArray>(env, ret);
 }
 
-static base::subtle::AtomicWord g_TestJni_returnBooleanArray = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_returnBooleanArray = 0;
 static base::android::ScopedJavaLocalRef<jbooleanArray>
     Java_TestJni_returnBooleanArray(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      TestJni_clazz(env), NULL);
+      org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "returnBooleanArray",
 "("
 ")"
 "[Z",
-      &g_TestJni_returnBooleanArray);
+      &g_org_chromium_TestJni_returnBooleanArray);
 
   jbooleanArray ret =
       static_cast<jbooleanArray>(env->CallObjectMethod(obj.obj(),
@@ -285,21 +298,21 @@ static base::android::ScopedJavaLocalRef<jbooleanArray>
   return base::android::ScopedJavaLocalRef<jbooleanArray>(env, ret);
 }
 
-static base::subtle::AtomicWord g_TestJni_returnCharArray = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_returnCharArray = 0;
 static base::android::ScopedJavaLocalRef<jcharArray>
     Java_TestJni_returnCharArray(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      TestJni_clazz(env), NULL);
+      org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "returnCharArray",
 "("
 ")"
 "[C",
-      &g_TestJni_returnCharArray);
+      &g_org_chromium_TestJni_returnCharArray);
 
   jcharArray ret =
       static_cast<jcharArray>(env->CallObjectMethod(obj.obj(),
@@ -308,21 +321,21 @@ static base::android::ScopedJavaLocalRef<jcharArray>
   return base::android::ScopedJavaLocalRef<jcharArray>(env, ret);
 }
 
-static base::subtle::AtomicWord g_TestJni_returnShortArray = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_returnShortArray = 0;
 static base::android::ScopedJavaLocalRef<jshortArray>
     Java_TestJni_returnShortArray(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      TestJni_clazz(env), NULL);
+      org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "returnShortArray",
 "("
 ")"
 "[S",
-      &g_TestJni_returnShortArray);
+      &g_org_chromium_TestJni_returnShortArray);
 
   jshortArray ret =
       static_cast<jshortArray>(env->CallObjectMethod(obj.obj(),
@@ -331,21 +344,21 @@ static base::android::ScopedJavaLocalRef<jshortArray>
   return base::android::ScopedJavaLocalRef<jshortArray>(env, ret);
 }
 
-static base::subtle::AtomicWord g_TestJni_returnIntArray = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_returnIntArray = 0;
 static base::android::ScopedJavaLocalRef<jintArray>
     Java_TestJni_returnIntArray(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      TestJni_clazz(env), NULL);
+      org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "returnIntArray",
 "("
 ")"
 "[I",
-      &g_TestJni_returnIntArray);
+      &g_org_chromium_TestJni_returnIntArray);
 
   jintArray ret =
       static_cast<jintArray>(env->CallObjectMethod(obj.obj(),
@@ -354,21 +367,21 @@ static base::android::ScopedJavaLocalRef<jintArray>
   return base::android::ScopedJavaLocalRef<jintArray>(env, ret);
 }
 
-static base::subtle::AtomicWord g_TestJni_returnLongArray = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_returnLongArray = 0;
 static base::android::ScopedJavaLocalRef<jlongArray>
     Java_TestJni_returnLongArray(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      TestJni_clazz(env), NULL);
+      org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "returnLongArray",
 "("
 ")"
 "[J",
-      &g_TestJni_returnLongArray);
+      &g_org_chromium_TestJni_returnLongArray);
 
   jlongArray ret =
       static_cast<jlongArray>(env->CallObjectMethod(obj.obj(),
@@ -377,21 +390,21 @@ static base::android::ScopedJavaLocalRef<jlongArray>
   return base::android::ScopedJavaLocalRef<jlongArray>(env, ret);
 }
 
-static base::subtle::AtomicWord g_TestJni_returnDoubleArray = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_returnDoubleArray = 0;
 static base::android::ScopedJavaLocalRef<jdoubleArray>
     Java_TestJni_returnDoubleArray(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      TestJni_clazz(env), NULL);
+      org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "returnDoubleArray",
 "("
 ")"
 "[D",
-      &g_TestJni_returnDoubleArray);
+      &g_org_chromium_TestJni_returnDoubleArray);
 
   jdoubleArray ret =
       static_cast<jdoubleArray>(env->CallObjectMethod(obj.obj(),
@@ -400,21 +413,21 @@ static base::android::ScopedJavaLocalRef<jdoubleArray>
   return base::android::ScopedJavaLocalRef<jdoubleArray>(env, ret);
 }
 
-static base::subtle::AtomicWord g_TestJni_returnObjectArray = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_returnObjectArray = 0;
 static base::android::ScopedJavaLocalRef<jobjectArray>
     Java_TestJni_returnObjectArray(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      TestJni_clazz(env), NULL);
+      org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "returnObjectArray",
 "("
 ")"
 "[Ljava/lang/Object;",
-      &g_TestJni_returnObjectArray);
+      &g_org_chromium_TestJni_returnObjectArray);
 
   jobjectArray ret =
       static_cast<jobjectArray>(env->CallObjectMethod(obj.obj(),
@@ -423,21 +436,22 @@ static base::android::ScopedJavaLocalRef<jobjectArray>
   return base::android::ScopedJavaLocalRef<jobjectArray>(env, ret);
 }
 
-static base::subtle::AtomicWord g_TestJni_returnArrayOfByteArray = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_returnArrayOfByteArray =
+    0;
 static base::android::ScopedJavaLocalRef<jobjectArray>
     Java_TestJni_returnArrayOfByteArray(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      TestJni_clazz(env), NULL);
+      org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "returnArrayOfByteArray",
 "("
 ")"
 "[[B",
-      &g_TestJni_returnArrayOfByteArray);
+      &g_org_chromium_TestJni_returnArrayOfByteArray);
 
   jobjectArray ret =
       static_cast<jobjectArray>(env->CallObjectMethod(obj.obj(),
@@ -446,21 +460,21 @@ static base::android::ScopedJavaLocalRef<jobjectArray>
   return base::android::ScopedJavaLocalRef<jobjectArray>(env, ret);
 }
 
-static base::subtle::AtomicWord g_TestJni_getCompressFormat = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_getCompressFormat = 0;
 static base::android::ScopedJavaLocalRef<jobject>
     Java_TestJni_getCompressFormat(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      TestJni_clazz(env), NULL);
+      org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "getCompressFormat",
 "("
 ")"
 "Landroid/graphics/Bitmap$CompressFormat;",
-      &g_TestJni_getCompressFormat);
+      &g_org_chromium_TestJni_getCompressFormat);
 
   jobject ret =
       env->CallObjectMethod(obj.obj(),
@@ -469,21 +483,22 @@ static base::android::ScopedJavaLocalRef<jobject>
   return base::android::ScopedJavaLocalRef<jobject>(env, ret);
 }
 
-static base::subtle::AtomicWord g_TestJni_getCompressFormatList = 0;
+static base::subtle::AtomicWord g_org_chromium_TestJni_getCompressFormatList =
+    0;
 static base::android::ScopedJavaLocalRef<jobject>
     Java_TestJni_getCompressFormatList(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
-      TestJni_clazz(env), NULL);
+      org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, TestJni_clazz(env),
+      env, org_chromium_TestJni_clazz(env),
       "getCompressFormatList",
 "("
 ")"
 "Ljava/util/List;",
-      &g_TestJni_getCompressFormatList);
+      &g_org_chromium_TestJni_getCompressFormatList);
 
   jobject ret =
       env->CallObjectMethod(obj.obj(),

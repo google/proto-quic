@@ -530,15 +530,6 @@ bool Value::Equals(const Value* other) const {
   return *this == *other;
 }
 
-// static
-bool Value::Equals(const Value* a, const Value* b) {
-  if ((a == NULL) && (b == NULL))
-    return true;
-  if ((a == NULL) ^ (b == NULL))
-    return false;
-  return *a == *b;
-}
-
 void Value::InternalCopyFundamentalValue(const Value& that) {
   switch (type_) {
     case Type::NONE:

@@ -305,6 +305,8 @@ def main(argv):
   parser.add_option('--secondary-abi-shared-libraries-runtime-deps',
                     help='Path to file containing runtime deps for secondary '
                          'abi shared libraries.')
+  parser.add_option('--enable-relocation-packing',
+                    help='Whether relocation packing is enabled.')
 
   # apk options
   parser.add_option('--apk-path', help='Path to the target\'s apk output.')
@@ -472,6 +474,7 @@ def main(argv):
       deps_info['incremental_apk_path'] = options.incremental_apk_path
       deps_info['incremental_install_script_path'] = (
           options.incremental_install_script_path)
+      deps_info['enable_relocation_packing'] = options.enable_relocation_packing
 
   if options.type in ('java_binary', 'java_library', 'android_apk', 'dist_jar'):
     # Classpath values filled in below (after applying tested_apk_config).

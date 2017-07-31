@@ -15,7 +15,6 @@
 #include "net/cert/internal/name_constraints.h"
 #include "net/cert/internal/parse_certificate.h"
 #include "net/cert/internal/signature_algorithm.h"
-#include "net/cert/internal/signature_policy.h"
 #include "net/cert/internal/trust_store.h"
 #include "net/cert/internal/verify_signed_data.h"
 #include "net/der/input.h"
@@ -67,6 +66,10 @@ DEFINE_CERT_ERROR_ID(kCertIsNotTrustAnchor,
 DEFINE_CERT_ERROR_ID(kNoValidPolicy, "No valid policy");
 DEFINE_CERT_ERROR_ID(kPolicyMappingAnyPolicy,
                      "PolicyMappings must not map anyPolicy");
+DEFINE_CERT_ERROR_ID(kFailedParsingSpki, "Couldn't parse SubjectPublicKeyInfo");
+DEFINE_CERT_ERROR_ID(kUnacceptableSignatureAlgorithm,
+                     "Unacceptable signature algorithm");
+DEFINE_CERT_ERROR_ID(kUnacceptablePublicKey, "Unacceptable public key");
 
 bool IsHandledCriticalExtension(const ParsedExtension& extension) {
   if (extension.oid == BasicConstraintsOid())
@@ -437,7 +440,7 @@ class PathVerifier {
   // Same parameters and meaning as VerifyCertificateChain().
   void Run(const ParsedCertificateList& certs,
            const CertificateTrust& last_cert_trust,
-           const SignaturePolicy* signature_policy,
+           VerifyCertificateChainDelegate* delegate,
            const der::GeneralizedTime& time,
            KeyPurpose required_key_purpose,
            InitialExplicitPolicy initial_explicit_policy,
@@ -462,7 +465,6 @@ class PathVerifier {
   // Processing" procedure.
   void BasicCertificateProcessing(const ParsedCertificate& cert,
                                   bool is_target_cert,
-                                  const SignaturePolicy* signature_policy,
                                   const der::GeneralizedTime& time,
                                   KeyPurpose required_key_purpose,
                                   CertErrors* errors);
@@ -490,6 +492,12 @@ class PathVerifier {
                               const CertificateTrust& trust,
                               KeyPurpose required_key_purpose,
                               CertErrors* errors);
+
+  // Parses |spki| to an EVP_PKEY and checks whether the public key is accepted
+  // by |delegate_|. On failure parsing returns nullptr. If either parsing the
+  // key or key policy failed, adds a high-severity error to |errors|.
+  bssl::UniquePtr<EVP_PKEY> ParseAndCheckPublicKey(const der::Input& spki,
+                                                   CertErrors* errors);
 
   ValidPolicyTree valid_policy_tree_;
 
@@ -541,21 +549,22 @@ class PathVerifier {
   //   otherwise the initial value is n+1.
   size_t policy_mapping_;
 
-  // |working_spki_| is an amalgamation of 3 separate variables from RFC 5280:
+  // |working_public_key_| is an amalgamation of 3 separate variables from RFC
+  // 5280:
   //    * working_public_key
   //    * working_public_key_algorithm
   //    * working_public_key_parameters
   //
   // They are combined for simplicity since the signature verification takes an
-  // SPKI, and the parameter inheritence is not applicable for the supported
-  // key types.
+  // EVP_PKEY, and the parameter inheritence is not applicable for the supported
+  // key types. |working_public_key_| may be null if parsing failed.
   //
-  // An approximate explanation of |working_spki| is this description from RFC
-  // 5280 section 6.1.2:
+  // An approximate explanation of |working_public_key_| is this description
+  // from RFC 5280 section 6.1.2:
   //
   //    working_public_key:  the public key used to verify the
   //    signature of a certificate.
-  der::Input working_spki_;
+  bssl::UniquePtr<EVP_PKEY> working_public_key_;
 
   // |working_normalized_issuer_name_| is the normalized value of the
   // working_issuer_name variable in RFC 5280 section 6.1.2:
@@ -573,6 +582,8 @@ class PathVerifier {
   //    field within the basic constraints extension of a CA
   //    certificate.
   size_t max_path_length_;
+
+  VerifyCertificateChainDelegate* delegate_;
 };
 
 void PathVerifier::VerifyPolicies(const ParsedCertificate& cert,
@@ -779,7 +790,6 @@ void PathVerifier::VerifyPolicyMappings(const ParsedCertificate& cert,
 void PathVerifier::BasicCertificateProcessing(
     const ParsedCertificate& cert,
     bool is_target_cert,
-    const SignaturePolicy* signature_policy,
     const der::GeneralizedTime& time,
     KeyPurpose required_key_purpose,
     CertErrors* errors) {
@@ -788,12 +798,20 @@ void PathVerifier::BasicCertificateProcessing(
   // sections 4.1.1.2 and 4.1.2.3.
   VerifySignatureAlgorithmsMatch(cert, errors);
 
-  // Verify the digital signature using the previous certificate's key (RFC
-  // 5280 section 6.1.3 step a.1).
-  if (!VerifySignedData(cert.signature_algorithm(), cert.tbs_certificate_tlv(),
-                        cert.signature_value(), working_spki_, signature_policy,
-                        errors)) {
-    errors->AddError(kVerifySignedDataFailed);
+  // Check whether this signature algorithm is allowed.
+  if (!delegate_->IsSignatureAlgorithmAcceptable(cert.signature_algorithm(),
+                                                 errors)) {
+    errors->AddError(kUnacceptableSignatureAlgorithm);
+  }
+
+  if (working_public_key_) {
+    // Verify the digital signature using the previous certificate's key (RFC
+    // 5280 section 6.1.3 step a.1).
+    if (!VerifySignedData(cert.signature_algorithm(),
+                          cert.tbs_certificate_tlv(), cert.signature_value(),
+                          working_public_key_.get())) {
+      errors->AddError(kVerifySignedDataFailed);
+    }
   }
 
   // Check the time range for the certificate's validity, ensuring it is valid
@@ -844,7 +862,7 @@ void PathVerifier::PrepareForNextCertificate(const ParsedCertificate& cert,
   // From RFC 5280 section 6.1.4 step d:
   //
   //    Assign the certificate subjectPublicKey to working_public_key.
-  working_spki_ = cert.tbs().spki_tlv;
+  working_public_key_ = ParseAndCheckPublicKey(cert.tbs().spki_tlv, errors);
 
   // Note that steps e and f are omitted as they are handled by
   // the assignment to |working_spki| above. See the definition
@@ -1048,6 +1066,11 @@ void PathVerifier::WrapUp(const ParsedCertificate& cert, CertErrors* errors) {
   // The following check is NOT part of RFC 5280 6.1.5's "Wrap-Up Procedure",
   // however is implied by RFC 5280 section 4.2.1.9.
   VerifyTargetCertHasConsistentCaBits(cert, errors);
+
+  // Check the public key for the target certificate. The public key for the
+  // other certificates is already checked by PrepareForNextCertificate().
+  // Note that this step is not part of RFC 5280 6.1.5.
+  ParseAndCheckPublicKey(cert.tbs().spki_tlv, errors);
 }
 
 void PathVerifier::ApplyTrustAnchorConstraints(const ParsedCertificate& cert,
@@ -1101,7 +1124,7 @@ void PathVerifier::ProcessRootCertificate(const ParsedCertificate& cert,
   // Use the certificate's SPKI and subject when verifying the next certificate.
   // Note this is initialized even in the case of untrusted roots (they already
   // emit an error for the distrust).
-  working_spki_ = cert.tbs().spki_tlv;
+  working_public_key_ = ParseAndCheckPublicKey(cert.tbs().spki_tlv, errors);
   working_normalized_issuer_name_ = cert.normalized_subject();
 
   switch (trust.type) {
@@ -1123,10 +1146,27 @@ void PathVerifier::ProcessRootCertificate(const ParsedCertificate& cert,
   }
 }
 
+bssl::UniquePtr<EVP_PKEY> PathVerifier::ParseAndCheckPublicKey(
+    const der::Input& spki,
+    CertErrors* errors) {
+  // Parse the public key.
+  bssl::UniquePtr<EVP_PKEY> pkey;
+  if (!ParsePublicKey(spki, &pkey)) {
+    errors->AddError(kFailedParsingSpki);
+    return nullptr;
+  }
+
+  // Check if the key is acceptable by the delegate.
+  if (!delegate_->IsPublicKeyAcceptable(pkey.get(), errors))
+    errors->AddError(kUnacceptablePublicKey);
+
+  return pkey;
+}
+
 void PathVerifier::Run(
     const ParsedCertificateList& certs,
     const CertificateTrust& last_cert_trust,
-    const SignaturePolicy* signature_policy,
+    VerifyCertificateChainDelegate* delegate,
     const der::GeneralizedTime& time,
     KeyPurpose required_key_purpose,
     InitialExplicitPolicy initial_explicit_policy,
@@ -1137,8 +1177,10 @@ void PathVerifier::Run(
     CertPathErrors* errors) {
   // This implementation is structured to mimic the description of certificate
   // path verification given by RFC 5280 section 6.1.
-  DCHECK(signature_policy);
+  DCHECK(delegate);
   DCHECK(errors);
+
+  delegate_ = delegate;
 
   // An empty chain is necessarily invalid.
   if (certs.empty()) {
@@ -1223,8 +1265,8 @@ void PathVerifier::Run(
     //  * If it is the last certificate in the path (target certificate)
     //     - Then run "Wrap up"
     //     - Otherwise run "Prepare for Next cert"
-    BasicCertificateProcessing(cert, is_target_cert, signature_policy, time,
-                               required_key_purpose, cert_errors);
+    BasicCertificateProcessing(cert, is_target_cert, time, required_key_purpose,
+                               cert_errors);
     if (!is_target_cert) {
       PrepareForNextCertificate(cert, cert_errors);
     } else {
@@ -1246,10 +1288,12 @@ void PathVerifier::Run(
 
 }  // namespace
 
+VerifyCertificateChainDelegate::~VerifyCertificateChainDelegate() = default;
+
 void VerifyCertificateChain(
     const ParsedCertificateList& certs,
     const CertificateTrust& last_cert_trust,
-    const SignaturePolicy* signature_policy,
+    VerifyCertificateChainDelegate* delegate,
     const der::GeneralizedTime& time,
     KeyPurpose required_key_purpose,
     InitialExplicitPolicy initial_explicit_policy,
@@ -1259,10 +1303,10 @@ void VerifyCertificateChain(
     std::set<der::Input>* user_constrained_policy_set,
     CertPathErrors* errors) {
   PathVerifier verifier;
-  verifier.Run(certs, last_cert_trust, signature_policy, time,
-               required_key_purpose, initial_explicit_policy,
-               user_initial_policy_set, initial_policy_mapping_inhibit,
-               initial_any_policy_inhibit, user_constrained_policy_set, errors);
+  verifier.Run(certs, last_cert_trust, delegate, time, required_key_purpose,
+               initial_explicit_policy, user_initial_policy_set,
+               initial_policy_mapping_inhibit, initial_any_policy_inhibit,
+               user_constrained_policy_set, errors);
 }
 
 }  // namespace net

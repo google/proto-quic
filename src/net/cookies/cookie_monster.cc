@@ -395,6 +395,17 @@ CookieMonster::CookieMonster(PersistentCookieStore* store,
   cookieable_schemes_.insert(
       cookieable_schemes_.begin(), kDefaultCookieableSchemes,
       kDefaultCookieableSchemes + kDefaultCookieableSchemesCount);
+  if (channel_id_service_ && store_) {
+    // |store_| can outlive this CookieMonster, but there are no guarantees
+    // about the lifetime of |channel_id_service_| relative to |store_|. The
+    // only guarantee is that |channel_id_service_| will outlive this
+    // CookieMonster. To avoid the PersistentCookieStore retaining a pointer to
+    // the ChannelIDStore via this callback after this CookieMonster is
+    // destroyed, CookieMonster's d'tor sets the callback to a null callback.
+    store_->SetBeforeFlushCallback(
+        base::Bind(&ChannelIDStore::Flush,
+                   base::Unretained(channel_id_service_->GetChannelIDStore())));
+  }
 }
 
 // Asynchronous CookieMonster API
@@ -428,9 +439,6 @@ void CookieMonster::FlushStore(base::OnceClosure callback) {
   DCHECK(thread_checker_.CalledOnValidThread());
 
   if (initialized_ && store_.get()) {
-    if (channel_id_service_) {
-      channel_id_service_->GetChannelIDStore()->Flush();
-    }
     store_->Flush(std::move(callback));
   } else if (callback) {
     base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
@@ -637,6 +645,10 @@ bool CookieMonster::IsEphemeral() {
 
 CookieMonster::~CookieMonster() {
   DCHECK(thread_checker_.CalledOnValidThread());
+
+  if (channel_id_service_ && store_) {
+    store_->SetBeforeFlushCallback(base::Closure());
+  }
 
   // TODO(mmenke): Does it really make sense to run |delegate_| and
   // CookieChanged callbacks when the CookieStore is destroyed?
@@ -1319,6 +1331,10 @@ bool CookieMonster::DeleteAnyEquivalentCookie(const std::string& key,
       } else {
         histogram_cookie_delete_equivalent_->Add(
             COOKIE_DELETE_EQUIVALENT_FOUND);
+        if (cc->Value() == ecc.Value()) {
+          histogram_cookie_delete_equivalent_->Add(
+              COOKIE_DELETE_EQUIVALENT_FOUND_WITH_SAME_VALUE);
+        }
         InternalDeleteCookie(curit, true, already_expired
                                               ? DELETE_COOKIE_EXPIRED_OVERWRITE
                                               : DELETE_COOKIE_OVERWRITE);

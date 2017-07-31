@@ -11,7 +11,7 @@
 #include <memory>
 #include <vector>
 
-#include "net/spdy/core/hpack/hpack_decoder.h"
+#include "net/spdy/core/hpack/hpack_decoder_adapter.h"
 #include "net/spdy/core/hpack/hpack_encoder.h"
 #include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string.h"
@@ -69,9 +69,9 @@ class SPDY_EXPORT_PRIVATE HpackFuzzUtil {
   struct SPDY_EXPORT_PRIVATE FuzzerContext {
     FuzzerContext();
     ~FuzzerContext();
-    std::unique_ptr<HpackDecoder> first_stage;
+    std::unique_ptr<HpackDecoderAdapter> first_stage;
     std::unique_ptr<HpackEncoder> second_stage;
-    std::unique_ptr<HpackDecoder> third_stage;
+    std::unique_ptr<HpackDecoderAdapter> third_stage;
   };
 
   static void InitializeFuzzerContext(FuzzerContext* context);

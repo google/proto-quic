@@ -675,40 +675,27 @@ TEST_F(TcpCubicSenderBytesTest, 1ConnectionCongestionAvoidanceAtEndOfRecovery) {
 
 TEST_F(TcpCubicSenderBytesTest, BandwidthResumption) {
   // Test that when provided with CachedNetworkParameters and opted in to the
-  // bandwidth resumption experiment, that the TcpCubicSender sets initial CWND
-  // appropriately.
+  // bandwidth resumption experiment, that the TcpCubicSenderPackets sets
+  // initial CWND appropriately.
 
   // Set some common values.
-  CachedNetworkParameters cached_network_params;
   const QuicPacketCount kNumberOfPackets = 123;
-  const int kBandwidthEstimateBytesPerSecond =
-      kNumberOfPackets * kDefaultTCPMSS;
-  cached_network_params.set_bandwidth_estimate_bytes_per_second(
-      kBandwidthEstimateBytesPerSecond);
-  cached_network_params.set_min_rtt_ms(1000);
+  const QuicBandwidth kBandwidthEstimate =
+      QuicBandwidth::FromBytesPerSecond(kNumberOfPackets * kDefaultTCPMSS);
+  const QuicTime::Delta kRttEstimate = QuicTime::Delta::FromSeconds(1);
+  sender_->AdjustNetworkParameters(kBandwidthEstimate, kRttEstimate);
+  EXPECT_EQ(kNumberOfPackets * kDefaultTCPMSS, sender_->GetCongestionWindow());
 
-  // Make sure that a bandwidth estimate results in a changed CWND.
-  cached_network_params.set_timestamp(clock_.WallNow().ToUNIXSeconds() -
-                                      (kNumSecondsPerHour - 1));
-  sender_->ResumeConnectionState(cached_network_params, false);
+  // Resume with an illegal value of 0 and verify the server ignores it.
+  sender_->AdjustNetworkParameters(QuicBandwidth::Zero(), kRttEstimate);
   EXPECT_EQ(kNumberOfPackets * kDefaultTCPMSS, sender_->GetCongestionWindow());
 
   // Resumed CWND is limited to be in a sensible range.
-  cached_network_params.set_bandwidth_estimate_bytes_per_second(
-      (kMaxCongestionWindowPackets + 1) * kDefaultTCPMSS);
-  sender_->ResumeConnectionState(cached_network_params, false);
-  EXPECT_EQ(kMaxCongestionWindowPackets * kDefaultTCPMSS,
-            sender_->GetCongestionWindow());
-
-  // Resume with an illegal value of 0 and verify the server uses 1 instead.
-  cached_network_params.set_bandwidth_estimate_bytes_per_second(0);
-  sender_->ResumeConnectionState(cached_network_params, false);
-  EXPECT_EQ(sender_->min_congestion_window(), sender_->GetCongestionWindow());
-
-  // Resume to the max value.
-  cached_network_params.set_max_bandwidth_estimate_bytes_per_second(
-      kMaxCongestionWindowPackets * kDefaultTCPMSS);
-  sender_->ResumeConnectionState(cached_network_params, true);
+  const QuicBandwidth kUnreasonableBandwidth =
+      QuicBandwidth::FromBytesPerSecond((kMaxCongestionWindowPackets + 1) *
+                                        kDefaultTCPMSS);
+  sender_->AdjustNetworkParameters(kUnreasonableBandwidth,
+                                   QuicTime::Delta::FromSeconds(1));
   EXPECT_EQ(kMaxCongestionWindowPackets * kDefaultTCPMSS,
             sender_->GetCongestionWindow());
 }

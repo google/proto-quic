@@ -43,10 +43,6 @@ class TabSwitchingTypical25(perf_benchmark.PerfBenchmark):
   def Name(cls):
     return 'tab_switching.typical_25'
 
-  @classmethod
-  def ShouldTearDownStateAfterEachStoryRun(cls):
-    return False
-
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):

@@ -265,25 +265,16 @@ TEST_P(QuicClientSessionTest, ResetAndTrailers) {
   trailers.OnHeaderBlockEnd(0, 0);
   session_->OnStreamHeaderList(stream_id, /*fin=*/false, 0, trailers);
 
-  if (FLAGS_quic_reloadable_flag_quic_final_offset_from_trailers) {
-    // The stream is now complete from the client's perspective, and it should
-    // be able to create a new outgoing stream.
-    EXPECT_EQ(0u, session_->GetNumOpenOutgoingStreams());
-    stream = session_->CreateOutgoingDynamicStream(kDefaultPriority);
-    EXPECT_NE(nullptr, stream);
-  } else {
-    // The old behavior: receiving trailers with final offset does not trigger
-    // cleanup of local stream state. New streams cannot be created.
-    EXPECT_EQ(1u, session_->GetNumOpenOutgoingStreams());
-    stream = session_->CreateOutgoingDynamicStream(kDefaultPriority);
-    EXPECT_EQ(nullptr, stream);
-  }
+  // The stream is now complete from the client's perspective, and it should
+  // be able to create a new outgoing stream.
+  EXPECT_EQ(0u, session_->GetNumOpenOutgoingStreams());
+  stream = session_->CreateOutgoingDynamicStream(kDefaultPriority);
+  EXPECT_NE(nullptr, stream);
 }
 
 TEST_P(QuicClientSessionTest, ReceivedMalformedTrailersAfterSendingRst) {
   // Tests the situation where the client has sent a RST to the server, and has
   // received trailing headers with a malformed final byte offset value.
-  FLAGS_quic_reloadable_flag_quic_final_offset_from_trailers = true;
   CompleteCryptoHandshake();
 
   QuicSpdyClientStream* stream =

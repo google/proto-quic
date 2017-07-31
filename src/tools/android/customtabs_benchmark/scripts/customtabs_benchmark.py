@@ -41,9 +41,9 @@ _TEST_APP_PACKAGE_NAME = 'org.chromium.customtabs.test'
 _INVALID_VALUE = -1
 
 
-def RunOnce(device, url, speculated_url, warmup, speculation_mode,
-            delay_to_may_launch_url, delay_to_launch_url, cold, chrome_args,
-            reset_chrome_state):
+def RunOnce(device, url, speculated_url, warmup, skip_launcher_activity,
+            speculation_mode, delay_to_may_launch_url, delay_to_launch_url,
+            cold, chrome_args, reset_chrome_state):
   """Runs a test on a device once.
 
   Args:
@@ -51,6 +51,7 @@ def RunOnce(device, url, speculated_url, warmup, speculation_mode,
     url: (str) URL to load.
     speculated_url: (str) Speculated URL.
     warmup: (bool) Whether to call warmup.
+    skip_launcher_activity: (bool) Whether to skip the launcher activity.
     speculation_mode: (str) Speculation Mode.
     delay_to_may_launch_url: (int) Delay to mayLaunchUrl() in ms.
     delay_to_launch_url: (int) Delay to launchUrl() in ms.
@@ -82,6 +83,7 @@ def RunOnce(device, url, speculated_url, warmup, speculation_mode,
         extras={'url': str(url),
                 'speculated_url': str(speculated_url),
                 'warmup': warmup,
+                'skip_launcher_activity': skip_launcher_activity,
                 'speculation_mode': str(speculation_mode),
                 'delay_to_may_launch_url': delay_to_may_launch_url,
                 'delay_to_launch_url': delay_to_launch_url,
@@ -110,9 +112,9 @@ def RunOnce(device, url, speculated_url, warmup, speculation_mode,
     return match.group(1) if match is not None else None
 
 
-RESULT_FIELDS = ('warmup', 'speculation_mode', 'delay_to_may_launch_url',
-                 'delay_to_launch_url', 'commit', 'plt',
-                 'first_contentful_paint')
+RESULT_FIELDS = ('warmup', 'skip_launcher_activity', 'speculation_mode',
+                 'delay_to_may_launch_url', 'delay_to_launch_url', 'commit',
+                 'plt', 'first_contentful_paint')
 Result = collections.namedtuple('Result', RESULT_FIELDS)
 
 
@@ -126,12 +128,13 @@ def ParseResult(result_line):
     An instance of Result.
   """
   tokens = result_line.strip().split(',')
-  assert len(tokens) == 8
-  intent_sent_timestamp = int(tokens[4])
-  return Result(bool(tokens[0]), tokens[1], int(tokens[2]), int(tokens[3]),
-                max(_INVALID_VALUE, int(tokens[5]) - intent_sent_timestamp),
+  assert len(tokens) == 9
+  intent_sent_timestamp = int(tokens[5])
+  return Result(int(tokens[0]), int(tokens[1]), tokens[2], int(tokens[3]),
+                int(tokens[4]),
                 max(_INVALID_VALUE, int(tokens[6]) - intent_sent_timestamp),
-                max(_INVALID_VALUE, int(tokens[7]) - intent_sent_timestamp))
+                max(_INVALID_VALUE, int(tokens[7]) - intent_sent_timestamp),
+                max(_INVALID_VALUE, int(tokens[8]) - intent_sent_timestamp))
 
 
 def LoopOnDevice(device, configs, output_filename, wpr_archive_path=None,
@@ -172,7 +175,8 @@ def LoopOnDevice(device, configs, output_filename, wpr_archive_path=None,
               '--enable-features=SpeculativeResourcePrefetching<trial'])
 
         result = RunOnce(device, config['url'], config['speculated_url'],
-                         config['warmup'], config['speculation_mode'],
+                         config['warmup'], config['skip_launcher_activity'],
+                         config['speculation_mode'],
                          config['delay_to_may_launch_url'],
                          config['delay_to_launch_url'], config['cold'],
                          chrome_args, reset_chrome_state=True)
@@ -200,20 +204,18 @@ def ProcessOutput(filename):
     A numpy structured array.
   """
   import numpy as np
-  data = np.genfromtxt(filename, delimiter=',', skip_header=1)
-  result = np.array(np.zeros(len(data)),
-                    dtype=[('warmup', bool), ('speculation_mode', str),
+  entries = []
+  with open(filename, 'r') as f:
+    lines = f.readlines()
+    entries = [ParseResult(line) for line in lines]
+  result = np.array(entries,
+                    dtype=[('warmup', np.int32),
+                           ('skip_launcher_activity', np.int32),
+                           ('speculation_mode', str),
                            ('delay_to_may_launch_url', np.int32),
                            ('delay_to_launch_url', np.int32),
                            ('commit', np.int32), ('plt', np.int32),
                            ('first_contentful_paint', np.int32)])
-  result['warmup'] = data[:, 0]
-  result['speculation_mode'] = data[:, 1]
-  result['delay_to_may_launch_url'] = data[:, 2]
-  result['delay_to_launch_url'] = data[:, 3]
-  result['commit'] = data[:, 4]
-  result['plt'] = data[:, 5]
-  result['first_contentful_paint'] = data[:, 6]
   return result
 
 
@@ -227,6 +229,9 @@ def _CreateOptionParser():
   parser.add_option('--url', help='URL to navigate to.',
                     default='https://www.android.com')
   parser.add_option('--warmup', help='Call warmup.', default=False,
+                    action='store_true')
+  parser.add_option('--skip_launcher_activity',
+                    help='Skip ChromeLauncherActivity.', default=False,
                     action='store_true')
   parser.add_option('--speculation_mode', default='prerender',
                     help='The speculation mode (prerender, '
@@ -295,6 +300,7 @@ def main():
 
   config = {
       'url': options.url,
+      'skip_launcher_activity': options.skip_launcher_activity,
       'speculated_url': options.speculated_url or options.url,
       'warmup': options.warmup,
       'speculation_mode': options.speculation_mode,

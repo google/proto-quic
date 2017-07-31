@@ -64,6 +64,7 @@ def _BuildManifestMergerClasspath(build_vars):
 def main(argv):
   argv = build_utils.ExpandFileArgs(argv)
   parser = argparse.ArgumentParser(description=__doc__)
+  build_utils.AddDepfileOption(parser)
   parser.add_argument('--build-vars',
                       help='Path to GN build vars file',
                       required=True)
@@ -75,10 +76,12 @@ def main(argv):
                       help='GN list of additional manifest to merge')
   args = parser.parse_args(argv)
 
+  classpath = _BuildManifestMergerClasspath(
+      build_utils.ReadBuildVars(args.build_vars))
   cmd = [
     'java',
     '-cp',
-    _BuildManifestMergerClasspath(build_utils.ReadBuildVars(args.build_vars)),
+    classpath,
     MANIFEST_MERGER_MAIN_CLASS,
     '--out', args.output,
   ]
@@ -94,6 +97,9 @@ def main(argv):
       # a nonzero exit code for failures.
       fail_func=lambda returncode, stderr: returncode != 0 or
         build_utils.IsTimeStale(args.output, [root_manifest] + extras))
+  if args.depfile:
+    inputs = extras + classpath.split(':')
+    build_utils.WriteDepfile(args.depfile, args.output, inputs=inputs)
 
 
 if __name__ == '__main__':

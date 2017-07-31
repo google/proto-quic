@@ -1660,7 +1660,9 @@ TEST_F(QuicSentPacketManagerTest, ResumeConnectionState) {
   CachedNetworkParameters cached_network_params;
   cached_network_params.set_min_rtt_ms(kRttMs);
 
-  EXPECT_CALL(*send_algorithm_, ResumeConnectionState(_, false));
+  EXPECT_CALL(*send_algorithm_, AdjustNetworkParameters(
+                                    QuicBandwidth::Zero(),
+                                    QuicTime::Delta::FromMilliseconds(kRttMs)));
   manager_.ResumeConnectionState(cached_network_params, false);
   EXPECT_EQ(kRttMs * kNumMicrosPerMilli,
             static_cast<uint64_t>(manager_.GetRttStats()->initial_rtt_us()));

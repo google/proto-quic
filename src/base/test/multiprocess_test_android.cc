@@ -33,11 +33,9 @@ SpawnChildResult SpawnMultiProcessTestChild(
 
   std::vector<int> fd_keys;
   std::vector<int> fd_fds;
-  if (options.fds_to_remap) {
-    for (auto& iter : *options.fds_to_remap) {
-      fd_keys.push_back(iter.second);
-      fd_fds.push_back(iter.first);
-    }
+  for (auto& iter : options.fds_to_remap) {
+    fd_keys.push_back(iter.second);
+    fd_fds.push_back(iter.first);
   }
 
   android::ScopedJavaLocalRef<jobjectArray> fds =

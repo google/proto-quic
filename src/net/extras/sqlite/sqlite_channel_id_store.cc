@@ -539,8 +539,12 @@ void SQLiteChannelIDStore::Backend::PrunePendingOperationsForDeletes(
 }
 
 void SQLiteChannelIDStore::Backend::Flush() {
-  background_task_runner_->PostTask(FROM_HERE,
-                                    base::Bind(&Backend::Commit, this));
+  if (background_task_runner_->RunsTasksInCurrentSequence()) {
+    Commit();
+  } else {
+    background_task_runner_->PostTask(FROM_HERE,
+                                      base::Bind(&Backend::Commit, this));
+  }
 }
 
 void SQLiteChannelIDStore::Backend::Commit() {

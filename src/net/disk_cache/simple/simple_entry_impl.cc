@@ -1511,8 +1511,8 @@ void SimpleEntryImpl::AdvanceCrc(net::IOBuffer* buffer,
     uint32_t initial_crc =
         (offset != 0) ? crc32s_[stream_index] : crc32(0, Z_NULL, 0);
     if (length > 0) {
-      crc32s_[stream_index] = crc32(
-          initial_crc, reinterpret_cast<const Bytef*>(buffer->data()), length);
+      crc32s_[stream_index] =
+          simple_util::IncrementalCrc32(initial_crc, buffer->data(), length);
     }
     crc32s_end_offset_[stream_index] = offset + length;
   } else if (offset < crc32s_end_offset_[stream_index]) {

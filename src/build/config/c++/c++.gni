@@ -8,8 +8,9 @@ declare_args() {
   # Use libc++ (buildtools/third_party/libc++ and
   # buildtools/third_party/libc++abi) instead of stdlibc++ as standard
   # library.
-  use_custom_libcxx = (is_linux && !is_chromeos &&
-                       (!is_chromecast || is_cast_desktop_build)) || is_msan
+  use_custom_libcxx =
+      is_msan || is_fuchsia ||
+      (is_linux && !is_chromeos && (!is_chromecast || is_cast_desktop_build))
 
   # ASan, MSan and TSan builds need to override operator new, operator delete,
   # and some exception handling symbols, so libc++ must be a shared library to

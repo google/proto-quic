@@ -196,8 +196,6 @@ class QuicStreamFactoryTestBase {
         close_sessions_on_ip_change_(false),
         idle_connection_timeout_seconds_(kIdleConnectionTimeoutSeconds),
         reduced_ping_timeout_seconds_(kPingTimeoutSecs),
-        packet_reader_yield_after_duration_milliseconds_(
-            kQuicYieldAfterDurationMilliseconds),
         migrate_sessions_on_network_change_(false),
         migrate_sessions_early_(false),
         allow_server_migration_(false),
@@ -220,7 +218,6 @@ class QuicStreamFactoryTestBase {
         close_sessions_on_ip_change_,
         /*mark_quic_broken_when_network_blackholes*/ false,
         idle_connection_timeout_seconds_, reduced_ping_timeout_seconds_,
-        packet_reader_yield_after_duration_milliseconds_,
         migrate_sessions_on_network_change_, migrate_sessions_early_,
         allow_server_migration_, force_hol_blocking_, race_cert_verification_,
         estimate_initial_rtt_, QuicTagVector(),
@@ -729,7 +726,6 @@ class QuicStreamFactoryTestBase {
   bool close_sessions_on_ip_change_;
   int idle_connection_timeout_seconds_;
   int reduced_ping_timeout_seconds_;
-  int packet_reader_yield_after_duration_milliseconds_;
   bool migrate_sessions_on_network_change_;
   bool migrate_sessions_early_;
   bool allow_server_migration_;

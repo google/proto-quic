@@ -38,26 +38,26 @@ class FileProxyTest : public testing::Test {
 
   void DidFinish(File::Error error) {
     error_ = error;
-    MessageLoop::current()->QuitWhenIdle();
+    RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 
   void DidCreateOrOpen(File::Error error) {
     error_ = error;
-    MessageLoop::current()->QuitWhenIdle();
+    RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 
   void DidCreateTemporary(File::Error error,
                           const FilePath& path) {
     error_ = error;
     path_ = path;
-    MessageLoop::current()->QuitWhenIdle();
+    RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 
   void DidGetFileInfo(File::Error error,
                       const File::Info& file_info) {
     error_ = error;
     file_info_ = file_info;
-    MessageLoop::current()->QuitWhenIdle();
+    RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 
   void DidRead(File::Error error,
@@ -66,14 +66,14 @@ class FileProxyTest : public testing::Test {
     error_ = error;
     buffer_.resize(bytes_read);
     memcpy(&buffer_[0], data, bytes_read);
-    MessageLoop::current()->QuitWhenIdle();
+    RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 
   void DidWrite(File::Error error,
                 int bytes_written) {
     error_ = error;
     bytes_written_ = bytes_written;
-    MessageLoop::current()->QuitWhenIdle();
+    RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 
  protected:

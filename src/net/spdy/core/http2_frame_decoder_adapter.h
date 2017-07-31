@@ -7,7 +7,7 @@
 
 // Provides a SpdyFramerDecoderAdapter that uses Http2FrameDecoder for decoding
 // HTTP/2 frames. The adapter does not directly decode HPACK, but instead calls
-// SpdyFramer::GetHpackDecoderForAdapter() to get the decoder to be used.
+// SpdyFramer::GetHpackDecoderAdapter() to get the decoder to be used.
 
 #include <memory>
 

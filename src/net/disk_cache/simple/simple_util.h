@@ -82,6 +82,10 @@ NET_EXPORT_PRIVATE bool GetMTime(const base::FilePath& path,
 // is possible to immediately create a new file with the same name.
 NET_EXPORT_PRIVATE bool SimpleCacheDeleteFile(const base::FilePath& path);
 
+uint32_t Crc32(const char* data, int length);
+
+uint32_t IncrementalCrc32(uint32_t previous_crc, const char* data, int length);
+
 }  // namespace simple_util
 
 }  // namespace disk_cache

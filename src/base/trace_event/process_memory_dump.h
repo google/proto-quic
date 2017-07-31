@@ -30,6 +30,7 @@
 
 namespace base {
 
+class SharedMemory;
 class UnguessableToken;
 
 namespace trace_event {
@@ -73,6 +74,11 @@ class BASE_EXPORT ProcessMemoryDump {
   // value returned is valid only if the given range is currently mmapped by the
   // process. The |start_address| must be page-aligned.
   static size_t CountResidentBytes(void* start_address, size_t mapped_size);
+
+  // Returns the total bytes resident for the given |shared_memory|'s mapped
+  // region.
+  static base::Optional<size_t> CountResidentBytesInSharedMemory(
+      const SharedMemory& shared_memory);
 #endif
 
   ProcessMemoryDump(scoped_refptr<HeapProfilerSerializationState>

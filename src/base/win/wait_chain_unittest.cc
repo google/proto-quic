@@ -190,10 +190,8 @@ Process StartChildProcess(HANDLE mutex, HANDLE sync_event) {
   AppendSwitchHandle(&command_line, "sync_event", sync_event);
 
   LaunchOptions options;
-  HandlesToInheritVector handle_vector;
-  handle_vector.push_back(mutex);
-  handle_vector.push_back(sync_event);
-  options.handles_to_inherit = &handle_vector;
+  options.handles_to_inherit.push_back(mutex);
+  options.handles_to_inherit.push_back(sync_event);
   base::SpawnChildResult spawn_result =
       SpawnMultiProcessTestChild("WaitChainTestProc", command_line, options);
   return std::move(spawn_result.process);

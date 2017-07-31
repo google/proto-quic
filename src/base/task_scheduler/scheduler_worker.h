@@ -19,6 +19,10 @@
 #include "base/time/time.h"
 #include "build/build_config.h"
 
+#if defined(OS_WIN)
+#include "base/win/com_init_check_hook.h"
+#endif
+
 namespace base {
 namespace internal {
 
@@ -195,7 +199,7 @@ class BASE_EXPORT SchedulerWorker
   const std::unique_ptr<Delegate> delegate_;
   TaskTracker* const task_tracker_;
 
-#if defined(OS_WIN)
+#if defined(OS_WIN) && !defined(COM_INIT_CHECK_HOOK_ENABLED)
   const SchedulerBackwardCompatibility backward_compatibility_;
 #endif
 

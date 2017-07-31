@@ -46,7 +46,7 @@ def main():
   if os.path.isdir(output_dir):
     shutil.rmtree(output_dir)
 
-  bucket = 'gs://fuchsia-build/fuchsia/sdk/linux64/'
+  bucket = 'gs://fuchsia/sdk/linux-amd64/'
   with tempfile.NamedTemporaryFile() as f:
     cmd = [os.path.join(find_depot_tools.DEPOT_TOOLS_PATH, 'gsutil.py'),
            'cp', bucket + sdk_hash, f.name]

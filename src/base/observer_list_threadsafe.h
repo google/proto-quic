@@ -170,7 +170,7 @@ class ObserverListThreadSafe
       auto it = observers_.find(observer);
       if (it == observers_.end())
         return;
-      DCHECK(it->second->RunsTasksOnCurrentThread());
+      DCHECK(it->second->RunsTasksInCurrentSequence());
     }
 
     // Keep track of the notification being dispatched on the current thread.

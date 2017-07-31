@@ -875,7 +875,7 @@ bool SequencedWorkerPool::Inner::RunsTasksOnCurrentThread() const {
       runs_tasks_on_verifier_ = CreateTaskRunnerWithTraits(
           {MayBlock(), WithBaseSyncPrimitives(), task_priority_});
     }
-    return runs_tasks_on_verifier_->RunsTasksOnCurrentThread();
+    return runs_tasks_on_verifier_->RunsTasksInCurrentSequence();
   } else {
     return ContainsKey(threads_, PlatformThread::CurrentId());
   }
@@ -891,7 +891,7 @@ bool SequencedWorkerPool::Inner::IsRunningSequenceOnCurrentThread(
     const auto sequenced_task_runner_it =
         sequenced_task_runner_map_.find(sequence_token.id_);
     return sequenced_task_runner_it != sequenced_task_runner_map_.end() &&
-           sequenced_task_runner_it->second->RunsTasksOnCurrentThread();
+           sequenced_task_runner_it->second->RunsTasksInCurrentSequence();
   } else {
     ThreadMap::const_iterator found =
         threads_.find(PlatformThread::CurrentId());
@@ -1502,7 +1502,7 @@ SequencedWorkerPool::~SequencedWorkerPool() {}
 
 void SequencedWorkerPool::OnDestruct() const {
   // Avoid deleting ourselves on a worker thread (which would deadlock).
-  if (RunsTasksOnCurrentThread()) {
+  if (RunsTasksInCurrentSequence()) {
     constructor_task_runner_->DeleteSoon(FROM_HERE, this);
   } else {
     delete this;
@@ -1604,7 +1604,7 @@ bool SequencedWorkerPool::RunsTasksInCurrentSequence() const {
 }
 
 void SequencedWorkerPool::FlushForTesting() {
-  DCHECK(!RunsTasksOnCurrentThread());
+  DCHECK(!RunsTasksInCurrentSequence());
   base::ThreadRestrictions::ScopedAllowWait allow_wait;
   if (g_all_pools_state == AllPoolsState::REDIRECTED_TO_TASK_SCHEDULER) {
     // TODO(gab): Remove this if http://crbug.com/622400 fails.
@@ -1619,7 +1619,7 @@ void SequencedWorkerPool::SignalHasWorkForTesting() {
 }
 
 void SequencedWorkerPool::Shutdown(int max_new_blocking_tasks_after_shutdown) {
-  DCHECK(constructor_task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(constructor_task_runner_->RunsTasksInCurrentSequence());
   inner_->Shutdown(max_new_blocking_tasks_after_shutdown);
 }
 

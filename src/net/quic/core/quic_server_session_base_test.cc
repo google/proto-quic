@@ -198,17 +198,6 @@ MATCHER_P(EqualsProto, network_params, "") {
 INSTANTIATE_TEST_CASE_P(Tests,
                         QuicServerSessionBaseTest,
                         ::testing::ValuesIn(AllSupportedVersions()));
-TEST_P(QuicServerSessionBaseTest, ServerPushDisabledByDefault) {
-  FLAGS_quic_reloadable_flag_quic_enable_server_push_by_default = true;
-  // Without the client explicitly sending kSPSH, server push will be disabled
-  // at the server, until version 35 when it is enabled by default.
-  EXPECT_FALSE(
-      session_->config()->HasReceivedConnectionOptions() &&
-      ContainsQuicTag(session_->config()->ReceivedConnectionOptions(), kSPSH));
-  session_->OnConfigNegotiated();
-  EXPECT_TRUE(session_->server_push_enabled());
-}
-
 TEST_P(QuicServerSessionBaseTest, CloseStreamDueToReset) {
   // Open a stream, then reset it.
   // Send two bytes of payload to open it.
@@ -356,19 +345,6 @@ TEST_P(QuicServerSessionBaseTest, MaxAvailableStreams) {
   // violates the quota.
   EXPECT_FALSE(QuicServerSessionBasePeer::GetOrCreateDynamicStream(
       session_.get(), kLimitingStreamId + 2 * next_id));
-}
-
-// TODO(ckrasic): remove this when
-// FLAGS_quic_reloadable_flag_quic_enable_server_push_by_default is
-// deprecated.
-TEST_P(QuicServerSessionBaseTest, EnableServerPushThroughConnectionOption) {
-  FLAGS_quic_reloadable_flag_quic_enable_server_push_by_default = false;
-  // Assume server received server push connection option.
-  QuicTagVector copt;
-  copt.push_back(kSPSH);
-  QuicConfigPeer::SetReceivedConnectionOptions(session_->config(), copt);
-  session_->OnConfigNegotiated();
-  EXPECT_TRUE(session_->server_push_enabled());
 }
 
 TEST_P(QuicServerSessionBaseTest, GetEvenIncomingError) {

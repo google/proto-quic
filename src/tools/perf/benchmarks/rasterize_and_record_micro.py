@@ -7,6 +7,7 @@ from core import perf_benchmark
 from measurements import rasterize_and_record_micro
 import page_sets
 from telemetry import benchmark
+from telemetry import story
 
 
 class _RasterizeAndRecordMicro(perf_benchmark.PerfBenchmark):
@@ -58,7 +59,15 @@ class RasterizeAndRecordMicroTop25(_RasterizeAndRecordMicro):
     return 'rasterize_and_record_micro.top_25'
 
   def GetExpectations(self):
-    return page_sets.Top25StoryExpectations()
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        self.DisableStory('http://www.cnn.com', [story.expectations.ALL],
+                          'crbug.com/528472')
+        self.DisableStory('https://mail.google.com/mail/',
+                          [story.expectations.ALL_LINUX],
+                          'crbug.com/747021')
+    return StoryExpectations()
+
 
 
 # New benchmark only enabled on Linux until we've observed behavior for a

@@ -244,7 +244,7 @@ void QuicUtils::CopyToBuffer(QuicIOVector iov,
     // prefetch(next_base, PREFETCH_HINT_T0);
     if (iov.iov[iovnum + 1].iov_len >= 64) {
       // TODO(ckrasic) - investigate what to do about prefetch directives.
-      // prefetch(next_base + CACHELINE_SIZE, PREFETCH_HINT_T0);
+      // prefetch(next_base + ABSL_CACHELINE_SIZE, PREFETCH_HINT_T0);
     }
   }
 

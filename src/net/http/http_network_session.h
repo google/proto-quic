@@ -71,6 +71,9 @@ class TransportSecurityState;
 // Specifies the maximum HPACK dynamic table size the server is allowed to set.
 const uint32_t kSpdyMaxHeaderTableSize = 64 * 1024;
 
+// The maximum size of header list that the server is allowed to send.
+const uint32_t kSpdyMaxHeaderListSize = 256 * 1024;
+
 // Specifies the maximum concurrent streams server could send (via push).
 const uint32_t kSpdyMaxConcurrentPushedStreams = 1000;
 
@@ -138,9 +141,6 @@ class NET_EXPORT HttpNetworkSession : public base::MemoryCoordinatorClient {
     // Specifies the reduced ping timeout subsequent connections should use when
     // a connection was timed out with open streams.
     int quic_reduced_ping_timeout_seconds;
-    // Specifies the maximum time duration that QUIC packet reader can perform
-    // consecutive packets reading.
-    int quic_packet_reader_yield_after_duration_milliseconds;
     // If true, active QUIC sessions may be migrated onto a new network when
     // the platform indicates that the default network is changing.
     bool quic_migrate_sessions_on_network_change;

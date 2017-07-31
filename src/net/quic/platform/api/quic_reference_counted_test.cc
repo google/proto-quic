@@ -16,8 +16,6 @@ class Base : public QuicReferenceCounted {
     *destroyed_ = false;
   }
 
-  bool destroyed() const { return *destroyed_; }
-
  protected:
   ~Base() override { *destroyed_ = true; }
 

@@ -27,7 +27,7 @@ namespace base {
 FilePathWatcherKQueue::FilePathWatcherKQueue() : kqueue_(-1) {}
 
 FilePathWatcherKQueue::~FilePathWatcherKQueue() {
-  DCHECK(!task_runner() || task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(!task_runner() || task_runner()->RunsTasksInCurrentSequence());
 }
 
 void FilePathWatcherKQueue::ReleaseEvent(struct kevent& event) {
@@ -283,7 +283,7 @@ void FilePathWatcherKQueue::Cancel() {
     return;
   }
 
-  DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(task_runner()->RunsTasksInCurrentSequence());
   if (!is_cancelled()) {
     set_cancelled();
     kqueue_watch_controller_.reset();
@@ -298,7 +298,7 @@ void FilePathWatcherKQueue::Cancel() {
 }
 
 void FilePathWatcherKQueue::OnKQueueReadable() {
-  DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  DCHECK(task_runner()->RunsTasksInCurrentSequence());
   DCHECK(events_.size());
 
   // Request the file system update notifications that have occurred and return

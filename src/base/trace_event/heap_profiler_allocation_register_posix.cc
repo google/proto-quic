@@ -42,7 +42,7 @@ void* AllocateGuardedVirtualMemory(size_t size) {
   // create a virtual mapping with the size of the guard page unmapped after the
   // block.
   mx_handle_t vmo;
-  CHECK(mx_vmo_create(map_size, 0, &vmo) == MX_OK);
+  CHECK(mx_vmo_create(size, 0, &vmo) == MX_OK);
   mx_handle_t vmar;
   uintptr_t addr_uint;
   CHECK(mx_vmar_allocate(mx_vmar_root_self(), 0, map_size,

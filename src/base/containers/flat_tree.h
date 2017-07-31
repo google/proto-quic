@@ -7,7 +7,10 @@
 
 #include <algorithm>
 #include <iterator>
+#include <type_traits>
 #include <vector>
+
+#include "base/template_util.h"
 
 namespace base {
 
@@ -54,6 +57,15 @@ Iterator LastUnique(Iterator first, Iterator last, BinaryPredicate compare) {
   *replacable++ = std::move(*first);
   return replacable;
 }
+
+// Uses SFINAE to detect whether type has is_transparent member.
+template <typename T, typename = void>
+struct IsTransparentCompare : std::false_type {};
+template <typename T>
+struct IsTransparentCompare<T, void_t<typename T::is_transparent>>
+    : std::true_type {};
+
+// Implementation -------------------------------------------------------------
 
 // Implementation of a sorted vector for backing flat_set and flat_map. Do not
 // use directly.
@@ -234,9 +246,11 @@ class flat_tree {
   // Prefer base::EraseIf() or some other variation on erase(remove(), end())
   // idiom when deleting multiple non-consecutive elements.
 
+  iterator erase(iterator position);
   iterator erase(const_iterator position);
   iterator erase(const_iterator first, const_iterator last);
-  size_type erase(const key_type& key);
+  template <typename K>
+  size_type erase(const K& key);
 
   // --------------------------------------------------------------------------
   // Comparators.
@@ -249,20 +263,32 @@ class flat_tree {
   //
   // Search operations have O(log(size)) complexity.
 
-  size_type count(const key_type& key) const;
+  template <typename K>
+  size_type count(const K& key) const;
 
-  iterator find(const key_type& key);
-  const_iterator find(const key_type& key) const;
+  template <typename K>
+  iterator find(const K& key);
 
-  std::pair<iterator, iterator> equal_range(const key_type& ket);
-  std::pair<const_iterator, const_iterator> equal_range(
-      const key_type& key) const;
+  template <typename K>
+  const_iterator find(const K& key) const;
 
-  iterator lower_bound(const key_type& key);
-  const_iterator lower_bound(const key_type& key) const;
+  template <typename K>
+  std::pair<iterator, iterator> equal_range(const K& key);
 
-  iterator upper_bound(const key_type& key);
-  const_iterator upper_bound(const key_type& key) const;
+  template <typename K>
+  std::pair<const_iterator, const_iterator> equal_range(const K& key) const;
+
+  template <typename K>
+  iterator lower_bound(const K& key);
+
+  template <typename K>
+  const_iterator lower_bound(const K& key) const;
+
+  template <typename K>
+  iterator upper_bound(const K& key);
+
+  template <typename K>
+  const_iterator upper_bound(const K& key) const;
 
   // --------------------------------------------------------------------------
   // General operations.
@@ -317,12 +343,22 @@ class flat_tree {
     explicit KeyValueCompare(const key_compare& key_comp)
         : key_comp_(key_comp) {}
 
-    bool operator()(const value_type& left, const key_type& right) const {
-      GetKeyFromValue extractor;
-      return key_comp_(extractor(left), right);
+    template <typename T, typename U>
+    bool operator()(const T& lhs, const U& rhs) const {
+      return key_comp_(extract_if_value_type(lhs), extract_if_value_type(rhs));
     }
 
    private:
+    const key_type& extract_if_value_type(const value_type& v) const {
+      GetKeyFromValue extractor;
+      return extractor(v);
+    }
+
+    template <typename K>
+    const K& extract_if_value_type(const K& k) const {
+      return k;
+    }
+
     const key_compare& key_comp_;
   };
 
@@ -436,6 +472,11 @@ class flat_tree {
 
     underlying_type body_;
   } impl_;
+
+  // If the compare is not transparent we want to construct key_type once.
+  template <typename K>
+  using KeyTypeOrK = typename std::
+      conditional<IsTransparentCompare<key_compare>::value, K, key_type>::type;
 };
 
 // ----------------------------------------------------------------------------
@@ -767,14 +808,21 @@ auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::emplace_hint(
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
 auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::erase(
-    const_iterator position) -> iterator {
-  // We have to cast away const because of crbug.com/677044.
-  return impl_.body_.erase(const_cast_it(position));
+    iterator position) -> iterator {
+  return impl_.body_.erase(position);
 }
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
 auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::erase(
-    const key_type& val) -> size_type {
+    const_iterator position) -> iterator {
+  // We have to cast away const because of crbug.com/677044.
+  return erase(const_cast_it(position));
+}
+
+template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
+template <typename K>
+auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::erase(const K& val)
+    -> size_type {
   auto eq_range = equal_range(val);
   auto res = std::distance(eq_range.first, eq_range.second);
   // We have to cast away const because of crbug.com/677044.
@@ -809,35 +857,40 @@ auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::value_comp() const
 // Search operations.
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
+template <typename K>
 auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::count(
-    const key_type& key) const -> size_type {
+    const K& key) const -> size_type {
   auto eq_range = equal_range(key);
   return std::distance(eq_range.first, eq_range.second);
 }
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
-auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::find(
-    const key_type& key) -> iterator {
+template <typename K>
+auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::find(const K& key)
+    -> iterator {
   return const_cast_it(as_const().find(key));
 }
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
+template <typename K>
 auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::find(
-    const key_type& key) const -> const_iterator {
+    const K& key) const -> const_iterator {
   auto eq_range = equal_range(key);
   return (eq_range.first == eq_range.second) ? end() : eq_range.first;
 }
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
+template <typename K>
 auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::equal_range(
-    const key_type& key) -> std::pair<iterator, iterator> {
+    const K& key) -> std::pair<iterator, iterator> {
   auto res = as_const().equal_range(key);
   return {const_cast_it(res.first), const_cast_it(res.second)};
 }
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
+template <typename K>
 auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::equal_range(
-    const key_type& key) const -> std::pair<const_iterator, const_iterator> {
+    const K& key) const -> std::pair<const_iterator, const_iterator> {
   auto lower = lower_bound(key);
 
   GetKeyFromValue extractor;
@@ -848,29 +901,45 @@ auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::equal_range(
 }
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
+template <typename K>
 auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::lower_bound(
-    const key_type& key) -> iterator {
+    const K& key) -> iterator {
   return const_cast_it(as_const().lower_bound(key));
 }
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
+template <typename K>
 auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::lower_bound(
-    const key_type& key) const -> const_iterator {
+    const K& key) const -> const_iterator {
+  static_assert(std::is_convertible<const KeyTypeOrK<K>&, const K&>::value,
+                "Requested type cannot be bound to the container's key_type "
+                "which is required for a non-transparent compare.");
+
+  const KeyTypeOrK<K>& key_ref = key;
+
   KeyValueCompare key_value(impl_.get_key_comp());
-  return std::lower_bound(begin(), end(), key, key_value);
+  return std::lower_bound(begin(), end(), key_ref, key_value);
 }
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
+template <typename K>
 auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::upper_bound(
-    const key_type& key) -> iterator {
+    const K& key) -> iterator {
   return const_cast_it(as_const().upper_bound(key));
 }
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
+template <typename K>
 auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::upper_bound(
-    const key_type& key) const -> const_iterator {
+    const K& key) const -> const_iterator {
+  static_assert(std::is_convertible<const KeyTypeOrK<K>&, const K&>::value,
+                "Requested type cannot be bound to the container's key_type "
+                "which is required for a non-transparent compare.");
+
+  const KeyTypeOrK<K>& key_ref = key;
+
   KeyValueCompare key_value(impl_.get_key_comp());
-  return std::upper_bound(begin(), end(), key, key_value);
+  return std::upper_bound(begin(), end(), key_ref, key_value);
 }
 
 // ----------------------------------------------------------------------------

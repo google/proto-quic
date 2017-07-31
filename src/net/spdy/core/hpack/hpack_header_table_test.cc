@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "net/spdy/chromium/spdy_flags.h"
 #include "net/spdy/core/hpack/hpack_constants.h"
 #include "net/spdy/core/hpack/hpack_entry.h"
 #include "net/spdy/platform/api/spdy_string.h"

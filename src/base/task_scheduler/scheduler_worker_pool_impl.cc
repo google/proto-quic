@@ -141,11 +141,8 @@ bool ContainsWorker(const std::vector<scoped_refptr<SchedulerWorker>>& workers,
 class SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl
     : public SchedulerWorker::Delegate {
  public:
-  // |outer| owns the worker for which this delegate is constructed. |index|
-  // will be appended to the pool name to label the underlying worker threads.
-  SchedulerWorkerDelegateImpl(
-      SchedulerWorkerPoolImpl* outer,
-      int index);
+  // |outer| owns the worker for which this delegate is constructed.
+  SchedulerWorkerDelegateImpl(SchedulerWorkerPoolImpl* outer);
   ~SchedulerWorkerDelegateImpl() override;
 
   // SchedulerWorker::Delegate:
@@ -180,8 +177,6 @@ class SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl
   // Number of tasks executed since the last time the
   // TaskScheduler.NumTasksBeforeDetach histogram was recorded.
   size_t num_tasks_since_last_detach_ = 0;
-
-  const int index_;
 
   DISALLOW_COPY_AND_ASSIGN(SchedulerWorkerDelegateImpl);
 };
@@ -230,8 +225,6 @@ SchedulerWorkerPoolImpl::SchedulerWorkerPoolImpl(
 }
 
 void SchedulerWorkerPoolImpl::Start(const SchedulerWorkerPoolParams& params) {
-  suggested_reclaim_time_ = params.suggested_reclaim_time();
-
   AutoSchedulerLock auto_lock(lock_);
 
 #if DCHECK_IS_ON()
@@ -239,31 +232,18 @@ void SchedulerWorkerPoolImpl::Start(const SchedulerWorkerPoolParams& params) {
 #endif
 
   DCHECK(workers_.empty());
-  workers_.resize(params.max_threads());
 
-  // The number of workers created alive is |num_wake_ups_before_start_|, plus
-  // one if the standby thread policy is ONE (in order to start with one alive
-  // idle worker).
-  const int num_alive_workers =
-      num_wake_ups_before_start_ +
-      (params.standby_thread_policy() ==
-               SchedulerWorkerPoolParams::StandbyThreadPolicy::ONE
-           ? 1
-           : 0);
+  worker_capacity_ = params.max_threads();
+  suggested_reclaim_time_ = params.suggested_reclaim_time();
+  backward_compatibility_ = params.backward_compatibility();
 
-  // Create workers in reverse order of index so that the worker with the
-  // highest index is at the bottom of the idle stack.
-  for (int index = params.max_threads() - 1; index >= 0; --index) {
-    workers_[index] = make_scoped_refptr(new SchedulerWorker(
-        priority_hint_, MakeUnique<SchedulerWorkerDelegateImpl>(this, index),
-        task_tracker_, &lock_, params.backward_compatibility(),
-        index < num_alive_workers ? SchedulerWorker::InitialState::ALIVE
-                                  : SchedulerWorker::InitialState::DETACHED));
+  // The initial number of workers is |num_wake_ups_before_start_|, plus
+  // one to try to keep one at least one standby thread at all times.
+  const int num_initial_workers = num_wake_ups_before_start_ + 1;
+  workers_.reserve(num_initial_workers);
 
-    // Put workers that won't be woken up at the end of this method on the
-    // idle stack.
-    if (index >= num_wake_ups_before_start_)
-      idle_workers_stack_.Push(workers_[index].get());
+  for (int index = 0; index < num_initial_workers; ++index) {
+    CreateAndRegisterSchedulerWorker();
   }
 
 #if DCHECK_IS_ON()
@@ -278,12 +258,13 @@ void SchedulerWorkerPoolImpl::Start(const SchedulerWorkerPoolParams& params) {
   for (size_t index = 0; index < workers_.size(); ++index) {
     const bool start_success = workers_[index]->Start();
     CHECK(start_success || index > 0);
-  }
 
-  // Wake up one worker for each wake up that occurred before Start().
-  for (size_t index = 0; index < workers_.size(); ++index) {
+    // Wake up one worker for each wake up that occurred before Start(). Place
+    // all the other workers on the idle stack.
     if (static_cast<int>(index) < num_wake_ups_before_start_)
       workers_[index]->WakeUp();
+    else
+      idle_workers_stack_.Push(workers_[index].get());
   }
 }
 
@@ -368,12 +349,13 @@ void SchedulerWorkerPoolImpl::GetHistograms(
   histograms->push_back(num_tasks_between_waits_histogram_);
 }
 
+// TODO(jeffreyhe): Add and return an |initial_worker_capacity_| member when
+// worker capacity becomes dynamic.
 int SchedulerWorkerPoolImpl::GetMaxConcurrentTasksDeprecated() const {
-  AutoSchedulerLock auto_lock(lock_);
 #if DCHECK_IS_ON()
   DCHECK(workers_created_.IsSet());
 #endif
-  return workers_.size();
+  return worker_capacity_;
 }
 
 void SchedulerWorkerPoolImpl::WaitForAllWorkersIdleForTesting() {
@@ -435,11 +417,8 @@ size_t SchedulerWorkerPoolImpl::NumberOfAliveWorkersForTesting() {
 }
 
 SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::
-    SchedulerWorkerDelegateImpl(
-        SchedulerWorkerPoolImpl* outer,
-        int index)
-    : outer_(outer),
-      index_(index) {}
+    SchedulerWorkerDelegateImpl(SchedulerWorkerPoolImpl* outer)
+    : outer_(outer) {}
 
 SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::
     ~SchedulerWorkerDelegateImpl() = default;
@@ -462,7 +441,7 @@ void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::OnMainEntry(
   }
 
   PlatformThread::SetName(
-      StringPrintf("TaskScheduler%sWorker%d", outer_->name_.c_str(), index_));
+      StringPrintf("TaskScheduler%sWorker", outer_->name_.c_str()));
 
   DCHECK(!tls_current_worker_pool.Get().Get());
   tls_current_worker_pool.Get().Set(outer_);
@@ -576,23 +555,31 @@ void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::OnDetach() {
 
 void SchedulerWorkerPoolImpl::WakeUpOneWorker() {
   SchedulerWorker* worker = nullptr;
-  {
-    AutoSchedulerLock auto_lock(lock_);
+
+  AutoSchedulerLock auto_lock(lock_);
 
 #if DCHECK_IS_ON()
-    DCHECK_EQ(workers_.empty(), !workers_created_.IsSet());
+  DCHECK_EQ(workers_.empty(), !workers_created_.IsSet());
 #endif
 
-    if (workers_.empty())
-      ++num_wake_ups_before_start_;
-    else
-      worker = idle_workers_stack_.Pop();
+  if (workers_.empty()) {
+    ++num_wake_ups_before_start_;
+    return;
   }
+
+  // Add a new worker if we're below capacity and there are no idle workers.
+  if (idle_workers_stack_.IsEmpty() && workers_.size() < worker_capacity_)
+    worker = CreateRegisterAndStartSchedulerWorker().get();
+  else
+    worker = idle_workers_stack_.Pop();
 
   if (worker)
     worker->WakeUp();
-  // TODO(robliao): Honor StandbyThreadPolicy::ONE here and consider adding
-  // hysteresis to the CanDetach check. See https://crbug.com/666041.
+
+  // Try to keep at least one idle worker at all times for better
+  // responsiveness.
+  if (idle_workers_stack_.IsEmpty() && workers_.size() < worker_capacity_)
+    idle_workers_stack_.Push(CreateRegisterAndStartSchedulerWorker().get());
 }
 
 void SchedulerWorkerPoolImpl::AddToIdleWorkersStack(
@@ -625,6 +612,28 @@ void SchedulerWorkerPoolImpl::RemoveFromIdleWorkersStack(
 
 bool SchedulerWorkerPoolImpl::CanWorkerDetachForTesting() {
   return !worker_detachment_disallowed_.IsSet();
+}
+
+scoped_refptr<SchedulerWorker>
+SchedulerWorkerPoolImpl::CreateAndRegisterSchedulerWorker() {
+  lock_.AssertAcquired();
+
+  // SchedulerWorker needs |lock_| as a predecessor for its thread lock
+  // because in WakeUpOneWorker, |lock_| is first acquired and then
+  // the thread lock is acquired when WakeUp is called on the worker.
+  workers_.push_back(MakeRefCounted<SchedulerWorker>(
+      priority_hint_, MakeUnique<SchedulerWorkerDelegateImpl>(this),
+      task_tracker_, &lock_, backward_compatibility_,
+      SchedulerWorker::InitialState::ALIVE));
+
+  return workers_.back();
+}
+
+scoped_refptr<SchedulerWorker>
+SchedulerWorkerPoolImpl::CreateRegisterAndStartSchedulerWorker() {
+  scoped_refptr<SchedulerWorker> worker = CreateAndRegisterSchedulerWorker();
+  worker->Start();
+  return worker;
 }
 
 }  // namespace internal

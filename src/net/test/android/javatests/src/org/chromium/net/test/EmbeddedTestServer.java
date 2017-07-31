@@ -16,6 +16,7 @@ import android.os.RemoteException;
 import org.junit.Assert;
 
 import org.chromium.base.Log;
+import org.chromium.base.ThreadUtils;
 
 import java.io.File;
 
@@ -70,6 +71,53 @@ public class EmbeddedTestServer {
 
         public EmbeddedTestServerFailure(String errorDesc, Throwable cause) {
             super(errorDesc, cause);
+        }
+    }
+
+    /**
+     * Connection listener class, to be notified of new connections and sockets reads.
+     *
+     * Notifications are asynchronous and delivered to the UI thread.
+     */
+    public static class ConnectionListener {
+        private final IConnectionListener mListener = new IConnectionListener.Stub() {
+            @Override
+            public void acceptedSocket(final long socketId) {
+                ThreadUtils.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ConnectionListener.this.acceptedSocket(socketId);
+                    }
+                });
+            }
+
+            @Override
+            public void readFromSocket(final long socketId) {
+                ThreadUtils.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ConnectionListener.this.readFromSocket(socketId);
+                    }
+                });
+            }
+        };
+
+        /**
+         * A new socket connection has been opened on the server.
+         *
+         * @param socketId Socket unique identifier. Unique as long as the socket stays open.
+         */
+        public void acceptedSocket(long socketId) {}
+
+        /**
+         * Data  has been read from a socket.
+         *
+         * @param socketId Socket unique identifier. Unique as long as the socket stays open.
+         */
+        public void readFromSocket(long socketId) {}
+
+        private IConnectionListener getListener() {
+            return mListener;
         }
     }
 
@@ -167,6 +215,23 @@ public class EmbeddedTestServer {
         } catch (RemoteException e) {
             throw new EmbeddedTestServerFailure(
                     "Failed to start serving files from " + directoryPath + ": " + e.toString());
+        }
+    }
+
+    /**
+     * Sets a connection listener. Must be called after the server has been initialized, but
+     * before calling {@link start()}.
+     *
+     * @param listener The listener to set.
+     */
+    public void setConnectionListener(ConnectionListener listener) {
+        try {
+            synchronized (mImplMonitor) {
+                checkServiceLocked();
+                mImpl.setConnectionListener(listener.getListener());
+            }
+        } catch (RemoteException e) {
+            throw new EmbeddedTestServerFailure("Cannot set the listener");
         }
     }
 

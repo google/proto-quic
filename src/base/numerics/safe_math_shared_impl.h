@@ -96,7 +96,7 @@ struct ClampedMulFastOp {
 };
 
 template <typename T>
-struct ClampedAbsFastOp {
+struct ClampedNegFastOp {
   static const bool is_supported = false;
   static constexpr T Do(T) {
     // Force a compile failure if instantiated.

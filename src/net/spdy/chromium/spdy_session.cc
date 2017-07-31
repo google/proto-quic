@@ -793,6 +793,7 @@ SpdySession::SpdySession(const SpdySessionKey& spdy_session_key,
   DCHECK(base::ContainsKey(initial_settings_, SETTINGS_HEADER_TABLE_SIZE));
   DCHECK(base::ContainsKey(initial_settings_, SETTINGS_MAX_CONCURRENT_STREAMS));
   DCHECK(base::ContainsKey(initial_settings_, SETTINGS_INITIAL_WINDOW_SIZE));
+  DCHECK(base::ContainsKey(initial_settings_, SETTINGS_MAX_HEADER_LIST_SIZE));
 
   // TODO(mbelshe): consider randomization of the stream_hi_water_mark.
 }
@@ -824,27 +825,27 @@ int SpdySession::GetPushStream(const GURL& url,
   }
 
   *stream = GetActivePushStream(url);
-  if (*stream) {
-    DCHECK_LT(streams_pushed_and_claimed_count_, streams_pushed_count_);
-    streams_pushed_and_claimed_count_++;
+  if (!*stream)
+    return OK;
 
-    // If the stream is still open, update its priority to match
-    // the priority of the matching request.
-    if (!(*stream)->IsClosed() && (*stream)->priority() != priority) {
-      (*stream)->set_priority(priority);
+  DCHECK_LT(streams_pushed_and_claimed_count_, streams_pushed_count_);
+  streams_pushed_and_claimed_count_++;
 
-      // Send PRIORITY updates.
-      auto updates = priority_dependency_state_.OnStreamUpdate(
-          (*stream)->stream_id(),
-          ConvertRequestPriorityToSpdyPriority(priority));
-      for (auto u : updates) {
-        ActiveStreamMap::iterator it = active_streams_.find(u.id);
-        DCHECK(it != active_streams_.end());
-        int weight = Spdy3PriorityToHttp2Weight(
-            ConvertRequestPriorityToSpdyPriority(it->second->priority()));
-        EnqueuePriorityFrame(u.id, u.dependent_stream_id, weight, u.exclusive);
-      }
-    }
+  if ((*stream)->IsClosed() || (*stream)->priority() == priority)
+    return OK;
+
+  // If the stream is still open, update its priority to that of the request.
+  (*stream)->set_priority(priority);
+
+  // Send PRIORITY updates.
+  auto updates = priority_dependency_state_.OnStreamUpdate(
+      (*stream)->stream_id(), ConvertRequestPriorityToSpdyPriority(priority));
+  for (auto u : updates) {
+    ActiveStreamMap::iterator it = active_streams_.find(u.id);
+    DCHECK(it != active_streams_.end());
+    int weight = Spdy3PriorityToHttp2Weight(
+        ConvertRequestPriorityToSpdyPriority(it->second->priority()));
+    EnqueuePriorityFrame(u.id, u.dependent_stream_id, weight, u.exclusive);
   }
 
   return OK;
@@ -883,13 +884,11 @@ void SpdySession::InitializeWithSocket(
   session_send_window_size_ = kDefaultInitialWindowSize;
   session_recv_window_size_ = kDefaultInitialWindowSize;
 
-  buffered_spdy_framer_ = base::MakeUnique<BufferedSpdyFramer>(net_log_);
+  buffered_spdy_framer_ = base::MakeUnique<BufferedSpdyFramer>(
+      initial_settings_.find(SETTINGS_MAX_HEADER_LIST_SIZE)->second, net_log_);
   buffered_spdy_framer_->set_visitor(this);
   buffered_spdy_framer_->set_debug_visitor(this);
   buffered_spdy_framer_->UpdateHeaderDecoderTableSize(max_header_table_size_);
-  // Do not bother decoding response headers more than a factor over the limit.
-  buffered_spdy_framer_->set_max_decode_buffer_size_bytes(2 *
-                                                          kMaxHeaderListSize);
 
   net_log_.AddEvent(NetLogEventType::HTTP2_SESSION_INITIALIZED,
                     base::Bind(&NetLogSpdyInitializedCallback,
@@ -1506,27 +1505,30 @@ void SpdySession::ProcessPendingStreamRequests() {
 void SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
                                       SpdyStreamId associated_stream_id,
                                       SpdyHeaderBlock headers) {
-  // Server-initiated streams should have even sequence numbers.
   if ((stream_id & 0x1) != 0) {
-    LOG(WARNING) << "Received invalid push stream id " << stream_id;
-    CloseSessionOnError(ERR_SPDY_PROTOCOL_ERROR, "Odd push stream id.");
+    SpdyString description = SpdyStringPrintf(
+        "Received invalid pushed stream id %d (must be even) on stream id %d.",
+        stream_id, associated_stream_id);
+    LOG(WARNING) << description;
+    CloseSessionOnError(ERR_SPDY_PROTOCOL_ERROR, description);
     return;
   }
 
-  // Server-initiated streams must be associated with client-initiated streams.
   if ((associated_stream_id & 0x1) != 1) {
-    LOG(WARNING) << "Received push stream id " << stream_id
-                 << " with invalid associated stream id";
-    CloseSessionOnError(ERR_SPDY_PROTOCOL_ERROR, "Push on even stream id.");
+    SpdyString description = SpdyStringPrintf(
+        "Received pushed stream id %d on invalid stream id %d (must be odd).",
+        stream_id, associated_stream_id);
+    LOG(WARNING) << description;
+    CloseSessionOnError(ERR_SPDY_PROTOCOL_ERROR, description);
     return;
   }
 
   if (stream_id <= last_accepted_push_stream_id_) {
-    LOG(WARNING) << "Received push stream id " << stream_id
-                 << " lesser or equal to the last accepted before";
-    CloseSessionOnError(
-        ERR_SPDY_PROTOCOL_ERROR,
-        "New push stream id must be greater than the last accepted.");
+    SpdyString description = SpdyStringPrintf(
+        "Received pushed stream id %d must be larger than last accepted id %d.",
+        stream_id, last_accepted_push_stream_id_);
+    LOG(WARNING) << description;
+    CloseSessionOnError(ERR_SPDY_PROTOCOL_ERROR, description);
     return;
   }
 
@@ -1543,28 +1545,13 @@ void SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
   const RequestPriority request_priority = IDLE;
 
   if (availability_state_ == STATE_GOING_AWAY) {
-    // TODO(akalin): This behavior isn't in the SPDY spec, although it
-    // probably should be.
     EnqueueResetStreamFrame(stream_id, request_priority,
                             ERROR_CODE_REFUSED_STREAM,
-                            "push stream request received when going away");
-    return;
-  }
-
-  if (associated_stream_id == 0) {
-    // In HTTP/2 0 stream id in PUSH_PROMISE frame leads to framer error and
-    // session going away. We should never get here.
-    SpdyString description = SpdyStringPrintf(
-        "Received invalid associated stream id %d for pushed stream %d",
-        associated_stream_id, stream_id);
-    EnqueueResetStreamFrame(stream_id, request_priority,
-                            ERROR_CODE_REFUSED_STREAM, description);
+                            "Push stream request received while going away.");
     return;
   }
 
   streams_pushed_count_++;
-
-  // TODO(mbelshe): DCHECK that this is a GET method?
 
   // Verify that the response had a URL for us.
   GURL gurl = GetUrlFromHeaderBlock(headers);
@@ -2043,8 +2030,7 @@ int SpdySession::DoWrite() {
     }
     in_flight_write_frame_type_ = frame_type;
     in_flight_write_frame_size_ = in_flight_write_->GetRemainingSize();
-    DCHECK_GE(in_flight_write_frame_size_,
-              buffered_spdy_framer_->GetFrameMinimumSize());
+    DCHECK_GE(in_flight_write_frame_size_, kFrameMinimumSize);
     in_flight_write_stream_ = stream;
   }
 
@@ -2393,14 +2379,6 @@ void SpdySession::DeleteStream(std::unique_ptr<SpdyStream> stream, int status) {
   }
 }
 
-SpdyStreamId SpdySession::GetStreamIdForPush(const GURL& url) {
-  UnclaimedPushedStreamContainer::const_iterator unclaimed_it =
-      unclaimed_pushed_streams_.find(url);
-  if (unclaimed_it == unclaimed_pushed_streams_.end())
-    return 0;
-  return unclaimed_it->second.stream_id;
-}
-
 SpdyStream* SpdySession::GetActivePushStream(const GURL& url) {
   UnclaimedPushedStreamContainer::const_iterator unclaimed_it =
       unclaimed_pushed_streams_.find(url);
@@ -2739,8 +2717,7 @@ void SpdySession::OnDataFrameHeader(SpdyStreamId stream_id,
   CHECK_EQ(stream->stream_id(), stream_id);
 
   DCHECK(buffered_spdy_framer_);
-  size_t header_len = buffered_spdy_framer_->GetDataFrameMinimumSize();
-  stream->AddRawReceivedBytes(header_len);
+  stream->AddRawReceivedBytes(kDataFrameMinimumSize);
 }
 
 void SpdySession::OnStreamFrameData(SpdyStreamId stream_id,
@@ -3063,8 +3040,7 @@ void SpdySession::OnSendCompressedFrame(SpdyStreamId stream_id,
   }
 
   DCHECK(buffered_spdy_framer_.get());
-  size_t compressed_len =
-      frame_len - buffered_spdy_framer_->GetFrameMinimumSize();
+  size_t compressed_len = frame_len - kFrameMinimumSize;
 
   if (payload_len) {
     // Make sure we avoid early decimal truncation.

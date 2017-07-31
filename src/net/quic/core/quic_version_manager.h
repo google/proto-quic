@@ -31,6 +31,8 @@ class QUIC_EXPORT_PRIVATE QuicVersionManager {
   }
 
  private:
+  // FLAGS_quic_enable_version_41
+  bool enable_version_41_;
   // FLAGS_quic_enable_version_40
   bool enable_version_40_;
   // FLAGS_quic_reloadable_flag_quic_enable_version_39

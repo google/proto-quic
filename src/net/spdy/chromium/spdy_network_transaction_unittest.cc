@@ -3012,7 +3012,8 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushOnPushedStream) {
   SpdySerializedFrame stream2_priority(
       spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
   SpdySerializedFrame goaway(spdy_util_.ConstructSpdyGoAway(
-      2, ERROR_CODE_PROTOCOL_ERROR, "Push on even stream id."));
+      2, ERROR_CODE_PROTOCOL_ERROR,
+      "Received pushed stream id 4 on invalid stream id 2 (must be odd)."));
   MockWrite writes[] = {
       CreateMockWrite(stream1_syn, 0), CreateMockWrite(stream2_priority, 3),
       CreateMockWrite(goaway, 5),
@@ -3089,7 +3090,8 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushOnClosedPushedStream) {
   SpdySerializedFrame stream2_priority(
       spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
   SpdySerializedFrame goaway(spdy_util_.ConstructSpdyGoAway(
-      2, ERROR_CODE_PROTOCOL_ERROR, "Push on even stream id."));
+      2, ERROR_CODE_PROTOCOL_ERROR,
+      "Received pushed stream id 4 on invalid stream id 2 (must be odd)."));
   MockWrite writes[] = {
       CreateMockWrite(stream1_syn, 0), CreateMockWrite(stream2_priority, 3),
       CreateMockWrite(goaway, 8),
@@ -5674,6 +5676,7 @@ TEST_F(SpdyNetworkTransactionTest, WindowUpdateSent) {
   initial_settings[SETTINGS_MAX_CONCURRENT_STREAMS] =
       kSpdyMaxConcurrentPushedStreams;
   initial_settings[SETTINGS_INITIAL_WINDOW_SIZE] = stream_max_recv_window_size;
+  initial_settings[SETTINGS_MAX_HEADER_LIST_SIZE] = kSpdyMaxHeaderListSize;
   SpdySerializedFrame initial_settings_frame(
       spdy_util_.ConstructSpdySettings(initial_settings));
 
@@ -6332,7 +6335,8 @@ TEST_F(SpdyNetworkTransactionTest, GoAwayOnOddPushStreamId) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame goaway(spdy_util_.ConstructSpdyGoAway(
-      0, ERROR_CODE_PROTOCOL_ERROR, "Odd push stream id."));
+      0, ERROR_CODE_PROTOCOL_ERROR,
+      "Received invalid pushed stream id 3 (must be even) on stream id 1."));
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(goaway, 2),
   };
@@ -6364,7 +6368,7 @@ TEST_F(SpdyNetworkTransactionTest,
       spdy_util_.ConstructSpdyPriority(4, 1, IDLE, true));
   SpdySerializedFrame goaway(spdy_util_.ConstructSpdyGoAway(
       4, ERROR_CODE_PROTOCOL_ERROR,
-      "New push stream id must be greater than the last accepted."));
+      "Received pushed stream id 2 must be larger than last accepted id 4."));
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(priority_a, 2),
       CreateMockWrite(goaway, 4),

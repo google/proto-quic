@@ -33,7 +33,7 @@ bool ObjectWatcher::StopWatching() {
     return false;
 
   // Make sure ObjectWatcher is used in a sequenced fashion.
-  DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  DCHECK(task_runner_->RunsTasksInCurrentSequence());
 
   // Blocking call to cancel the wait. Any callbacks already in progress will
   // finish before we return from this call.

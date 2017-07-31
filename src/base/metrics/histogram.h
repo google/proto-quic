@@ -207,8 +207,14 @@ class BASE_EXPORT Histogram : public HistogramBase {
   void WriteHTMLGraph(std::string* output) const override;
   void WriteAscii(std::string* output) const override;
 
+  // Validates the histogram contents. If |crash_if_invalid| is true and the
+  // histogram is invalid, this will trigger a CHECK. Otherwise, it will return
+  // a bool indicating if the histogram is valid. |corrupted_count| is extra
+  // information the caller can provide about the number of corrupt histograms
+  // if available.
   // TODO(bcwhite): Remove this after crbug/736675.
-  void ValidateHistogramContents() const override;
+  bool ValidateHistogramContents(bool crash_if_invalid,
+                                 int corrupted_count) const override;
 
  protected:
   // This class, defined entirely within the .cc file, contains all the

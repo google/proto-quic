@@ -303,7 +303,7 @@ int SdchDictionaryFetcher::DoSendRequest(int rv) {
           destination: WEBSITE
         }
         policy {
-          cookies_allowed: false
+          cookies_allowed: NO
           setting:
             "This feature is disabled in Chrome and can only be enabled in non-"
             "Chromium embedders."

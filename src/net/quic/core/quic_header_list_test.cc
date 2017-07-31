@@ -28,8 +28,18 @@ TEST_F(QuicHeaderListTest, TooLarge) {
   QuicHeaderList headers;
   string key = "key";
   string value(1 << 18, '1');
+  // Send a header that exceeds max_header_list_size.
   headers.OnHeader(key, value);
-  size_t total_bytes = key.size() + value.size();
+  // Send a second header exceeding max_header_list_size.
+  headers.OnHeader(key + "2", value);
+  if (FLAGS_quic_restart_flag_quic_header_list_size) {
+    // We should not allocate more memory after exceeding max_header_list_size.
+    EXPECT_LT(headers.DebugString().size(), 2 * value.size());
+  } else {
+    // Demonstrates previous behavior.
+    EXPECT_GE(headers.DebugString().size(), 2 * value.size());
+  }
+  size_t total_bytes = 2 * (key.size() + value.size()) + 1;
   headers.OnHeaderBlockEnd(total_bytes, total_bytes);
   EXPECT_TRUE(headers.empty());
 
@@ -38,7 +48,7 @@ TEST_F(QuicHeaderListTest, TooLarge) {
 
 TEST_F(QuicHeaderListTest, NotTooLarge) {
   QuicHeaderList headers;
-  headers.set_max_uncompressed_header_bytes(1 << 20);
+  headers.set_max_header_list_size(1 << 20);
   string key = "key";
   string value(1 << 18, '1');
   headers.OnHeader(key, value);

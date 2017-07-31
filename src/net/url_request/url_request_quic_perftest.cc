@@ -14,18 +14,14 @@
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
-#include "base/strings/string_number_conversions.h"
 #include "base/strings/stringprintf.h"
-#include "base/test/trace_event_analyzer.h"
 #include "base/time/time.h"
 #include "base/trace_event/memory_dump_manager.h"
 #include "base/trace_event/memory_dump_manager_test_utils.h"
 #include "base/trace_event/memory_dump_request_args.h"
 #include "base/trace_event/process_memory_dump.h"
-#include "base/trace_event/trace_buffer.h"
 #include "base/trace_event/trace_config.h"
-#include "base/trace_event/trace_config_memory_test_util.h"
-#include "base/trace_event/trace_log.h"
+#include "base/trace_event/trace_event_argument.h"
 #include "net/base/load_timing_info.h"
 #include "net/cert/mock_cert_verifier.h"
 #include "net/dns/mapped_host_resolver.h"
@@ -50,6 +46,7 @@
 
 using testing::_;
 using testing::Invoke;
+using base::trace_event::MemoryAllocatorDump;
 
 namespace net {
 
@@ -180,36 +177,30 @@ class URLRequestQuicPerfTest : public ::testing::Test {
   std::unique_ptr<QuicSimpleServer> quic_server_;
   std::unique_ptr<base::MessageLoop> message_loop_;
   std::unique_ptr<TestURLRequestContext> context_;
-  std::vector<base::trace_event::MemoryDumpCallbackResult> results_;
   QuicHttpResponseCache response_cache_;
   MockCertVerifier cert_verifier_;
 };
 
-void OnTraceDataCollected(base::Closure quit_closure,
-                          base::trace_event::TraceResultBuffer* buffer,
-                          const scoped_refptr<base::RefCountedString>& json,
-                          bool has_more_events) {
-  buffer->AddFragment(json->data());
-  if (!has_more_events)
-    quit_closure.Run();
-}
-
-std::unique_ptr<trace_analyzer::TraceAnalyzer> GetDeserializedTrace() {
-  // Flush the trace into JSON.
-  base::trace_event::TraceResultBuffer buffer;
-  base::trace_event::TraceResultBuffer::SimpleOutput trace_output;
-  buffer.SetOutputCallback(trace_output.GetCallback());
-  base::RunLoop run_loop;
-  buffer.Start();
-  base::trace_event::TraceLog::GetInstance()->Flush(
-      Bind(&OnTraceDataCollected, run_loop.QuitClosure(),
-           base::Unretained(&buffer)));
-  run_loop.Run();
-  buffer.Finish();
-
-  // Analyze the JSON.
-  return base::WrapUnique(
-      trace_analyzer::TraceAnalyzer::Create(trace_output.json_output));
+void CheckScalarInDump(const MemoryAllocatorDump* dump,
+                       const std::string& name,
+                       const char* expected_units,
+                       uint64_t expected_value) {
+  std::string attr_str_value;
+  std::unique_ptr<base::Value> raw_attrs =
+      dump->attributes_for_testing()->ToBaseValue();
+  base::DictionaryValue* args = nullptr;
+  base::DictionaryValue* arg = nullptr;
+  std::string arg_value;
+  EXPECT_TRUE(raw_attrs->GetAsDictionary(&args));
+  EXPECT_TRUE(args->GetDictionary(name, &arg));
+  EXPECT_TRUE(arg->GetString("type", &arg_value));
+  EXPECT_EQ(MemoryAllocatorDump::kTypeScalar, arg_value);
+  EXPECT_TRUE(arg->GetString("units", &arg_value));
+  EXPECT_EQ(expected_units, arg_value);
+  const base::Value* attr_value = nullptr;
+  EXPECT_TRUE(arg->Get("value", &attr_value));
+  EXPECT_TRUE(attr_value->GetAsString(&attr_str_value));
+  EXPECT_EQ(base::StringPrintf("%" PRIx64, expected_value), attr_str_value);
 }
 
 }  // namespace
@@ -239,89 +230,60 @@ TEST_F(URLRequestQuicPerfTest, TestGetRequest) {
   PrintPerfTest("time", (end - start).InMilliseconds() / kNumRequest, "ms");
 
   EXPECT_TRUE(quic_succeeded);
-  base::trace_event::TraceLog::GetInstance()->SetEnabled(
-      base::trace_event::TraceConfig(
-          base::trace_event::MemoryDumpManager::kTraceCategory, ""),
-      base::trace_event::TraceLog::RECORDING_MODE);
+  base::trace_event::MemoryDumpManager::GetInstance()->SetupForTracing(
+      base::trace_event::TraceConfig::MemoryDumpConfig());
 
   base::RunLoop run_loop;
   base::trace_event::MemoryDumpRequestArgs args{
       1 /* dump_guid*/, base::trace_event::MemoryDumpType::EXPLICITLY_TRIGGERED,
       base::trace_event::MemoryDumpLevelOfDetail::LIGHT};
+
   auto on_memory_dump_done =
-      [](base::Closure quit_closure, bool success, uint64_t dump_guid,
-         const base::trace_event::ProcessMemoryDumpsMap&) {
-        base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, quit_closure);
+      [](base::Closure quit_closure, const URLRequestContext* context,
+         bool success, uint64_t dump_guid,
+         const base::trace_event::ProcessMemoryDumpsMap& dumps) {
         ASSERT_TRUE(success);
+        ASSERT_EQ(1u, dumps.size());
+        const auto& allocator_dumps = dumps.begin()->second->allocator_dumps();
+
+        auto it = allocator_dumps.find(
+            base::StringPrintf("net/url_request_context/unknown/0x%" PRIxPTR,
+                               reinterpret_cast<uintptr_t>(context)));
+        ASSERT_NE(allocator_dumps.end(), it);
+        MemoryAllocatorDump* url_request_context_dump = it->second.get();
+        CheckScalarInDump(
+            url_request_context_dump,
+            base::trace_event::MemoryAllocatorDump::kNameObjectCount,
+            base::trace_event::MemoryAllocatorDump::kUnitsObjects, 0);
+
+        it = allocator_dumps.find(base::StringPrintf(
+            "net/http_network_session_0x%" PRIxPTR "/quic_stream_factory",
+            reinterpret_cast<uintptr_t>(
+                context->http_transaction_factory()->GetSession())));
+        ASSERT_NE(allocator_dumps.end(), it);
+        MemoryAllocatorDump* quic_stream_factory_dump = it->second.get();
+        CheckScalarInDump(quic_stream_factory_dump, "active_jobs",
+                          base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+                          0);
+
+        PrintPerfTest("active_quic_jobs", 0, "count");
+        CheckScalarInDump(quic_stream_factory_dump, "all_sessions",
+                          base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+                          1);
+        PrintPerfTest("active_quic_sessions", 1, "count");
+
+        std::string stream_factory_dump_name = base::StringPrintf(
+            "net/http_network_session_0x%" PRIxPTR "/stream_factory",
+            reinterpret_cast<uintptr_t>(
+                context->http_transaction_factory()->GetSession()));
+        ASSERT_EQ(0u, allocator_dumps.count(stream_factory_dump_name));
+        quit_closure.Run();
+
       };
   base::trace_event::MemoryDumpManager::GetInstance()->CreateProcessDump(
-      args, base::Bind(on_memory_dump_done, run_loop.QuitClosure()));
+      args, base::Bind(on_memory_dump_done, run_loop.QuitClosure(), context()));
   run_loop.Run();
-  base::trace_event::TraceLog::GetInstance()->SetDisabled();
-  std::unique_ptr<trace_analyzer::TraceAnalyzer> analyzer =
-      GetDeserializedTrace();
-
-  trace_analyzer::TraceEventVector events;
-  analyzer->FindEvents(
-      trace_analyzer::Query::EventPhaseIs(TRACE_EVENT_PHASE_MEMORY_DUMP),
-      &events);
-  EXPECT_EQ(
-      1u,
-      trace_analyzer::CountMatches(
-          events,
-          trace_analyzer::Query::EventNameIs(
-              base::trace_event::MemoryDumpTypeToString(
-                  base::trace_event::MemoryDumpType::EXPLICITLY_TRIGGERED))));
-
-  const trace_analyzer::TraceEvent* event = events[0];
-  std::unique_ptr<base::Value> dumps;
-  event->GetArgAsValue("dumps", &dumps);
-  base::DictionaryValue* allocator_dumps;
-  ASSERT_TRUE(dumps->GetAsDictionary(&allocator_dumps));
-  ASSERT_TRUE(allocator_dumps->GetDictionary("allocators", &allocator_dumps));
-
-  base::DictionaryValue* url_request_context_dump;
-  ASSERT_TRUE(allocator_dumps->GetDictionary(
-      base::StringPrintf("net/url_request_context/unknown/0x%" PRIxPTR,
-                         reinterpret_cast<uintptr_t>(context())),
-      &url_request_context_dump));
-  base::DictionaryValue* attrs;
-  ASSERT_TRUE(url_request_context_dump->GetDictionary("attrs", &attrs));
-  base::DictionaryValue* object_count_attrs;
-  ASSERT_TRUE(attrs->GetDictionary(
-      base::trace_event::MemoryAllocatorDump::kNameObjectCount,
-      &object_count_attrs));
-  std::string object_count_str;
-  ASSERT_TRUE(object_count_attrs->GetString("value", &object_count_str));
-  EXPECT_EQ("0", object_count_str);
-
-  base::DictionaryValue* quic_stream_factory_dump;
-  ASSERT_TRUE(allocator_dumps->GetDictionary(
-      base::StringPrintf(
-          "net/http_network_session_0x%" PRIxPTR "/quic_stream_factory",
-          reinterpret_cast<uintptr_t>(
-              context()->http_transaction_factory()->GetSession())),
-      &quic_stream_factory_dump));
-  ASSERT_TRUE(quic_stream_factory_dump->GetDictionary("attrs", &attrs));
-  ASSERT_TRUE(attrs->GetDictionary("active_jobs", &object_count_attrs));
-  ASSERT_TRUE(object_count_attrs->GetString("value", &object_count_str));
-  EXPECT_EQ("0", object_count_str);
-  int object_count = -1;
-  ASSERT_TRUE(base::HexStringToInt(object_count_str, &object_count));
-  PrintPerfTest("active_quic_jobs", object_count, "count");
-  ASSERT_TRUE(attrs->GetDictionary("all_sessions", &object_count_attrs));
-  ASSERT_TRUE(object_count_attrs->GetString("value", &object_count_str));
-  EXPECT_EQ("1", object_count_str);
-  ASSERT_TRUE(base::HexStringToInt(object_count_str, &object_count));
-  PrintPerfTest("active_quic_sessions", object_count, "count");
-
-  base::DictionaryValue* http_stream_factory_dump;
-  ASSERT_FALSE(allocator_dumps->GetDictionary(
-      base::StringPrintf(
-          "net/http_network_session_0x%" PRIxPTR "/stream_factory",
-          reinterpret_cast<uintptr_t>(
-              context()->http_transaction_factory()->GetSession())),
-      &http_stream_factory_dump));
+  base::trace_event::MemoryDumpManager::GetInstance()->TeardownForTracing();
 }
 
 }  // namespace net

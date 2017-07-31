@@ -63,7 +63,7 @@ void BlameContext::TakeSnapshot() {
   std::unique_ptr<trace_event::TracedValue> snapshot(
       new trace_event::TracedValue);
   AsValueInto(snapshot.get());
-  static const char* kArgName = "snapshot";
+  static const char* const kArgName = "snapshot";
   const int kNumArgs = 1;
   unsigned char arg_types[1] = {TRACE_VALUE_TYPE_CONVERTABLE};
   std::unique_ptr<trace_event::ConvertableToTraceFormat> arg_values[1] = {

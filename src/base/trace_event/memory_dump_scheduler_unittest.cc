@@ -187,7 +187,7 @@ TEST_F(MemoryDumpSchedulerTest, StopAndStartOnAnotherThread) {
   EXPECT_CALL(on_tick_, OnTick(_))
       .WillRepeatedly(
           Invoke([&evt, expected_task_runner](MemoryDumpLevelOfDetail) {
-            EXPECT_TRUE(expected_task_runner->RunsTasksOnCurrentThread());
+            EXPECT_TRUE(expected_task_runner->RunsTasksInCurrentSequence());
             evt.Signal();
           }));
 
@@ -204,7 +204,7 @@ TEST_F(MemoryDumpSchedulerTest, StopAndStartOnAnotherThread) {
   EXPECT_CALL(on_tick_, OnTick(_))
       .WillRepeatedly(
           Invoke([&evt, expected_task_runner](MemoryDumpLevelOfDetail) {
-            EXPECT_TRUE(expected_task_runner->RunsTasksOnCurrentThread());
+            EXPECT_TRUE(expected_task_runner->RunsTasksInCurrentSequence());
             evt.Signal();
           }));
   scheduler_->Start(config, bg_thread_->task_runner());

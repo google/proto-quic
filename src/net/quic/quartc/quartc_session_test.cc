@@ -336,7 +336,7 @@ class FakeQuartcStreamDelegate : public QuartcStreamInterface::Delegate {
 
   void OnClose(QuartcStreamInterface* stream) override {}
 
-  void OnBufferedAmountDecrease(QuartcStreamInterface* stream) override {}
+  void OnCanWrite(QuartcStreamInterface* stream) override {}
 
   string data() { return last_received_data_; }
 
@@ -634,6 +634,16 @@ TEST_F(QuartcSessionTest, CancelQuartcStream) {
   EXPECT_EQ(stream->stream_error(),
             QuicRstStreamErrorCode::QUIC_STREAM_CANCELLED);
   EXPECT_TRUE(client_peer_->IsClosedStream(id));
+}
+
+TEST_F(QuartcSessionTest, GetStats) {
+  CreateClientAndServerSessions();
+  StartHandshake();
+  ASSERT_TRUE(client_peer_->IsCryptoHandshakeConfirmed());
+  ASSERT_TRUE(server_peer_->IsCryptoHandshakeConfirmed());
+
+  QuartcSessionStats stats = client_peer_->GetStats();
+  EXPECT_GT(stats.bandwidth_estimate_bits_per_second, 0);
 }
 
 }  // namespace

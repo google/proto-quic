@@ -37,6 +37,7 @@ android_library("net_java") {
 android_aidl("embedded_test_server_aidl") {
   interface_file = "../test/android/javatests/src/org/chromium/net/test/IEmbeddedTestServerInterface.aidl"
   sources = [
+    "../test/android/javatests/src/org/chromium/net/test/IConnectionListener.aidl",
     "../test/android/javatests/src/org/chromium/net/test/IEmbeddedTestServerImpl.aidl",
   ]
 }

@@ -60,8 +60,6 @@ class NET_EXPORT_PRIVATE ThroughputAnalyzer {
       const NetworkQualityEstimatorParams* params,
       scoped_refptr<base::SingleThreadTaskRunner> task_runner,
       ThroughputObservationCallback throughput_observation_callback,
-      bool use_local_host_requests_for_tests,
-      bool use_smaller_responses_for_tests,
       const NetLogWithSource& net_log);
   virtual ~ThroughputAnalyzer();
 

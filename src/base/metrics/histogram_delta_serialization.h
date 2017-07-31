@@ -44,10 +44,6 @@ class BASE_EXPORT HistogramDeltaSerialization : public HistogramFlattener {
   // HistogramFlattener implementation.
   void RecordDelta(const HistogramBase& histogram,
                    const HistogramSamples& snapshot) override;
-  void InconsistencyDetected(HistogramBase::Inconsistency problem) override;
-  void UniqueInconsistencyDetected(
-      HistogramBase::Inconsistency problem) override;
-  void InconsistencyDetectedInLoggedCount(int amount) override;
 
   ThreadChecker thread_checker_;
 
@@ -56,11 +52,6 @@ class BASE_EXPORT HistogramDeltaSerialization : public HistogramFlattener {
 
   // Output buffer for serialized deltas.
   std::vector<std::string>* serialized_deltas_;
-
-  // Histograms to count inconsistencies in snapshots.
-  HistogramBase* inconsistencies_histogram_;
-  HistogramBase* inconsistencies_unique_histogram_;
-  HistogramBase* inconsistent_snapshot_histogram_;
 
   DISALLOW_COPY_AND_ASSIGN(HistogramDeltaSerialization);
 };

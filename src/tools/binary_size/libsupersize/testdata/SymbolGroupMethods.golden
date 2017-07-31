@@ -1,8 +1,9 @@
 GroupedByName()
 Showing 41 symbols (41 unique) with total pss: 43785380 bytes
-.text=34.2mb     .rodata=5.65mb     .data*=1.87mb     .bss=512kb      total=41.8mb
+.text=34.2mb     .rodata=5.65mb     .data.rel.ro=1.02mb     .data=99.4kb     .bss=512kb      total=41.8mb    
 Number of unique paths: 9
 
+Section Legend: t=.text, r=.rodata, R=.data.rel.ro, d=.data, b=.bss
 Index | Running Total | Section@Address | PSS | Path
 ------------------------------------------------------------
 0)         16 (0.0%)  *@Group      16              _GLOBAL__sub_I_page_allocator.cc (count=1)
@@ -48,9 +49,10 @@ Index | Running Total | Section@Address | PSS | Path
 40)  43785380 (100.0%) *@Group      0               g_AnimationFrameTimeHistogram_clazz (count=1)
 GroupedByName(depth=1)
 Showing 33 symbols (33 unique) with total pss: 43785380 bytes
-.text=34.2mb     .rodata=5.65mb     .data*=1.87mb     .bss=512kb      total=41.8mb
+.text=34.2mb     .rodata=5.65mb     .data.rel.ro=1.02mb     .data=99.4kb     .bss=512kb      total=41.8mb    
 Number of unique paths: 9
 
+Section Legend: t=.text, r=.rodata, R=.data.rel.ro, d=.data, b=.bss
 Index | Running Total | Section@Address | PSS | Path
 ------------------------------------------------------------
 0)         16 (0.0%)  *@Group      16              _GLOBAL__sub_I_page_allocator.cc (count=1)
@@ -88,9 +90,10 @@ Index | Running Total | Section@Address | PSS | Path
 32)  43785380 (100.0%) *@Group      0               g_AnimationFrameTimeHistogram_clazz (count=1)
 GroupedByName(depth=-1)
 Showing 36 symbols (36 unique) with total pss: 43785380 bytes
-.text=34.2mb     .rodata=5.65mb     .data*=1.87mb     .bss=512kb      total=41.8mb
+.text=34.2mb     .rodata=5.65mb     .data.rel.ro=1.02mb     .data=99.4kb     .bss=512kb      total=41.8mb    
 Number of unique paths: 9
 
+Section Legend: t=.text, r=.rodata, R=.data.rel.ro, d=.data, b=.bss
 Index | Running Total | Section@Address | PSS | Path
 ------------------------------------------------------------
 0)         16 (0.0%)  *@Group      16              _GLOBAL__sub_I_page_allocator.cc (count=1)
@@ -131,9 +134,10 @@ Index | Running Total | Section@Address | PSS | Path
 35)  43785380 (100.0%) *@Group      0               g_AnimationFrameTimeHistogram_clazz (count=1)
 GroupedByName(depth=1, min_count=2)
 Showing 33 symbols (32 unique) with total pss: 43785380 bytes
-.text=34.2mb     .rodata=5.65mb     .data*=1.87mb     .bss=512kb      total=41.8mb
+.text=34.2mb     .rodata=5.65mb     .data.rel.ro=1.02mb     .data=99.4kb     .bss=512kb      total=41.8mb    
 Number of unique paths: 9
 
+Section Legend: t=.text, r=.rodata, R=.data.rel.ro, d=.data, b=.bss
 Index | Running Total | Section@Address | PSS | Path
 ------------------------------------------------------------
 0)         16 (0.0%)  t@0x28d900   16             base/page_allocator.cc
@@ -171,17 +175,17 @@ Index | Running Total | Section@Address | PSS | Path
              chrome (count=3)
 17)  42618292 (97.3%) r@0x28f3450  55             third_party/paint.cc
              kAnimationFrameTimeHistogramClassPath
-18)  42618348 (97.3%) d@0x2c176f0  56             third_party/icu/ucnv_ext.c
+18)  42618348 (97.3%) R@0x2c176f0  56             third_party/icu/ucnv_ext.c
              ChromeMainDelegate [vtable]
-19)  42618380 (97.3%) d@0x2cd84e0  32             third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libcontroller_api_impl.a_controller_api_impl.o
+19)  42618380 (97.3%) R@0x2cd84e0  32             third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libcontroller_api_impl.a_controller_api_impl.o
              .Lswitch.table.45
-20)  42618388 (97.3%) d@0x2cd84f0  8              third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libport_android_jni.a_jni_utils.o
+20)  42618388 (97.3%) R@0x2cd84f0  8              third_party/gvr-android-sdk/libgvr_shim_static_arm.a/libport_android_jni.a_jni_utils.o
              kSystemClassPrefixes
-21)  42618444 (97.3%) d@0x2cd8500  56             third_party/paint.cc
+21)  42618444 (97.3%) R@0x2cd8500  56             third_party/paint.cc
              ChromeMainDelegateAndroid [vtable]
-22)  42618468 (97.3%) d@0x2cd8538  24             base/page_allocator.cc
+22)  42618468 (97.3%) R@0x2cd8538  24             base/page_allocator.cc
              mojo::MessageReceiver [vtable]
-23)  42618480 (97.3%) d@0x2cd8550  12             base/page_allocator.cc
+23)  42618480 (97.3%) R@0x2cd8550  12             base/page_allocator.cc
              kMethodsAnimationFrameTimeHistogram
 24)  43785212 (100.0%) *@Group      1166732        {no path}
              ** symbol gap 0 (end of section) (count=2)

@@ -146,7 +146,7 @@ TEST_F(TaskSchedulerSingleThreadTaskRunnerManagerTest, SameThreadUsed) {
 }
 
 TEST_F(TaskSchedulerSingleThreadTaskRunnerManagerTest,
-       RunsTasksOnCurrentThread) {
+       RunsTasksInCurrentSequence) {
   scoped_refptr<SingleThreadTaskRunner> task_runner_1 =
       single_thread_task_runner_manager_
           ->CreateSingleThreadTaskRunnerWithTraits(
@@ -158,26 +158,28 @@ TEST_F(TaskSchedulerSingleThreadTaskRunnerManagerTest,
               "B", {TaskShutdownBehavior::BLOCK_SHUTDOWN},
               SingleThreadTaskRunnerThreadMode::DEDICATED);
 
-  EXPECT_FALSE(task_runner_1->RunsTasksOnCurrentThread());
-  EXPECT_FALSE(task_runner_2->RunsTasksOnCurrentThread());
+  EXPECT_FALSE(task_runner_1->RunsTasksInCurrentSequence());
+  EXPECT_FALSE(task_runner_2->RunsTasksInCurrentSequence());
 
   task_runner_1->PostTask(
-      FROM_HERE, BindOnce(
-                     [](scoped_refptr<SingleThreadTaskRunner> task_runner_1,
-                        scoped_refptr<SingleThreadTaskRunner> task_runner_2) {
-                       EXPECT_TRUE(task_runner_1->RunsTasksOnCurrentThread());
-                       EXPECT_FALSE(task_runner_2->RunsTasksOnCurrentThread());
-                     },
-                     task_runner_1, task_runner_2));
+      FROM_HERE,
+      BindOnce(
+          [](scoped_refptr<SingleThreadTaskRunner> task_runner_1,
+             scoped_refptr<SingleThreadTaskRunner> task_runner_2) {
+            EXPECT_TRUE(task_runner_1->RunsTasksInCurrentSequence());
+            EXPECT_FALSE(task_runner_2->RunsTasksInCurrentSequence());
+          },
+          task_runner_1, task_runner_2));
 
   task_runner_2->PostTask(
-      FROM_HERE, BindOnce(
-                     [](scoped_refptr<SingleThreadTaskRunner> task_runner_1,
-                        scoped_refptr<SingleThreadTaskRunner> task_runner_2) {
-                       EXPECT_FALSE(task_runner_1->RunsTasksOnCurrentThread());
-                       EXPECT_TRUE(task_runner_2->RunsTasksOnCurrentThread());
-                     },
-                     task_runner_1, task_runner_2));
+      FROM_HERE,
+      BindOnce(
+          [](scoped_refptr<SingleThreadTaskRunner> task_runner_1,
+             scoped_refptr<SingleThreadTaskRunner> task_runner_2) {
+            EXPECT_FALSE(task_runner_1->RunsTasksInCurrentSequence());
+            EXPECT_TRUE(task_runner_2->RunsTasksInCurrentSequence());
+          },
+          task_runner_1, task_runner_2));
 
   task_tracker_.Shutdown();
 }

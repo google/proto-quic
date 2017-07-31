@@ -15,6 +15,7 @@
 #if defined(OS_MACOSX)
 #include "base/mac/scoped_nsautorelease_pool.h"
 #elif defined(OS_WIN)
+#include "base/win/com_init_check_hook.h"
 #include "base/win/scoped_com_initializer.h"
 #endif
 
@@ -43,7 +44,10 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
     // A SchedulerWorker starts out waiting for work.
     outer_->delegate_->WaitForWork(&wake_up_event_);
 
-#if defined(OS_WIN)
+    // When defined(COM_INIT_CHECK_HOOK_ENABLED), ignore
+    // SchedulerBackwardCompatibility::INIT_COM_STA to find incorrect uses of
+    // COM that should be running in a COM STA Task Runner.
+#if defined(OS_WIN) && !defined(COM_INIT_CHECK_HOOK_ENABLED)
     std::unique_ptr<win::ScopedCOMInitializer> com_initializer;
     if (outer_->backward_compatibility_ ==
         SchedulerBackwardCompatibility::INIT_COM_STA) {
@@ -210,7 +214,7 @@ SchedulerWorker::SchedulerWorker(
       priority_hint_(priority_hint),
       delegate_(std::move(delegate)),
       task_tracker_(task_tracker),
-#if defined(OS_WIN)
+#if defined(OS_WIN) && !defined(COM_INIT_CHECK_HOOK_ENABLED)
       backward_compatibility_(backward_compatibility),
 #endif
       initial_state_(initial_state) {

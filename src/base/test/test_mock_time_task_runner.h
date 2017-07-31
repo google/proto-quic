@@ -31,9 +31,9 @@ class TickClock;
 //
 // TestMockTimeTaskRunner has the following properties:
 //
-//   - Methods RunsTasksOnCurrentThread() and Post[Delayed]Task() can be called
-//     from any thread, but the rest of the methods must be called on the same
-//     thread the TaskRunner was created on.
+//   - Methods RunsTasksInCurrentSequence() and Post[Delayed]Task() can be
+//     called from any thread, but the rest of the methods must be called on
+//     the same thread the TaskRunner was created on.
 //   - It allows for reentrancy, in that it handles the running of tasks that in
 //     turn call back into it (e.g., to post more tasks).
 //   - Tasks are stored in a priority queue, and executed in the increasing
@@ -51,8 +51,8 @@ class TestMockTimeTaskRunner : public SingleThreadTaskRunner {
  public:
   // Everything that is executed in the scope of a ScopedContext will behave as
   // though it ran under |scope| (i.e. ThreadTaskRunnerHandle,
-  // RunsTasksOnCurrentThread, etc.). This allows the test body to be all in one
-  // block when multiple TestMockTimeTaskRunners share the main thread. For
+  // RunsTasksInCurrentSequence, etc.). This allows the test body to be all in
+  // one block when multiple TestMockTimeTaskRunners share the main thread. For
   // example:
   //
   //   class ExampleFixture {
@@ -199,7 +199,7 @@ class TestMockTimeTaskRunner : public SingleThreadTaskRunner {
                        const TimeDelta& max_delta,
                        TestPendingTask* next_task);
 
-  // Also used for non-dcheck logic (RunsTasksOnCurrentThread()) and as such
+  // Also used for non-dcheck logic (RunsTasksInCurrentSequence()) and as such
   // needs to be a ThreadCheckerImpl.
   ThreadCheckerImpl thread_checker_;
 

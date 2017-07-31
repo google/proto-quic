@@ -879,7 +879,8 @@ BASE_EXPORT std::string SystemErrorCodeToString(SystemErrorCode error_code) {
 }
 #elif defined(OS_POSIX)
 BASE_EXPORT std::string SystemErrorCodeToString(SystemErrorCode error_code) {
-  return base::safe_strerror(error_code);
+  return base::safe_strerror(error_code) +
+         base::StringPrintf(" (%d)", error_code);
 }
 #else
 #error Not implemented
@@ -913,6 +914,10 @@ ErrnoLogMessage::ErrnoLogMessage(const char* file,
 
 ErrnoLogMessage::~ErrnoLogMessage() {
   stream() << ": " << SystemErrorCodeToString(err_);
+  // We're about to crash (CHECK). Put |err_| on the stack (by placing it in a
+  // field) and use Alias in hopes that it makes it into crash dumps.
+  int last_error = err_;
+  base::debug::Alias(&last_error);
 }
 #endif  // defined(OS_WIN)
 

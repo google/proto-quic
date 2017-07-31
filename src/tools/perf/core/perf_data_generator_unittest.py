@@ -9,6 +9,7 @@ from core.perf_data_generator import BenchmarkMetadata
 
 from telemetry import benchmark
 from telemetry import decorators
+from telemetry import story
 
 import mock
 
@@ -93,6 +94,7 @@ class PerfDataGeneratorTest(unittest.TestCase):
           'can_use_on_swarming_builders': True,
           'expiration': 36000,
           'io_timeout': 3600,
+          'upload_test_results': False,
         },
         'name': 'speedometer',
         'isolate_name': 'telemetry_perf_tests',
@@ -115,6 +117,7 @@ class PerfDataGeneratorTest(unittest.TestCase):
           'can_use_on_swarming_builders': True,
           'expiration': 36000,
           'io_timeout': 3600,
+          'upload_test_results': False,
         },
         'name': 'speedometer.reference',
         'isolate_name': 'telemetry_perf_tests',
@@ -151,7 +154,7 @@ class PerfDataGeneratorTest(unittest.TestCase):
   def testGenerateTelemetryTestsWithUploadToFlakinessDashboard(self):
     swarming_dimensions = [{'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP'}]
     test = perf_data_generator.generate_telemetry_test(
-        swarming_dimensions, 'system_health.common_desktop', 'release', True)
+        swarming_dimensions, 'system_health.common_desktop', 'release')
     expected_generated_test = {
         'override_compile_targets': ['telemetry_perf_tests'],
         'args': ['system_health.common_desktop', '-v', '--upload-results',
@@ -164,6 +167,7 @@ class PerfDataGeneratorTest(unittest.TestCase):
           'can_use_on_swarming_builders': True,
           'expiration': 36000,
           'io_timeout': 3600,
+          'upload_test_results': True,
         },
         'name': 'system_health.common_desktop',
         'isolate_name': 'telemetry_perf_tests',
@@ -324,3 +328,42 @@ class PerfDataGeneratorTest(unittest.TestCase):
     self.assertTrue('Linux Perf' in tests)
     self.assertTrue('Mojo Linux Perf' in tests)
     self.assertFalse('comment' in tests)
+
+  def testShouldBenchmarksBeScheduledViaStoryExpectationsBadOS(self):
+    class RegularBenchmark(benchmark.Benchmark):
+      @classmethod
+      def Name(cls):
+        return 'regular'
+
+    with self.assertRaises(TypeError):
+      perf_data_generator.ShouldBenchmarksBeScheduledViaStoryExpectations(
+          RegularBenchmark, 'bot_name', 'os_name', None)
+
+  def testShouldBenchmarksBeScheduledViaStoryExpectationsShouldRun(self):
+    class RegularBenchmark(benchmark.Benchmark):
+      @classmethod
+      def Name(cls):
+        return 'regular'
+    valid_os_list = ['mac', 'android', 'windows', 'linux']
+    for os in valid_os_list:
+      self.assertTrue(
+          perf_data_generator.ShouldBenchmarksBeScheduledViaStoryExpectations(
+              RegularBenchmark, 'bot_name', os, None))
+
+  def testShouldBenchmarksBeScheduledViaStoryExpectationsShouldntRun(self):
+    class RegularBenchmark(benchmark.Benchmark):
+      @classmethod
+      def Name(cls):
+        return 'regular'
+
+      def GetExpectations(self):
+        class Expectations(story.expectations.StoryExpectations):
+          def SetExpectations(self):
+            self.PermanentlyDisableBenchmark([story.expectations.ALL], 'reason')
+        return Expectations()
+
+    valid_os_list = ['mac', 'android', 'windows', 'linux']
+    for os in valid_os_list:
+      self.assertFalse(
+          perf_data_generator.ShouldBenchmarksBeScheduledViaStoryExpectations(
+              RegularBenchmark, 'bot_name', os, None))

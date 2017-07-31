@@ -26,15 +26,6 @@ config("compiler") {
   }
   asmflags = cflags
 
-  # TODO(thakis): Once Fuchsia's libclang_rt.builtin no longer has upstream
-  # patches, we might want to make tools/clang/scripts/update.py build it
-  # and bundle it with the clang package instead of using the library from
-  # the SDK, https://crbug.com/724204
-  ldflags += [
-    "-resource-dir",
-    rebase_path(fuchsia_sdk, root_build_dir) + "/toolchain_libs/clang/5.0.0",
-  ]
-
   ldflags += [
     # The stack defaults to 256k on Fuchsia (see
     # https://fuchsia.googlesource.com/magenta/+/master/system/private/magenta/stack.h#9),

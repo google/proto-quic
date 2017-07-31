@@ -26,7 +26,7 @@ using CertErrorId = const void*;
 // TODO(crbug.com/634443): Implement this -- add magic to ensure that storage
 //                         of identical strings isn't pool.
 #define DEFINE_CERT_ERROR_ID(name, c_str_literal) \
-  CertErrorId name = c_str_literal
+  const CertErrorId name = c_str_literal
 
 // Returns a debug string for a CertErrorId. In practice this returns the
 // string literal given to DEFINE_CERT_ERROR_ID(), which is human-readable.

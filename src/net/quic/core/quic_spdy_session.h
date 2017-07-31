@@ -159,8 +159,14 @@ class QUIC_EXPORT_PRIVATE QuicSpdySession : public QuicSession {
     spdy_framer_.set_max_decode_buffer_size_bytes(max_decode_buffer_size_bytes);
   }
 
+  // TODO(dahollings): Move to private upon deprecation of
+  // --quic_restart_flag_quic_header_list_size.
   void set_max_uncompressed_header_bytes(
       size_t set_max_uncompressed_header_bytes);
+
+  void set_max_inbound_header_list_size(size_t max_inbound_header_list_size) {
+    max_inbound_header_list_size_ = max_inbound_header_list_size;
+  }
 
  protected:
   // TODO(ckrasic) - remove these two when
@@ -262,6 +268,10 @@ class QUIC_EXPORT_PRIVATE QuicSpdySession : public QuicSession {
       QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
 
   std::unique_ptr<QuicHeadersStream> headers_stream_;
+
+  // The maximum size of a header block that will be accepted from the peer,
+  // defined per spec as key + value + overhead per field (uncompressed).
+  size_t max_inbound_header_list_size_;
 
   // If set, redirect all data through the headers stream in order to
   // simulate forced HOL blocking between streams as happens in

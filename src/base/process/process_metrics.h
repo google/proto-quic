@@ -480,9 +480,22 @@ struct BASE_EXPORT SwapInfo {
   uint64_t mem_used_total;
 };
 
+// Parses a string containing the contents of /sys/block/zram0/mm_stat.
+// This should be used for the new ZRAM sysfs interfaces.
+// Returns true on success or false for a parsing error.
+// Exposed for testing.
+BASE_EXPORT bool ParseZramMmStat(StringPiece mm_stat_data, SwapInfo* swap_info);
+
+// Parses a string containing the contents of /sys/block/zram0/stat
+// This should be used for the new ZRAM sysfs interfaces.
+// Returns true on success or false for a parsing error.
+// Exposed for testing.
+BASE_EXPORT bool ParseZramStat(StringPiece stat_data, SwapInfo* swap_info);
+
 // In ChromeOS, reads files from /sys/block/zram0 that contain ZRAM usage data.
 // Fills in the provided |swap_data| structure.
-BASE_EXPORT void GetSwapInfo(SwapInfo* swap_info);
+// Returns true on success or false for a parsing error.
+BASE_EXPORT bool GetSwapInfo(SwapInfo* swap_info);
 #endif  // defined(OS_CHROMEOS)
 
 // Collects and holds performance metrics for system memory and disk.

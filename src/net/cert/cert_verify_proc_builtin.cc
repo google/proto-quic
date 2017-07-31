@@ -21,7 +21,7 @@
 #include "net/cert/internal/cert_issuer_source_static.h"
 #include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/internal/path_builder.h"
-#include "net/cert/internal/signature_policy.h"
+#include "net/cert/internal/simple_path_builder_delegate.h"
 #include "net/cert/internal/system_trust_store.h"
 #include "net/cert/internal/verify_certificate_chain.h"
 #include "net/cert/x509_certificate.h"
@@ -200,9 +200,7 @@ void DoVerify(X509Certificate* input_cert,
   // keys, and separately cert_verify_proc.cc also checks the chains with its
   // own policy. These policies should be aligned, to give path building the
   // best chance of finding a good path.
-  // Another difference to resolve is the path building here does not check the
-  // target certificate's key strength, whereas cert_verify_proc.cc does.
-  SimpleSignaturePolicy signature_policy(1024);
+  SimplePathBuilderDelegate path_builder_delegate(1024);
 
   // Use the current time.
   der::GeneralizedTime verification_time;
@@ -217,7 +215,7 @@ void DoVerify(X509Certificate* input_cert,
   // Initialize the path builder.
   CertPathBuilder::Result result;
   CertPathBuilder path_builder(
-      target, ssl_trust_store->GetTrustStore(), &signature_policy,
+      target, ssl_trust_store->GetTrustStore(), &path_builder_delegate,
       verification_time, KeyPurpose::SERVER_AUTH, InitialExplicitPolicy::kFalse,
       {AnyPolicy()} /* user_initial_policy_set*/,
       InitialPolicyMappingInhibit::kFalse, InitialAnyPolicyInhibit::kFalse,

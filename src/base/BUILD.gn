@@ -580,19 +580,6 @@ component("base") {
     "nix/mime_util_xdg.h",
     "nix/xdg_util.cc",
     "nix/xdg_util.h",
-    "numerics/checked_math.h",
-    "numerics/checked_math_impl.h",
-    "numerics/clamped_math.h",
-    "numerics/clamped_math_impl.h",
-    "numerics/safe_conversions.h",
-    "numerics/safe_conversions_arm_impl.h",
-    "numerics/safe_conversions_impl.h",
-    "numerics/safe_math.h",
-    "numerics/safe_math_arm_impl.h",
-    "numerics/safe_math_clang_gcc_impl.h",
-    "numerics/safe_math_shared_impl.h",
-    "numerics/saturated_arithmetic.h",
-    "numerics/saturated_arithmetic_arm.h",
     "observer_list.h",
     "observer_list_threadsafe.h",
     "optional.h",
@@ -613,8 +600,7 @@ component("base") {
     "posix/global_descriptors.h",
     "posix/safe_strerror.cc",
     "posix/safe_strerror.h",
-    "posix/unix_domain_socket_linux.cc",
-    "posix/unix_domain_socket_linux.h",
+    "posix/unix_domain_socket.h",
     "post_task_and_reply_with_result_internal.h",
     "power_monitor/power_monitor.cc",
     "power_monitor/power_monitor.h",
@@ -775,10 +761,8 @@ component("base") {
     "synchronization/read_write_lock_win.cc",
     "synchronization/spin_wait.h",
     "synchronization/waitable_event.h",
-    "synchronization/waitable_event_mac.cc",
     "synchronization/waitable_event_posix.cc",
     "synchronization/waitable_event_watcher.h",
-    "synchronization/waitable_event_watcher_mac.cc",
     "synchronization/waitable_event_watcher_posix.cc",
     "synchronization/waitable_event_watcher_win.cc",
     "synchronization/waitable_event_win.cc",
@@ -1102,6 +1086,7 @@ component("base") {
       "base_paths_posix.h",
       "base_paths_win.cc",
       "base_paths_win.h",
+      "posix/unix_domain_socket.cc",
     ]
 
     if (is_linux) {
@@ -1134,6 +1119,7 @@ component("base") {
     ":base_static",
     ":build_date",
     ":debugging_flags",
+    "//base/numerics:base_numerics",
   ]
 
   # Needed for <atomic> if using newer C++ library than sysroot, except if
@@ -1197,7 +1183,6 @@ component("base") {
     sources += [
       "debug/proc_maps_linux.cc",
       "files/file_path_watcher_linux.cc",
-      "posix/unix_domain_socket_linux.cc",
       "power_monitor/power_monitor_device_source_android.cc",
       "process/internal_linux.cc",
       "process/memory_linux.cc",
@@ -1234,6 +1219,8 @@ component("base") {
       "memory/shared_memory_posix.cc",
       "message_loop/message_pump_libevent.cc",
       "message_loop/message_pump_libevent.h",
+      "posix/unix_domain_socket.cc",
+      "posix/unix_domain_socket.h",
       "process/kill_posix.cc",
       "process/launch_posix.cc",
       "process/process_handle_posix.cc",
@@ -1325,7 +1312,7 @@ component("base") {
 
     if (is_nacl_nonsfi) {
       set_sources_assignment_filter([])
-      sources += [ "posix/unix_domain_socket_linux.cc" ]
+      sources += [ "posix/unix_domain_socket.cc" ]
       set_sources_assignment_filter(sources_assignment_filter)
       sources -= [ "rand_util_nacl.cc" ]
       configs += [ ":nacl_nonsfi_warnings" ]
@@ -1512,8 +1499,6 @@ component("base") {
       "memory/shared_memory_posix.cc",
       "native_library_posix.cc",
       "strings/sys_string_conversions_posix.cc",
-      "synchronization/waitable_event_posix.cc",
-      "synchronization/waitable_event_watcher_posix.cc",
       "threading/platform_thread_internal_posix.cc",
     ]
 
@@ -1532,11 +1517,6 @@ component("base") {
 
   # Linux.
   if (is_linux) {
-    if (is_asan || is_lsan || is_msan || is_tsan) {
-      # For llvm-sanitizer.
-      data += [ "//third_party/llvm-build/Release+Asserts/lib/libstdc++.so.6" ]
-    }
-
     # TODO(brettw) this will need to be parameterized at some point.
     linux_configs = []
     if (use_glib) {
@@ -1640,8 +1620,6 @@ component("base") {
       "power_monitor/power_monitor_device_source_ios.mm",
       "process/memory_stubs.cc",
       "strings/sys_string_conversions_mac.mm",
-      "synchronization/waitable_event_mac.cc",
-      "synchronization/waitable_event_watcher_mac.cc",
       "threading/platform_thread_mac.mm",
       "time/time_conversion_posix.cc",
       "time/time_mac.cc",
@@ -1993,7 +1971,6 @@ test("base_unittests") {
     "cancelable_callback_unittest.cc",
     "command_line_unittest.cc",
     "containers/adapters_unittest.cc",
-    "containers/container_test_utils.h",
     "containers/flat_map_unittest.cc",
     "containers/flat_set_unittest.cc",
     "containers/flat_tree_unittest.cc",
@@ -2111,8 +2088,6 @@ test("base_unittests") {
     "metrics/sparse_histogram_unittest.cc",
     "metrics/statistics_recorder_unittest.cc",
     "native_library_unittest.cc",
-    "numerics/safe_numerics_unittest.cc",
-    "numerics/saturated_arithmetic_unittest.cc",
     "observer_list_unittest.cc",
     "optional_unittest.cc",
     "os_compat_android_unittest.cc",
@@ -2120,7 +2095,7 @@ test("base_unittests") {
     "pending_task_unittest.cc",
     "pickle_unittest.cc",
     "posix/file_descriptor_shuffle_unittest.cc",
-    "posix/unix_domain_socket_linux_unittest.cc",
+    "posix/unix_domain_socket_unittest.cc",
     "power_monitor/power_monitor_unittest.cc",
     "process/launch_unittest_win.cc",
     "process/memory_unittest.cc",
@@ -2134,6 +2109,7 @@ test("base_unittests") {
     "profiler/stack_sampling_profiler_unittest.cc",
     "rand_util_unittest.cc",
     "run_loop_unittest.cc",
+    "safe_numerics_unittest.cc",
     "scoped_clear_errno_unittest.cc",
     "scoped_generic_unittest.cc",
     "scoped_native_library_unittest.cc",
@@ -2268,7 +2244,6 @@ test("base_unittests") {
     "win/pe_image_unittest.cc",
     "win/registry_unittest.cc",
     "win/scoped_bstr_unittest.cc",
-    "win/scoped_comptr_unittest.cc",
     "win/scoped_handle_unittest.cc",
     "win/scoped_process_information_unittest.cc",
     "win/scoped_variant_unittest.cc",
@@ -2396,8 +2371,10 @@ test("base_unittests") {
   }
 
   if (is_fuchsia) {
-    # Fuchsia doesn't support file locking.
-    sources -= [ "files/file_locking_unittest.cc" ]
+    sources -= [
+      "files/file_locking_unittest.cc",
+      "posix/unix_domain_socket_unittest.cc",
+    ]
   }
 
   if (is_android) {

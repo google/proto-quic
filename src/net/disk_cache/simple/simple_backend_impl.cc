@@ -27,6 +27,7 @@
 #include "base/single_thread_task_runner.h"
 #include "base/sys_info.h"
 #include "base/task_runner_util.h"
+#include "base/task_scheduler/post_task.h"
 #include "base/threading/sequenced_worker_pool.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
@@ -88,6 +89,15 @@ class LeakySequencedWorkerPool {
 
 base::LazyInstance<LeakySequencedWorkerPool>::Leaky g_sequenced_worker_pool =
     LAZY_INSTANCE_INITIALIZER;
+
+scoped_refptr<base::SequencedTaskRunner> FallbackToInternalIfNull(
+    const scoped_refptr<base::SingleThreadTaskRunner>& cache_thread) {
+  if (cache_thread)
+    return cache_thread;
+  return base::CreateSequencedTaskRunnerWithTraits(
+      {base::MayBlock(), base::TaskPriority::USER_BLOCKING,
+       base::TaskShutdownBehavior::BLOCK_SHUTDOWN});
+}
 
 bool g_fd_limit_histogram_has_been_populated = false;
 
@@ -247,11 +257,11 @@ SimpleBackendImpl::SimpleBackendImpl(
     net::NetLog* net_log)
     : path_(path),
       cache_type_(cache_type),
-      cache_thread_(cache_thread),
+      cache_runner_(FallbackToInternalIfNull(cache_thread)),
       orig_max_size_(max_bytes),
-      entry_operations_mode_(cache_type == net::DISK_CACHE ?
-                                 SimpleEntryImpl::OPTIMISTIC_OPERATIONS :
-                                 SimpleEntryImpl::NON_OPTIMISTIC_OPERATIONS),
+      entry_operations_mode_(cache_type == net::DISK_CACHE
+                                 ? SimpleEntryImpl::OPTIMISTIC_OPERATIONS
+                                 : SimpleEntryImpl::NON_OPTIMISTIC_OPERATIONS),
       net_log_(net_log) {
   MaybeHistogramFdLimit(cache_type_);
 }
@@ -265,13 +275,13 @@ int SimpleBackendImpl::Init(const CompletionCallback& completion_callback) {
 
   index_.reset(new SimpleIndex(
       base::ThreadTaskRunnerHandle::Get(), this, cache_type_,
-      base::MakeUnique<SimpleIndexFile>(cache_thread_, worker_pool_.get(),
+      base::MakeUnique<SimpleIndexFile>(cache_runner_, worker_pool_.get(),
                                         cache_type_, path_)));
   index_->ExecuteWhenReady(
       base::Bind(&RecordIndexLoad, cache_type_, base::TimeTicks::Now()));
 
   PostTaskAndReplyWithResult(
-      cache_thread_.get(), FROM_HERE,
+      cache_runner_.get(), FROM_HERE,
       base::Bind(&SimpleBackendImpl::InitCacheStructureOnDisk, path_,
                  orig_max_size_, GetSimpleExperiment(cache_type_)),
       base::Bind(&SimpleBackendImpl::InitializeIndex, AsWeakPtr(),

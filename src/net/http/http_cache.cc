@@ -53,27 +53,22 @@
 
 namespace net {
 
-HttpCache::DefaultBackend::DefaultBackend(
-    CacheType type,
-    BackendType backend_type,
-    const base::FilePath& path,
-    int max_bytes,
-    const scoped_refptr<base::SingleThreadTaskRunner>& thread)
+HttpCache::DefaultBackend::DefaultBackend(CacheType type,
+                                          BackendType backend_type,
+                                          const base::FilePath& path,
+                                          int max_bytes)
     : type_(type),
       backend_type_(backend_type),
       path_(path),
-      max_bytes_(max_bytes),
-      thread_(thread) {
-}
+      max_bytes_(max_bytes) {}
 
 HttpCache::DefaultBackend::~DefaultBackend() {}
 
 // static
 std::unique_ptr<HttpCache::BackendFactory> HttpCache::DefaultBackend::InMemory(
     int max_bytes) {
-  return base::WrapUnique(
-      new DefaultBackend(MEMORY_CACHE, CACHE_BACKEND_DEFAULT, base::FilePath(),
-                         max_bytes, nullptr));
+  return base::WrapUnique(new DefaultBackend(
+      MEMORY_CACHE, CACHE_BACKEND_DEFAULT, base::FilePath(), max_bytes));
 }
 
 int HttpCache::DefaultBackend::CreateBackend(
@@ -86,7 +81,6 @@ int HttpCache::DefaultBackend::CreateBackend(
                                         path_,
                                         max_bytes_,
                                         true,
-                                        thread_,
                                         net_log,
                                         backend,
                                         callback);
@@ -872,8 +866,9 @@ void HttpCache::DoneWithEntry(ActiveEntry* entry,
                               bool is_partial) {
   // |should_restart| is true if there may be other transactions dependent on
   // this transaction and they will need to be restarted.
-  bool should_restart = process_cancel && HasDependentTransactions(
-                                              entry, transaction, is_partial);
+  bool should_restart =
+      process_cancel && HasDependentTransactions(entry, transaction);
+
   if (should_restart && is_partial)
     entry->disk_entry->CancelSparseIO();
 
@@ -900,7 +895,7 @@ void HttpCache::DoneWithEntry(ActiveEntry* entry,
     // Assume there was a failure.
     bool success = false;
     bool did_truncate = false;
-    if (should_restart) {
+    if (should_restart && IsValidResponseForWriter(transaction, is_partial)) {
       DCHECK(entry->disk_entry);
       // This is a successful operation in the sense that we want to keep the
       // entry.
@@ -1122,8 +1117,7 @@ bool HttpCache::CanTransactionWriteResponseHeaders(ActiveEntry* entry,
 }
 
 bool HttpCache::HasDependentTransactions(ActiveEntry* entry,
-                                         Transaction* transaction,
-                                         bool is_partial) const {
+                                         Transaction* transaction) const {
   if (transaction->method() == "HEAD" || transaction->method() == "DELETE")
     return false;
 
@@ -1143,6 +1137,21 @@ bool HttpCache::HasDependentTransactions(ActiveEntry* entry,
     if (pending_transaction == transaction)
       return false;
   }
+
+  return true;
+}
+
+bool HttpCache::IsValidResponseForWriter(Transaction* transaction,
+                                         bool is_partial) const {
+  const HttpResponseInfo* response_info = transaction->GetResponseInfo();
+
+  if (!response_info->headers.get())
+    return false;
+
+  // Return false if the response code sent by the server is garbled.
+  // TODO(shivanisha): Also include 304 when shared writing is supported.
+  if (!is_partial && response_info->headers->response_code() != 200)
+    return false;
 
   return true;
 }

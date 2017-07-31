@@ -153,11 +153,12 @@ bool Process::WaitForExitWithTimeout(TimeDelta timeout, int* exit_code) const {
   // Record the event that this thread is blocking upon (for hang diagnosis).
   base::debug::ScopedProcessWaitActivity process_activity(this);
 
-  mx_time_t mxtimeout_nanos =
-      timeout == TimeDelta::Max() ? MX_TIME_INFINITE : timeout.InNanoseconds();
-  mx_signals_t signals_observed;
+  mx_time_t deadline = timeout == TimeDelta::Max()
+                           ? MX_TIME_INFINITE
+                           : (TimeTicks::Now() + timeout).ToMXTime();
+  mx_signals_t signals_observed = 0;
   mx_status_t status = mx_object_wait_one(process_, MX_TASK_TERMINATED,
-                                          mxtimeout_nanos, &signals_observed);
+                                          deadline, &signals_observed);
   *exit_code = -1;
   if (status != MX_OK && status != MX_ERR_TIMED_OUT)
     return false;
@@ -168,7 +169,7 @@ bool Process::WaitForExitWithTimeout(TimeDelta timeout, int* exit_code) const {
   status = mx_object_get_info(process_, MX_INFO_PROCESS, &proc_info,
                               sizeof(proc_info), nullptr, nullptr);
   if (status != MX_OK)
-    return status;
+    return false;
 
   *exit_code = proc_info.return_code;
   return true;

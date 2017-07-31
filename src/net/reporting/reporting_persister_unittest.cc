@@ -64,7 +64,7 @@ TEST_F(ReportingPersisterTest, DISABLED_Test) {
   EXPECT_EQ(kUrl_, reports[0]->url);
   EXPECT_EQ(kGroup_, reports[0]->group);
   EXPECT_EQ(kType_, reports[0]->type);
-  EXPECT_TRUE(base::Value::Equals(&body, reports[0]->body.get()));
+  EXPECT_EQ(body, *reports[0]->body);
   EXPECT_EQ(tick_clock()->NowTicks() - base::TimeDelta::FromHours(1),
             reports[0]->queued);
   EXPECT_EQ(kAttempts, reports[0]->attempts);

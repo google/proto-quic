@@ -111,11 +111,11 @@ class QUIC_EXPORT_PRIVATE SendAlgorithmInterface {
 
   virtual CongestionControlType GetCongestionControlType() const = 0;
 
-  // Called by the Session when we get a bandwidth estimate from the client.
-  // Uses the max bandwidth in the params if |max_bandwidth_resumption| is true.
-  virtual void ResumeConnectionState(
-      const CachedNetworkParameters& cached_network_params,
-      bool max_bandwidth_resumption) = 0;
+  // Notifies the congestion control algorithm of an external network
+  // measurement or prediction.  Either |bandwidth| or |rtt| may be zero if no
+  // sample is available.
+  virtual void AdjustNetworkParameters(QuicBandwidth bandwidth,
+                                       QuicTime::Delta rtt) = 0;
 
   // Retrieves debugging information about the current state of the
   // send algorithm.

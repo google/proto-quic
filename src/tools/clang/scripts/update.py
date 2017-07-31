@@ -27,14 +27,14 @@ import zipfile
 # Do NOT CHANGE this if you don't know what you're doing -- see
 # https://chromium.googlesource.com/chromium/src/+/master/docs/updating_clang.md
 # Reverting problematic clang rolls is safe, though.
-CLANG_REVISION = '307486'
+CLANG_REVISION = '308728'
 
 use_head_revision = 'LLVM_FORCE_HEAD_REVISION' in os.environ
 if use_head_revision:
   CLANG_REVISION = 'HEAD'
 
 # This is incremented when pushing a new build of Clang at the same revision.
-CLANG_SUB_REVISION=1
+CLANG_SUB_REVISION=3
 
 PACKAGE_VERSION = "%s-%s" % (CLANG_REVISION, CLANG_SUB_REVISION)
 
@@ -66,7 +66,7 @@ LLVM_BUILD_TOOLS_DIR = os.path.abspath(
     os.path.join(LLVM_DIR, '..', 'llvm-build-tools'))
 STAMP_FILE = os.path.normpath(
     os.path.join(LLVM_DIR, '..', 'llvm-build', 'cr_build_revision'))
-VERSION = '5.0.0'
+VERSION = '6.0.0'
 ANDROID_NDK_DIR = os.path.join(
     CHROMIUM_DIR, 'third_party', 'android_tools', 'ndk')
 
@@ -289,8 +289,6 @@ def DownloadHostGcc(args):
   """Downloads gcc 4.8.5 and makes sure args.gcc_toolchain is set."""
   if not sys.platform.startswith('linux') or args.gcc_toolchain:
     return
-  # Unconditionally download a prebuilt gcc to guarantee the included libstdc++
-  # works on Ubuntu Precise.
   gcc_dir = os.path.join(LLVM_BUILD_TOOLS_DIR, 'gcc485precise')
   if not os.path.exists(gcc_dir):
     print 'Downloading pre-built GCC 4.8.5...'
@@ -490,7 +488,7 @@ def UpdateClang(args):
     EnsureDirExists(LLVM_BOOTSTRAP_DIR)
     os.chdir(LLVM_BOOTSTRAP_DIR)
     bootstrap_args = base_cmake_args + [
-        '-DLLVM_TARGETS_TO_BUILD=host',
+        '-DLLVM_TARGETS_TO_BUILD=X86;ARM;AArch64',
         '-DCMAKE_INSTALL_PREFIX=' + LLVM_BOOTSTRAP_INSTALL_DIR,
         '-DCMAKE_C_FLAGS=' + ' '.join(cflags),
         '-DCMAKE_CXX_FLAGS=' + ' '.join(cxxflags),
@@ -505,10 +503,6 @@ def UpdateClang(args):
         CopyDiaDllTo(os.path.join(LLVM_BOOTSTRAP_DIR, 'bin'))
       RunCommand(['ninja', 'check-all'], msvc_arch='x64')
     RunCommand(['ninja', 'install'], msvc_arch='x64')
-    if args.gcc_toolchain:
-      # Copy that gcc's stdlibc++.so.6 to the build dir, so the bootstrap
-      # compiler can start.
-      CopyFile(libstdcpp, os.path.join(LLVM_BOOTSTRAP_INSTALL_DIR, 'lib'))
 
     if sys.platform == 'win32':
       cc = os.path.join(LLVM_BOOTSTRAP_INSTALL_DIR, 'bin', 'clang-cl.exe')
@@ -624,15 +618,6 @@ def UpdateClang(args):
   RmCmakeCache('.')
   RunCommand(['cmake'] + cmake_args + [LLVM_DIR],
              msvc_arch='x64', env=deployment_env)
-
-  if args.gcc_toolchain:
-    # Copy in the right stdlibc++.so.6 so clang can start.
-    if not os.path.exists(os.path.join(LLVM_BUILD_DIR, 'lib')):
-      os.mkdir(os.path.join(LLVM_BUILD_DIR, 'lib'))
-    libstdcpp = subprocess.check_output(
-        [cxx] + cxxflags + ['-print-file-name=libstdc++.so.6']).rstrip()
-    CopyFile(libstdcpp, os.path.join(LLVM_BUILD_DIR, 'lib'))
-
   RunCommand(['ninja'], msvc_arch='x64')
 
   # Copy LTO-optimized lld, if any.
@@ -723,21 +708,6 @@ def UpdateClang(args):
       # http://crbug.com/344836.
       subprocess.call(['install_name_tool', '-id',
                        '@executable_path/' + os.path.basename(dylib), dylib])
-
-
-  if sys.platform == 'win32':
-    # Make an extra copy of the sanitizer headers, to be put on the include path
-    # of the fallback compiler.
-    sanitizer_include_dir = os.path.join(LLVM_BUILD_DIR, 'lib', 'clang',
-                                         VERSION, 'include', 'sanitizer')
-    aux_sanitizer_include_dir = os.path.join(LLVM_BUILD_DIR, 'lib', 'clang',
-                                             VERSION, 'include_sanitizer',
-                                             'sanitizer')
-    EnsureDirExists(aux_sanitizer_include_dir)
-    for _, _, files in os.walk(sanitizer_include_dir):
-      for f in files:
-        CopyFile(os.path.join(sanitizer_include_dir, f),
-                 aux_sanitizer_include_dir)
 
   if args.with_android:
     make_toolchain = os.path.join(
@@ -850,11 +820,6 @@ def main():
   if (use_head_revision or args.llvm_force_head_revision or
       args.force_local_build):
     AddSvnToPathOnWin()
-
-  if use_head_revision:
-    # TODO(hans): Trunk was updated; remove after the next roll.
-    global VERSION
-    VERSION = '6.0.0'
 
   global CLANG_REVISION, PACKAGE_VERSION
   if args.print_revision:

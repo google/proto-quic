@@ -412,11 +412,11 @@ TEST_F(BrokenAlternativeServicesTest,
   std::unique_ptr<BrokenAlternativeServiceList> broken_list =
       base::MakeUnique<BrokenAlternativeServiceList>();
   broken_list->push_back(
-      {alternative_service3,
-       broken_services_clock_->NowTicks() + base::TimeDelta::FromMinutes(1)});
-  broken_list->push_back(
       {alternative_service1,
        broken_services_clock_->NowTicks() + base::TimeDelta::FromMinutes(3)});
+  broken_list->push_back(
+      {alternative_service3,
+       broken_services_clock_->NowTicks() + base::TimeDelta::FromMinutes(1)});
 
   std::unique_ptr<RecentlyBrokenAlternativeServices> recently_broken_map =
       base::MakeUnique<RecentlyBrokenAlternativeServices>(

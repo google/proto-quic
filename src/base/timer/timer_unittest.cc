@@ -419,7 +419,7 @@ TEST(TimerTest, OneShotTimer_CustomTaskRunner) {
   OneShotTimerTester f(&did_run);
   f.SetTaskRunner(other_thread.task_runner());
   f.Start();
-  EXPECT_TRUE(f.IsRunning());
+  EXPECT_TRUE(f.IsRunning() || did_run.IsSignaled());
 
   f.WaitAndConfirmTimerFiredAfterDelay();
   EXPECT_TRUE(did_run.IsSignaled());
@@ -680,12 +680,12 @@ void ClearAllCallbackHappened() {
 
 void SetCallbackHappened1() {
   g_callback_happened1 = true;
-  MessageLoop::current()->QuitWhenIdle();
+  RunLoop::QuitCurrentWhenIdleDeprecated();
 }
 
 void SetCallbackHappened2() {
   g_callback_happened2 = true;
-  MessageLoop::current()->QuitWhenIdle();
+  RunLoop::QuitCurrentWhenIdleDeprecated();
 }
 
 }  // namespace
@@ -774,7 +774,7 @@ class TimerSequenceTest : public testing::Test {
   }
 
   static void VerifyAffinity(const SequencedTaskRunner* task_runner) {
-    EXPECT_TRUE(task_runner->RunsTasksOnCurrentThread());
+    EXPECT_TRUE(task_runner->RunsTasksInCurrentSequence());
   }
 
   // Delete the timer.

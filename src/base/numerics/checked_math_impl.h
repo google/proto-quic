@@ -534,9 +534,10 @@ class CheckedNumericState<T, NUMERIC_FLOATING> {
 
   constexpr bool is_valid() const {
     // Written this way because std::isfinite is not reliably constexpr.
-    // TODO(jschuh): Fix this if the libraries ever get fixed.
-    return value_ <= std::numeric_limits<T>::max() &&
-           value_ >= std::numeric_limits<T>::lowest();
+    return MustTreatAsConstexpr(value_)
+               ? value_ <= std::numeric_limits<T>::max() &&
+                     value_ >= std::numeric_limits<T>::lowest()
+               : std::isfinite(value_);
   }
   constexpr T value() const { return value_; }
 };

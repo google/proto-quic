@@ -211,4 +211,16 @@ void BandwidthSampler::RemoveObsoletePackets(QuicPacketNumber least_unacked) {
   }
 }
 
+QuicByteCount BandwidthSampler::total_bytes_acked() const {
+  return total_bytes_acked_;
+}
+
+bool BandwidthSampler::is_app_limited() const {
+  return is_app_limited_;
+}
+
+QuicPacketNumber BandwidthSampler::end_of_app_limited_phase() const {
+  return end_of_app_limited_phase_;
+}
+
 }  // namespace net

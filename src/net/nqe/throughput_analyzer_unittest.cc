@@ -46,8 +46,6 @@ class TestThroughputAnalyzer : public internal::ThroughputAnalyzer {
             base::Bind(
                 &TestThroughputAnalyzer::OnNewThroughputObservationAvailable,
                 base::Unretained(this)),
-            false,
-            false,
             base::MakeUnique<BoundTestNetLog>()->bound()),
         throughput_observations_received_(0),
         bits_received_(0) {}

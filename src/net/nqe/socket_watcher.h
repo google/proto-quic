@@ -24,6 +24,8 @@ class TimeDelta;
 
 namespace net {
 
+class AddressList;
+
 namespace {
 typedef base::Callback<void(SocketPerformanceWatcherFactory::Protocol protocol,
                             const base::TimeDelta& rtt)>
@@ -40,11 +42,16 @@ class NET_EXPORT_PRIVATE SocketWatcher : public SocketPerformanceWatcher {
   // Creates a SocketWatcher which can be used to watch a socket that uses
   // |protocol| as the transport layer protocol. The socket watcher will call
   // |updated_rtt_observation_callback| on |task_runner| every time a new RTT
-  // observation is available. |min_notification_interval| is the minimum
+  // observation is available. |address_list| is the list of addresses that
+  // the socket may connect to. |min_notification_interval| is the minimum
   // interval betweeen consecutive notifications to this socket watcher.
-  // |tick_clock| is guaranteed to be non-null.
+  // |allow_rtt_private_address| is true if |updated_rtt_observation_callback|
+  // should be called when RTT observation from a socket connected to private
+  // address is received. |tick_clock| is guaranteed to be non-null.
   SocketWatcher(SocketPerformanceWatcherFactory::Protocol protocol,
+                const AddressList& address_list,
                 base::TimeDelta min_notification_interval,
+                bool allow_rtt_private_address,
                 scoped_refptr<base::SingleThreadTaskRunner> task_runner,
                 OnUpdatedRTTAvailableCallback updated_rtt_observation_callback,
                 base::TickClock* tick_clock);
@@ -67,6 +74,10 @@ class NET_EXPORT_PRIVATE SocketWatcher : public SocketPerformanceWatcher {
 
   // Minimum interval betweeen consecutive incoming notifications.
   const base::TimeDelta rtt_notifications_minimum_interval_;
+
+  // True if the RTT observations from this socket can be notified using
+  // |updated_rtt_observation_callback_|.
+  const bool run_rtt_callback_;
 
   // Time when this was last notified of updated RTT.
   base::TimeTicks last_rtt_notification_;

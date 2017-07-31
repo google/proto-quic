@@ -43,10 +43,6 @@
 #include "net/ssl/ssl_config_service.h"
 #include "net/url_request/url_request_job_factory.h"
 
-namespace base {
-class SingleThreadTaskRunner;
-}
-
 namespace net {
 
 class CertVerifier;
@@ -55,6 +51,7 @@ class CookieStore;
 class CTPolicyEnforcer;
 class CTVerifier;
 class HttpAuthHandlerFactory;
+class HttpTransactionFactory;
 class HttpUserAgentSettings;
 class HttpServerProperties;
 class NetworkQualityEstimator;
@@ -84,6 +81,12 @@ class NET_EXPORT URLRequestContextBuilder {
   using CreateInterceptingJobFactory =
       base::OnceCallback<std::unique_ptr<net::URLRequestJobFactory>(
           std::unique_ptr<net::URLRequestJobFactory> inner_job_factory)>;
+
+  // Creates an HttpNetworkTransactionFactory given an HttpNetworkSession. Does
+  // not take ownership of the session.
+  using CreateHttpTransactionFactoryCallback =
+      base::OnceCallback<std::unique_ptr<net::HttpTransactionFactory>(
+          net::HttpNetworkSession* session)>;
 
   struct NET_EXPORT HttpCacheParams {
     enum Type {
@@ -335,13 +338,6 @@ class NET_EXPORT URLRequestContextBuilder {
       std::unique_ptr<CookieStore> cookie_store,
       std::unique_ptr<ChannelIDService> channel_id_service);
 
-  // Sets the SingleThreadTaskRunner used to perform cache operations. If not
-  // set, one will be created via a TaskScheduler instead. Other file tasks will
-  // use the task scheduler, but the cache needs a SingleThreadTaskRunner, so
-  // best to keep that configurable by the consumer.
-  void SetCacheThreadTaskRunner(
-      scoped_refptr<base::SingleThreadTaskRunner> cache_thread_task_runner);
-
   // Note that if SDCH is enabled without a policy object observing
   // the SDCH manager and handling at least Get-Dictionary events, the
   // result will be "Content-Encoding: sdch" advertisements, but no
@@ -353,6 +349,14 @@ class NET_EXPORT URLRequestContextBuilder {
   // URLRequestContext rather than creating a default HttpServerPropertiesImpl.
   void SetHttpServerProperties(
       std::unique_ptr<HttpServerProperties> http_server_properties);
+
+  // Sets a callback that will be used to create the
+  // HttpNetworkTransactionFactory. If a cache is enabled, the cache's
+  // HttpTransactionFactory will wrap the one this creates.
+  // TODO(mmenke): Get rid of this. See https://crbug.com/721408
+  void SetCreateHttpTransactionFactoryCallback(
+      CreateHttpTransactionFactoryCallback
+          create_http_network_transaction_factory);
 
   // Creates a mostly self-contained URLRequestContext. May only be called once
   // per URLRequestContextBuilder. After this is called, the Builder can be
@@ -394,9 +398,9 @@ class NET_EXPORT URLRequestContextBuilder {
   bool sdch_enabled_;
   bool cookie_store_set_by_client_;
 
-  scoped_refptr<base::SingleThreadTaskRunner> cache_thread_task_runner_;
   HttpCacheParams http_cache_params_;
   HttpNetworkSession::Params http_network_session_params_;
+  CreateHttpTransactionFactoryCallback create_http_network_transaction_factory_;
   base::FilePath transport_security_persister_path_;
   bool transport_security_persister_readonly_;
   NetLog* net_log_;

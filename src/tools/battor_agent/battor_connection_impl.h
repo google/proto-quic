@@ -63,7 +63,7 @@ class BattOrConnectionImpl
 
   // Internal callback for when bytes are read. This method may trigger
   // additional reads if any newly read bytes are escape bytes.
-  void OnBytesRead(int bytes_read, device::serial::ReceiveError error);
+  void OnBytesRead(int bytes_read, device::mojom::SerialReceiveError error);
 
   void EndReadBytes(bool success,
                     BattOrMessageType type,
@@ -84,7 +84,7 @@ class BattOrConnectionImpl
                                  std::vector<char>* data);
 
   // Internal callback for when bytes are sent.
-  void OnBytesSent(int bytes_sent, device::serial::SendError error);
+  void OnBytesSent(int bytes_sent, device::mojom::SerialSendError error);
 
   // Appends |str| to the serial log file if it exists.
   void LogSerial(const std::string& str);

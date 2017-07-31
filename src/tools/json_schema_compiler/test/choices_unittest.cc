@@ -188,7 +188,7 @@ TEST(JsonSchemaCompilerChoicesTest, NestedChoices) {
     EXPECT_FALSE(obj->as_choice2);
     EXPECT_EQ(42, *obj->as_integer);
 
-    EXPECT_TRUE(base::Value::Equals(value.get(), obj->ToValue().get()));
+    EXPECT_EQ(*value, *obj->ToValue());
   }
 
   {
@@ -204,7 +204,7 @@ TEST(JsonSchemaCompilerChoicesTest, NestedChoices) {
     EXPECT_FALSE(obj->as_choice1->as_boolean);
     EXPECT_EQ("foo", *obj->as_choice1->as_string);
 
-    EXPECT_TRUE(base::Value::Equals(value.get(), obj->ToValue().get()));
+    EXPECT_EQ(*value, *obj->ToValue());
   }
 
   {
@@ -220,7 +220,7 @@ TEST(JsonSchemaCompilerChoicesTest, NestedChoices) {
     ASSERT_TRUE(obj->as_choice1->as_boolean);
     EXPECT_TRUE(*obj->as_choice1->as_boolean);
 
-    EXPECT_TRUE(base::Value::Equals(value.get(), obj->ToValue().get()));
+    EXPECT_EQ(*value, *obj->ToValue());
   }
 
   {
@@ -237,7 +237,7 @@ TEST(JsonSchemaCompilerChoicesTest, NestedChoices) {
     EXPECT_FALSE(obj->as_choice2->as_choice_types);
     EXPECT_EQ(42.0, *obj->as_choice2->as_double);
 
-    EXPECT_TRUE(base::Value::Equals(value.get(), obj->ToValue().get()));
+    EXPECT_EQ(*value, *obj->ToValue());
   }
 
   {
@@ -264,7 +264,7 @@ TEST(JsonSchemaCompilerChoicesTest, NestedChoices) {
       EXPECT_EQ("foo", *choice_type->strings->as_string);
     }
 
-    EXPECT_TRUE(base::Value::Equals(value.get(), obj->ToValue().get()));
+    EXPECT_EQ(*value, *obj->ToValue());
   }
 
   {
@@ -290,7 +290,7 @@ TEST(JsonSchemaCompilerChoicesTest, NestedChoices) {
       ASSERT_EQ(2u, choice_types->size());
     }
 
-    EXPECT_TRUE(base::Value::Equals(value.get(), obj->ToValue().get()));
+    EXPECT_EQ(*value, *obj->ToValue());
   }
 }
 

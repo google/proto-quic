@@ -2848,43 +2848,6 @@ TEST_P(EndToEndTestServerPush, ServerPushOverLimitWithBlocking) {
   EXPECT_EQ(12u, client_->num_responses());
 }
 
-// TODO(ckrasic) - remove this when deprecating
-// FLAGS_quic_reloadable_flag_quic_enable_server_push_by_default.
-TEST_P(EndToEndTestServerPush, DisabledWithoutConnectionOption) {
-  FLAGS_quic_reloadable_flag_quic_enable_server_push_by_default = false;
-  // Tests that server push won't be triggered when kSPSH is not set by client.
-  support_server_push_ = false;
-  ASSERT_TRUE(Initialize());
-
-  // Add a response with headers, body, and push resources.
-  const string kBody = "body content";
-  size_t const kNumResources = 4;
-  string push_urls[] = {
-      "https://example.com/font.woff", "https://example.com/script.js",
-      "https://fonts.example.com/font.woff",
-      "https://example.com/logo-hires.jpg",
-  };
-  AddRequestAndResponseWithServerPush("example.com", "/push_example", kBody,
-                                      push_urls, kNumResources, 0);
-  client_->client()->set_response_listener(
-      std::unique_ptr<QuicClientBase::ResponseListener>(
-          new TestResponseListener));
-  EXPECT_EQ(kBody, client_->SendSynchronousRequest(
-                       "https://example.com/push_example"));
-
-  for (const string& url : push_urls) {
-    // Sending subsequent requests will trigger sending real requests because
-    // client doesn't support server push.
-    const string expected_body =
-        QuicStrCat("This is server push response body for ", url);
-    const string response_body = client_->SendSynchronousRequest(url);
-    EXPECT_EQ(expected_body, response_body);
-  }
-  // Same number of requests are sent as that of responses received.
-  EXPECT_EQ(1 + kNumResources, client_->num_requests());
-  EXPECT_EQ(1 + kNumResources, client_->num_responses());
-}
-
 // TODO(fayang): this test seems to cause net_unittests timeouts :|
 TEST_P(EndToEndTest, DISABLED_TestHugePostWithPacketLoss) {
   // This test tests a huge post with introduced packet loss from client to

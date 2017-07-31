@@ -14,7 +14,7 @@
 #include "net/cert/internal/name_constraints.h"
 #include "net/cert/internal/parse_name.h"
 #include "net/cert/internal/parsed_certificate.h"
-#include "net/cert/internal/signature_policy.h"
+#include "net/cert/internal/signature_algorithm.h"
 #include "net/cert/internal/verify_name_match.h"
 #include "net/cert/internal/verify_signed_data.h"
 #include "net/cert/x509_util.h"
@@ -462,11 +462,10 @@ bool X509Certificate::IsSelfSigned(OSCertHandle cert_handle) {
   if (!signature_algorithm)
     return false;
 
-  SimpleSignaturePolicy signature_policy(1024);
-  CertErrors unused_errors;
+  // Don't enforce any minimum key size or restrict the algorithm, since when
+  // self signed not very relevant.
   return VerifySignedData(*signature_algorithm, tbs_certificate_tlv,
-                          signature_value, tbs.spki_tlv, &signature_policy,
-                          &unused_errors);
+                          signature_value, tbs.spki_tlv);
 }
 
 // static

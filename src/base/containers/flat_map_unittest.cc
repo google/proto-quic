@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 
-#include "base/containers/container_test_utils.h"
 #include "base/macros.h"
+#include "base/test/move_only_int.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -168,6 +168,33 @@ TEST(FlatMap, SubscriptMoveOnlyKey) {
   // Overwrite existing elements.
   m[MoveOnlyInt(1)] = 44;
   EXPECT_EQ(44, m[MoveOnlyInt(1)]);
+}
+
+TEST(FlatMap, UsingTransparentCompare) {
+  using ExplicitInt = base::MoveOnlyInt;
+  base::flat_map<ExplicitInt, int> m;
+  const auto& m1 = m;
+  int x = 0;
+
+  // Check if we can use lookup functions without converting to key_type.
+  // Correctness is checked in flat_tree tests.
+  m.count(x);
+  m1.count(x);
+  m.find(x);
+  m1.find(x);
+  m.equal_range(x);
+  m1.equal_range(x);
+  m.lower_bound(x);
+  m1.lower_bound(x);
+  m.upper_bound(x);
+  m1.upper_bound(x);
+  m.erase(x);
+
+  // Check if we broke overload resolution.
+  m.emplace(ExplicitInt(0), 0);
+  m.emplace(ExplicitInt(1), 0);
+  m.erase(m.begin());
+  m.erase(m.cbegin());
 }
 
 }  // namespace base

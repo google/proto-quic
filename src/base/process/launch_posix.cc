@@ -307,15 +307,10 @@ Process LaunchProcess(const std::vector<std::string>& argv,
   }
 #endif
 
-  size_t fd_shuffle_size = 0;
-  if (options.fds_to_remap) {
-    fd_shuffle_size = options.fds_to_remap->size();
-  }
-
   InjectiveMultimap fd_shuffle1;
   InjectiveMultimap fd_shuffle2;
-  fd_shuffle1.reserve(fd_shuffle_size);
-  fd_shuffle2.reserve(fd_shuffle_size);
+  fd_shuffle1.reserve(options.fds_to_remap.size());
+  fd_shuffle2.reserve(options.fds_to_remap.size());
 
   std::vector<char*> argv_cstr;
   argv_cstr.reserve(argv.size() + 1);
@@ -455,14 +450,12 @@ Process LaunchProcess(const std::vector<std::string>& argv,
     }
 #endif  // defined(OS_CHROMEOS)
 
-    if (options.fds_to_remap) {
-      // Cannot use STL iterators here, since debug iterators use locks.
-      for (size_t i = 0; i < options.fds_to_remap->size(); ++i) {
-        const FileHandleMappingVector::value_type& value =
-            (*options.fds_to_remap)[i];
-        fd_shuffle1.push_back(InjectionArc(value.first, value.second, false));
-        fd_shuffle2.push_back(InjectionArc(value.first, value.second, false));
-      }
+    // Cannot use STL iterators here, since debug iterators use locks.
+    for (size_t i = 0; i < options.fds_to_remap.size(); ++i) {
+      const FileHandleMappingVector::value_type& value =
+          options.fds_to_remap[i];
+      fd_shuffle1.push_back(InjectionArc(value.first, value.second, false));
+      fd_shuffle2.push_back(InjectionArc(value.first, value.second, false));
     }
 
     if (!options.environ.empty() || options.clear_environ)

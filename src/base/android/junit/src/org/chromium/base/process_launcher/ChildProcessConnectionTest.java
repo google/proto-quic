@@ -198,14 +198,14 @@ public class ChildProcessConnectionTest {
         Assert.assertTrue(connection.isInitialBindingBound());
         Assert.assertFalse(connection.didOnServiceConnectedForTesting());
         verify(mServiceCallback, never()).onChildStarted();
-        verify(mServiceCallback, never()).onChildStartFailed();
+        verify(mServiceCallback, never()).onChildStartFailed(any());
         verify(mServiceCallback, never()).onChildProcessDied(any());
 
         // The service connects.
         mFirstServiceConnection.notifyServiceConnected(null /* iBinder */);
         Assert.assertTrue(connection.didOnServiceConnectedForTesting());
         verify(mServiceCallback, times(1)).onChildStarted();
-        verify(mServiceCallback, never()).onChildStartFailed();
+        verify(mServiceCallback, never()).onChildStartFailed(any());
         verify(mServiceCallback, never()).onChildProcessDied(any());
     }
 
@@ -221,7 +221,7 @@ public class ChildProcessConnectionTest {
         Assert.assertFalse(connection.isInitialBindingBound());
         Assert.assertFalse(connection.didOnServiceConnectedForTesting());
         verify(mServiceCallback, never()).onChildStarted();
-        verify(mServiceCallback, never()).onChildStartFailed();
+        verify(mServiceCallback, never()).onChildStartFailed(any());
         verify(mServiceCallback, times(1)).onChildProcessDied(connection);
     }
 
@@ -233,7 +233,7 @@ public class ChildProcessConnectionTest {
         mFirstServiceConnection.notifyServiceConnected(null /* iBinder */);
         connection.stop();
         verify(mServiceCallback, times(1)).onChildStarted();
-        verify(mServiceCallback, never()).onChildStartFailed();
+        verify(mServiceCallback, never()).onChildStartFailed(any());
         verify(mServiceCallback, times(1)).onChildProcessDied(connection);
     }
 
@@ -245,7 +245,7 @@ public class ChildProcessConnectionTest {
         mFirstServiceConnection.notifyServiceConnected(null /* iBinder */);
         mFirstServiceConnection.notifyServiceDisconnected();
         verify(mServiceCallback, times(1)).onChildStarted();
-        verify(mServiceCallback, never()).onChildStartFailed();
+        verify(mServiceCallback, never()).onChildStartFailed(any());
         verify(mServiceCallback, times(1)).onChildProcessDied(connection);
     }
 
@@ -258,7 +258,7 @@ public class ChildProcessConnectionTest {
         mFirstServiceConnection.notifyServiceConnected(mChildProcessServiceBinder);
         // Service is started and bindToCallback is not called.
         verify(mServiceCallback, times(1)).onChildStarted();
-        verify(mServiceCallback, never()).onChildStartFailed();
+        verify(mServiceCallback, never()).onChildStartFailed(any());
         verify(mServiceCallback, never()).onChildProcessDied(connection);
         verify(mIChildProcessService, never()).bindToCaller();
     }
@@ -273,7 +273,7 @@ public class ChildProcessConnectionTest {
         mFirstServiceConnection.notifyServiceConnected(mChildProcessServiceBinder);
         // Service is started and bindToCallback is called.
         verify(mServiceCallback, times(1)).onChildStarted();
-        verify(mServiceCallback, never()).onChildStartFailed();
+        verify(mServiceCallback, never()).onChildStartFailed(any());
         verify(mServiceCallback, never()).onChildProcessDied(connection);
         verify(mIChildProcessService, times(1)).bindToCaller();
     }
@@ -290,7 +290,7 @@ public class ChildProcessConnectionTest {
         mFirstServiceConnection.notifyServiceConnected(mChildProcessServiceBinder);
         // Service fails to start.
         verify(mServiceCallback, never()).onChildStarted();
-        verify(mServiceCallback, times(1)).onChildStartFailed();
+        verify(mServiceCallback, times(1)).onChildStartFailed(any());
         verify(mServiceCallback, never()).onChildProcessDied(connection);
         verify(mIChildProcessService, times(1)).bindToCaller();
     }

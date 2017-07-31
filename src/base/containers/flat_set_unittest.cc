@@ -7,8 +7,9 @@
 #include <string>
 #include <vector>
 
-#include "base/containers/container_test_utils.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
+#include "base/test/move_only_int.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -88,6 +89,33 @@ TEST(FlatSet, CopySwap) {
   original.swap(copy);
   EXPECT_THAT(original, ElementsAre(2, 10));
   EXPECT_THAT(copy, ElementsAre(1, 2));
+}
+
+TEST(FlatSet, UsingTransparentCompare) {
+  using ExplicitInt = base::MoveOnlyInt;
+  base::flat_set<ExplicitInt> s;
+  const auto& s1 = s;
+  int x = 0;
+
+  // Check if we can use lookup functions without converting to key_type.
+  // Correctness is checked in flat_tree tests.
+  s.count(x);
+  s1.count(x);
+  s.find(x);
+  s1.find(x);
+  s.equal_range(x);
+  s1.equal_range(x);
+  s.lower_bound(x);
+  s1.lower_bound(x);
+  s.upper_bound(x);
+  s1.upper_bound(x);
+  s.erase(x);
+
+  // Check if we broke overload resolution.
+  s.emplace(0);
+  s.emplace(1);
+  s.erase(s.begin());
+  s.erase(s.cbegin());
 }
 
 }  // namespace base

@@ -11,7 +11,8 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release"
+          "--browser=release",
+          "--xvfb"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "loading.desktop.network_service",

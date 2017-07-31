@@ -24,7 +24,8 @@
 #include "net/http2/decoder/http2_frame_decoder_listener.h"
 #include "net/http2/http2_constants.h"
 #include "net/http2/http2_structures.h"
-#include "net/spdy/core/hpack/hpack_decoder_interface.h"
+#include "net/http2/platform/api/http2_string.h"
+#include "net/spdy/core/hpack/hpack_decoder_adapter.h"
 #include "net/spdy/core/hpack/hpack_header_table.h"
 #include "net/spdy/core/spdy_alt_svc_wire_format.h"
 #include "net/spdy/core/spdy_bug_tracker.h"
@@ -34,7 +35,6 @@
 #include "net/spdy/core/spdy_protocol.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 #include "net/spdy/platform/api/spdy_ptr_util.h"
-#include "net/spdy/platform/api/spdy_string.h"
 
 namespace net {
 
@@ -839,9 +839,9 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
     }
   }
 
-  HpackDecoderInterface* GetHpackDecoder() {
+  HpackDecoderAdapter* GetHpackDecoder() {
     if (hpack_decoder_ == nullptr) {
-      hpack_decoder_ = outer_framer_->GetHpackDecoderForAdapter();
+      hpack_decoder_ = outer_framer_->GetHpackDecoderAdapter();
     }
     return hpack_decoder_;
   }
@@ -919,7 +919,7 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
 
   // The HPACK decoder that we're using for the HPACK block that is currently
   // being decoded. Cleared at the end of the block. Owned by the SpdyFramer.
-  HpackDecoderInterface* hpack_decoder_ = nullptr;
+  HpackDecoderAdapter* hpack_decoder_ = nullptr;
 
   // The HTTP/2 frame decoder. Accessed via a unique_ptr to allow replacement
   // (e.g. in tests) when Reset() is called.
@@ -938,8 +938,8 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
   base::Optional<size_t> opt_pad_length_;
 
   // Temporary buffers for the AltSvc fields.
-  SpdyString alt_svc_origin_;
-  SpdyString alt_svc_value_;
+  Http2String alt_svc_origin_;
+  Http2String alt_svc_value_;
 
   // Listener used if we transition to an error state; the listener ignores all
   // the callbacks.

@@ -9,7 +9,7 @@
 namespace base {
 
 // static
-int64_t SysInfo::AmountOfPhysicalMemory() {
+int64_t SysInfo::AmountOfPhysicalMemoryImpl() {
   return mx_system_get_physmem();
 }
 

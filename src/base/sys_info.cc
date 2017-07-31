@@ -15,10 +15,37 @@
 #include "build/build_config.h"
 
 namespace base {
+namespace {
+static const int kLowMemoryDeviceThresholdMB = 512;
+}
+
+// static
+int64_t SysInfo::AmountOfPhysicalMemory() {
+  if (base::CommandLine::ForCurrentProcess()->HasSwitch(
+          switches::kEnableLowEndDeviceMode)) {
+    return kLowMemoryDeviceThresholdMB * 1024 * 1024;
+  }
+
+  return AmountOfPhysicalMemoryImpl();
+}
+
+// static
+int64_t SysInfo::AmountOfAvailablePhysicalMemory() {
+  if (base::CommandLine::ForCurrentProcess()->HasSwitch(
+          switches::kEnableLowEndDeviceMode)) {
+    // Estimate the available memory by subtracting our memory used estimate
+    // from the fake |kLowMemoryDeviceThresholdMB| limit.
+    size_t memory_used =
+        AmountOfPhysicalMemoryImpl() - AmountOfAvailablePhysicalMemoryImpl();
+    size_t memory_limit = kLowMemoryDeviceThresholdMB * 1024 * 1024;
+    // std::min ensures no underflow, as |memory_used| can be > |memory_limit|.
+    return memory_limit - std::min(memory_used, memory_limit);
+  }
+
+  return AmountOfAvailablePhysicalMemoryImpl();
+}
 
 #if !defined(OS_ANDROID)
-
-static const int kLowMemoryDeviceThresholdMB = 512;
 
 bool DetectLowEndDevice() {
   CommandLine* command_line = CommandLine::ForCurrentProcess();

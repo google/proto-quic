@@ -13,11 +13,10 @@
 
 namespace net {
 
-const size_t kMaxHeaderListSize = 256 * 1024;
-
 class NET_EXPORT_PRIVATE HeaderCoalescer : public SpdyHeadersHandlerInterface {
  public:
-  explicit HeaderCoalescer(const NetLogWithSource& net_log);
+  HeaderCoalescer(uint32_t max_header_list_size,
+                  const NetLogWithSource& net_log);
 
   void OnHeaderBlockStart() override {}
 
@@ -41,6 +40,7 @@ class NET_EXPORT_PRIVATE HeaderCoalescer : public SpdyHeadersHandlerInterface {
   size_t header_list_size_ = 0;
   bool error_seen_ = false;
   bool regular_header_seen_ = false;
+  const uint32_t max_header_list_size_;
   NetLogWithSource net_log_;
 };
 

@@ -486,8 +486,8 @@ TEST_F(QuicPacketGeneratorTest, ConsumeData_FramesPreviouslyQueued) {
           QuicPacketCreatorPeer::GetPacketNumberLength(creator_)) +
       // Add an extra 3 bytes for the payload and 1 byte so BytesFree is larger
       // than the GetMinStreamFrameSize.
-      QuicFramer::GetMinStreamFrameSize(1, 0, false) + 3 +
-      QuicFramer::GetMinStreamFrameSize(1, 0, true) + 1;
+      QuicFramer::GetMinStreamFrameSize(framer_.version(), 1, 0, false) + 3 +
+      QuicFramer::GetMinStreamFrameSize(framer_.version(), 1, 0, true) + 1;
   generator_.SetMaxPacketLength(length);
   delegate_.SetCanWriteAnything();
   {
@@ -916,14 +916,15 @@ TEST_F(QuicPacketGeneratorTest, RandomPaddingAfterFinSingleStreamSinglePacket) {
   const QuicStreamId kDataStreamId = 5;
   // Set the packet size be enough for one stream frame with 0 stream offset and
   // max size of random padding.
-  size_t length = NullEncrypter(Perspective::IS_CLIENT).GetCiphertextSize(0) +
-                  GetPacketHeaderSize(
-                      framer_.version(), creator_->connection_id_length(),
-                      kIncludeVersion, !kIncludeDiversificationNonce,
-                      QuicPacketCreatorPeer::GetPacketNumberLength(creator_)) +
-                  QuicFramer::GetMinStreamFrameSize(
-                      kDataStreamId, 0, /*last_frame_in_packet=*/false) +
-                  kStreamFramePayloadSize + kMaxNumRandomPaddingBytes;
+  size_t length =
+      NullEncrypter(Perspective::IS_CLIENT).GetCiphertextSize(0) +
+      GetPacketHeaderSize(
+          framer_.version(), creator_->connection_id_length(), kIncludeVersion,
+          !kIncludeDiversificationNonce,
+          QuicPacketCreatorPeer::GetPacketNumberLength(creator_)) +
+      QuicFramer::GetMinStreamFrameSize(framer_.version(), kDataStreamId, 0,
+                                        /*last_frame_in_packet=*/false) +
+      kStreamFramePayloadSize + kMaxNumRandomPaddingBytes;
   generator_.SetMaxPacketLength(length);
   delegate_.SetCanWriteAnything();
   generator_.StartBatchOperations();
@@ -954,14 +955,15 @@ TEST_F(QuicPacketGeneratorTest,
   const QuicStreamId kDataStreamId = 5;
   // Set the packet size be enough for one stream frame with 0 stream offset +
   // 1. One or more packets will accommodate.
-  size_t length = NullEncrypter(Perspective::IS_CLIENT).GetCiphertextSize(0) +
-                  GetPacketHeaderSize(
-                      framer_.version(), creator_->connection_id_length(),
-                      kIncludeVersion, !kIncludeDiversificationNonce,
-                      QuicPacketCreatorPeer::GetPacketNumberLength(creator_)) +
-                  QuicFramer::GetMinStreamFrameSize(
-                      kDataStreamId, 0, /*last_frame_in_packet=*/false) +
-                  kStreamFramePayloadSize + 1;
+  size_t length =
+      NullEncrypter(Perspective::IS_CLIENT).GetCiphertextSize(0) +
+      GetPacketHeaderSize(
+          framer_.version(), creator_->connection_id_length(), kIncludeVersion,
+          !kIncludeDiversificationNonce,
+          QuicPacketCreatorPeer::GetPacketNumberLength(creator_)) +
+      QuicFramer::GetMinStreamFrameSize(framer_.version(), kDataStreamId, 0,
+                                        /*last_frame_in_packet=*/false) +
+      kStreamFramePayloadSize + 1;
   generator_.SetMaxPacketLength(length);
   delegate_.SetCanWriteAnything();
   generator_.StartBatchOperations();
@@ -1000,17 +1002,18 @@ TEST_F(QuicPacketGeneratorTest,
   const QuicStreamId kDataStreamId2 = 6;
   // Set the packet size be enough for first frame with 0 stream offset + second
   // frame + 1 byte payload. two or more packets will accommodate.
-  size_t length = NullEncrypter(Perspective::IS_CLIENT).GetCiphertextSize(0) +
-                  GetPacketHeaderSize(
-                      framer_.version(), creator_->connection_id_length(),
-                      kIncludeVersion, !kIncludeDiversificationNonce,
-                      QuicPacketCreatorPeer::GetPacketNumberLength(creator_)) +
-                  QuicFramer::GetMinStreamFrameSize(
-                      kDataStreamId1, 0, /*last_frame_in_packet=*/false) +
-                  kStreamFramePayloadSize +
-                  QuicFramer::GetMinStreamFrameSize(
-                      kDataStreamId1, 0, /*last_frame_in_packet=*/false) +
-                  1;
+  size_t length =
+      NullEncrypter(Perspective::IS_CLIENT).GetCiphertextSize(0) +
+      GetPacketHeaderSize(
+          framer_.version(), creator_->connection_id_length(), kIncludeVersion,
+          !kIncludeDiversificationNonce,
+          QuicPacketCreatorPeer::GetPacketNumberLength(creator_)) +
+      QuicFramer::GetMinStreamFrameSize(framer_.version(), kDataStreamId1, 0,
+                                        /*last_frame_in_packet=*/false) +
+      kStreamFramePayloadSize +
+      QuicFramer::GetMinStreamFrameSize(framer_.version(), kDataStreamId1, 0,
+                                        /*last_frame_in_packet=*/false) +
+      1;
   generator_.SetMaxPacketLength(length);
   delegate_.SetCanWriteAnything();
   generator_.StartBatchOperations();

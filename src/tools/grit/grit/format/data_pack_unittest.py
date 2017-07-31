@@ -17,8 +17,8 @@ from grit.format import data_pack
 
 
 class FormatDataPackUnittest(unittest.TestCase):
-  def testReadDataPackV4(self):
-    expected_data = (
+  def testWriteDataPack(self):
+    expected = (
         '\x04\x00\x00\x00'                  # header(version
         '\x04\x00\x00\x00'                  #        no. entries,
         '\x01'                              #        encoding)
@@ -28,42 +28,9 @@ class FormatDataPackUnittest(unittest.TestCase):
         '\x0a\x00\x3f\x00\x00\x00'          # index entry 10
         '\x00\x00\x3f\x00\x00\x00'          # extra entry for the size of last
         'this is id 4this is id 6')         # data
-    expected_resources = {
-        1: '',
-        4: 'this is id 4',
-        6: 'this is id 6',
-        10: '',
-    }
-    expected_data_pack = data_pack.DataPackContents(
-        expected_resources, data_pack.UTF8)
-    loaded = data_pack.ReadDataPackFromString(expected_data)
-    self.assertEquals(loaded, expected_data_pack)
-
-  def testReadWriteDataPackV5(self):
-    expected_data = (
-        '\x05\x00\x00\x00'                  # version
-        '\x01\x00\x00\x00'                  # encoding & padding
-        '\x03\x00'                          # resource_count
-        '\x01\x00'                          # alias_count
-        '\x01\x00\x28\x00\x00\x00'          # index entry 1
-        '\x04\x00\x28\x00\x00\x00'          # index entry 4
-        '\x06\x00\x34\x00\x00\x00'          # index entry 6
-        '\x00\x00\x40\x00\x00\x00'          # extra entry for the size of last
-        '\x0a\x00\x01\x00'                  # alias table
-        'this is id 4this is id 6')         # data
-    expected_resources = {
-        1: '',
-        4: 'this is id 4',
-        6: 'this is id 6',
-        10: 'this is id 4',
-    }
-    data = data_pack.WriteDataPackToString(expected_resources, data_pack.UTF8)
-    self.assertEquals(data, expected_data)
-
-    expected_data_pack = data_pack.DataPackContents(
-        expected_resources, data_pack.UTF8)
-    loaded = data_pack.ReadDataPackFromString(expected_data)
-    self.assertEquals(loaded, expected_data_pack)
+    input = {1: '', 4: 'this is id 4', 6: 'this is id 6', 10: ''}
+    output = data_pack.WriteDataPackToString(input, data_pack.UTF8)
+    self.failUnless(output == expected)
 
   def testRePackUnittest(self):
     expected_with_whitelist = {
@@ -83,14 +50,12 @@ class FormatDataPackUnittest(unittest.TestCase):
               in inputs]
 
     # RePack using whitelist
-    output, _ = data_pack.RePackFromDataPackStrings(
-        inputs, whitelist, suppress_removed_key_output=True)
+    output, _ = data_pack.RePackFromDataPackStrings(inputs, whitelist)
     self.assertDictEqual(expected_with_whitelist, output,
                          'Incorrect resource output')
 
     # RePack a None whitelist
-    output, _ = data_pack.RePackFromDataPackStrings(
-        inputs, None, suppress_removed_key_output=True)
+    output, _ = data_pack.RePackFromDataPackStrings(inputs, None)
     self.assertDictEqual(expected_without_whitelist, output,
                          'Incorrect resource output')
 

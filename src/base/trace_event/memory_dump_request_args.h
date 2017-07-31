@@ -80,36 +80,6 @@ struct MemoryDumpArgs {
   MemoryDumpLevelOfDetail level_of_detail;
 };
 
-// TODO(hjd): Not used yet, see crbug.com/703184
-// Summarises information about memory use as seen by a single process.
-// This information will eventually be passed to a service to be colated
-// and reported.
-struct BASE_EXPORT MemoryDumpCallbackResult {
-  struct OSMemDump {
-    uint32_t resident_set_kb = 0;
-    ProcessMemoryTotals::PlatformPrivateFootprint platform_private_footprint;
-  };
-  struct ChromeMemDump {
-    uint32_t malloc_total_kb = 0;
-    uint32_t command_buffer_total_kb = 0;
-    uint32_t partition_alloc_total_kb = 0;
-    uint32_t blink_gc_total_kb = 0;
-    uint32_t v8_total_kb = 0;
-  };
-
-  // These are for the current process.
-  OSMemDump os_dump;
-  ChromeMemDump chrome_dump;
-
-  // In some cases, OS stats can only be dumped from a privileged process to
-  // get around to sandboxing/selinux restrictions (see crbug.com/461788).
-  std::map<ProcessId, OSMemDump> extra_processes_dumps;
-
-  MemoryDumpCallbackResult();
-  MemoryDumpCallbackResult(const MemoryDumpCallbackResult&);
-  ~MemoryDumpCallbackResult();
-};
-
 using GlobalMemoryDumpCallback =
     Callback<void(bool success, uint64_t dump_guid)>;
 

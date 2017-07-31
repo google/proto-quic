@@ -177,7 +177,6 @@ clang_toolchain("clang_mips64el") {
   }
 }
 
-
 gcc_toolchain("mipsel") {
   cc = "mipsel-linux-gnu-gcc"
   cxx = "mipsel-linux-gnu-g++"
@@ -211,7 +210,6 @@ gcc_toolchain("mips64el") {
     use_goma = false
   }
 }
-
 
 gcc_toolchain("s390x") {
   cc = "gcc"

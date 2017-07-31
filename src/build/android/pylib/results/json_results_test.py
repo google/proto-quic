@@ -167,6 +167,14 @@ class JsonResultsTest(unittest.TestCase):
     self.assertIn('status', actual_test_results[1])
     self.assertEquals('SUCCESS', actual_test_results[1]['status'])
 
+  def testGenerateResultsDict_globalTags(self):
+    raw_results = []
+    global_tags = ['UNRELIABLE_RESULTS']
+
+    results_dict = json_results.GenerateResultsDict(
+        [raw_results], global_tags=global_tags)
+    self.assertEquals(['UNRELIABLE_RESULTS'], results_dict['global_tags'])
+
 
 if __name__ == '__main__':
   unittest.main(verbosity=2)

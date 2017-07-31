@@ -99,10 +99,6 @@ class IdlePlatformBenchmark(perf_benchmark.PerfBenchmark):
     return page_sets.IdleStorySet()
 
   @classmethod
-  def ShouldTearDownStateAfterEachStoryRun(cls):
-    return True
-
-  @classmethod
   def Name(cls):
     return 'power.idle_platform'
 

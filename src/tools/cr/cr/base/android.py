@@ -9,22 +9,10 @@ import subprocess
 
 import cr
 
-# This is the set of environment variables that are not automatically
-# copied back from the envsetup shell
-_IGNORE_ENV = [
-    'SHLVL',  # Because it's nothing to do with envsetup
-    'GYP_GENERATOR_FLAGS',  # because we set them in they gyp handler
-    'GYP_GENERATORS',  # because we set them in they gyp handler
-    'PATH',  # Because it gets a special merge handler
-    'GYP_DEFINES',  # Because it gets a special merge handler
-]
-
-
 class AndroidPlatform(cr.Platform):
   """The implementation of Platform for the android target."""
 
   ACTIVE = cr.Config.From(
-      CR_ENVSETUP=os.path.join('{CR_SRC}', 'build', 'android', 'envsetup.sh'),
       CR_ADB=os.path.join('{CR_SRC}', 'third_party', 'android_tools', 'sdk',
           'platform-tools', 'adb'),
       CR_TARGET_SUFFIX='_apk',
@@ -38,7 +26,6 @@ class AndroidPlatform(cr.Platform):
           '{CR_SRC}', 'build', 'android', 'test_runner.py'),
       CR_ADB_GDB=os.path.join('{CR_SRC}', 'build', 'android', 'adb_gdb'),
       CR_DEFAULT_TARGET='chrome_public',
-      GYP_DEF_OS='android',
       GN_ARG_target_os='"android"'
   )
 
@@ -46,51 +33,14 @@ class AndroidPlatform(cr.Platform):
     super(AndroidPlatform, self).__init__()
     self._env = cr.Config('android-env', literal=True, export=True)
     self.detected_config.AddChild(self._env)
-    self._env_ready = False
-    self._env_paths = []
 
   @property
   def priority(self):
     return super(AndroidPlatform, self).priority + 1
 
-  def Prepare(self):
-    """Override Prepare from cr.Platform."""
-    super(AndroidPlatform, self).Prepare()
-    try:
-      # capture the result of env setup if we have not already done so
-      if not self._env_ready:
-        # See what the env would be without env setup
-        before = cr.context.exported
-        # Run env setup and capture/parse its output
-        envsetup = 'source {CR_ENVSETUP}'
-        output = cr.Host.CaptureShell(envsetup + ' > /dev/null && env')
-        env_setup = cr.Config('envsetup', literal=True, export=True)
-        for line in output.split('\n'):
-          (key, op, value) = line.partition('=')
-          if op:
-            key = key.strip()
-            if key not in _IGNORE_ENV:
-              env_setup[key] = env_setup.ParseValue(value.strip())
-            if key == 'PATH':
-              self._env_paths = value.strip().split(os.path.pathsep)
-        items = env_setup.exported.items()
-        if not items:
-          # Because of the way envsetup is run, the exit code does not make it
-          # back to us. Instead, we assume if we got no environment at all, it
-          # must have failed.
-          print 'Envsetup failed!'
-          exit(1)
-        # Find all the things that envsetup changed
-        for key, value in env_setup.exported.items():
-          if str(value) != str(before.get(key, None)):
-            self._env[key] = value
-      self._env_ready = True
-    except subprocess.CalledProcessError, e:
-      exit(e.returncode)
-
   @property
   def paths(self):
-    return self._env_paths
+    return []
 
 
 class AndroidInitHook(cr.InitHook):

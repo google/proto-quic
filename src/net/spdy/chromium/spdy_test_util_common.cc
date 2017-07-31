@@ -240,7 +240,7 @@ class PriorityGetter : public BufferedSpdyFramerVisitorInterface {
 
 bool GetSpdyPriority(const SpdySerializedFrame& frame, SpdyPriority* priority) {
   NetLogWithSource net_log;
-  BufferedSpdyFramer framer(net_log);
+  BufferedSpdyFramer framer(kMaxHeaderListSizeForTest, net_log);
   PriorityGetter priority_getter;
   framer.set_visitor(&priority_getter);
   size_t frame_size = frame.size();

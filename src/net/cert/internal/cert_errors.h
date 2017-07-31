@@ -134,6 +134,11 @@ class NET_EXPORT CertPathErrors {
   // index in a certificate chain (with 0 being the target).
   CertErrors* GetErrorsForCert(size_t cert_index);
 
+  // Const version of the above, with the difference that if there is no
+  // existing bucket for |cert_index| returns nullptr rather than lazyily
+  // creating one.
+  const CertErrors* GetErrorsForCert(size_t cert_index) const;
+
   // Returns a bucket to put errors that are not associated with a particular
   // certificate.
   CertErrors* GetOtherErrors();

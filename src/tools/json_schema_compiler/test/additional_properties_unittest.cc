@@ -66,7 +66,6 @@ TEST(JsonSchemaCompilerAdditionalPropertiesTest,
     expected.Append(std::move(dict));
   }
 
-  EXPECT_TRUE(base::Value::Equals(
-      ReturnAdditionalProperties::Results::Create(result_object).get(),
-      &expected));
+  EXPECT_EQ(expected,
+            *ReturnAdditionalProperties::Results::Create(result_object));
 }

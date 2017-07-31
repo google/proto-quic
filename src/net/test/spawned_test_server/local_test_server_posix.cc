@@ -126,8 +126,6 @@ bool LocalTestServer::LaunchPython(const base::FilePath& testserver_path) {
   // Save the read half. The write half is sent to the child.
   child_fd_.reset(pipefd[0]);
   base::ScopedFD write_closer(pipefd[1]);
-  base::FileHandleMappingVector map_write_fd;
-  map_write_fd.push_back(std::make_pair(pipefd[1], pipefd[1]));
 
   python_command.AppendArg("--startup-pipe=" + base::IntToString(pipefd[1]));
 
@@ -140,8 +138,7 @@ bool LocalTestServer::LaunchPython(const base::FilePath& testserver_path) {
 
   // Launch a new testserver process.
   base::LaunchOptions options;
-
-  options.fds_to_remap = &map_write_fd;
+  options.fds_to_remap.push_back(std::make_pair(pipefd[1], pipefd[1]));
   process_ = base::LaunchProcess(python_command, options);
   if (!process_.IsValid()) {
     LOG(ERROR) << "Failed to launch " << python_command.GetCommandLineString();

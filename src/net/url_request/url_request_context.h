@@ -44,6 +44,7 @@ class HttpTransactionFactory;
 class HttpUserAgentSettings;
 class NetLog;
 class NetworkDelegate;
+class NetworkErrorLoggingDelegate;
 class NetworkQualityEstimator;
 class ReportingService;
 class SdchManager;
@@ -262,6 +263,14 @@ class NET_EXPORT URLRequestContext
     reporting_service_ = reporting_service;
   }
 
+  NetworkErrorLoggingDelegate* network_error_logging_delegate() const {
+    return network_error_logging_delegate_;
+  }
+  void set_network_error_logging_delegate(
+      NetworkErrorLoggingDelegate* network_error_logging_delegate) {
+    network_error_logging_delegate_ = network_error_logging_delegate;
+  }
+
   void set_enable_brotli(bool enable_brotli) { enable_brotli_ = enable_brotli; }
 
   bool enable_brotli() const { return enable_brotli_; }
@@ -319,6 +328,7 @@ class NET_EXPORT URLRequestContext
   SdchManager* sdch_manager_;
   NetworkQualityEstimator* network_quality_estimator_;
   ReportingService* reporting_service_;
+  NetworkErrorLoggingDelegate* network_error_logging_delegate_;
 
   // ---------------------------------------------------------------------------
   // Important: When adding any new members below, consider whether they need to

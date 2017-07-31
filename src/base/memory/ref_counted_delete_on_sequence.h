@@ -58,7 +58,7 @@ class RefCountedDeleteOnSequence : public subtle::RefCountedThreadSafeBase {
  private:
   void DestructOnSequence() const {
     const T* t = static_cast<const T*>(this);
-    if (task_runner_->RunsTasksOnCurrentThread())
+    if (task_runner_->RunsTasksInCurrentSequence())
       delete t;
     else
       task_runner_->DeleteSoon(FROM_HERE, t);

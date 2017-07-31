@@ -16,6 +16,7 @@
 #include "base/threading/thread_restrictions.h"
 #include "base/time/time.h"
 #include "net/disk_cache/simple/simple_entry_format.h"
+#include "third_party/zlib/zlib.h"
 
 namespace {
 
@@ -100,6 +101,17 @@ bool GetMTime(const base::FilePath& path, base::Time* out_mtime) {
     return false;
   *out_mtime = file_info.last_modified;
   return true;
+}
+
+uint32_t Crc32(const char* data, int length) {
+  uint32_t empty_crc = crc32(0, Z_NULL, 0);
+  if (length == 0)
+    return empty_crc;
+  return crc32(empty_crc, reinterpret_cast<const Bytef*>(data), length);
+}
+
+uint32_t IncrementalCrc32(uint32_t previous_crc, const char* data, int length) {
+  return crc32(previous_crc, reinterpret_cast<const Bytef*>(data), length);
 }
 
 }  // namespace simple_util

@@ -6,6 +6,8 @@
 
 #include <string>
 
+#include "base/containers/flat_tree.h"
+#include "base/test/move_only_int.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -91,4 +93,14 @@ static_assert(!base::is_trivially_copyable<TrivialCopyButWithDestructor>::value,
               "trivially copyable");
 
 }  // namespace
+
+TEST(TemplateUtil, Less) {
+  using ExplicitInt = base::MoveOnlyInt;
+  EXPECT_TRUE(base::less()(ExplicitInt(3), 4));
+  EXPECT_FALSE(base::less()(4, ExplicitInt(3)));
+  EXPECT_TRUE(base::less()(3, 4));
+
+  static_assert(base::internal::IsTransparentCompare<base::less>::value, "");
+}
+
 }  // namespace base

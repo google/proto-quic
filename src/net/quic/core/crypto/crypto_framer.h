@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "net/quic/core/crypto/crypto_handshake_message.h"
+#include "net/quic/core/crypto/crypto_message_parser.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_export.h"
 
@@ -30,22 +31,6 @@ class QUIC_EXPORT_PRIVATE CryptoFramerVisitorInterface {
 
   // Called when a complete handshake message has been parsed.
   virtual void OnHandshakeMessage(const CryptoHandshakeMessage& message) = 0;
-};
-
-class QUIC_EXPORT_PRIVATE CryptoMessageParser {
- public:
-  virtual ~CryptoMessageParser() {}
-
-  virtual QuicErrorCode error() const = 0;
-  virtual const std::string& error_detail() const = 0;
-
-  // Processes input data, which must be delivered in order. Returns
-  // false if there was an error, and true otherwise.
-  virtual bool ProcessInput(QuicStringPiece input, Perspective perspective) = 0;
-
-  // Returns the number of bytes of buffered input data remaining to be
-  // parsed.
-  virtual size_t InputBytesRemaining() const = 0;
 };
 
 // A class for framing the crypto messages that are exchanged in a QUIC

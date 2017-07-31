@@ -22,7 +22,6 @@
 
 namespace base {
 class FilePath;
-class SequencedTaskRunner;
 }
 
 namespace crypto {
@@ -107,16 +106,14 @@ class NET_EXPORT SSLClientSocket : public SSLSocket {
   virtual void GetSSLCertRequestInfo(
       SSLCertRequestInfo* cert_request_info) = 0;
 
-  // Log SSL key material to |path| on |task_runner|. Must be called before any
+  // Log SSL key material to |path|. Must be called before any
   // SSLClientSockets are created.
   //
   // TODO(davidben): Switch this to a parameter on the SSLClientSocketContext
-  // once https://crbug.com/458365 is resolved. This will require splitting
-  // SSLKeyLogger into an interface, built with OS_NACL and a non-NaCl
-  // SSLKeyLoggerImpl.
-  static void SetSSLKeyLogFile(
-      const base::FilePath& path,
-      const scoped_refptr<base::SequencedTaskRunner>& task_runner);
+  // once https://crbug.com/458365 is resolved. To avoid a dependency from
+  // OS_NACL to file I/O logic, this will require splitting SSLKeyLogger into an
+  // interface, built with OS_NACL and a non-NaCl SSLKeyLoggerImpl.
+  static void SetSSLKeyLogFile(const base::FilePath& path);
 
   // Returns true if |error| is OK or |load_flags| ignores certificate errors
   // and |error| is a certificate error.

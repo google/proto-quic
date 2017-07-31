@@ -257,11 +257,35 @@ const char* ErrorCodeToString(SpdyErrorCode error_code);
 
 // Number of octets in the frame header.
 const size_t kFrameHeaderSize = 9;
-// Size, in bytes, of the data frame header.
+
+// Minimum size of a frame, in octets.
+const size_t kFrameMinimumSize = kFrameHeaderSize;
+
+// Minimum frame size for variable size frame types (includes mandatory fields),
+// frame size for fixed size frames, in octets.
+
 const size_t kDataFrameMinimumSize = kFrameHeaderSize;
+const size_t kHeadersFrameMinimumSize = kFrameHeaderSize;
+// PRIORITY frame has stream_dependency (4 octets) and weight (1 octet) fields.
+const size_t kPriorityFrameSize = kFrameHeaderSize + 5;
+// RST_STREAM frame has error_code (4 octets) field.
+const size_t kRstStreamFrameSize = kFrameHeaderSize + 4;
+const size_t kSettingsFrameMinimumSize = kFrameHeaderSize;
+// PUSH_PROMISE frame has promised_stream_id (4 octet) field.
+const size_t kPushPromiseFrameMinimumSize = kFrameHeaderSize + 4;
+// PING frame has opaque_data (8 octet) field.
+const size_t kPingFrameSize = kFrameHeaderSize + 8;
+// GOAWAY frame has last_stream_id (4 octet) and error_code (4 octet) fields.
+const size_t kGoawayFrameMinimumSize = kFrameHeaderSize + 8;
+// WINDOW_UPDATE frame has window_size_increment (4 octet) field.
+const size_t kWindowUpdateFrameSize = kFrameHeaderSize + 4;
+const size_t kContinuationFrameMinimumSize = kFrameHeaderSize;
+// ALTSVC frame has origin_len (2 octets) field.
+const size_t kGetAltSvcFrameMinimumSize = kFrameHeaderSize + 2;
+
 // Maximum possible configurable size of a frame in octets.
 const size_t kMaxFrameSizeLimit = kSpdyMaxFrameSizeLimit + kFrameHeaderSize;
-// Size of a header block size field. Valid only for SPDY 3.
+// Size of a header block size field.
 const size_t kSizeOfSizeField = sizeof(uint32_t);
 // Per-header overhead for block size accounting in bytes.
 const size_t kPerHeaderOverhead = 32;
@@ -271,34 +295,6 @@ const int32_t kInitialStreamWindowSize = 64 * 1024 - 1;
 const int32_t kInitialSessionWindowSize = 64 * 1024 - 1;
 // The NPN string for HTTP2, "h2".
 extern const char* const kHttp2Npn;
-
-// Wire sizes of priority payloads.
-const size_t kPriorityDependencyPayloadSize = 4;
-const size_t kPriorityWeightPayloadSize = 1;
-
-namespace size_utils {
-
-// Returns the (minimum) size of frames (sans variable-length portions).
-size_t GetFrameHeaderSize();
-size_t GetDataFrameMinimumSize();
-size_t GetHeadersMinimumSize();
-size_t GetPrioritySize();
-size_t GetRstStreamSize();
-size_t GetSettingsMinimumSize();
-size_t GetPushPromiseMinimumSize();
-size_t GetPingSize();
-size_t GetGoAwayMinimumSize();
-size_t GetWindowUpdateSize();
-size_t GetContinuationMinimumSize();
-size_t GetAltSvcMinimumSize();
-
-// Convenience function for above.
-size_t GetMinimumSizeOfFrame(SpdyFrameType frame_type);
-
-// Returns the minimum size a frame can be (data or control).
-size_t GetFrameMinimumSize();
-
-}  // namespace size_utils
 
 // Variant type (i.e. tagged union) that is either a SPDY 3.x priority value,
 // or else an HTTP/2 stream dependency tuple {parent stream ID, weight,
@@ -833,9 +829,11 @@ class SPDY_EXPORT_PRIVATE SpdyUnknownIR : public SpdyFrameIR {
       : SpdyFrameIR(stream_id),
         type_(type),
         flags_(flags),
+        length_(payload.size()),
         payload_(std::move(payload)) {}
   uint8_t type() const { return type_; }
   uint8_t flags() const { return flags_; }
+  int length() const { return length_; }
   const SpdyString& payload() const { return payload_; }
 
   void Visit(SpdyFrameVisitor* visitor) const override;
@@ -844,9 +842,14 @@ class SPDY_EXPORT_PRIVATE SpdyUnknownIR : public SpdyFrameIR {
 
   int flow_control_window_consumed() const override;
 
+ protected:
+  // Allows subclasses to overwrite the default length.
+  void set_length(int length) { length_ = length; }
+
  private:
   uint8_t type_;
   uint8_t flags_;
+  int length_;
   const SpdyString payload_;
 
   DISALLOW_COPY_AND_ASSIGN(SpdyUnknownIR);

@@ -17,8 +17,8 @@
 
 namespace {
 
-void NullWriteCallback(int, device::serial::SendError) {}
-void NullReadCallback(int, device::serial::ReceiveError) {}
+void NullWriteCallback(int, device::mojom::SerialSendError) {}
+void NullReadCallback(int, device::mojom::SerialReceiveError) {}
 
 }  // namespace
 

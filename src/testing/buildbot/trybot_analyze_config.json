@@ -14,7 +14,6 @@
       "build/android/pylib/.*",
       "build/check_gn_headers.py",
       "build/check_gn_headers_whitelist.txt",
-      "build/compiler_version.py",
       "build/get_landmines.py",
       "build/gyp_chromium",
       "build/linux/sysroot_ld_path.sh",

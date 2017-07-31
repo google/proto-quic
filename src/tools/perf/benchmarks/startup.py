@@ -93,6 +93,8 @@ class StartupLargeProfileColdBlankPage(_StartupCold):
       def SetExpectations(self):
         self.PermanentlyDisableBenchmark(
             [story.expectations.ALL_ANDROID], 'Desktop benchmark')
+        self.DisableStory('blank_page.html', [story.expectations.ALL_MAC],
+                          'crbug.com/747024')
     return StoryExpectations()
 
 

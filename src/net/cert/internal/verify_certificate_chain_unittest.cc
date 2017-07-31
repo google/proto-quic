@@ -4,7 +4,7 @@
 
 #include "net/cert/internal/verify_certificate_chain.h"
 
-#include "net/cert/internal/signature_policy.h"
+#include "net/cert/internal/simple_path_builder_delegate.h"
 #include "net/cert/internal/test_helpers.h"
 #include "net/cert/internal/trust_store.h"
 #include "net/cert/internal/verify_certificate_chain_typed_unittest.h"
@@ -13,16 +13,16 @@ namespace net {
 
 namespace {
 
-class VerifyCertificateChainDelegate {
+class VerifyCertificateChainTestDelegate {
  public:
   static void Verify(const VerifyCertChainTest& test,
                      const std::string& test_file_path) {
-    SimpleSignaturePolicy signature_policy(1024);
+    SimplePathBuilderDelegate delegate(1024);
 
     CertPathErrors errors;
     // TODO(eroman): Check user_constrained_policy_set.
     VerifyCertificateChain(
-        test.chain, test.last_cert_trust, &signature_policy, test.time,
+        test.chain, test.last_cert_trust, &delegate, test.time,
         test.key_purpose, test.initial_explicit_policy,
         test.user_initial_policy_set, test.initial_policy_mapping_inhibit,
         test.initial_any_policy_inhibit,
@@ -36,6 +36,6 @@ class VerifyCertificateChainDelegate {
 
 INSTANTIATE_TYPED_TEST_CASE_P(VerifyCertificateChain,
                               VerifyCertificateChainSingleRootTest,
-                              VerifyCertificateChainDelegate);
+                              VerifyCertificateChainTestDelegate);
 
 }  // namespace net

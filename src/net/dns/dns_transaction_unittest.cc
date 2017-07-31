@@ -283,7 +283,7 @@ class TransactionHelper {
 
     // Tell MessageLoop to quit now, in case any ASSERT_* fails.
     if (quit_in_callback_)
-      base::MessageLoop::current()->QuitWhenIdle();
+      base::RunLoop::QuitCurrentWhenIdleDeprecated();
 
     if (expected_answer_count_ >= 0) {
       ASSERT_THAT(rv, IsOk());

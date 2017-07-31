@@ -348,6 +348,8 @@ TEST_F(SimpleIndexFileTest, SimpleCacheUpgrade) {
   // The backend flushes the index on destruction and does so on the cache
   // thread, wait for the flushing to finish by posting a callback to the cache
   // thread after that.
+  // TODO(morlovich): Convert this test to post-cleanup callback API once it's
+  // there.
   MessageLoopHelper helper;
   CallbackTest cb_shutdown(&helper, false);
   cache_thread.task_runner()->PostTaskAndReply(

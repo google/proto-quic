@@ -58,6 +58,10 @@ const char kDefaultUrl[] = "https://www.example.org/";
 const char kUploadData[] = "hello!";
 const int kUploadDataSize = arraysize(kUploadData)-1;
 
+// While HTTP/2 protocol defines default SETTINGS_MAX_HEADER_LIST_SIZE_FOR_TEST
+// to be unlimited, BufferedSpdyFramer constructor requires a value.
+const uint32_t kMaxHeaderListSizeForTest = 1024;
+
 // Chop a SpdySerializedFrame into an array of MockWrites.
 // |frame| is the frame to chop.
 // |num_chunks| is the number of chunks to create.

@@ -198,16 +198,17 @@ public class ChildConnectionAllocator {
                     }
 
                     @Override
-                    public void onChildStartFailed() {
+                    public void onChildStartFailed(final ChildProcessConnection connection) {
                         assert isRunningOnLauncherThread();
                         if (serviceCallback != null) {
                             mLauncherHandler.post(new Runnable() {
                                 @Override
                                 public void run() {
-                                    serviceCallback.onChildStartFailed();
+                                    serviceCallback.onChildStartFailed(connection);
                                 }
                             });
                         }
+                        freeConnectionWithDelay(connection);
                     }
 
                     @Override
@@ -221,7 +222,10 @@ public class ChildConnectionAllocator {
                                 }
                             });
                         }
+                        freeConnectionWithDelay(connection);
+                    }
 
+                    private void freeConnectionWithDelay(final ChildProcessConnection connection) {
                         // Freeing a service should be delayed. This is so that we avoid immediately
                         // reusing the freed service (see http://crbug.com/164069): the framework
                         // might keep a service process alive when it's been unbound for a short

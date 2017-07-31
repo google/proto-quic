@@ -149,7 +149,7 @@ class ThreadPostingTasks : public SimpleThread {
 
  private:
   void Run() override {
-    EXPECT_FALSE(factory_.task_runner()->RunsTasksOnCurrentThread());
+    EXPECT_FALSE(factory_.task_runner()->RunsTasksInCurrentSequence());
 
     const size_t kNumTasksPerThread = 150;
     for (size_t i = 0; i < kNumTasksPerThread; ++i) {
@@ -192,8 +192,6 @@ class TaskSchedulerImplTest
   TaskSchedulerImplTest() : scheduler_("Test") {}
 
   void StartTaskScheduler() {
-    using StandbyThreadPolicy = SchedulerWorkerPoolParams::StandbyThreadPolicy;
-
     constexpr TimeDelta kSuggestedReclaimTime = TimeDelta::FromSeconds(30);
     constexpr int kMaxNumBackgroundThreads = 1;
     constexpr int kMaxNumBackgroundBlockingThreads = 3;
@@ -201,14 +199,10 @@ class TaskSchedulerImplTest
     constexpr int kMaxNumForegroundBlockingThreads = 12;
 
     scheduler_.Start(
-        {{StandbyThreadPolicy::LAZY, kMaxNumBackgroundThreads,
-          kSuggestedReclaimTime},
-         {StandbyThreadPolicy::LAZY, kMaxNumBackgroundBlockingThreads,
-          kSuggestedReclaimTime},
-         {StandbyThreadPolicy::LAZY, kMaxNumForegroundThreads,
-          kSuggestedReclaimTime},
-         {StandbyThreadPolicy::LAZY, kMaxNumForegroundBlockingThreads,
-          kSuggestedReclaimTime}});
+        {{kMaxNumBackgroundThreads, kSuggestedReclaimTime},
+         {kMaxNumBackgroundBlockingThreads, kSuggestedReclaimTime},
+         {kMaxNumForegroundThreads, kSuggestedReclaimTime},
+         {kMaxNumForegroundBlockingThreads, kSuggestedReclaimTime}});
   }
 
   void TearDown() override { scheduler_.JoinForTesting(); }
@@ -262,7 +256,7 @@ TEST_P(TaskSchedulerImplTest, PostTasksViaTaskRunner) {
       CreateTaskRunnerWithTraitsAndExecutionMode(&scheduler_, GetParam().traits,
                                                  GetParam().execution_mode),
       GetParam().execution_mode);
-  EXPECT_FALSE(factory.task_runner()->RunsTasksOnCurrentThread());
+  EXPECT_FALSE(factory.task_runner()->RunsTasksInCurrentSequence());
 
   const size_t kNumTasksPerTest = 150;
   for (size_t i = 0; i < kNumTasksPerTest; ++i) {
@@ -382,9 +376,9 @@ TEST_F(TaskSchedulerImplTest, GetMaxConcurrentTasksWithTraitsDeprecated) {
                     {MayBlock(), TaskPriority::USER_BLOCKING}));
 }
 
-// Verify that the RunsTasksOnCurrentThread() method of a SequencedTaskRunner
+// Verify that the RunsTasksInCurrentSequence() method of a SequencedTaskRunner
 // returns false when called from a task that isn't part of the sequence.
-TEST_F(TaskSchedulerImplTest, SequencedRunsTasksOnCurrentThread) {
+TEST_F(TaskSchedulerImplTest, SequencedRunsTasksInCurrentSequence) {
   StartTaskScheduler();
   auto single_thread_task_runner =
       scheduler_.CreateSingleThreadTaskRunnerWithTraits(
@@ -399,16 +393,17 @@ TEST_F(TaskSchedulerImplTest, SequencedRunsTasksOnCurrentThread) {
       BindOnce(
           [](scoped_refptr<TaskRunner> sequenced_task_runner,
              WaitableEvent* task_ran) {
-            EXPECT_FALSE(sequenced_task_runner->RunsTasksOnCurrentThread());
+            EXPECT_FALSE(sequenced_task_runner->RunsTasksInCurrentSequence());
             task_ran->Signal();
           },
           sequenced_task_runner, Unretained(&task_ran)));
   task_ran.Wait();
 }
 
-// Verify that the RunsTasksOnCurrentThread() method of a SingleThreadTaskRunner
-// returns false when called from a task that isn't part of the sequence.
-TEST_F(TaskSchedulerImplTest, SingleThreadRunsTasksOnCurrentThread) {
+// Verify that the RunsTasksInCurrentSequence() method of a
+// SingleThreadTaskRunner returns false when called from a task that isn't part
+// of the sequence.
+TEST_F(TaskSchedulerImplTest, SingleThreadRunsTasksInCurrentSequence) {
   StartTaskScheduler();
   auto sequenced_task_runner =
       scheduler_.CreateSequencedTaskRunnerWithTraits(TaskTraits());
@@ -423,7 +418,8 @@ TEST_F(TaskSchedulerImplTest, SingleThreadRunsTasksOnCurrentThread) {
       BindOnce(
           [](scoped_refptr<TaskRunner> single_thread_task_runner,
              WaitableEvent* task_ran) {
-            EXPECT_FALSE(single_thread_task_runner->RunsTasksOnCurrentThread());
+            EXPECT_FALSE(
+                single_thread_task_runner->RunsTasksInCurrentSequence());
             task_ran->Signal();
           },
           single_thread_task_runner, Unretained(&task_ran)));

@@ -18,11 +18,11 @@ declare_args() {
   # numbers also give longer single-file recompilation times.
   #
   # Recommendations:
-  # Higher numbers than 200 does not reduce wall clock compile times
-  # for 4 cores or less.
-  # 200 uses 8% less total CPU than 100 when compiling content and 10%
+  # Higher numbers than 100 does not reduce wall clock compile times
+  # even for 4 cores or less so no reason to go (much) higher than 100.
+  # 100 uses 8% less total CPU than 50 when compiling content and 10%
   # less wall clock when compiling with 4 cores.
-  jumbo_file_merge_limit = 200
+  jumbo_file_merge_limit = 100
 }
 
 # Use one of the targets jumbo_source_set, jumbo_static_library,
@@ -92,20 +92,31 @@ template("internal_jumbo_target") {
     jumbo_files = []
 
     # Split the sources list into chunks that are not excessively large
-    files_per_chunk = jumbo_file_merge_limit
     current_file_index = 0
     next_chunk_start = 0
     next_chunk_number = 1
     foreach(source_file, invoker.sources) {
-      if (current_file_index == next_chunk_start) {
-        jumbo_files += [ "$gen_target_dir/" + target_name + "_jumbo_" +
-                         next_chunk_number + ".cc" ]
-        next_chunk_number += 1
-        next_chunk_start += files_per_chunk
+      if (get_path_info(source_file, "extension") != "h") {
+        if (current_file_index == next_chunk_start) {
+          jumbo_files += [ "$gen_target_dir/" + target_name + "_jumbo_" +
+                           next_chunk_number + ".cc" ]
+          next_chunk_number += 1
+          next_chunk_start += jumbo_file_merge_limit
+        }
+        current_file_index += 1
       }
-      current_file_index += 1
     }
 
+    if (jumbo_files == []) {
+      # Empty sources list or a sources list with only header files.
+      use_jumbo_build_for_target = false
+      assert(current_file_index == 0)  # Prevent "unused variable"
+      assert(next_chunk_start == 0)  # Prevent "unused variable"
+      assert(next_chunk_number == 1)  # Prevent "unused variable"
+    }
+  }
+
+  if (use_jumbo_build_for_target) {
     has_objective_c_file = false
     has_c_file = false
     foreach(source_file, invoker.sources) {

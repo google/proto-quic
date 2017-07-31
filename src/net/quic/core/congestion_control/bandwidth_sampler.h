@@ -37,6 +37,50 @@ struct QUIC_EXPORT_PRIVATE BandwidthSample {
         is_app_limited(false) {}
 };
 
+// An interface common to any class that can provide bandwidth samples from the
+// information per individual acknowledged packet.
+class QUIC_EXPORT_PRIVATE BandwidthSamplerInterface {
+ public:
+  virtual ~BandwidthSamplerInterface() {}
+
+  // Inputs the sent packet information into the sampler. Assumes that all
+  // packets are sent in order. The information about the packet will not be
+  // released from the sampler until it the packet is either acknowledged or
+  // declared lost.
+  virtual void OnPacketSent(
+      QuicTime sent_time,
+      QuicPacketNumber packet_number,
+      QuicByteCount bytes,
+      QuicByteCount bytes_in_flight,
+      HasRetransmittableData has_retransmittable_data) = 0;
+
+  // Notifies the sampler that the |packet_number| is acknowledged. Returns a
+  // bandwidth sample. If no bandwidth sample is available,
+  // QuicBandwidth::Zero() is returned.
+  virtual BandwidthSample OnPacketAcknowledged(
+      QuicTime ack_time,
+      QuicPacketNumber packet_number) = 0;
+
+  // Informs the sampler that a packet is considered lost and it should no
+  // longer keep track of it.
+  virtual void OnPacketLost(QuicPacketNumber packet_number) = 0;
+
+  // Informs the sampler that the connection is currently app-limited, causing
+  // the sampler to enter the app-limited phase.  The phase will expire by
+  // itself.
+  virtual void OnAppLimited() = 0;
+
+  // Remove all the packets lower than the specified packet number.
+  virtual void RemoveObsoletePackets(QuicPacketNumber least_unacked) = 0;
+
+  // Total number of bytes currently acknowledged by the receiver.
+  virtual QuicByteCount total_bytes_acked() const = 0;
+
+  // Application-limited information exported for debugging.
+  virtual bool is_app_limited() const = 0;
+  virtual QuicPacketNumber end_of_app_limited_phase() const = 0;
+};
+
 // BandwidthSampler keeps track of sent and acknowledged packets and outputs a
 // bandwidth sample for every packet acknowledged. The samples are taken for
 // individual packets, and are not filtered; the consumer has to filter the
@@ -117,42 +161,27 @@ struct QUIC_EXPORT_PRIVATE BandwidthSample {
 // up until an ack for a packet that was sent after OnAppLimited() was called.
 // Note that while the scenario above is not the only scenario when the
 // connection is app-limited, the approach works in other cases too.
-class QUIC_EXPORT_PRIVATE BandwidthSampler {
+class QUIC_EXPORT_PRIVATE BandwidthSampler : public BandwidthSamplerInterface {
  public:
   BandwidthSampler();
-  ~BandwidthSampler();
+  ~BandwidthSampler() override;
 
-  // Inputs the sent packet information into the sampler. Assumes that all
-  // packets are sent in order. The information about the packet will not be
-  // released from the sampler until it the packet is either acknowledged or
-  // declared lost.
   void OnPacketSent(QuicTime sent_time,
                     QuicPacketNumber packet_number,
                     QuicByteCount bytes,
                     QuicByteCount bytes_in_flight,
-                    HasRetransmittableData has_retransmittable_data);
-  // Notifies the sampler that the |packet_number| is acknowledged. Returns a
-  // bandwidth sample. If no bandwidth sample is available,
-  // QuicBandwidth::Zero() is returned.
+                    HasRetransmittableData has_retransmittable_data) override;
   BandwidthSample OnPacketAcknowledged(QuicTime ack_time,
-                                       QuicPacketNumber packet_number);
-  // Informs the sampler that a packet is considered lost and it should no
-  // longer keep track of it.
-  void OnPacketLost(QuicPacketNumber packet_number);
+                                       QuicPacketNumber packet_number) override;
+  void OnPacketLost(QuicPacketNumber packet_number) override;
 
-  // Informs the sampler that the connection is currently app-limited, causing
-  // the sampler to enter the app-limited phase. The phase will expire by itself
-  // (see |is_app_limited_| documentation for details).
-  void OnAppLimited();
+  void OnAppLimited() override;
 
-  // Remove all the packets lower than the specified packet number.
-  void RemoveObsoletePackets(QuicPacketNumber least_unacked);
+  void RemoveObsoletePackets(QuicPacketNumber least_unacked) override;
 
-  QuicByteCount total_bytes_acked() const { return total_bytes_acked_; }
-  bool is_app_limited() const { return is_app_limited_; }
-  QuicPacketNumber end_of_app_limited_phase() const {
-    return end_of_app_limited_phase_;
-  }
+  QuicByteCount total_bytes_acked() const override;
+  bool is_app_limited() const override;
+  QuicPacketNumber end_of_app_limited_phase() const override;
 
  private:
   friend class test::BandwidthSamplerPeer;

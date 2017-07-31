@@ -363,9 +363,8 @@ void SimpleSynchronousEntry::ReadData(const EntryOperationData& in_entry_op,
   if (bytes_read > 0) {
     entry_stat->set_last_used(Time::Now());
     if (crc_request != nullptr) {
-      crc_request->data_crc32 =
-          crc32(crc_request->data_crc32,
-                reinterpret_cast<const Bytef*>(out_buf->data()), bytes_read);
+      crc_request->data_crc32 = simple_util::IncrementalCrc32(
+          crc_request->data_crc32, out_buf->data(), bytes_read);
       // Verify checksum after last read, if we've been asked to.
       if (crc_request->request_verify &&
           in_entry_op.offset + bytes_read ==
@@ -1262,11 +1261,7 @@ int SimpleSynchronousEntry::ReadAndValidateStream0(
 
   // Check the CRC32.
   uint32_t expected_crc32 =
-      stream_0_size == 0
-          ? crc32(0, Z_NULL, 0)
-          : crc32(crc32(0, Z_NULL, 0),
-                  reinterpret_cast<const Bytef*>((*stream_0_data)->data()),
-                  stream_0_size);
+      simple_util::Crc32((*stream_0_data)->data(), stream_0_size);
   if (has_crc32 && read_crc32 != expected_crc32) {
     DVLOG(1) << "EOF record had bad crc.";
     RecordCheckEOFResult(cache_type_, CHECK_EOF_RESULT_CRC_MISMATCH);
@@ -1560,9 +1555,7 @@ bool SimpleSynchronousEntry::ReadSparseRange(const SparseRange* range,
 
   // If we read the whole range and we have a crc32, check it.
   if (offset == 0 && len == range->length && range->data_crc32 != 0) {
-    uint32_t actual_crc32 =
-        crc32(crc32(0L, Z_NULL, 0), reinterpret_cast<const Bytef*>(buf), len);
-    if (actual_crc32 != range->data_crc32) {
+    if (simple_util::Crc32(buf, len) != range->data_crc32) {
       DLOG(WARNING) << "Sparse range crc32 mismatch.";
       return false;
     }
@@ -1582,9 +1575,7 @@ bool SimpleSynchronousEntry::WriteSparseRange(SparseRange* range,
 
   uint32_t new_crc32 = 0;
   if (offset == 0 && len == range->length) {
-    new_crc32 = crc32(crc32(0L, Z_NULL, 0),
-                      reinterpret_cast<const Bytef*>(buf),
-                      len);
+    new_crc32 = simple_util::Crc32(buf, len);
   }
 
   if (new_crc32 != range->data_crc32) {
@@ -1621,8 +1612,7 @@ bool SimpleSynchronousEntry::AppendSparseRange(int64_t offset,
   DCHECK_GT(len, 0);
   DCHECK(buf);
 
-  uint32_t data_crc32 =
-      crc32(crc32(0L, Z_NULL, 0), reinterpret_cast<const Bytef*>(buf), len);
+  uint32_t data_crc32 = simple_util::Crc32(buf, len);
 
   SimpleFileSparseRangeHeader header;
   header.sparse_range_magic_number = kSimpleSparseRangeMagicNumber;

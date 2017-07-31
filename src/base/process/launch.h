@@ -40,8 +40,11 @@ typedef std::vector<HANDLE> HandlesToInheritVector;
 #elif defined(OS_FUCHSIA)
 typedef std::vector<mx_handle_t> HandlesToInheritVector;
 #endif
-// TODO(viettrungluu): Only define this on POSIX?
-typedef std::vector<std::pair<int, int> > FileHandleMappingVector;
+#if defined(OS_POSIX)
+// TODO(fuchsia): Turn this if into an elif, after the OS_FUCHSIA check, once
+// callers have been cleaned-up not to rely on it (crbug.com/748350).
+typedef std::vector<std::pair<int, int>> FileHandleMappingVector;
+#endif
 
 // Options for launching a subprocess that are passed to LaunchProcess().
 // The default constructor constructs the object with default options.
@@ -77,17 +80,35 @@ struct BASE_EXPORT LaunchOptions {
 #if defined(OS_WIN)
   bool start_hidden = false;
 
-  // If non-null, inherit exactly the list of handles in this vector (these
-  // handles must be inheritable).
-  HandlesToInheritVector* handles_to_inherit = nullptr;
+  // Windows can inherit handles when it launches child processes.
+  // See https://blogs.msdn.microsoft.com/oldnewthing/20111216-00/?p=8873
+  // for a good overview of Windows handle inheritance.
+  //
+  // Implementation note: it might be nice to implement in terms of
+  // base::Optional<>, but then the natural default state (vector not present)
+  // would be "all inheritable handles" while we want "no inheritance."
+  enum class Inherit {
+    // Only those handles in |handles_to_inherit| vector are inherited. If the
+    // vector is empty, no handles are inherited. The handles in the vector must
+    // all be inheritable.
+    kSpecific,
 
-  // If true, the new process inherits handles from the parent. In production
-  // code this flag should be used only when running short-lived, trusted
-  // binaries, because open handles from other libraries and subsystems will
-  // leak to the child process, causing errors such as open socket hangs.
-  // Note: If |handles_to_inherit| is non-null, this flag is ignored and only
-  // those handles will be inherited.
-  bool inherit_handles = false;
+    // All handles in the current process which are inheritable are inherited.
+    // In production code this flag should be used only when running
+    // short-lived, trusted binaries, because open handles from other libraries
+    // and subsystems will leak to the child process, causing errors such as
+    // open socket hangs. There are also race conditions that can cause handle
+    // over-sharing.
+    //
+    // |handles_to_inherit| must be null.
+    //
+    // DEPRECATED. THIS SHOULD NOT BE USED. Explicitly map all handles that
+    // need to be shared in new code.
+    // TODO(brettw) bug 748258: remove this.
+    kAll
+  };
+  Inherit inherit_mode = Inherit::kSpecific;
+  HandlesToInheritVector handles_to_inherit;
 
   // If non-null, runs as if the user represented by the token had launched it.
   // Whether the application is visible on the interactive desktop depends on
@@ -106,10 +127,16 @@ struct BASE_EXPORT LaunchOptions {
   // the job object fails.
   HANDLE job_handle = nullptr;
 
-  // Handles for the redirection of stdin, stdout and stderr. The handles must
-  // be inheritable. Caller should either set all three of them or none (i.e.
-  // there is no way to redirect stderr without redirecting stdin). The
-  // |inherit_handles| flag must be set to true when redirecting stdio stream.
+  // Handles for the redirection of stdin, stdout and stderr. The caller should
+  // either set all three of them or none (i.e. there is no way to redirect
+  // stderr without redirecting stdin).
+  //
+  // The handles must be inheritable. Pseudo handles are used when stdout and
+  // stderr redirect to the console. In that case, GetFileType() will return
+  // FILE_TYPE_CHAR and they're automatically inherited by child processes. See
+  // https://msdn.microsoft.com/en-us/library/windows/desktop/ms682075.aspx
+  // Otherwise, the caller must ensure that the |inherit_mode| and/or
+  // |handles_to_inherit| set so that the handles are inherited.
   HANDLE stdin_handle = nullptr;
   HANDLE stdout_handle = nullptr;
   HANDLE stderr_handle = nullptr;
@@ -128,11 +155,9 @@ struct BASE_EXPORT LaunchOptions {
   // |environ|.
   bool clear_environ = false;
 
-  // If non-null, remap file descriptors according to the mapping of
-  // src fd->dest fd to propagate FDs into the child process.
-  // This pointer is owned by the caller and must live through the
-  // call to LaunchProcess().
-  const FileHandleMappingVector* fds_to_remap = nullptr;
+  // Remap file descriptors according to the mapping of src_fd->dest_fd to
+  // propagate FDs into the child process.
+  FileHandleMappingVector fds_to_remap;
 
   // Each element is an RLIMIT_* constant that should be raised to its
   // rlim_max.  This pointer is owned by the caller and must live through
@@ -327,6 +352,9 @@ BASE_EXPORT LaunchOptions LaunchOptionsForTest();
 // threads could have been in any state (potentially holding locks, etc.).
 // Callers should most likely call execve() in the child soon after calling
 // this.
+//
+// It is unsafe to use any pthread APIs after ForkWithFlags().
+// However, performing an exec() will lift this restriction.
 BASE_EXPORT pid_t ForkWithFlags(unsigned long flags, pid_t* ptid, pid_t* ctid);
 #endif
 

@@ -77,17 +77,22 @@ if (enable_nocompile_tests) {
       outputs = [
         result_path,
       ]
-      sysroot_args = ""
-      if (sysroot != "") {
-        sysroot_args = " --sysroot " + rebase_path(sysroot, root_build_dir)
-      }
       args = [
         "4",  # number of compilers to invoke in parallel.
         "{{source}}",
-        "-Wall -Werror -Wfatal-errors " + "-I" +
-            rebase_path("//", root_build_dir) + sysroot_args,
         rebase_path(result_path, root_build_dir),
+        "--",
+        "-Wall",
+        "-Werror",
+        "-Wfatal-errors",
+        "-I" + rebase_path("//", root_build_dir),
       ]
+      if (sysroot != "") {
+        args += [
+          "--sysroot",
+          rebase_path(sysroot, root_build_dir),
+        ]
+      }
     }
 
     test(target_name) {

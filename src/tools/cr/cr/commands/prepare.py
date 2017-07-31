@@ -23,7 +23,7 @@ class PrepareCommand(cr.Command):
     self.help = 'Prepares an output directory'
     self.description = ("""
         This does any preparation needed for the output directory, such as
-        running gyp.
+        running gn.
         """)
 
   def Run(self):

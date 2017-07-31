@@ -37,9 +37,9 @@ void TaskTracker::WaitForCompletedTasks(int count) {
     task_runs_cv_.Wait();
 }
 
-void ExpectRunsTasksOnCurrentThread(bool expected_value,
-                                    TaskRunner* task_runner) {
-  EXPECT_EQ(expected_value, task_runner->RunsTasksOnCurrentThread());
+void ExpectRunsTasksInCurrentSequence(bool expected_value,
+                                      TaskRunner* task_runner) {
+  EXPECT_EQ(expected_value, task_runner->RunsTasksInCurrentSequence());
 }
 
 }  // namespace test

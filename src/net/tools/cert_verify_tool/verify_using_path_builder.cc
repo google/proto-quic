@@ -19,7 +19,7 @@
 #include "net/cert/internal/parse_name.h"
 #include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/internal/path_builder.h"
-#include "net/cert/internal/signature_policy.h"
+#include "net/cert/internal/simple_path_builder_delegate.h"
 #include "net/cert/internal/system_trust_store.h"
 #include "net/cert/x509_util.h"
 #include "net/cert_net/cert_net_fetcher_impl.h"
@@ -206,10 +206,10 @@ bool VerifyUsingPathBuilder(
     return false;
 
   // Verify the chain.
-  net::SimpleSignaturePolicy signature_policy(2048);
+  net::SimplePathBuilderDelegate delegate(2048);
   net::CertPathBuilder::Result result;
   net::CertPathBuilder path_builder(
-      target_cert, ssl_trust_store->GetTrustStore(), &signature_policy, time,
+      target_cert, ssl_trust_store->GetTrustStore(), &delegate, time,
       net::KeyPurpose::SERVER_AUTH, net::InitialExplicitPolicy::kFalse,
       {net::AnyPolicy()}, net::InitialPolicyMappingInhibit::kFalse,
       net::InitialAnyPolicyInhibit::kFalse, &result);

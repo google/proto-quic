@@ -400,10 +400,6 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   // than the number of round-trips needed for the handshake.
   int GetNumSentClientHellos() const;
 
-  // Returns the stream id of the push stream if it is not claimed yet, or 0
-  // otherwise.
-  QuicStreamId GetStreamIdForPush(const GURL& pushed_url);
-
   // Returns true if |hostname| may be pooled onto this session.  If this
   // is a secure QUIC session, then |hostname| must match the certificate
   // presented during the handshake.

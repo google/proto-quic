@@ -13,8 +13,7 @@
 #include <utility>
 
 #include "base/sys_byteorder.h"
-#include "net/spdy/chromium/spdy_flags.h"
-#include "net/spdy/core/hpack/hpack_decoder_interface.h"
+#include "net/spdy/core/hpack/hpack_decoder_adapter.h"
 #include "net/spdy/core/hpack/hpack_encoder.h"
 #include "net/spdy/core/spdy_alt_svc_wire_format.h"
 #include "net/spdy/core/spdy_header_block.h"
@@ -319,11 +318,6 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
     DISABLE_COMPRESSION,
   };
 
-  // Typedef for a function used to create SpdyFramerDecoderAdapter's.
-  // Defined in support of evaluating an alternate HTTP/2 decoder.
-  typedef std::unique_ptr<SpdyFramerDecoderAdapter> (*DecoderAdapterFactoryFn)(
-      SpdyFramer* outer);
-
   // Constant for invalid (or unknown) stream IDs.
   static const SpdyStreamId kInvalidStream;
 
@@ -342,11 +336,6 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   static uint8_t GetSerializedFlags(const SpdyFrameIR& frame);
 
   explicit SpdyFramer(CompressionOption option);
-
-  // Used recursively from the above constructor in order to support
-  // instantiating a SpdyFramerDecoderAdapter selected via flags or some other
-  // means.
-  SpdyFramer(DecoderAdapterFactoryFn adapter_factory, CompressionOption option);
 
   virtual ~SpdyFramer();
 
@@ -527,26 +516,6 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
     GetHpackEncoder()->SetIndexingPolicy(std::move(policy));
   }
 
-  // Returns the (minimum) size of frames (sans variable-length portions).
-  size_t GetFrameHeaderSize() const;
-  size_t GetDataFrameMinimumSize() const;
-  size_t GetHeadersMinimumSize() const;
-  size_t GetPrioritySize() const;
-  size_t GetRstStreamSize() const;
-  size_t GetSettingsMinimumSize() const;
-  size_t GetPushPromiseMinimumSize() const;
-  size_t GetPingSize() const;
-  size_t GetGoAwayMinimumSize() const;
-  size_t GetWindowUpdateSize() const;
-  size_t GetContinuationMinimumSize() const;
-  size_t GetAltSvcMinimumSize() const;
-
-  // Convenience function for above.
-  size_t GetMinimumSizeOfFrame(SpdyFrameType frame_type) const;
-
-  // Returns the minimum size a frame can be (data or control).
-  size_t GetFrameMinimumSize() const;
-
   // Returns the maximum size a frame can be (data or control).
   size_t GetFrameMaximumSize() const;
 
@@ -597,9 +566,7 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
 
   // For use in SpdyFramerDecoderAdapter implementations; returns the HPACK
   // decoder to be used.
-  HpackDecoderInterface* GetHpackDecoderForAdapter() {
-    return GetHpackDecoder();
-  }
+  HpackDecoderAdapter* GetHpackDecoderAdapter() { return GetHpackDecoder(); }
 
   void SetOverwriteLastFrame(bool value) { overwrite_last_frame_ = value; }
   void SetIsLastFrame(bool value) { is_last_frame_ = value; }
@@ -733,81 +700,9 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   };
 
  private:
-  class CharBuffer {
-   public:
-    explicit CharBuffer(size_t capacity);
-    ~CharBuffer();
-
-    void CopyFrom(const char* data, size_t size);
-    void Rewind();
-
-    const char* data() const { return buffer_.get(); }
-    size_t len() const { return len_; }
-
-    size_t EstimateMemoryUsage() const;
-
-   private:
-    std::unique_ptr<char[]> buffer_;
-    size_t capacity_;
-    size_t len_;
-  };
-
-  // Scratch space necessary for processing SETTINGS frames.
-  struct SpdySettingsScratch {
-    SpdySettingsScratch();
-    void Reset();
-    size_t EstimateMemoryUsage() const;
-
-    // Buffer contains up to one complete key/value pair.
-    CharBuffer buffer;
-
-    // The ID of the last setting that was processed in the current SETTINGS
-    // frame. Used for detecting out-of-order or duplicate keys within a
-    // settings frame. Set to -1 before first key/value pair is processed.
-    int last_setting_id;
-  };
-
-  // Internal breakouts from ProcessInput. Each returns the number of bytes
-  // consumed from the data.
-  size_t ProcessCommonHeader(const char* data, size_t len);
-  size_t ProcessControlFramePayload(const char* data, size_t len);
-  size_t ProcessControlFrameBeforeHeaderBlock(const char* data, size_t len);
-  // HPACK data is re-encoded as SPDY3 and re-entrantly delivered through
-  // |ProcessControlFrameHeaderBlock()|. |is_hpack_header_block| controls
-  // whether data is treated as HPACK- vs SPDY3-encoded.
-  size_t ProcessControlFrameHeaderBlock(const char* data, size_t len);
-  size_t ProcessDataFramePaddingLength(const char* data, size_t len);
-  size_t ProcessFramePadding(const char* data, size_t len);
-  size_t ProcessDataFramePayload(const char* data, size_t len);
-  size_t ProcessGoAwayFramePayload(const char* data, size_t len);
-  size_t ProcessSettingsFrameHeader(const char* data, size_t len);
-  size_t ProcessSettingsFramePayload(const char* data, size_t len);
-  size_t ProcessAltSvcFramePayload(const char* data, size_t len);
-  size_t ProcessIgnoredControlFramePayload(/*const char* data,*/ size_t len);
-  size_t ProcessExtensionFramePayload(const char* data, size_t len);
-
-  // Validates the frame header against the current protocol, e.g.
-  // Frame type must be known, must specify a non-zero stream id.
-  //
-  // is_control_frame    : the control bit
-  // frame_type_field    : the unparsed frame type octet(s)
-  // payload_length_field: the stated length in octets of the frame payload
-  //
-  // For valid frames, returns the correct SpdyFrameType.
-  // Otherwise returns a best guess at invalid frame type,
-  // after setting the appropriate SpdyFramerError.
-  SpdyFrameType ValidateFrameHeader(bool is_control_frame,
-                                    uint8_t frame_type_field,
-                                    size_t payload_length_field);
-
-  // Helpers for above internal breakouts from ProcessInput.
-  void ProcessControlFrameHeader();
-  // Always passed exactly 1 setting's worth of data.
-  bool ProcessSetting(const char* data);
-
   // Get (and lazily initialize) the HPACK state.
   HpackEncoder* GetHpackEncoder();
-  HpackDecoderInterface* GetHpackDecoder();
+  HpackDecoderAdapter* GetHpackDecoder();
 
   size_t GetNumberRequiredContinuationFrames(size_t size);
 
@@ -856,9 +751,6 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   uint8_t SerializePushPromiseFrameFlags(
       const SpdyPushPromiseIR& push_promise_ir) const;
 
-  // Set the error code and moves the framer into the error state.
-  void set_error(SpdyFramerError error);
-
   // Helper functions to prepare the input for SpdyFrameBuilder.
   void SerializeDataBuilderHelper(const SpdyDataIR& data_ir,
                                   uint8_t* flags,
@@ -904,23 +796,6 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   // The size of one parameter in SETTINGS frame.
   static const size_t kOneSettingParameterSize;
 
-  SpdyState state_;
-  SpdyState previous_state_;
-  SpdyFramerError spdy_framer_error_;
-
-  // Note that for DATA frame, remaining_data_length_ is sum of lengths of
-  // frame header, padding length field (optional), data payload (optional) and
-  // padding payload (optional).
-  size_t remaining_data_length_;
-
-  // The length (in bytes) of the padding payload to be processed.
-  size_t remaining_padding_payload_length_;
-
-  // The number of bytes remaining to read from the current control frame's
-  // headers. Note that header data blocks (for control types that have them)
-  // are part of the frame's payload, and not the frame's headers.
-  size_t remaining_control_header_;
-
   // The limit on the size of sent HTTP/2 payloads as specified in the
   // SETTINGS_MAX_FRAME_SIZE received from peer.
   size_t send_frame_size_limit_ = kSpdyInitialFrameSizeLimit;
@@ -929,32 +804,8 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   // SETTINGS_MAX_FRAME_SIZE advertised to peer.
   size_t recv_frame_size_limit_ = kSpdyInitialFrameSizeLimit;
 
-  CharBuffer current_frame_buffer_;
-
-  // The type of the frame currently being read.
-  SpdyFrameType current_frame_type_;
-
-  // The total length of the frame currently being read, including frame header.
-  uint32_t current_frame_length_;
-
-  // The stream ID field of the frame currently being read, if applicable.
-  SpdyStreamId current_frame_stream_id_;
-
-  // Set this to the current stream when we receive a HEADERS, PUSH_PROMISE, or
-  // CONTINUATION frame without the END_HEADERS(0x4) bit set. These frames must
-  // be followed by a CONTINUATION frame, or else we throw a PROTOCOL_ERROR.
-  // A value of 0 indicates that we are not expecting a CONTINUATION frame.
-  SpdyStreamId expect_continuation_;
-
-  // Scratch space for handling SETTINGS frames.
-  // TODO(hkhalil): Unify memory for this scratch space with
-  // current_frame_buffer_.
-  SpdySettingsScratch settings_scratch_;
-
-  std::unique_ptr<CharBuffer> altsvc_scratch_;
-
   std::unique_ptr<HpackEncoder> hpack_encoder_;
-  std::unique_ptr<HpackDecoderInterface> hpack_decoder_;
+  std::unique_ptr<HpackDecoderAdapter> hpack_decoder_;
 
   SpdyFramerVisitorInterface* visitor_;
   ExtensionVisitorInterface* extension_;
@@ -962,30 +813,11 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
 
   SpdyHeadersHandlerInterface* header_handler_;
 
-  // Optional decoder to use instead of this instance.
+  // Decoder to use instead of this instance.
   std::unique_ptr<SpdyFramerDecoderAdapter> decoder_adapter_;
-
-  // The flags field of the frame currently being read.
-  uint8_t current_frame_flags_;
 
   // Determines whether HPACK compression is used.
   const CompressionOption compression_option_;
-
-  // On the first read, we check to see if the data starts with HTTP.
-  // If it does, we likely have an HTTP response.   This isn't guaranteed
-  // though: we could have gotten a settings frame and then corrupt data that
-  // just looks like HTTP, but deterministic checking requires a lot more state.
-  bool probable_http_response_;
-
-  // If a HEADERS frame is followed by a CONTINUATION frame, the FIN/END_STREAM
-  // flag is still carried in the HEADERS frame. If it's set, flip this so that
-  // we know to terminate the stream when the entire header block has been
-  // processed.
-  bool end_stream_when_done_;
-
-  // If true, then ProcessInput returns after processing a full frame,
-  // rather than reading all available input.
-  bool process_single_input_frame_ = false;
 
   // TODO(yasong): Remove overwrite_last_frame_ and is_last_frame_ when we make
   // Serialize<FrameType>() functions static and independent of SpdyFramer. And

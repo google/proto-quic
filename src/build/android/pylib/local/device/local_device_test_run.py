@@ -10,7 +10,9 @@ import signal
 import thread
 import threading
 
+from devil import base_error
 from devil.android import crash_handler
+from devil.android import device_errors
 from devil.utils import signal_handler
 from pylib import valgrind_tools
 from pylib.base import base_test_result
@@ -97,10 +99,15 @@ class LocalDeviceTestRun(test_run.TestRun):
           else:
             raise Exception(
                 'Unexpected result type: %s' % type(result).__name__)
-        except:
+        except Exception as e:  # pylint: disable=broad-except
           if isinstance(tests, test_collection.TestCollection):
             rerun = test
-          raise
+          if (isinstance(e, device_errors.DeviceUnreachableError)
+              or not isinstance(e, base_error.BaseError)):
+            # If we get a device error but believe the device is still
+            # reachable, attempt to continue using it. Otherwise, raise
+            # the exception and terminate this run_tests_on_device call.
+            raise
         finally:
           if isinstance(tests, test_collection.TestCollection):
             if rerun:
@@ -168,6 +175,8 @@ class LocalDeviceTestRun(test_run.TestRun):
   def _GetTestsToRetry(self, tests, try_results):
 
     def is_failure_result(test_result):
+      if isinstance(test_result, list):
+        return any(is_failure_result(r) for r in test_result)
       return (
           test_result is None
           or test_result.GetType() not in (
@@ -176,17 +185,24 @@ class LocalDeviceTestRun(test_run.TestRun):
 
     all_test_results = {r.GetName(): r for r in try_results.GetAll()}
 
-    def test_failed(name):
-      # When specifying a test filter, names can contain trailing wildcards.
-      # See local_device_gtest_run._ExtractTestsFromFilter()
+    tests_and_names = ((t, self._GetUniqueTestName(t)) for t in tests)
+
+    tests_and_results = {}
+    for test, name in tests_and_names:
       if name.endswith('*'):
-        return any(fnmatch.fnmatch(n, name) and is_failure_result(t)
-                   for n, t in all_test_results.iteritems())
-      return is_failure_result(all_test_results.get(name))
+        tests_and_results[name] = (
+            test,
+            [r for n, r in all_test_results.iteritems()
+             if fnmatch.fnmatch(n, name)])
+      else:
+        tests_and_results[name] = (test, all_test_results.get(name))
 
-    failed_tests = (t for t in tests if test_failed(self._GetUniqueTestName(t)))
+    failed_tests_and_results = (
+        (test, result) for test, result in tests_and_results.itervalues()
+        if is_failure_result(result)
+    )
 
-    return [t for t in failed_tests if self._ShouldRetry(t)]
+    return [t for t, r in failed_tests_and_results if self._ShouldRetry(t, r)]
 
   def _ApplyExternalSharding(self, tests, shard_index, total_shards):
     logging.info('Using external sharding settings. This is shard %d/%d',
@@ -212,7 +228,7 @@ class LocalDeviceTestRun(test_run.TestRun):
     # pylint: disable=no-self-use
     return test
 
-  def _ShouldRetry(self, test):
+  def _ShouldRetry(self, test, result):
     # pylint: disable=no-self-use,unused-argument
     return True
 

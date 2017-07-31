@@ -658,7 +658,7 @@ class TestConnectJobDelegate : public ConnectJob::Delegate {
     EXPECT_EQ(socket == NULL, result != OK);
     have_result_ = true;
     if (waiting_for_result_)
-      base::MessageLoop::current()->QuitWhenIdle();
+      base::RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 
   int WaitForResult() {

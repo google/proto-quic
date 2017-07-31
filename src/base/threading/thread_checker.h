@@ -78,11 +78,12 @@ namespace base {
 // macros) to get the right version for your build configuration.
 class ThreadCheckerDoNothing {
  public:
-  bool CalledOnValidThread() const WARN_UNUSED_RESULT {
-    return true;
-  }
-
+  ThreadCheckerDoNothing() = default;
+  bool CalledOnValidThread() const WARN_UNUSED_RESULT { return true; }
   void DetachFromThread() {}
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(ThreadCheckerDoNothing);
 };
 
 // Note that ThreadCheckerImpl::CalledOnValidThread() returns false when called

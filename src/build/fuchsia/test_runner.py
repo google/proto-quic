@@ -4,14 +4,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Packages a user.bootfs for a Fuchsia QEMU image, pulling in the runtime
-dependencies of a test binary, and then uses QEMU from the Fuchsia SDK to run
-it. Does not yet implement running on real hardware."""
+"""Packages a user.bootfs for a Fuchsia boot image, pulling in the runtime
+dependencies of a test binary, and then uses either QEMU from the Fuchsia SDK
+to run, or starts the bootserver to allow running on a hardware device."""
 
 import argparse
 import multiprocessing
 import os
 import re
+import signal
 import subprocess
 import sys
 import tempfile
@@ -20,6 +21,7 @@ import tempfile
 DIR_SOURCE_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
 SDK_ROOT = os.path.join(DIR_SOURCE_ROOT, 'third_party', 'fuchsia-sdk')
+SYMBOLIZATION_TIMEOUT_SECS = 10
 
 
 def RunAndCheck(dry_run, args):
@@ -102,7 +104,7 @@ def AddToManifest(manifest_file, target_name, source, mapper):
 
 
 def BuildBootfs(output_directory, runtime_deps_path, test_name, child_args,
-                test_launcher_filter_file, dry_run):
+                test_launcher_filter_file, device, dry_run):
   with open(runtime_deps_path) as f:
     lines = f.readlines()
 
@@ -148,28 +150,17 @@ def BuildBootfs(output_directory, runtime_deps_path, test_name, child_args,
     autorun_file.write(' "%s"' % arg);
 
   autorun_file.write('\n')
-  # If shutdown happens too soon after the test completion, log statements from
-  # the end of the run will be lost, so sleep for a bit before shutting down.
-  autorun_file.write('msleep 3000\n')
-  autorun_file.write('dm poweroff\n')
+  if not device:
+    # If shutdown of QEMU happens too soon after the test completion, log
+    # statements from the end of the run will be lost, so sleep for a bit before
+    # shutting down. When running on device don't power off so the output and
+    # system can be inspected.
+    autorun_file.write('msleep 3000\n')
+    autorun_file.write('dm poweroff\n')
   autorun_file.flush()
   os.chmod(autorun_file.name, 0750)
   DumpFile(dry_run, autorun_file.name, 'autorun')
   target_source_pairs.append(('autorun', autorun_file.name))
-
-  # Generate an initial.config for application_manager that tells it to run
-  # our autorun script with sh.
-  initial_config_file = tempfile.NamedTemporaryFile()
-  initial_config_file.write('''{
-  "initial-apps": [
-    [ "file:///boot/bin/sh", "/system/autorun" ]
-  ]
-}
-''')
-  initial_config_file.flush()
-  DumpFile(dry_run, initial_config_file.name, 'initial.config')
-  target_source_pairs.append(('data/appmgr/initial.config',
-                              initial_config_file.name))
 
   manifest_file = tempfile.NamedTemporaryFile()
   bootfs_name = runtime_deps_path + '.bootfs'
@@ -203,8 +194,27 @@ def SymbolizeEntry(entry):
 
 
 def ParallelSymbolizeBacktrace(backtrace):
+  # Disable handling of SIGINT during sub-process creation, to prevent
+  # sub-processes from consuming Ctrl-C signals, rather than the parent
+  # process doing so.
+  saved_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
   p = multiprocessing.Pool(multiprocessing.cpu_count())
-  return p.imap(SymbolizeEntry, backtrace)
+
+  # Restore the signal handler for the parent process.
+  signal.signal(signal.SIGINT, saved_sigint_handler)
+
+  symbolized = []
+  try:
+    result = p.map_async(SymbolizeEntry, backtrace)
+    symbolized = result.get(SYMBOLIZATION_TIMEOUT_SECS)
+    if not symbolized:
+      return []
+  except multiprocessing.TimeoutError:
+    return ['(timeout error occurred during symbolization)']
+  except KeyboardInterrupt:  # SIGINT
+    p.terminate()
+
+  return symbolized
 
 
 def main():
@@ -244,6 +254,8 @@ def main():
                       help='Currently ignored for 2-sided roll.')
   parser.add_argument('child_args', nargs='*',
                       help='Arguments for the test process.')
+  parser.add_argument('-d', '--device', action='store_true', default=False,
+                      help='Run on hardware device instead of QEMU.')
   args = parser.parse_args()
 
   child_args = ['--test-launcher-retry-limit=0']
@@ -272,76 +284,86 @@ def main():
 
   bootfs = BuildBootfs(args.output_directory, args.runtime_deps_path,
                        args.test_name, child_args,
-                       args.test_launcher_filter_file, args.dry_run)
+                       args.test_launcher_filter_file, args.device,
+                       args.dry_run)
 
-  qemu_path = os.path.join(SDK_ROOT, 'qemu', 'bin', 'qemu-system-x86_64')
+  kernel_path = os.path.join(SDK_ROOT, 'kernel', 'magenta.bin')
 
-  qemu_command = [qemu_path,
-       '-m', '2048',
-       '-nographic',
-       '-net', 'none',
-       '-smp', '4',
-       '-machine', 'q35',
-       '-kernel', os.path.join(SDK_ROOT, 'kernel', 'magenta.bin'),
-       '-initrd', bootfs,
-
-       # Use stdio for the guest OS only; don't attach the QEMU interactive
-       # monitor.
-       '-serial', 'stdio',
-       '-monitor', 'none',
-
-       # TERM=dumb tells the guest OS to not emit ANSI commands that trigger
-       # noisy ANSI spew from the user's terminal emulator.
-       '-append', 'TERM=dumb kernel.halt_on_panic=true']
-  if int(os.environ.get('CHROME_HEADLESS', 0)) == 0:
-    qemu_command += ['-enable-kvm', '-cpu', 'host,migratable=no']
+  if args.device:
+    # TODO(fuchsia): This doesn't capture stdout as there's no way to do so
+    # currently. See https://crbug.com/749242.
+    bootserver_path = os.path.join(SDK_ROOT, 'tools', 'bootserver')
+    bootserver_command = [bootserver_path, '-1', kernel_path, bootfs]
+    RunAndCheck(args.dry_run, bootserver_command)
   else:
-    qemu_command += ['-cpu', 'Haswell,+smap,-check']
+    qemu_path = os.path.join(SDK_ROOT, 'qemu', 'bin', 'qemu-system-x86_64')
 
-  if args.dry_run:
-    print 'Run:', qemu_command
-  else:
-    prefix = r'^.*> '
-    bt_with_offset_re = re.compile(prefix +
-        'bt#(\d+): pc 0x[0-9a-f]+ sp (0x[0-9a-f]+) \((\S+),(0x[0-9a-f]+)\)$')
-    bt_end_re = re.compile(prefix + 'bt#(\d+): end')
+    qemu_command = [qemu_path,
+        '-m', '2048',
+        '-nographic',
+        '-net', 'none',
+        '-smp', '4',
+        '-machine', 'q35',
+        '-kernel', kernel_path,
+        '-initrd', bootfs,
 
-    # We pass a separate stdin stream to qemu. Sharing stdin across processes
-    # leads to flakiness due to the OS prematurely killing the stream and the
-    # Python script panicking and aborting.
-    # The precise root cause is still nebulous, but this fix works.
-    # See crbug.com/741194 .
-    qemu_popen = subprocess.Popen(
-        qemu_command, stdout=subprocess.PIPE, stdin=open(os.devnull))
+        # Use stdio for the guest OS only; don't attach the QEMU interactive
+        # monitor.
+        '-serial', 'stdio',
+        '-monitor', 'none',
 
-    # A buffer of backtrace entries awaiting symbolization, stored as tuples.
-    # Element #0: backtrace frame number (starting at 0).
-    # Element #1: path to executable code corresponding to the current frame.
-    # Element #2: memory offset within the executable.
-    bt_entries = []
+        # TERM=dumb tells the guest OS to not emit ANSI commands that trigger
+        # noisy ANSI spew from the user's terminal emulator.
+        '-append', 'TERM=dumb kernel.halt_on_panic=true']
+    if int(os.environ.get('CHROME_HEADLESS', 0)) == 0:
+      qemu_command += ['-enable-kvm', '-cpu', 'host,migratable=no']
+    else:
+      qemu_command += ['-cpu', 'Haswell,+smap,-check']
 
-    success = False
-    while True:
-      line = qemu_popen.stdout.readline()
-      if not line:
-        break
-      print line,
-      if 'SUCCESS: all tests passed.' in line:
-        success = True
-      if bt_end_re.match(line.strip()):
-        if bt_entries:
-          print '----- start symbolized stack'
-          for processed in ParallelSymbolizeBacktrace(bt_entries):
-            print processed
-          print '----- end symbolized stack'
-        bt_entries = []
-      else:
-        m = bt_with_offset_re.match(line.strip())
-        if m:
-          bt_entries.append((m.group(1), args.test_name, m.group(4)))
-    qemu_popen.wait()
+    if args.dry_run:
+      print 'Run:', qemu_command
+    else:
+      prefix = r'^.*> '
+      bt_with_offset_re = re.compile(prefix +
+          'bt#(\d+): pc 0x[0-9a-f]+ sp (0x[0-9a-f]+) \((\S+),(0x[0-9a-f]+)\)$')
+      bt_end_re = re.compile(prefix + 'bt#(\d+): end')
 
-    return 0 if success else 1
+      # We pass a separate stdin stream to qemu. Sharing stdin across processes
+      # leads to flakiness due to the OS prematurely killing the stream and the
+      # Python script panicking and aborting.
+      # The precise root cause is still nebulous, but this fix works.
+      # See crbug.com/741194 .
+      qemu_popen = subprocess.Popen(
+          qemu_command, stdout=subprocess.PIPE, stdin=open(os.devnull))
+
+      # A buffer of backtrace entries awaiting symbolization, stored as tuples.
+      # Element #0: backtrace frame number (starting at 0).
+      # Element #1: path to executable code corresponding to the current frame.
+      # Element #2: memory offset within the executable.
+      bt_entries = []
+
+      success = False
+      while True:
+        line = qemu_popen.stdout.readline()
+        if not line:
+          break
+        print line,
+        if 'SUCCESS: all tests passed.' in line:
+          success = True
+        if bt_end_re.match(line.strip()):
+          if bt_entries:
+            print '----- start symbolized stack'
+            for processed in ParallelSymbolizeBacktrace(bt_entries):
+              print processed
+            print '----- end symbolized stack'
+          bt_entries = []
+        else:
+          m = bt_with_offset_re.match(line.strip())
+          if m:
+            bt_entries.append((m.group(1), args.test_name, m.group(4)))
+      qemu_popen.wait()
+
+      return 0 if success else 1
 
   return 0
 

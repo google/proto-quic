@@ -10,7 +10,6 @@
 #include "net/quic/test_tools/quic_test_utils.h"
 
 using std::string;
-using testing::Return;
 using testing::_;
 
 namespace net {

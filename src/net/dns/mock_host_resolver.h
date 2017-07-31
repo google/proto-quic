@@ -181,14 +181,13 @@ class RuleBasedHostResolverProc : public HostResolverProc {
   explicit RuleBasedHostResolverProc(HostResolverProc* previous);
 
   // Any hostname matching the given pattern will be replaced with the given
-  // replacement value.  Usually, replacement should be an IP address literal.
-  void AddRule(const std::string& host_pattern,
-               const std::string& replacement);
+  // |ip_literal|.
+  void AddRule(const std::string& host_pattern, const std::string& ip_literal);
 
   // Same as AddRule(), but further restricts to |address_family|.
   void AddRuleForAddressFamily(const std::string& host_pattern,
                                AddressFamily address_family,
-                               const std::string& replacement);
+                               const std::string& ip_literal);
 
   // Same as AddRule(), but the replacement is expected to be an IPv4 or IPv6
   // literal. This can be used in place of AddRule() to bypass the system's
@@ -230,6 +229,8 @@ class RuleBasedHostResolverProc : public HostResolverProc {
   struct Rule {
     enum ResolverType {
       kResolverTypeFail,
+      // TODO(mmenke): Is it really reasonable for a "mock" host resolver to
+      // fall back to the system resolver?
       kResolverTypeSystem,
       kResolverTypeIPLiteral,
     };

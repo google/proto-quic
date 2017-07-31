@@ -6,14 +6,17 @@
 
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_flags.h"
+#include "net/spdy/core/spdy_protocol.h"
 
 using std::string;
 
 namespace net {
 
 QuicHeaderList::QuicHeaderList()
-    : max_uncompressed_header_bytes_(kDefaultMaxUncompressedHeaderSize),
-      uncompressed_header_bytes_(0) {}
+    : max_header_list_size_(kDefaultMaxUncompressedHeaderSize),
+      current_header_list_size_(0),
+      uncompressed_header_bytes_(0),
+      compressed_header_bytes_(0) {}
 
 QuicHeaderList::QuicHeaderList(QuicHeaderList&& other) = default;
 
@@ -27,15 +30,29 @@ QuicHeaderList& QuicHeaderList::operator=(QuicHeaderList&& other) = default;
 QuicHeaderList::~QuicHeaderList() {}
 
 void QuicHeaderList::OnHeaderBlockStart() {
-  QUIC_BUG_IF(uncompressed_header_bytes_ != 0)
-      << "OnHeaderBlockStart called more than once!";
+  if (FLAGS_quic_restart_flag_quic_header_list_size) {
+    QUIC_BUG_IF(current_header_list_size_ != 0)
+        << "OnHeaderBlockStart called more than once!";
+  } else {
+    QUIC_BUG_IF(uncompressed_header_bytes_ != 0)
+        << "OnHeaderBlockStart called more than once!";
+  }
 }
 
 void QuicHeaderList::OnHeader(QuicStringPiece name, QuicStringPiece value) {
-  // Avoid infinte buffering of headers. No longer store headers
+  // Avoid infinite buffering of headers. No longer store headers
   // once the current headers are over the limit.
-  if (uncompressed_header_bytes_ == 0 || !header_list_.empty()) {
-    header_list_.emplace_back(name.as_string(), value.as_string());
+  if (FLAGS_quic_restart_flag_quic_header_list_size) {
+    if (current_header_list_size_ < max_header_list_size_) {
+      current_header_list_size_ += name.size();
+      current_header_list_size_ += value.size();
+      current_header_list_size_ += kPerHeaderOverhead;
+      header_list_.emplace_back(string(name), string(value));
+    }
+  } else {
+    if (uncompressed_header_bytes_ == 0 || !header_list_.empty()) {
+      header_list_.emplace_back(string(name), string(value));
+    }
   }
 }
 
@@ -43,14 +60,22 @@ void QuicHeaderList::OnHeaderBlockEnd(size_t uncompressed_header_bytes,
                                       size_t compressed_header_bytes) {
   uncompressed_header_bytes_ = uncompressed_header_bytes;
   compressed_header_bytes_ = compressed_header_bytes;
-  if (uncompressed_header_bytes_ > max_uncompressed_header_bytes_) {
-    Clear();
+  if (FLAGS_quic_restart_flag_quic_header_list_size) {
+    if (current_header_list_size_ > max_header_list_size_) {
+      Clear();
+    }
+  } else {
+    if (uncompressed_header_bytes_ > max_header_list_size_) {
+      Clear();
+    }
   }
 }
 
 void QuicHeaderList::Clear() {
   header_list_.clear();
+  current_header_list_size_ = 0;
   uncompressed_header_bytes_ = 0;
+  compressed_header_bytes_ = 0;
 }
 
 string QuicHeaderList::DebugString() const {

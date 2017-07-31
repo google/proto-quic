@@ -139,10 +139,10 @@ SpdyString HpackFuzzUtil::HeaderBlockPrefix(size_t block_size) {
 
 // static
 void HpackFuzzUtil::InitializeFuzzerContext(FuzzerContext* context) {
-  context->first_stage = SpdyMakeUnique<HpackDecoder>();
+  context->first_stage = SpdyMakeUnique<HpackDecoderAdapter>();
   context->second_stage =
       SpdyMakeUnique<HpackEncoder>(ObtainHpackHuffmanTable());
-  context->third_stage = SpdyMakeUnique<HpackDecoder>();
+  context->third_stage = SpdyMakeUnique<HpackDecoderAdapter>();
 }
 
 // static

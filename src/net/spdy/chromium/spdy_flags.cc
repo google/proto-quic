@@ -6,7 +6,4 @@
 
 namespace net {
 
-// Use NestedSpdyFramerDecoder.
-bool FLAGS_use_nested_spdy_framer_decoder = false;
-
 }  // namespace net

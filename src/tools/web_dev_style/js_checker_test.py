@@ -64,65 +64,6 @@ class JsCheckerTest(SuperMoxTestBase):
     for line in lines:
       self.ShouldPassCommentCheck(line)
 
-  def ShouldFailConstCheck(self, line):
-    """Checks that the 'const' checker flags |line| as a style error."""
-    error = self.checker.ConstCheck(1, line)
-    self.assertNotEqual('', error,
-        'Should be flagged as style error: ' + line)
-    self.assertEqual(test_util.GetHighlight(line, error), 'const')
-
-  def ShouldPassConstCheck(self, line):
-    """Checks that the 'const' checker doesn't flag |line| as a style error."""
-    self.assertEqual('', self.checker.ConstCheck(1, line),
-        'Should not be flagged as style error: ' + line)
-
-  def testConstFails(self):
-    lines = [
-        "const foo = 'bar';",
-        "    const bar = 'foo';",
-
-        # Trying to use |const| as a variable name
-        "var const = 0;",
-
-        "var x = 5; const y = 6;",
-        "for (var i=0, const e=10; i<e; i++) {",
-        "for (const x=0; x<foo; i++) {",
-        "while (const x = 7) {",
-    ]
-    for line in lines:
-      self.ShouldFailConstCheck(line)
-
-  def testConstPasses(self):
-    lines = [
-        # sanity check
-        "var foo = 'bar'",
-
-        # @const JsDoc tag
-        "/** @const */ var SEVEN = 7;",
-
-        # @const tag in multi-line comment
-        " * @const",
-        "   * @const",
-
-        # @constructor tag in multi-line comment
-        " * @constructor",
-        "   * @constructor",
-
-        # words containing 'const'
-        "if (foo.constructor) {",
-        "var deconstruction = 'something';",
-        "var madeUpWordconst = 10;",
-
-        # Strings containing the word |const|
-        "var str = 'const at the beginning';",
-        "var str = 'At the end: const';",
-
-        # doing this one with regex is probably not practical
-        #"var str = 'a const in the middle';",
-    ]
-    for line in lines:
-      self.ShouldPassConstCheck(line)
-
   def ShouldFailChromeSendCheck(self, line):
     """Checks that the 'chrome.send' checker flags |line| as a style error."""
     error = self.checker.ChromeSendCheck(1, line)

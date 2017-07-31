@@ -38,7 +38,7 @@
 #include "net/nqe/network_quality_store.h"
 #include "net/nqe/observation_buffer.h"
 #include "net/nqe/rtt_throughput_estimates_observer.h"
-#include "net/socket/socket_performance_watcher_factory.h"
+#include "net/nqe/socket_watcher_factory.h"
 
 namespace base {
 class TickClock;
@@ -176,10 +176,15 @@ class NET_EXPORT NetworkQualityEstimator
   // quality estimation.
   void SetUseLocalHostRequestsForTesting(bool use_localhost_requests);
 
-  // |use_smaller_responses_for_tests| should only be true when testing.
+  // |use_small_responses| should only be true when testing.
   // Allows the responses smaller than |kMinTransferSizeInBits| to be used for
   // network quality estimation.
   void SetUseSmallResponsesForTesting(bool use_small_responses);
+
+  // |add_default_platform_observations| should be false only if |this| should
+  // not generate observations based on the platform and/or connection type.
+  void SetAddDefaultPlatformObservationsForTesting(
+      bool add_default_platform_observations);
 
   // If |disable_offline_check| is set to true, then the device offline check is
   // disabled when computing the effective connection type or when writing the
@@ -211,24 +216,6 @@ class NET_EXPORT NetworkQualityEstimator
                      nqe::internal::CachedNetworkQuality> read_prefs);
 
  protected:
-  // A protected constructor for testing that allows setting the value of
-  // configuration params.
-  // |use_local_host_requests_for_tests| should only be true when testing
-  // against local HTTP server and allows the requests to local host to be
-  // used for network quality estimation.
-  // |use_smaller_responses_for_tests| should only be true when testing.
-  // Allows the responses smaller than |kMinTransferSizeInBits| to be used for
-  // network quality estimation.
-  // |add_default_platform_observations_| should be false only if |this| should
-  // not generate observations based on the platform and/or connection type.
-  NetworkQualityEstimator(
-      std::unique_ptr<ExternalEstimateProvider> external_estimates_provider,
-      std::unique_ptr<NetworkQualityEstimatorParams> params,
-      bool use_local_host_requests_for_tests,
-      bool use_smaller_responses_for_tests,
-      bool add_default_platform_observations,
-      const NetLogWithSource& net_log);
-
   // Different experimental statistic algorithms that can be used for computing
   // the predictions.
   enum Statistic {
@@ -529,11 +516,13 @@ class NET_EXPORT NetworkQualityEstimator
   bool use_small_responses_;
 
   // When set to true, the device offline check is disabled when computing the
-  // effective connection type or when writing the prefs.
+  // effective connection type or when writing the prefs. Set to true only for
+  // testing.
   bool disable_offline_check_;
 
   // If true, default values provided by the platform are used for estimation.
-  const bool add_default_platform_observations_;
+  // Set to false only for testing.
+  bool add_default_platform_observations_;
 
   // Tick clock used by the network quality estimator.
   std::unique_ptr<base::TickClock> tick_clock_;
@@ -587,7 +576,7 @@ class NET_EXPORT NetworkQualityEstimator
   base::ObserverList<RTTObserver> rtt_observer_list_;
   base::ObserverList<ThroughputObserver> throughput_observer_list_;
 
-  std::unique_ptr<SocketPerformanceWatcherFactory> watcher_factory_;
+  std::unique_ptr<nqe::internal::SocketWatcherFactory> watcher_factory_;
 
   // Takes throughput measurements, and passes them back to |this| through the
   // provided callback. |this| stores the throughput observations in
@@ -634,6 +623,8 @@ class NET_EXPORT NetworkQualityEstimator
 
   base::ThreadChecker thread_checker_;
 
+  NetLogWithSource net_log_;
+
   // Manages the writing of events to the net log.
   nqe::internal::EventCreator event_creator_;
 
@@ -646,8 +637,6 @@ class NET_EXPORT NetworkQualityEstimator
   // computing the estimate at transport layer.
   const std::vector<NetworkQualityObservationSource>
       disallowed_observation_sources_for_transport_;
-
-  NetLogWithSource net_log_;
 
   base::WeakPtrFactory<NetworkQualityEstimator> weak_ptr_factory_;
 

@@ -6,7 +6,6 @@
 
 #include "base/callback_helpers.h"
 #include "base/logging.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/strings/string16.h"
 #include "base/strings/utf_string_conversions.h"
@@ -27,7 +26,7 @@ int MockProxyScriptFetcher::Fetch(const GURL& url, base::string16* text,
   DCHECK(!has_pending_request());
 
   if (waiting_for_fetch_)
-    base::MessageLoop::current()->QuitWhenIdle();
+    base::RunLoop::QuitCurrentWhenIdleDeprecated();
 
   if (is_shutdown_)
     return ERR_CONTEXT_SHUT_DOWN;

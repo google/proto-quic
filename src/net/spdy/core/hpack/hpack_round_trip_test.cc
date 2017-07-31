@@ -8,7 +8,7 @@
 
 #include "base/rand_util.h"
 #include "net/spdy/core/hpack/hpack_constants.h"
-#include "net/spdy/core/hpack/hpack_decoder.h"
+#include "net/spdy/core/hpack/hpack_decoder_adapter.h"
 #include "net/spdy/core/hpack/hpack_encoder.h"
 #include "net/spdy/core/spdy_test_utils.h"
 #include "net/spdy/platform/api/spdy_string.h"
@@ -72,7 +72,7 @@ class HpackRoundTripTest : public ::testing::TestWithParam<InputSizeParam> {
   }
 
   HpackEncoder encoder_;
-  HpackDecoder decoder_;
+  HpackDecoderAdapter decoder_;
 };
 
 INSTANTIATE_TEST_CASE_P(Tests,

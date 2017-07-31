@@ -1450,7 +1450,7 @@ template("ios_xctest_bundle") {
       visibility = [ ":$_info_plist_bundle" ]
 
       info_plist = "//build/config/ios/Module-Info.plist"
-      executable_name = _target_name
+      executable_name = _output_name
 
       if (ios_automatically_manage_certs) {
         # Use a fixed bundle identifier for EarlGrey tests when using Xcode to
@@ -1685,7 +1685,7 @@ template("ios_xcuitest_test_runner_bundle") {
     testonly = true
     visibility = [ ":$_info_plist_bundle" ]
 
-    executable_name = _target_name
+    executable_name = _output_name
     info_plist_target = ":$_info_plist_merge_plist"
 
     if (ios_automatically_manage_certs) {

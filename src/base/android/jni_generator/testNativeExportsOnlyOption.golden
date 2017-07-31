@@ -18,11 +18,19 @@
 
 // Step 1: forward declarations.
 namespace {
-const char kSampleForTestsClassPath[] =
+const char kClassPath_org_chromium_example_jni_1generator_SampleForTests[] =
     "org/chromium/example/jni_generator/SampleForTests";
 // Leaking this jclass as we cannot use LazyInstance from some threads.
-base::subtle::AtomicWord g_SampleForTests_clazz __attribute__((unused)) = 0;
-#define SampleForTests_clazz(env) base::android::LazyGetClass(env, kSampleForTestsClassPath, &g_SampleForTests_clazz)
+base::subtle::AtomicWord
+    g_org_chromium_example_jni_1generator_SampleForTests_clazz
+    __attribute__((unused)) = 0;
+
+inline jclass org_chromium_example_jni_1generator_SampleForTests_clazz(JNIEnv*
+    env) {
+  return base::android::LazyGetClass(env,
+      kClassPath_org_chromium_example_jni_1generator_SampleForTests,
+      &g_org_chromium_example_jni_1generator_SampleForTests_clazz);
+}
 
 }  // namespace
 
@@ -67,44 +75,47 @@ JNI_GENERATOR_EXPORT jint
   return Init(env, base::android::JavaParamRef<jobject>(env, jcaller));
 }
 
-static base::subtle::AtomicWord g_SampleForTests_testMethodWithParam = 0;
+static base::subtle::AtomicWord
+    g_org_chromium_example_jni_1generator_SampleForTests_testMethodWithParam =
+    0;
 static void Java_SampleForTests_testMethodWithParam(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj, JniIntWrapper iParam) {
   CHECK_CLAZZ(env, obj.obj(),
-      SampleForTests_clazz(env));
+      org_chromium_example_jni_1generator_SampleForTests_clazz(env));
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, SampleForTests_clazz(env),
+      env, org_chromium_example_jni_1generator_SampleForTests_clazz(env),
       "testMethodWithParam",
 "("
 "I"
 ")"
 "V",
-      &g_SampleForTests_testMethodWithParam);
+&g_org_chromium_example_jni_1generator_SampleForTests_testMethodWithParam);
 
      env->CallVoidMethod(obj.obj(),
           method_id, as_jint(iParam));
   jni_generator::CheckException(env);
 }
 
-static base::subtle::AtomicWord g_SampleForTests_testMethodWithParamAndReturn =
-    0;
+static base::subtle::AtomicWord
+    g_org_chromium_example_jni_1generator_SampleForTests_testMethodWithParamAndReturn
+    = 0;
 static base::android::ScopedJavaLocalRef<jstring>
     Java_SampleForTests_testMethodWithParamAndReturn(JNIEnv* env, const
     base::android::JavaRefOrBare<jobject>& obj, JniIntWrapper iParam) {
   CHECK_CLAZZ(env, obj.obj(),
-      SampleForTests_clazz(env), NULL);
+      org_chromium_example_jni_1generator_SampleForTests_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_INSTANCE>(
-      env, SampleForTests_clazz(env),
+      env, org_chromium_example_jni_1generator_SampleForTests_clazz(env),
       "testMethodWithParamAndReturn",
 "("
 "I"
 ")"
 "Ljava/lang/String;",
-      &g_SampleForTests_testMethodWithParamAndReturn);
+&g_org_chromium_example_jni_1generator_SampleForTests_testMethodWithParamAndReturn);
 
   jstring ret =
       static_cast<jstring>(env->CallObjectMethod(obj.obj(),
@@ -113,73 +124,87 @@ static base::android::ScopedJavaLocalRef<jstring>
   return base::android::ScopedJavaLocalRef<jstring>(env, ret);
 }
 
-static base::subtle::AtomicWord g_SampleForTests_testStaticMethodWithParam = 0;
+static base::subtle::AtomicWord
+    g_org_chromium_example_jni_1generator_SampleForTests_testStaticMethodWithParam
+    = 0;
 static jint Java_SampleForTests_testStaticMethodWithParam(JNIEnv* env,
     JniIntWrapper iParam) {
-  CHECK_CLAZZ(env, SampleForTests_clazz(env),
-      SampleForTests_clazz(env), 0);
+  CHECK_CLAZZ(env,
+      org_chromium_example_jni_1generator_SampleForTests_clazz(env),
+      org_chromium_example_jni_1generator_SampleForTests_clazz(env), 0);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_STATIC>(
-      env, SampleForTests_clazz(env),
+      env, org_chromium_example_jni_1generator_SampleForTests_clazz(env),
       "testStaticMethodWithParam",
 "("
 "I"
 ")"
 "I",
-      &g_SampleForTests_testStaticMethodWithParam);
+&g_org_chromium_example_jni_1generator_SampleForTests_testStaticMethodWithParam);
 
   jint ret =
-      env->CallStaticIntMethod(SampleForTests_clazz(env),
+env->CallStaticIntMethod(org_chromium_example_jni_1generator_SampleForTests_clazz(env),
           method_id, as_jint(iParam));
   jni_generator::CheckException(env);
   return ret;
 }
 
-static base::subtle::AtomicWord g_SampleForTests_testMethodWithNoParam = 0;
+static base::subtle::AtomicWord
+    g_org_chromium_example_jni_1generator_SampleForTests_testMethodWithNoParam =
+    0;
 static jdouble Java_SampleForTests_testMethodWithNoParam(JNIEnv* env) {
-  CHECK_CLAZZ(env, SampleForTests_clazz(env),
-      SampleForTests_clazz(env), 0);
+  CHECK_CLAZZ(env,
+      org_chromium_example_jni_1generator_SampleForTests_clazz(env),
+      org_chromium_example_jni_1generator_SampleForTests_clazz(env), 0);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_STATIC>(
-      env, SampleForTests_clazz(env),
+      env, org_chromium_example_jni_1generator_SampleForTests_clazz(env),
       "testMethodWithNoParam",
 "("
 ")"
 "D",
-      &g_SampleForTests_testMethodWithNoParam);
+&g_org_chromium_example_jni_1generator_SampleForTests_testMethodWithNoParam);
 
   jdouble ret =
-      env->CallStaticDoubleMethod(SampleForTests_clazz(env),
+env->CallStaticDoubleMethod(org_chromium_example_jni_1generator_SampleForTests_clazz(env),
           method_id);
   jni_generator::CheckException(env);
   return ret;
 }
 
-static base::subtle::AtomicWord g_SampleForTests_testStaticMethodWithNoParam =
-    0;
+static base::subtle::AtomicWord
+    g_org_chromium_example_jni_1generator_SampleForTests_testStaticMethodWithNoParam
+    = 0;
 static base::android::ScopedJavaLocalRef<jstring>
     Java_SampleForTests_testStaticMethodWithNoParam(JNIEnv* env) {
-  CHECK_CLAZZ(env, SampleForTests_clazz(env),
-      SampleForTests_clazz(env), NULL);
+  CHECK_CLAZZ(env,
+      org_chromium_example_jni_1generator_SampleForTests_clazz(env),
+      org_chromium_example_jni_1generator_SampleForTests_clazz(env), NULL);
   jmethodID method_id =
       base::android::MethodID::LazyGet<
       base::android::MethodID::TYPE_STATIC>(
-      env, SampleForTests_clazz(env),
+      env, org_chromium_example_jni_1generator_SampleForTests_clazz(env),
       "testStaticMethodWithNoParam",
 "("
 ")"
 "Ljava/lang/String;",
-      &g_SampleForTests_testStaticMethodWithNoParam);
+&g_org_chromium_example_jni_1generator_SampleForTests_testStaticMethodWithNoParam);
 
   jstring ret =
-static_cast<jstring>(env->CallStaticObjectMethod(SampleForTests_clazz(env),
+static_cast<jstring>(env->CallStaticObjectMethod(org_chromium_example_jni_1generator_SampleForTests_clazz(env),
           method_id));
   jni_generator::CheckException(env);
   return base::android::ScopedJavaLocalRef<jstring>(env, ret);
 }
 
 // Step 3: RegisterNatives.
+
+// TODO(agrieve): Remove these empty registration functions and functions
+// calling them. https://crbug.com/683256.
+inline bool RegisterNativesImpl(JNIEnv* env) {
+  return true;
+}
 
 #endif  // org_chromium_example_jni_generator_SampleForTests_JNI

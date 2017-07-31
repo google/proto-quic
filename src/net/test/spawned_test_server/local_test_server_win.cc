@@ -125,7 +125,8 @@ bool LocalTestServer::LaunchPython(const base::FilePath& testserver_path) {
       base::IntToString(reinterpret_cast<uintptr_t>(child_write)));
 
   base::LaunchOptions launch_options;
-  launch_options.inherit_handles = true;
+  // TODO(brettw) bug 748258: Share only explicit handles.
+  launch_options.inherit_mode = base::LaunchOptions::Inherit::kAll;
   process_ = base::LaunchProcess(python_command, launch_options);
   if (!process_.IsValid()) {
     LOG(ERROR) << "Failed to launch " << python_command.GetCommandLineString();

@@ -53,7 +53,7 @@ void TestTaskFactory::RunTaskCallback(size_t task_index,
   if (post_nested_task == PostNestedTask::YES)
     PostTask(PostNestedTask::NO, Closure());
 
-  EXPECT_TRUE(task_runner_->RunsTasksOnCurrentThread());
+  EXPECT_TRUE(task_runner_->RunsTasksInCurrentSequence());
 
   // Verify TaskRunnerHandles are set as expected in the task's scope.
   switch (execution_mode_) {

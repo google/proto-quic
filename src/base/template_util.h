@@ -42,6 +42,19 @@ template <class T> struct is_non_const_reference<const T&> : std::false_type {};
 
 namespace internal {
 
+template <typename...>
+struct make_void {
+  using type = void;
+};
+
+// A clone of C++17 std::void_t.
+// Unlike the original version, we need |make_void| as a helper struct to avoid
+// a C++14 defect.
+// ref: http://en.cppreference.com/w/cpp/types/void_t
+// ref: http://open-std.org/JTC1/SC22/WG21/docs/cwg_defects.html#1558
+template <typename... Ts>
+using void_t = typename make_void<Ts...>::type;
+
 // Uses expression SFINAE to detect whether using operator<< would work.
 template <typename T, typename = void>
 struct SupportsOstreamOperator : std::false_type {};
@@ -95,6 +108,19 @@ struct is_trivially_copyable {
 template <class T>
 using is_trivially_copyable = std::is_trivially_copyable<T>;
 #endif
+
+// std::less<> from C++14.
+struct less {
+  template <typename T, typename U>
+  constexpr auto operator()(T&& lhs, U&& rhs) const
+      -> decltype(std::forward<T>(lhs) < std::forward<U>(rhs)) {
+    return std::forward<T>(lhs) < std::forward<U>(rhs);
+  }
+
+  // You can find more information about transparent comparisons here:
+  // http://en.cppreference.com/w/cpp/utility/functional/less_void
+  using is_transparent = int;
+};
 
 }  // namespace base
 

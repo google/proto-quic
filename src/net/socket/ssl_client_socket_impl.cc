@@ -297,11 +297,9 @@ class SSLClientSocketImpl::SSLContext {
   }
 
 #if !defined(OS_NACL)
-  void SetSSLKeyLogFile(
-      const base::FilePath& path,
-      const scoped_refptr<base::SequencedTaskRunner>& task_runner) {
+  void SetSSLKeyLogFile(const base::FilePath& path) {
     DCHECK(!ssl_key_logger_);
-    ssl_key_logger_.reset(new SSLKeyLogger(path, task_runner));
+    ssl_key_logger_.reset(new SSLKeyLogger(path));
     SSL_CTX_set_keylog_callback(ssl_ctx_.get(), KeyLogCallback);
   }
 #endif
@@ -512,9 +510,8 @@ SSLClientSocketImpl::~SSLClientSocketImpl() {
 
 #if !defined(OS_NACL)
 void SSLClientSocketImpl::SetSSLKeyLogFile(
-    const base::FilePath& ssl_keylog_file,
-    const scoped_refptr<base::SequencedTaskRunner>& task_runner) {
-  SSLContext::GetInstance()->SetSSLKeyLogFile(ssl_keylog_file, task_runner);
+    const base::FilePath& ssl_keylog_file) {
+  SSLContext::GetInstance()->SetSSLKeyLogFile(ssl_keylog_file);
 }
 #endif
 

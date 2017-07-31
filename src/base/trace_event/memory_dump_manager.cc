@@ -378,7 +378,7 @@ void MemoryDumpManager::UnregisterDumpProviderInternal(
     // In all the other cases, it is not possible to guarantee that the
     // unregistration will not race with OnMemoryDump() calls.
     DCHECK((*mdp_iter)->task_runner &&
-           (*mdp_iter)->task_runner->RunsTasksOnCurrentThread())
+           (*mdp_iter)->task_runner->RunsTasksInCurrentSequence())
         << "MemoryDumpProvider \"" << (*mdp_iter)->name << "\" attempted to "
         << "unregister itself in a racy way. Please file a crbug.";
   }
@@ -540,7 +540,7 @@ void MemoryDumpManager::SetupNextMemoryDump(
   }
 
   if (mdpinfo->options.dumps_on_single_thread_task_runner &&
-      task_runner->RunsTasksOnCurrentThread()) {
+      task_runner->RunsTasksInCurrentSequence()) {
     // If |dumps_on_single_thread_task_runner| is true then no PostTask is
     // required if we are on the right thread.
     return InvokeOnMemoryDump(pmd_async_state.release());
@@ -598,7 +598,7 @@ void MemoryDumpManager::InvokeOnMemoryDump(
       pmd_async_state->pending_dump_providers.back().get();
 
   DCHECK(!mdpinfo->task_runner ||
-         mdpinfo->task_runner->RunsTasksOnCurrentThread());
+         mdpinfo->task_runner->RunsTasksInCurrentSequence());
 
   bool should_dump;
   {

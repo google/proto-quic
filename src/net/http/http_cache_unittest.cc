@@ -7222,6 +7222,61 @@ TEST(HttpCache, SetTruncatedFlag) {
   VerifyTruncatedFlag(&cache, kSimpleGET_Transaction.url, true, 0);
 }
 
+// Tests that we mark an entry as incomplete when the request is cancelled.
+TEST(HttpCache, DontSetTruncatedFlagForGarbledResponseCode) {
+  MockHttpCache cache;
+
+  ScopedMockTransaction transaction(kSimpleGET_Transaction);
+  transaction.response_headers =
+      "Last-Modified: Wed, 28 Nov 2007 00:40:09 GMT\n"
+      "Content-Length: 22\n"
+      "Etag: \"foopy\"\n";
+  transaction.status = "HTTP/1.1 2";
+  MockHttpRequest request(transaction);
+
+  auto c = base::MakeUnique<Context>();
+
+  int rv = cache.CreateTransaction(&c->trans);
+  ASSERT_THAT(rv, IsOk());
+
+  rv = c->trans->Start(&request, c->callback.callback(), NetLogWithSource());
+  if (rv == ERR_IO_PENDING)
+    rv = c->callback.WaitForResult();
+
+  EXPECT_EQ(1, cache.network_layer()->transaction_count());
+  EXPECT_EQ(0, cache.disk_cache()->open_count());
+  EXPECT_EQ(1, cache.disk_cache()->create_count());
+
+  // Make sure that the entry has some data stored.
+  scoped_refptr<IOBufferWithSize> buf(new IOBufferWithSize(10));
+  rv = c->trans->Read(buf.get(), buf->size(), c->callback.callback());
+  if (rv == ERR_IO_PENDING)
+    rv = c->callback.WaitForResult();
+  EXPECT_EQ(buf->size(), rv);
+
+  // We want to cancel the request when the transaction is busy.
+  rv = c->trans->Read(buf.get(), buf->size(), c->callback.callback());
+  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
+  EXPECT_FALSE(c->callback.have_result());
+
+  MockHttpCache::SetTestMode(TEST_MODE_SYNC_ALL);
+
+  // Destroy the transaction.
+  c->trans.reset();
+  MockHttpCache::SetTestMode(0);
+
+  // Make sure that we don't invoke the callback. We may have an issue if the
+  // UrlRequestJob is killed directly (without cancelling the UrlRequest) so we
+  // could end up with the transaction being deleted twice if we send any
+  // notification from the transaction destructor (see http://crbug.com/31723).
+  EXPECT_FALSE(c->callback.have_result());
+
+  // Verify that the entry is deleted as well, since the response status is
+  // garbled.
+  disk_cache::Entry* entry;
+  ASSERT_FALSE(cache.OpenBackendEntry(kSimpleGET_Transaction.url, &entry));
+}
+
 // Tests that we don't mark an entry as truncated when we read everything.
 TEST(HttpCache, DontSetTruncatedFlag) {
   MockHttpCache cache;
