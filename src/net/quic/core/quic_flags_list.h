@@ -88,7 +88,7 @@ QUIC_FLAG(double, FLAGS_quic_bbr_cwnd_gain, 2.0f)
 
 // If true, do not send or process stop waiting frames in QUIC if the NSTP
 // connection option is provided.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames, true)
 
 // Allows one self address change.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_allow_one_address_change, false)
@@ -160,25 +160,12 @@ QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_handle_duplicate_trailers,
           false)
 
-// Allows QUIC BBR up to twice the previously measured ack aggregation to be
-// added to the CWND as long as bytes_in_flight goes below the target recently.
-QUIC_FLAG(bool,
-          FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes2,
-          false)
-
 // If true, disables support for QUIC version 36.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_disable_version_36, false)
 
 // If true, disables support for the packets-based QUIC congestion control
 // algorithms.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_disable_packets_based_cc, false)
-
-// When enabled, adds up to 1.5x the previously measured ack aggregation in
-// bytes to the CWND, but reduces that amount by 1/2 the bytes acked since the
-// queue was drained.
-QUIC_FLAG(bool,
-          FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes3,
-          false)
 
 // When enabled, ack frame uses a deque internally instead of a set.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_frames_deque, false)
@@ -204,3 +191,9 @@ QUIC_FLAG(bool, FLAGS_quic_restart_flag_quic_header_list_size, false)
 // When true, allows the LRTT connection option to cause QUIC BBR to exit
 // STARTUP when in recovery and there has been no bandwidth increase for 1RTT.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_exit_startup_on_loss, false)
+
+// Enables the BBR1 and BBR2 QUIC connection options, which enable two forms of
+// ack aggregation that prevent persistent standing queues.
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes4,
+          false)

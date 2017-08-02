@@ -10,6 +10,8 @@
 
 #include "base/logging.h"
 #include "base/strings/string_util.h"
+#include "net/cert/internal/cert_error_params.h"
+#include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/verify_name_match.h"
 #include "net/der/input.h"
 #include "net/der/parser.h"
@@ -18,6 +20,19 @@
 namespace net {
 
 namespace {
+
+DEFINE_CERT_ERROR_ID(kDnsNameNotAscii, "dNSName is not ASCII");
+DEFINE_CERT_ERROR_ID(kFailedParsingIp, "Failed parsing iPAddress");
+DEFINE_CERT_ERROR_ID(kUnknownGeneralNameType, "Unknown GeneralName type");
+DEFINE_CERT_ERROR_ID(kFailedReadingGeneralNames,
+                     "Failed reading GeneralNames SEQUENCE");
+DEFINE_CERT_ERROR_ID(kGeneralNamesTrailingData,
+                     "GeneralNames contains trailing data after the sequence");
+DEFINE_CERT_ERROR_ID(kGeneralNamesEmpty,
+                     "GeneralNames is a sequence of 0 elements");
+DEFINE_CERT_ERROR_ID(kFailedReadingGeneralName,
+                     "Failed reading GeneralName TLV");
+DEFINE_CERT_ERROR_ID(kFailedParsingGeneralName, "Failed parsing GeneralName");
 
 // The name types of GeneralName that are fully supported in name constraints.
 //
@@ -146,7 +161,9 @@ WARN_UNUSED_RESULT bool ParseGeneralName(
     const der::Input& input,
     ParseGeneralNameUnsupportedTypeBehavior unsupported_type_behavior,
     ParseGeneralNameIPAddressType ip_address_type,
-    GeneralNames* subtrees) {
+    GeneralNames* subtrees,
+    CertErrors* errors) {
+  DCHECK(errors);
   der::Parser parser(input);
   der::Tag tag;
   der::Input value;
@@ -163,8 +180,10 @@ WARN_UNUSED_RESULT bool ParseGeneralName(
     // dNSName                         [2]     IA5String,
     name_type = GENERAL_NAME_DNS_NAME;
     const std::string s = value.AsString();
-    if (!base::IsStringASCII(s))
+    if (!base::IsStringASCII(s)) {
+      errors->AddError(kDnsNameNotAscii);
       return false;
+    }
     subtrees->dns_names.push_back(s);
   } else if (tag == der::ContextSpecificConstructed(3)) {
     // x400Address                     [3]     ORAddress,
@@ -202,6 +221,7 @@ WARN_UNUSED_RESULT bool ParseGeneralName(
       // the octet string MUST contain exactly sixteen octets.
       if ((value.Length() != IPAddress::kIPv4AddressSize &&
            value.Length() != IPAddress::kIPv6AddressSize)) {
+        errors->AddError(kFailedParsingIp);
         return false;
       }
       subtrees->ip_addresses.push_back(
@@ -220,13 +240,16 @@ WARN_UNUSED_RESULT bool ParseGeneralName(
       // 192.0.2.0/24 (mask 255.255.255.0).
       if (value.Length() != IPAddress::kIPv4AddressSize * 2 &&
           value.Length() != IPAddress::kIPv6AddressSize * 2) {
+        errors->AddError(kFailedParsingIp);
         return false;
       }
       const IPAddress mask(value.UnsafeData() + value.Length() / 2,
                            value.Length() / 2);
       const unsigned mask_prefix_length = MaskPrefixLength(mask);
-      if (!IsSuffixZero(mask.bytes(), mask_prefix_length))
+      if (!IsSuffixZero(mask.bytes(), mask_prefix_length)) {
+        errors->AddError(kFailedParsingIp);
         return false;
+      }
       subtrees->ip_address_ranges.push_back(
           std::make_pair(IPAddress(value.UnsafeData(), value.Length() / 2),
                          mask_prefix_length));
@@ -235,6 +258,8 @@ WARN_UNUSED_RESULT bool ParseGeneralName(
     // registeredID                    [8]     OBJECT IDENTIFIER }
     name_type = GENERAL_NAME_REGISTERED_ID;
   } else {
+    errors->AddError(kUnknownGeneralNameType,
+                     CreateCertErrorParams1SizeT("tag", tag));
     return false;
   }
   DCHECK_NE(GENERAL_NAME_NONE, name_type);
@@ -253,7 +278,10 @@ WARN_UNUSED_RESULT bool ParseGeneralName(
 // return value.
 WARN_UNUSED_RESULT bool ParseGeneralSubtrees(const der::Input& value,
                                              bool is_critical,
-                                             GeneralNames* subtrees) {
+                                             GeneralNames* subtrees,
+                                             CertErrors* errors) {
+  DCHECK(errors);
+
   // GeneralSubtrees ::= SEQUENCE SIZE (1..MAX) OF GeneralSubtree
   //
   // GeneralSubtree ::= SEQUENCE {
@@ -277,7 +305,8 @@ WARN_UNUSED_RESULT bool ParseGeneralSubtrees(const der::Input& value,
 
     if (!ParseGeneralName(raw_general_name,
                           is_critical ? RECORD_UNSUPPORTED : IGNORE_UNSUPPORTED,
-                          IP_ADDRESS_AND_NETMASK, subtrees)) {
+                          IP_ADDRESS_AND_NETMASK, subtrees, errors)) {
+      errors->AddError(kFailedParsingGeneralName);
       return false;
     }
 
@@ -307,29 +336,42 @@ GeneralNames::~GeneralNames() {}
 
 // static
 std::unique_ptr<GeneralNames> GeneralNames::Create(
-    const der::Input& general_names_tlv) {
+    const der::Input& general_names_tlv,
+    CertErrors* errors) {
+  DCHECK(errors);
+
   // RFC 5280 section 4.2.1.6:
   // GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName
   std::unique_ptr<GeneralNames> general_names(new GeneralNames());
   der::Parser parser(general_names_tlv);
   der::Parser sequence_parser;
-  if (!parser.ReadSequence(&sequence_parser))
+  if (!parser.ReadSequence(&sequence_parser)) {
+    errors->AddError(kFailedReadingGeneralNames);
     return nullptr;
+  }
   // Should not have trailing data after GeneralNames sequence.
-  if (parser.HasMore())
+  if (parser.HasMore()) {
+    errors->AddError(kGeneralNamesTrailingData);
     return nullptr;
+  }
   // The GeneralNames sequence should have at least 1 element.
-  if (!sequence_parser.HasMore())
+  if (!sequence_parser.HasMore()) {
+    errors->AddError(kGeneralNamesEmpty);
     return nullptr;
+  }
 
   while (sequence_parser.HasMore()) {
     der::Input raw_general_name;
-    if (!sequence_parser.ReadRawTLV(&raw_general_name))
+    if (!sequence_parser.ReadRawTLV(&raw_general_name)) {
+      errors->AddError(kFailedReadingGeneralName);
       return nullptr;
+    }
 
     if (!ParseGeneralName(raw_general_name, RECORD_UNSUPPORTED, IP_ADDRESS_ONLY,
-                          general_names.get()))
+                          general_names.get(), errors)) {
+      errors->AddError(kFailedParsingGeneralName);
       return nullptr;
+    }
   }
 
   return general_names;
@@ -340,15 +382,21 @@ NameConstraints::~NameConstraints() {}
 // static
 std::unique_ptr<NameConstraints> NameConstraints::Create(
     const der::Input& extension_value,
-    bool is_critical) {
+    bool is_critical,
+    CertErrors* errors) {
+  DCHECK(errors);
+
   std::unique_ptr<NameConstraints> name_constraints(new NameConstraints());
-  if (!name_constraints->Parse(extension_value, is_critical))
+  if (!name_constraints->Parse(extension_value, is_critical, errors))
     return nullptr;
   return name_constraints;
 }
 
 bool NameConstraints::Parse(const der::Input& extension_value,
-                            bool is_critical) {
+                            bool is_critical,
+                            CertErrors* errors) {
+  DCHECK(errors);
+
   der::Parser extension_parser(extension_value);
   der::Parser sequence_parser;
 
@@ -369,7 +417,7 @@ bool NameConstraints::Parse(const der::Input& extension_value,
   }
   if (had_permitted_subtrees &&
       !ParseGeneralSubtrees(permitted_subtrees_value, is_critical,
-                            &permitted_subtrees_)) {
+                            &permitted_subtrees_, errors)) {
     return false;
   }
 
@@ -382,7 +430,7 @@ bool NameConstraints::Parse(const der::Input& extension_value,
   }
   if (had_excluded_subtrees &&
       !ParseGeneralSubtrees(excluded_subtrees_value, is_critical,
-                            &excluded_subtrees_)) {
+                            &excluded_subtrees_, errors)) {
     return false;
   }
 

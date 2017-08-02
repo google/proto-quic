@@ -51,7 +51,7 @@ class BASE_EXPORT UnguessableToken {
   uint64_t GetHighForSerialization() const {
     DCHECK(!is_empty());
     return high_;
-  };
+  }
 
   // NOTE: Serializing an empty UnguessableToken is an illegal operation.
   uint64_t GetLowForSerialization() const {

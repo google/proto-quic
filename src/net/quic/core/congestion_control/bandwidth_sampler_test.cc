@@ -14,19 +14,12 @@ namespace test {
 class BandwidthSamplerPeer {
  public:
   static size_t GetNumberOfTrackedPackets(const BandwidthSampler& sampler) {
-    if (FLAGS_quic_reloadable_flag_quic_faster_bandwidth_sampler) {
-      return sampler.connection_state_map_new_.number_of_present_entries();
-    }
-    return sampler.connection_state_map_.size();
+    return sampler.connection_state_map_.number_of_present_entries();
   }
 
   static QuicByteCount GetPacketSize(const BandwidthSampler& sampler,
                                      QuicPacketNumber packet_number) {
-    if (FLAGS_quic_reloadable_flag_quic_faster_bandwidth_sampler) {
-      return sampler.connection_state_map_new_.GetEntry(packet_number)->size;
-    }
-    auto iterator = sampler.connection_state_map_.find(packet_number);
-    return iterator->second.size;
+    return sampler.connection_state_map_.GetEntry(packet_number)->size;
   }
 };
 

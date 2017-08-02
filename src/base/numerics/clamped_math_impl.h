@@ -85,7 +85,7 @@ struct ClampedAddOp<T,
 
     V result;
     // TODO(jschuh) C++14 constexpr allows a compile-time constant optimization.
-    const V saturated = GetMaxOrMin<V>(IsValueNegative(y));
+    const V saturated = CommonMaxOrMin<V>(IsValueNegative(y));
     return CheckedAddOp<T, U>::Do(x, y, &result) ? result : saturated;
   }
 };
@@ -107,7 +107,7 @@ struct ClampedSubOp<T,
 
     V result;
     // TODO(jschuh) C++14 constexpr allows a compile-time constant optimization.
-    const V saturated = GetMaxOrMin<V>(!IsValueNegative(y));
+    const V saturated = CommonMaxOrMin<V>(!IsValueNegative(y));
     return CheckedSubOp<T, U>::Do(x, y, &result) ? result : saturated;
   }
 };
@@ -128,7 +128,8 @@ struct ClampedMulOp<T,
       return ClampedMulFastOp<T, U>::template Do<V>(x, y);
 
     V result;
-    const V saturated = GetMaxOrMin<V>(IsValueNegative(x) ^ IsValueNegative(y));
+    const V saturated =
+        CommonMaxOrMin<V>(IsValueNegative(x) ^ IsValueNegative(y));
     return CheckedMulOp<T, U>::Do(x, y, &result) ? result : saturated;
   }
 };
@@ -147,7 +148,8 @@ struct ClampedDivOp<T,
     V result;
     if (CheckedDivOp<T, U>::Do(x, y, &result))
       return result;
-    const V saturated = GetMaxOrMin<V>(IsValueNegative(x) ^ IsValueNegative(y));
+    const V saturated =
+        CommonMaxOrMin<V>(IsValueNegative(x) ^ IsValueNegative(y));
     return x ? saturated : SaturationDefaultLimits<V>::NaN();
   }
 };
@@ -184,7 +186,7 @@ struct ClampedLshOp<T,
   static V Do(T x, U shift) {
     static_assert(!std::is_signed<U>::value, "Shift value must be unsigned.");
     V result = x;
-    const V saturated = x ? GetMaxOrMin<V>(IsValueNegative(x)) : 0;
+    const V saturated = x ? CommonMaxOrMin<V>(IsValueNegative(x)) : 0;
     return (shift < std::numeric_limits<T>::digits &&
             CheckedMulOp<T, T>::Do(x, T(1) << shift, &result))
                ? result

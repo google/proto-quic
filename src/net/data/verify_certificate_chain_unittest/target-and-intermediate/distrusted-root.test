@@ -4,5 +4,5 @@ utc_time: 150302120000Z
 key_purpose: SERVER_AUTH
 expected_errors:
 ----- Certificate i=2 (CN=Root) -----
-ERROR: Certificate is distrusted
+ERROR: Distrusted by trust store
 

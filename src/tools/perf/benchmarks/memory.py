@@ -113,42 +113,6 @@ class MemoryBenchmarkTop10Mobile(_MemoryInfra):
     return page_sets.MemoryTop10MobileStoryExpectations()
 
 
-@benchmark.Enabled('android')  # catapult:#3176
-@benchmark.Owner(emails=['bashi@chromium.org'])
-class RendererMemoryBlinkMemoryMobile(_MemoryInfra):
-  """Timeline based benchmark for measuring memory consumption on mobile
-  sites on which blink's memory consumption is relatively high.
-  """
-  page_set = page_sets.BlinkMemoryMobilePageSet
-
-  def SetExtraBrowserOptions(self, options):
-    super(RendererMemoryBlinkMemoryMobile, self).SetExtraBrowserOptions(
-        options)
-    options.AppendExtraBrowserArgs([
-        # Ignore certs errors because record_wpr cannot handle certs correctly
-        # in some cases (e.g. WordPress).
-        '--ignore-certificate-errors',
-    ])
-
-  @classmethod
-  def Name(cls):
-    return 'memory.blink_memory_mobile'
-
-  @classmethod
-  def ValueCanBeAddedPredicate(cls, value, is_first_result):
-    return (not _IGNORED_STATS_RE.search(value.name) and
-            'renderer_processes' in value.name)
-
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    # http://crbug.com/634319
-    return (possible_browser.browser_type == 'reference' and
-            possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X')
-
-  def GetExpectations(self):
-    return page_sets.BlinkMemoryMobileStoryExpectations()
-
-
 class _MemoryV8Benchmark(_MemoryInfra):
 
   # Report only V8-specific and overall renderer memory values. Note that

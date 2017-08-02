@@ -126,6 +126,8 @@
 #include "../crypto/internal.h"
 
 
+namespace bssl {
+
 static int ssl_check_clienthello_tlsext(SSL_HANDSHAKE *hs);
 
 static int compare_uint16_t(const void *p1, const void *p2) {
@@ -287,20 +289,6 @@ int ssl_client_hello_get_extension(const SSL_CLIENT_HELLO *client_hello,
   }
 
   return 0;
-}
-
-int SSL_early_callback_ctx_extension_get(const SSL_CLIENT_HELLO *client_hello,
-                                         uint16_t extension_type,
-                                         const uint8_t **out_data,
-                                         size_t *out_len) {
-  CBS cbs;
-  if (!ssl_client_hello_get_extension(client_hello, &cbs, extension_type)) {
-    return 0;
-  }
-
-  *out_data = CBS_data(&cbs);
-  *out_len = CBS_len(&cbs);
-  return 1;
 }
 
 static const uint16_t kDefaultGroups[] = {
@@ -508,10 +496,6 @@ static const uint16_t kSignSignatureAlgorithms[] = {
     SSL_SIGN_RSA_PKCS1_SHA1,
 };
 
-void SSL_CTX_set_ed25519_enabled(SSL_CTX *ctx, int enabled) {
-  ctx->ed25519_enabled = !!enabled;
-}
-
 int tls12_add_verify_sigalgs(const SSL *ssl, CBB *out) {
   const uint16_t *sigalgs = kVerifySignatureAlgorithms;
   size_t num_sigalgs = OPENSSL_ARRAY_SIZE(kVerifySignatureAlgorithms);
@@ -690,10 +674,12 @@ static int ext_sni_parse_clienthello(SSL_HANDSHAKE *hs, uint8_t *out_alert,
   }
 
   /* Copy the hostname as a string. */
-  if (!CBS_strdup(&host_name, &hs->hostname)) {
+  char *hostname_raw = nullptr;
+  if (!CBS_strdup(&host_name, &hostname_raw)) {
     *out_alert = SSL_AD_INTERNAL_ERROR;
     return 0;
   }
+  hs->hostname.reset(hostname_raw);
 
   hs->should_ack_sni = 1;
   return 1;
@@ -816,7 +802,7 @@ static int ext_ri_parse_serverhello(SSL_HANDSHAKE *hs, uint8_t *out_alert,
 #endif
   if (!ok) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_RENEGOTIATION_MISMATCH);
-    *out_alert = SSL_AD_ILLEGAL_PARAMETER;
+    *out_alert = SSL_AD_HANDSHAKE_FAILURE;
     return 0;
   }
   ssl->s3->send_connection_binding = 1;
@@ -1638,11 +1624,8 @@ static void ext_srtp_init(SSL_HANDSHAKE *hs) {
 static int ext_srtp_add_clienthello(SSL_HANDSHAKE *hs, CBB *out) {
   SSL *const ssl = hs->ssl;
   STACK_OF(SRTP_PROTECTION_PROFILE) *profiles = SSL_get_srtp_profiles(ssl);
-  if (profiles == NULL) {
-    return 1;
-  }
-  const size_t num_profiles = sk_SRTP_PROTECTION_PROFILE_num(profiles);
-  if (num_profiles == 0) {
+  if (profiles == NULL ||
+      sk_SRTP_PROTECTION_PROFILE_num(profiles) == 0) {
     return 1;
   }
 
@@ -1653,9 +1636,8 @@ static int ext_srtp_add_clienthello(SSL_HANDSHAKE *hs, CBB *out) {
     return 0;
   }
 
-  for (size_t i = 0; i < num_profiles; i++) {
-    if (!CBB_add_u16(&profile_ids,
-                     sk_SRTP_PROTECTION_PROFILE_value(profiles, i)->id)) {
+  for (const SRTP_PROTECTION_PROFILE *profile : profiles) {
+    if (!CBB_add_u16(&profile_ids, profile->id)) {
       return 0;
     }
   }
@@ -1701,10 +1683,7 @@ static int ext_srtp_parse_serverhello(SSL_HANDSHAKE *hs, uint8_t *out_alert,
 
   /* Check to see if the server gave us something we support (and presumably
    * offered). */
-  for (size_t i = 0; i < sk_SRTP_PROTECTION_PROFILE_num(profiles); i++) {
-    const SRTP_PROTECTION_PROFILE *profile =
-        sk_SRTP_PROTECTION_PROFILE_value(profiles, i);
-
+  for (const SRTP_PROTECTION_PROFILE *profile : profiles) {
     if (profile->id == profile_id) {
       ssl->srtp_profile = profile;
       return 1;
@@ -1737,10 +1716,7 @@ static int ext_srtp_parse_clienthello(SSL_HANDSHAKE *hs, uint8_t *out_alert,
       SSL_get_srtp_profiles(ssl);
 
   /* Pick the server's most preferred profile. */
-  for (size_t i = 0; i < sk_SRTP_PROTECTION_PROFILE_num(server_profiles); i++) {
-    const SRTP_PROTECTION_PROFILE *server_profile =
-        sk_SRTP_PROTECTION_PROFILE_value(server_profiles, i);
-
+  for (const SRTP_PROTECTION_PROFILE *server_profile : server_profiles) {
     CBS profile_ids_tmp;
     CBS_init(&profile_ids_tmp, CBS_data(&profile_ids), CBS_len(&profile_ids));
 
@@ -2149,7 +2125,7 @@ static int ext_key_share_add_clienthello(SSL_HANDSHAKE *hs, CBB *out) {
   uint16_t group_id = hs->retry_group;
   if (hs->received_hello_retry_request) {
     /* We received a HelloRetryRequest without a new curve, so there is no new
-     * share to append. Leave |ecdh_ctx| as-is. */
+     * share to append. Leave |hs->key_share| as-is. */
     if (group_id == 0 &&
         !CBB_add_bytes(&kse_bytes, hs->key_share_bytes,
                        hs->key_share_bytes_len)) {
@@ -2183,11 +2159,12 @@ static int ext_key_share_add_clienthello(SSL_HANDSHAKE *hs, CBB *out) {
     group_id = groups[0];
   }
 
+  hs->key_share = SSLKeyShare::Create(group_id);
   CBB key_exchange;
-  if (!CBB_add_u16(&kse_bytes, group_id) ||
+  if (!hs->key_share ||
+      !CBB_add_u16(&kse_bytes, group_id) ||
       !CBB_add_u16_length_prefixed(&kse_bytes, &key_exchange) ||
-      !SSL_ECDH_CTX_init(&hs->ecdh_ctx, group_id) ||
-      !SSL_ECDH_CTX_offer(&hs->ecdh_ctx, &key_exchange) ||
+      !hs->key_share->Offer(&key_exchange) ||
       !CBB_flush(&kse_bytes)) {
     return 0;
   }
@@ -2218,20 +2195,20 @@ int ssl_ext_key_share_parse_serverhello(SSL_HANDSHAKE *hs, uint8_t **out_secret,
     return 0;
   }
 
-  if (SSL_ECDH_CTX_get_id(&hs->ecdh_ctx) != group_id) {
+  if (hs->key_share->GroupID() != group_id) {
     *out_alert = SSL_AD_ILLEGAL_PARAMETER;
     OPENSSL_PUT_ERROR(SSL, SSL_R_WRONG_CURVE);
     return 0;
   }
 
-  if (!SSL_ECDH_CTX_finish(&hs->ecdh_ctx, out_secret, out_secret_len, out_alert,
-                           CBS_data(&peer_key), CBS_len(&peer_key))) {
+  if (!hs->key_share->Finish(out_secret, out_secret_len, out_alert,
+                             CBS_data(&peer_key), CBS_len(&peer_key))) {
     *out_alert = SSL_AD_INTERNAL_ERROR;
     return 0;
   }
 
   hs->new_session->group_id = group_id;
-  SSL_ECDH_CTX_cleanup(&hs->ecdh_ctx);
+  hs->key_share.reset();
   return 1;
 }
 
@@ -2288,23 +2265,18 @@ int ssl_ext_key_share_parse_clienthello(SSL_HANDSHAKE *hs, int *out_found,
   /* Compute the DH secret. */
   uint8_t *secret = NULL;
   size_t secret_len;
-  SSL_ECDH_CTX group;
-  OPENSSL_memset(&group, 0, sizeof(SSL_ECDH_CTX));
-  CBB public_key;
-  if (!CBB_init(&public_key, 32) ||
-      !SSL_ECDH_CTX_init(&group, group_id) ||
-      !SSL_ECDH_CTX_accept(&group, &public_key, &secret, &secret_len, out_alert,
-                           CBS_data(&peer_key), CBS_len(&peer_key)) ||
-      !CBB_finish(&public_key, &hs->ecdh_public_key,
+  ScopedCBB public_key;
+  UniquePtr<SSLKeyShare> key_share = SSLKeyShare::Create(group_id);
+  if (!key_share ||
+      !CBB_init(public_key.get(), 32) ||
+      !key_share->Accept(public_key.get(), &secret, &secret_len, out_alert,
+                         CBS_data(&peer_key), CBS_len(&peer_key)) ||
+      !CBB_finish(public_key.get(), &hs->ecdh_public_key,
                   &hs->ecdh_public_key_len)) {
     OPENSSL_free(secret);
-    SSL_ECDH_CTX_cleanup(&group);
-    CBB_cleanup(&public_key);
     *out_alert = SSL_AD_ILLEGAL_PARAMETER;
     return 0;
   }
-
-  SSL_ECDH_CTX_cleanup(&group);
 
   *out_secret = secret;
   *out_secret_len = secret_len;
@@ -2656,12 +2628,6 @@ static const struct tls_extension *tls_extension_find(uint32_t *out_index,
   }
 
   return NULL;
-}
-
-int SSL_extension_supported(unsigned extension_value) {
-  uint32_t index;
-  return extension_value == TLSEXT_TYPE_padding ||
-         tls_extension_find(&index, extension_value) != NULL;
 }
 
 int ssl_add_clienthello_tlsext(SSL_HANDSHAKE *hs, CBB *out, size_t header_len) {
@@ -3044,8 +3010,8 @@ ssl_decrypt_ticket_with_cipher_ctx(SSL *ssl, uint8_t **out, size_t *out_len,
                                    size_t ticket_len) {
   const SSL_CTX *const ssl_ctx = ssl->session_ctx;
 
-  bssl::ScopedHMAC_CTX hmac_ctx;
-  bssl::ScopedEVP_CIPHER_CTX cipher_ctx;
+  ScopedHMAC_CTX hmac_ctx;
+  ScopedEVP_CIPHER_CTX cipher_ctx;
 
   /* Ensure there is room for the key name and the largest IV
    * |tlsext_ticket_key_cb| may try to consume. The real limit may be lower, but
@@ -3105,7 +3071,7 @@ ssl_decrypt_ticket_with_cipher_ctx(SSL *ssl, uint8_t **out, size_t *out_len,
   const uint8_t *ciphertext = ticket + SSL_TICKET_KEY_NAME_LEN + iv_len;
   size_t ciphertext_len = ticket_len - SSL_TICKET_KEY_NAME_LEN - iv_len -
                           mac_len;
-  bssl::UniquePtr<uint8_t> plaintext((uint8_t *)OPENSSL_malloc(ciphertext_len));
+  UniquePtr<uint8_t> plaintext((uint8_t *)OPENSSL_malloc(ciphertext_len));
   if (!plaintext) {
     return ssl_ticket_aead_error;
   }
@@ -3263,7 +3229,7 @@ int tls1_choose_signature_algorithm(SSL_HANDSHAKE *hs, uint16_t *out) {
   /* Before TLS 1.2, the signature algorithm isn't negotiated as part of the
    * handshake. */
   if (ssl3_protocol_version(ssl) < TLS1_2_VERSION) {
-    if (!tls1_get_legacy_signature_algorithm(out, hs->local_pubkey)) {
+    if (!tls1_get_legacy_signature_algorithm(out, hs->local_pubkey.get())) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_NO_COMMON_SIGNATURE_ALGORITHMS);
       return 0;
     }
@@ -3328,15 +3294,14 @@ int tls1_verify_channel_id(SSL_HANDSHAKE *hs) {
     return 0;
   }
 
-  bssl::UniquePtr<EC_GROUP> p256(
-      EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1));
+  UniquePtr<EC_GROUP> p256(EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1));
   if (!p256) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_NO_P256_SUPPORT);
     return 0;
   }
 
-  bssl::UniquePtr<ECDSA_SIG> sig(ECDSA_SIG_new());
-  bssl::UniquePtr<BIGNUM> x(BN_new()), y(BN_new());
+  UniquePtr<ECDSA_SIG> sig(ECDSA_SIG_new());
+  UniquePtr<BIGNUM> x(BN_new()), y(BN_new());
   if (!sig || !x || !y) {
     return 0;
   }
@@ -3349,8 +3314,8 @@ int tls1_verify_channel_id(SSL_HANDSHAKE *hs) {
     return 0;
   }
 
-  bssl::UniquePtr<EC_KEY> key(EC_KEY_new());
-  bssl::UniquePtr<EC_POINT> point(EC_POINT_new(p256.get()));
+  UniquePtr<EC_KEY> key(EC_KEY_new());
+  UniquePtr<EC_POINT> point(EC_POINT_new(p256.get()));
   if (!key || !point ||
       !EC_POINT_set_affine_coordinates_GFp(p256.get(), point.get(), x.get(),
                                            y.get(), nullptr) ||
@@ -3464,7 +3429,7 @@ int tls1_channel_id_hash(SSL_HANDSHAKE *hs, uint8_t *out, size_t *out_len) {
 
   uint8_t hs_hash[EVP_MAX_MD_SIZE];
   size_t hs_hash_len;
-  if (!SSL_TRANSCRIPT_get_hash(&hs->transcript, hs_hash, &hs_hash_len)) {
+  if (!hs->transcript.GetHash(hs_hash, &hs_hash_len)) {
     return 0;
   }
   SHA256_Update(&ctx, hs_hash, (size_t)hs_hash_len);
@@ -3490,9 +3455,8 @@ int tls1_record_handshake_hashes_for_channel_id(SSL_HANDSHAKE *hs) {
       "original_handshake_hash is too small");
 
   size_t digest_len;
-  if (!SSL_TRANSCRIPT_get_hash(&hs->transcript,
-                               hs->new_session->original_handshake_hash,
-                               &digest_len)) {
+  if (!hs->transcript.GetHash(hs->new_session->original_handshake_hash,
+                              &digest_len)) {
     return -1;
   }
 
@@ -3542,4 +3506,32 @@ int ssl_is_sct_list_valid(const CBS *contents) {
   }
 
   return 1;
+}
+
+}  // namespace bssl
+
+using namespace bssl;
+
+int SSL_early_callback_ctx_extension_get(const SSL_CLIENT_HELLO *client_hello,
+                                         uint16_t extension_type,
+                                         const uint8_t **out_data,
+                                         size_t *out_len) {
+  CBS cbs;
+  if (!ssl_client_hello_get_extension(client_hello, &cbs, extension_type)) {
+    return 0;
+  }
+
+  *out_data = CBS_data(&cbs);
+  *out_len = CBS_len(&cbs);
+  return 1;
+}
+
+void SSL_CTX_set_ed25519_enabled(SSL_CTX *ctx, int enabled) {
+  ctx->ed25519_enabled = !!enabled;
+}
+
+int SSL_extension_supported(unsigned extension_value) {
+  uint32_t index;
+  return extension_value == TLSEXT_TYPE_padding ||
+         tls_extension_find(&index, extension_value) != NULL;
 }

@@ -671,9 +671,19 @@ be describing additional metrics about the same event.
     </summary>
   </metric>
   <metric name="Net.EffectiveConnectionType.OnNavigationStart">
+    <obsolete>
+      Deprecated 7/2017 in favor of
+      Net.EffectiveConnectionType2.OnNavigationStart.
+    </obsolete>
     <summary>
       The |net::EffectiveConnectionType| at the time the navigation for this
       page load was initiated.
+    </summary>
+  </metric>
+  <metric name="Net.EffectiveConnectionType2.OnNavigationStart">
+    <summary>
+      The |SystemProfileProto::Network::EffectiveConnectionType| at the time the
+      navigation for this page load was initiated.
     </summary>
   </metric>
   <metric name="Net.ErrorCode.OnFailedProvisionalLoad">

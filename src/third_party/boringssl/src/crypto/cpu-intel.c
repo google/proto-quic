@@ -207,6 +207,14 @@ void OPENSSL_cpuid_setup(void) {
   /* Reserved bit #30 is repurposed to signal an Intel CPU. */
   if (is_intel) {
     edx |= (1 << 30);
+
+    /* Clear the XSAVE bit on Knights Landing to mimic Silvermont. This enables
+     * some Silvermont-specific codepaths which perform better. See OpenSSL
+     * commit 64d92d74985ebb3d0be58a9718f9e080a14a8e7f. */
+    if ((eax & 0x0fff0ff0) == 0x00050670 /* Knights Landing */ ||
+        (eax & 0x0fff0ff0) == 0x00080650 /* Knights Mill (per SDE) */) {
+      ecx &= ~(1 << 26);
+    }
   } else {
     edx &= ~(1 << 30);
   }
@@ -223,13 +231,30 @@ void OPENSSL_cpuid_setup(void) {
     /* XCR0 may only be queried if the OSXSAVE bit is set. */
     xcr0 = OPENSSL_xgetbv(0);
   }
-  /* See Intel manual, section 14.3. */
+  /* See Intel manual, volume 1, section 14.3. */
   if ((xcr0 & 6) != 6) {
     /* YMM registers cannot be used. */
     ecx &= ~(1 << 28); /* AVX */
     ecx &= ~(1 << 12); /* FMA */
     ecx &= ~(1 << 11); /* AMD XOP */
-    extended_features &= ~(1 << 5); /* AVX2 */
+    /* Clear AVX2 and AVX512* bits.
+     *
+     * TODO(davidben): Should bits 17 and 26-28 also be cleared? Upstream
+     * doesn't clear those. */
+    extended_features &=
+        ~((1 << 5) | (1 << 16) | (1 << 21) | (1 << 30) | (1 << 31));
+  }
+  /* See Intel manual, volume 1, section 15.2. */
+  if ((xcr0 & 0xe6) != 0xe6) {
+    /* Clear AVX512F. Note we don't touch other AVX512 extensions because they
+     * can be used with YMM. */
+    extended_features &= ~(1 << 16);
+  }
+
+  /* Disable ADX instructions on Knights Landing. See OpenSSL commit
+   * 64d92d74985ebb3d0be58a9718f9e080a14a8e7f. */
+  if ((ecx & (1 << 26)) == 0) {
+    extended_features &= ~(1 << 19);
   }
 
   OPENSSL_ia32cap_P[0] = edx;

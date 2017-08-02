@@ -59,7 +59,7 @@ def _CheckFileList(local_path, file_list):
   for f in abs_path_list:
     if os.path.commonprefix([f, local_path]) != local_path:
       raise IOError(
-          '%s in the arguments are not decendants of the specified directory %s'
+          '%s in the arguments is not descendant of the specified directory %s'
           % (f, local_path))
   return abs_path_list
 

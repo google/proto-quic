@@ -837,6 +837,13 @@
       },
       {
         "swarming": {
+          "can_use_on_swarming_builders": true,
+          "shards": 2
+        },
+        "test": "interactive_ui_tests"
+      },
+      {
+        "swarming": {
           "can_use_on_swarming_builders": true
         },
         "test": "ipc_tests"

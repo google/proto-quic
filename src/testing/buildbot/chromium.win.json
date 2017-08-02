@@ -462,6 +462,12 @@
           "can_use_on_swarming_builders": true
         },
         "test": "wm_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "zucchini_unittests"
       }
     ],
     "isolated_scripts": [
@@ -1012,6 +1018,12 @@
           "can_use_on_swarming_builders": true
         },
         "test": "wm_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "zucchini_unittests"
       }
     ]
   },
@@ -1549,6 +1561,12 @@
           "can_use_on_swarming_builders": true
         },
         "test": "wtf_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "zucchini_unittests"
       }
     ],
     "isolated_scripts": [
@@ -2002,6 +2020,12 @@
           "can_use_on_swarming_builders": true
         },
         "test": "wm_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "zucchini_unittests"
       }
     ],
     "isolated_scripts": [

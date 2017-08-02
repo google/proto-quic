@@ -19,11 +19,11 @@
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/cert_issuer_source_static.h"
+#include "net/cert/internal/common_cert_errors.h"
 #include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/internal/path_builder.h"
 #include "net/cert/internal/simple_path_builder_delegate.h"
 #include "net/cert/internal/system_trust_store.h"
-#include "net/cert/internal/verify_certificate_chain.h"
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util.h"
 #include "net/der/encode_values.h"
@@ -114,11 +114,11 @@ void MapPathBuilderErrorsToCertStatus(const CertPathErrors& errors,
   if (!errors.ContainsHighSeverityErrors())
     return;
 
-  if (errors.ContainsError(kRsaModulusTooSmall))
+  if (errors.ContainsError(cert_errors::kUnacceptablePublicKey))
     *cert_status |= CERT_STATUS_WEAK_KEY;
 
-  if (errors.ContainsError(kValidityFailedNotAfter) ||
-      errors.ContainsError(kValidityFailedNotBefore)) {
+  if (errors.ContainsError(cert_errors::kValidityFailedNotAfter) ||
+      errors.ContainsError(cert_errors::kValidityFailedNotBefore)) {
     *cert_status |= CERT_STATUS_DATE_INVALID;
   }
 

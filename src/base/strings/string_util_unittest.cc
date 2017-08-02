@@ -585,32 +585,66 @@ TEST(StringUtilTest, FormatBytesUnlocalized) {
 }
 TEST(StringUtilTest, ReplaceSubstringsAfterOffset) {
   static const struct {
-    const char* str;
-    string16::size_type start_offset;
-    const char* find_this;
-    const char* replace_with;
-    const char* expected;
+    StringPiece str;
+    size_t start_offset;
+    StringPiece find_this;
+    StringPiece replace_with;
+    StringPiece expected;
   } cases[] = {
-    {"aaa", 0, "a", "b", "bbb"},
-    {"abb", 0, "ab", "a", "ab"},
-    {"Removing some substrings inging", 0, "ing", "", "Remov some substrs "},
-    {"Not found", 0, "x", "0", "Not found"},
-    {"Not found again", 5, "x", "0", "Not found again"},
-    {" Making it much longer ", 0, " ", "Four score and seven years ago",
-     "Four score and seven years agoMakingFour score and seven years agoit"
-     "Four score and seven years agomuchFour score and seven years agolonger"
-     "Four score and seven years ago"},
-    {"Invalid offset", 9999, "t", "foobar", "Invalid offset"},
-    {"Replace me only me once", 9, "me ", "", "Replace me only once"},
-    {"abababab", 2, "ab", "c", "abccc"},
+      {"aaa", 0, "a", "b", "bbb"},
+      {"aaa", 0, "aa", "b", "ba"},
+      {"aaa", 0, "aa", "bbb", "bbba"},
+      {"aaaaa", 0, "aa", "b", "bba"},
+      {"ababaaababa", 0, "aba", "", "baaba"},
+      {"ababaaababa", 0, "aba", "_", "_baa_ba"},
+      {"ababaaababa", 0, "aba", "__", "__baa__ba"},
+      {"ababaaababa", 0, "aba", "___", "___baa___ba"},
+      {"ababaaababa", 0, "aba", "____", "____baa____ba"},
+      {"ababaaababa", 0, "aba", "_____", "_____baa_____ba"},
+      {"abb", 0, "ab", "a", "ab"},
+      {"Removing some substrings inging", 0, "ing", "", "Remov some substrs "},
+      {"Not found", 0, "x", "0", "Not found"},
+      {"Not found again", 5, "x", "0", "Not found again"},
+      {" Making it much longer ", 0, " ", "Four score and seven years ago",
+       "Four score and seven years agoMakingFour score and seven years agoit"
+       "Four score and seven years agomuchFour score and seven years agolonger"
+       "Four score and seven years ago"},
+      {" Making it much much much much shorter ", 0,
+       "Making it much much much much shorter", "", "  "},
+      {"so much much much much much very much much much shorter", 0, "much ",
+       "", "so very shorter"},
+      {"Invalid offset", 9999, "t", "foobar", "Invalid offset"},
+      {"Replace me only me once", 9, "me ", "", "Replace me only once"},
+      {"abababab", 2, "ab", "c", "abccc"},
   };
 
-  for (size_t i = 0; i < arraysize(cases); i++) {
-    string16 str = ASCIIToUTF16(cases[i].str);
-    ReplaceSubstringsAfterOffset(&str, cases[i].start_offset,
-                                 ASCIIToUTF16(cases[i].find_this),
-                                 ASCIIToUTF16(cases[i].replace_with));
-    EXPECT_EQ(ASCIIToUTF16(cases[i].expected), str);
+  // base::string16 variant
+  for (const auto& scenario : cases) {
+    string16 str = ASCIIToUTF16(scenario.str);
+    ReplaceSubstringsAfterOffset(&str, scenario.start_offset,
+                                 ASCIIToUTF16(scenario.find_this),
+                                 ASCIIToUTF16(scenario.replace_with));
+    EXPECT_EQ(ASCIIToUTF16(scenario.expected), str);
+  }
+
+  // std::string with insufficient capacity: expansion must realloc the buffer.
+  for (const auto& scenario : cases) {
+    std::string str = scenario.str.as_string();
+    str.shrink_to_fit();  // This is nonbinding, but it's the best we've got.
+    ReplaceSubstringsAfterOffset(&str, scenario.start_offset,
+                                 scenario.find_this, scenario.replace_with);
+    EXPECT_EQ(scenario.expected, str);
+  }
+
+  // std::string with ample capacity: should be possible to grow in-place.
+  for (const auto& scenario : cases) {
+    std::string str = scenario.str.as_string();
+    str.reserve(std::max(scenario.str.length(), scenario.expected.length()) *
+                2);
+
+    ReplaceSubstringsAfterOffset(&str, scenario.start_offset,
+                                 scenario.find_this, scenario.replace_with);
+    EXPECT_EQ(scenario.expected, str);
   }
 }
 

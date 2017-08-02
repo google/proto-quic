@@ -209,7 +209,9 @@ class SmoothnessKeyDesktopMoveCases(_Smoothness):
   def GetExpectations(self):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing.
+        self.DisableStory('https://mail.google.com/mail/',
+                          [story_module.expectations.ALL_WIN],
+                          'crbug.com/750131')
     return StoryExpectations()
 
 
@@ -415,7 +417,9 @@ class SmoothnessSimpleMobilePages(_Smoothness):
   def GetExpectations(self):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing.
+        self.DisableStory('https://www.flickr.com/',
+                          [story_module.expectations.ANDROID_WEBVIEW],
+                          'crbug.com/750833')
     return StoryExpectations()
 
 

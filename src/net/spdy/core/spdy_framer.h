@@ -543,10 +543,7 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   // Returns the maximum size of the header encoder compression table.
   size_t header_encoder_table_size() const;
 
-  void set_max_decode_buffer_size_bytes(size_t max_decode_buffer_size_bytes) {
-    GetHpackDecoder()->set_max_decode_buffer_size_bytes(
-        max_decode_buffer_size_bytes);
-  }
+  void set_max_decode_buffer_size_bytes(size_t max_decode_buffer_size_bytes);
 
   size_t send_frame_size_limit() const { return send_frame_size_limit_; }
   void set_send_frame_size_limit(size_t send_frame_size_limit) {
@@ -563,10 +560,6 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
 
   void SetEncoderHeaderTableDebugVisitor(
       std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor);
-
-  // For use in SpdyFramerDecoderAdapter implementations; returns the HPACK
-  // decoder to be used.
-  HpackDecoderAdapter* GetHpackDecoderAdapter() { return GetHpackDecoder(); }
 
   void SetOverwriteLastFrame(bool value) { overwrite_last_frame_ = value; }
   void SetIsLastFrame(bool value) { is_last_frame_ = value; }
@@ -700,9 +693,8 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   };
 
  private:
-  // Get (and lazily initialize) the HPACK state.
+  // Get (and lazily initialize) the HPACK encoder state.
   HpackEncoder* GetHpackEncoder();
-  HpackDecoderAdapter* GetHpackDecoder();
 
   size_t GetNumberRequiredContinuationFrames(size_t size);
 
@@ -805,7 +797,6 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   size_t recv_frame_size_limit_ = kSpdyInitialFrameSizeLimit;
 
   std::unique_ptr<HpackEncoder> hpack_encoder_;
-  std::unique_ptr<HpackDecoderAdapter> hpack_decoder_;
 
   SpdyFramerVisitorInterface* visitor_;
   ExtensionVisitorInterface* extension_;

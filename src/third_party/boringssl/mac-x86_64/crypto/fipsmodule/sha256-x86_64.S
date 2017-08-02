@@ -43,7 +43,6 @@ L$prologue:
 	movl	20(%rdi),%r9d
 	movl	24(%rdi),%r10d
 	movl	28(%rdi),%r11d
-
 	jmp	L$loop
 
 .p2align	4

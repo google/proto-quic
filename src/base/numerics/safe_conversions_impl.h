@@ -10,6 +10,14 @@
 #include <limits>
 #include <type_traits>
 
+#if defined(__GNUC__) || defined(__clang__)
+#define BASE_NUMERICS_LIKELY(x) __builtin_expect(!!(x), 1)
+#define BASE_NUMERICS_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else
+#define BASE_NUMERICS_LIKELY(x) (x)
+#define BASE_NUMERICS_UNLIKELY(x) (x)
+#endif
+
 namespace base {
 namespace internal {
 
@@ -675,17 +683,6 @@ as_unsigned(const Src value) {
   return static_cast<decltype(as_unsigned(value))>(value);
 }
 
-// This is a wrapper to generate return the max or min for a supplied type.
-// If the argument is false, the returned value is the maximum. If true the
-// returned value is the minimum.
-template <typename T>
-constexpr T GetMaxOrMin(bool is_min) {
-  // For both signed and unsigned math the bit pattern for minimum is really
-  // just one plus the maximum. However, we have to cast to unsigned to ensure
-  // we get well-defined overflow semantics.
-  return as_unsigned(std::numeric_limits<T>::max()) + is_min;
-}
-
 template <typename L, typename R>
 constexpr bool IsLessImpl(const L lhs,
                           const R rhs,
@@ -809,6 +806,40 @@ constexpr bool SafeCompare(const L lhs, const R rhs) {
                    static_cast<BigType>(static_cast<R>(rhs)))
              // Let the template functions figure it out for mixed types.
              : C<L, R>::Test(lhs, rhs);
+}
+
+template <typename Dst, typename Src>
+constexpr bool IsMaxInRangeForNumericType() {
+  return IsGreaterOrEqual<Dst, Src>::Test(std::numeric_limits<Dst>::max(),
+                                          std::numeric_limits<Src>::max());
+}
+
+template <typename Dst, typename Src>
+constexpr bool IsMinInRangeForNumericType() {
+  return IsLessOrEqual<Dst, Src>::Test(std::numeric_limits<Dst>::lowest(),
+                                       std::numeric_limits<Src>::lowest());
+}
+
+template <typename Dst, typename Src>
+constexpr Dst CommonMax() {
+  return !IsMaxInRangeForNumericType<Dst, Src>()
+             ? Dst(std::numeric_limits<Dst>::max())
+             : Dst(std::numeric_limits<Src>::max());
+}
+
+template <typename Dst, typename Src>
+constexpr Dst CommonMin() {
+  return !IsMinInRangeForNumericType<Dst, Src>()
+             ? Dst(std::numeric_limits<Dst>::lowest())
+             : Dst(std::numeric_limits<Src>::lowest());
+}
+
+// This is a wrapper to generate return the max or min for a supplied type.
+// If the argument is false, the returned value is the maximum. If true the
+// returned value is the minimum.
+template <typename Dst, typename Src = Dst>
+constexpr Dst CommonMaxOrMin(bool is_min) {
+  return is_min ? CommonMin<Dst, Src>() : CommonMax<Dst, Src>();
 }
 
 }  // namespace internal

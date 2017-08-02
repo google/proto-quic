@@ -278,10 +278,7 @@ class QUIC_EXPORT_PRIVATE BandwidthSampler : public BandwidthSamplerInterface {
 
   // Record of the connection state at the point where each packet in flight was
   // sent, indexed by the packet number.
-  ConnectionStateMap connection_state_map_;
-  PacketNumberIndexedQueue<ConnectionStateOnSentPacket>
-      connection_state_map_new_;
-  const bool use_new_connection_state_map_;
+  PacketNumberIndexedQueue<ConnectionStateOnSentPacket> connection_state_map_;
 
   // Handles the actual bandwidth calculations, whereas the outer method handles
   // retrieving and removing |sent_packet|.

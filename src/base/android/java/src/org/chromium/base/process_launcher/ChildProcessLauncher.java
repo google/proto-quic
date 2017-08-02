@@ -23,7 +23,25 @@ public class ChildProcessLauncher {
     private static final String TAG = "ChildProcLauncher";
 
     /** Delegate that client should use to customize the process launching. */
-    public interface Delegate {
+    public abstract static class Delegate {
+        /**
+         * Called when the launcher is about to start. Gives the embedder a chance to provide an
+         * already bound connection if it has one. (allowing for warm-up connections: connections
+         * that are already bound in advance to speed up child process start-up time).
+         * Note that onBeforeConnectionAllocated will not be called if this method returns a
+         * connection.
+         * @param connectionAllocator the allocator the returned connection should have been
+         * allocated of.
+         * @param serviceCallback the service callback that the connection should use.
+         * @return a bound connection to use to connect to the child process service, or null if a
+         * connection should be allocated and bound by the launcher.
+         */
+        public ChildProcessConnection getBoundConnection(
+                ChildConnectionAllocator connectionAllocator,
+                ChildProcessConnection.ServiceCallback serviceCallback) {
+            return null;
+        }
+
         /**
          * Called before a connection is allocated.
          * Note that this is only called if the ChildProcessLauncher is created with
@@ -31,37 +49,28 @@ public class ChildProcessLauncher {
          * @param serviceBundle the bundle passed in the service intent. Clients can add their own
          * extras to the bundle.
          */
-        void onBeforeConnectionAllocated(Bundle serviceBundle);
+        public void onBeforeConnectionAllocated(Bundle serviceBundle) {}
 
         /**
          * Called before setup is called on the connection.
          * @param connectionBundle the bundle passed to the {@link ChildProcessService} in the
          * setup call. Clients can add their own extras to the bundle.
          */
-        void onBeforeConnectionSetup(Bundle connectionBundle);
+        public void onBeforeConnectionSetup(Bundle connectionBundle) {}
 
         /**
          * Called when the connection was successfully established, meaning the setup call on the
          * service was successful.
          * @param connection the connection over which the setup call was made.
          */
-        void onConnectionEstablished(ChildProcessConnection connection);
+        public void onConnectionEstablished(ChildProcessConnection connection) {}
 
         /**
          * Called when a connection has been disconnected. Only invoked if onConnectionEstablished
          * was called, meaning the connection was already established.
          * @param connection the connection that got disconnected.
          */
-        void onConnectionLost(ChildProcessConnection connection);
-    }
-
-    /**
-     * Interface used by clients that already have a bound connection ready when instanciating the
-     * ChildProcessLauncher.
-     */
-    public interface BoundConnectionProvider {
-        ChildProcessConnection getConnection(
-                ChildProcessConnection.ServiceCallback serviceCallback);
+        public void onConnectionLost(ChildProcessConnection connection) {}
     }
 
     // Represents an invalid process handle; same as base/process/process.h kNullProcessHandle.
@@ -76,9 +85,6 @@ public class ChildProcessLauncher {
     private final FileDescriptorInfo[] mFilesToBeMapped;
 
     // The allocator used to create the connection.
-    private final BoundConnectionProvider mConnectionProvider;
-
-    // The allocator used to create the connection.
     private final ChildConnectionAllocator mConnectionAllocator;
 
     // The IBinder provided to the created service.
@@ -88,38 +94,23 @@ public class ChildProcessLauncher {
     private ChildProcessConnection mConnection;
 
     /**
-     * Creates a ChildProcessLauncher using the already bound connection provided.
-     * Note that onBeforeConnectionAllocated and onConnectionBound will not be invoked on the
-     * delegate since the connection is already available.
+     * Constructor.
+     *
+     * @param launcherHandler the handler for the thread where all operations should happen.
+     * @param delegate the delagate that gets notified of the launch progress.
+     * @param commandLine the command line that should be passed to the started process.
+     * @param filesToBeMapped the files that should be passed to the started process.
+     * @param connectionAllocator the allocator used to create connections to the service.
+     * @param binderCallback the callback that should be passed to the started process.
      */
-    public static ChildProcessLauncher createWithBoundConnectionProvider(Handler launcherHandler,
-            Delegate delegate, String[] commandLine, FileDescriptorInfo[] filesToBeMapped,
-            BoundConnectionProvider connectionProvider, IBinder binderCallback) {
-        return new ChildProcessLauncher(launcherHandler, delegate, commandLine, filesToBeMapped,
-                connectionProvider, null /* connectionAllocator */, binderCallback);
-    }
-
-    /**
-     * Creates a ChildProcessLauncher that will create a connection using the specified
-     * ChildConnectionAllocator.
-     */
-    public static ChildProcessLauncher createWithConnectionAllocator(Handler launcherHandler,
-            Delegate delegate, String[] commandLine, FileDescriptorInfo[] filesToBeMapped,
-            ChildConnectionAllocator connectionAllocator, IBinder binderCallback) {
-        return new ChildProcessLauncher(launcherHandler, delegate, commandLine, filesToBeMapped,
-                null /* connection */, connectionAllocator, binderCallback);
-    }
-
     @SuppressFBWarnings("EI_EXPOSE_REP2")
-    private ChildProcessLauncher(Handler launcherHandler, Delegate delegate, String[] commandLine,
-            FileDescriptorInfo[] filesToBeMapped, BoundConnectionProvider connectionProvider,
-            ChildConnectionAllocator connectionAllocator, IBinder binderCallback) {
-        // Either a bound connection provider or a connection allocator should be provided.
-        assert (connectionProvider == null) != (connectionAllocator == null);
+    public ChildProcessLauncher(Handler launcherHandler, Delegate delegate, String[] commandLine,
+            FileDescriptorInfo[] filesToBeMapped, ChildConnectionAllocator connectionAllocator,
+            IBinder binderCallback) {
+        assert connectionAllocator != null;
         mLauncherHandler = launcherHandler;
         isRunningOnLauncherThread();
         mCommandLine = commandLine;
-        mConnectionProvider = connectionProvider;
         mConnectionAllocator = connectionAllocator;
         mDelegate = delegate;
         mFilesToBeMapped = filesToBeMapped;
@@ -170,17 +161,16 @@ public class ChildProcessLauncher {
                             ChildProcessLauncher.this.onChildProcessDied();
                         }
                     };
-            if (mConnectionProvider != null) {
-                mConnection = mConnectionProvider.getConnection(serviceCallback);
-                assert mConnection != null;
+            mConnection = mDelegate.getBoundConnection(mConnectionAllocator, serviceCallback);
+            if (mConnection != null) {
+                assert mConnectionAllocator.isConnectionFromAllocator(mConnection);
                 setupConnection();
-            } else {
-                assert mConnectionAllocator != null;
-                if (!allocateAndSetupConnection(
-                            serviceCallback, setupConnection, queueIfNoFreeConnection)
-                        && !queueIfNoFreeConnection) {
-                    return false;
-                }
+                return true;
+            }
+            if (!allocateAndSetupConnection(
+                        serviceCallback, setupConnection, queueIfNoFreeConnection)
+                    && !queueIfNoFreeConnection) {
+                return false;
             }
             return true;
         } finally {

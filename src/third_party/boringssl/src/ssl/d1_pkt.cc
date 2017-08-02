@@ -126,6 +126,8 @@
 #include "internal.h"
 
 
+namespace bssl {
+
 int dtls1_get_record(SSL *ssl) {
 again:
   switch (ssl->s3->recv_shutdown) {
@@ -415,3 +417,5 @@ int dtls1_dispatch_alert(SSL *ssl) {
 
   return 1;
 }
+
+}  // namespace bssl

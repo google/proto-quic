@@ -35,6 +35,8 @@ class PriorityWriteSchedulerPeer;
 // for each priority value.  Each PriorityInfo contains a list of streams of
 // that priority that are ready to write, as well as a timestamp of the last
 // I/O event that occurred for a stream of that priority.
+//
+// DO NOT USE. Deprecated.
 template <typename StreamIdType>
 class PriorityWriteScheduler : public WriteScheduler<StreamIdType> {
  public:

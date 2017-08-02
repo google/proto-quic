@@ -14917,6 +14917,16 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>Time taken to create a single download in the history DB.</summary>
 </histogram>
 
+<histogram name="Download.Database.IsAvailable" enum="BooleanAvailable">
+  <owner>xingliu@chromium.org</owner>
+  <summary>
+    Records whether the download database is available when database startup
+    completes, before starting any pending downloads.  If the database is
+    available, it will provide the next download id. Or no download history will
+    be persisted.
+  </summary>
+</histogram>
+
 <histogram name="Download.Database.QueryDownloadDuration" units="ms">
   <owner>asanka@chromium.org</owner>
   <summary>Time taken to query all downloads from history DB.</summary>
@@ -22268,6 +22278,14 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     The total number of network requests that were delayed by extension user
     script load. Recorded once each time network requests may have been delayed
     by user script load (i.e., once at the end of each batch of script loads).
+  </summary>
+</histogram>
+
+<histogram base="true" name="Extensions.TimeYieldedBetweenContentScriptRuns"
+    units="ms">
+  <owner>ksakamoto@chromium.org</owner>
+  <summary>
+    Time elapsed between two asynchronously-injected content script runs.
   </summary>
 </histogram>
 
@@ -29909,6 +29927,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="Media.DXVAVDA.PictureBufferErrorLine">
+  <owner>jbauman@chromium.org</owner>
+  <owner>sandersd@chromium.org</owner>
+  <summary>
+    Whenever an error is logged from the DXVAVDA picture buffer code, this
+    records the line in dxva_picture_buffer_win.cc where the failure occurred.
+    This histogram can only meaningfully be compared between different versions
+    of Chromium if no line numbers in that file changed between those versions.
+  </summary>
+</histogram>
+
 <histogram name="Media.EME.CdmFileIO.FileSizeKBOnError" units="KB">
   <owner>xhwang@chromium.org</owner>
   <summary>
@@ -32567,6 +32596,48 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     The number of pages compressed per second. Recorded every 60 seconds. Only
     recorded on macOS.
+  </summary>
+</histogram>
+
+<histogram name="Memory.Experimental.Debug.FailedProcessDumpsPerGlobalDump"
+    units="failures">
+  <owner>hjd@chromium.org</owner>
+  <owner>primiano@chromium.org</owner>
+  <owner>erikchen@chromium.org</owner>
+  <summary>
+    Records how many failed process dumps there were for a given global dump
+    completed by the memory instrumentation service
+    (resource_coordinator/memory_instrumentation/coordinator_impl.h). This is
+    recorded once each time a global dump request is completed.
+  </summary>
+</histogram>
+
+<histogram name="Memory.Experimental.Debug.GlobalDumpDuration" units="ms">
+  <owner>hjd@chromium.org</owner>
+  <owner>primiano@chromium.org</owner>
+  <owner>erikchen@chromium.org</owner>
+  <summary>
+    Records how long it took the memory instrumentation service
+    (resource_coordinator/memory_instrumentation/coordinator_impl.h) from
+    starting working on a global memory dump request until complating that
+    request. This does not include queuing time (requests are handled serially).
+    This is recorded once each time a request is completed.
+  </summary>
+</histogram>
+
+<histogram name="Memory.Experimental.Debug.GlobalDumpQueueLength"
+    units="requests">
+  <owner>hjd@chromium.org</owner>
+  <owner>primiano@chromium.org</owner>
+  <owner>erikchen@chromium.org</owner>
+  <summary>
+    Number of global memory dump requests queued in by the memory
+    instrumentation service
+    (resource_coordinator/memory_instrumentation/coordinator_impl.h). This
+    includes the request currently being worked on if any. This is recorded once
+    each time a new request is queued. This happens at least once per UMA ping
+    to in order to compute Memory.Experimental.Renderer2,
+    Memory.Experimental.Browser2 etc.
   </summary>
 </histogram>
 
@@ -53888,6 +53959,28 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="PasswordProtection.ChromeSettingsAction"
+    enum="PasswordProtectionWarningAction">
+  <owner>jialiul@chromium.org</owner>
+  <owner>nparker@chromium.org</owner>
+  <summary>
+    Records how a user interacts with the chrome://settings page that displays
+    the password protection warning. Logged when the page is shown and when the
+    user chooses to change their password on the page.
+  </summary>
+</histogram>
+
+<histogram name="PasswordProtection.ModalWarningDialogAction"
+    enum="PasswordProtectionWarningAction">
+  <owner>jialiul@chromium.org</owner>
+  <owner>nparker@chromium.org</owner>
+  <summary>
+    Records how a user interacts with the password protection modal warning
+    dialog. Logged when the dialog is shown and when the user chooses to change
+    their password, ignore warning, or navigate away.
+  </summary>
+</histogram>
+
 <histogram base="true"
     name="PasswordProtection.NumberOfCachedVerdictBeforeShutdown" units="count">
   <owner>jialiul@chromium.org</owner>
@@ -53895,6 +53988,18 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     Number of password protection verdicts stored in content settings of a
     profile before this profile is destructed.
+  </summary>
+</histogram>
+
+<histogram name="PasswordProtection.PageInfoAction"
+    enum="PasswordProtectionWarningAction">
+  <owner>jialiul@chromium.org</owner>
+  <owner>nparker@chromium.org</owner>
+  <summary>
+    Records how a user interacts with page info bubble that displays the
+    password protection warning. Logged when such page info bubble is shown and
+    when the user chooses to change their password, ignore warning, or mark site
+    as legitimate via buttons on the page info bubble.
   </summary>
 </histogram>
 
@@ -64879,6 +64984,16 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="SafeBrowsing.ThreatReport.MaxNodesExceededInFrame"
+    enum="BooleanExceeded">
+  <owner>lpz@chromium.org</owner>
+  <summary>
+    Whether the threat report generated for a subframe of a page hit the maximum
+    number of nodes. When this is true, the data from that frame will be
+    truncated.
+  </summary>
+</histogram>
+
 <histogram name="SafeBrowsing.UnverifiedDownloads.Allowed"
     enum="SBClientDownloadExtensions">
   <owner>asanka@chromium.org</owner>
@@ -70161,6 +70276,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     The time taken between dispatching a SyncEvent to a Service Worker and
     receiving a message that it finished handling the event. Includes the time
     for the waitUntil() promise to settle.
+  </summary>
+</histogram>
+
+<histogram name="ServiceWorker.CanMakePaymentEvent.Time" units="ms">
+  <owner>jinho.bang@samsung.com</owner>
+  <summary>
+    The time taken between dispatching an CanMakePaymentEvent to a Service
+    Worker and receiving a message that it finished handling the event. Includes
+    the time for the waitUntil() promise to settle.
   </summary>
 </histogram>
 
@@ -79865,6 +79989,56 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="TabManager.SessionRestore.CompressedPagesPerSecond"
+    units="pages/s">
+  <owner>fmeawad@chromium.org</owner>
+  <summary>
+    The number of pages compressed per second during session restore. Recorded
+    at the end of session restore as an average over the entire period, defined
+    as the period of time when session restore is actively loading tabs, which
+    ends when either all tabs have been loaded and their pages rendered, or tab
+    loading needs to be deferred in cases where the system is under memory
+    pressure. Only recorded on macOS.
+  </summary>
+</histogram>
+
+<histogram name="TabManager.SessionRestore.DecompressedPagesPerSecond"
+    units="pages/s">
+  <owner>fmweawad@chromium.org</owner>
+  <summary>
+    The number of pages decompressed per second during session restore. Recorded
+    at the end of session restore as an average over the entire period, defined
+    as the period of time when session restore is actively loading tabs, which
+    ends when either all tabs have been loaded and their pages rendered, or tab
+    loading needs to be deferred in cases where the system is under memory
+    pressure. Only recorded on macOS.
+  </summary>
+</histogram>
+
+<histogram name="TabManager.SessionRestore.SwapInPerSecond" units="swaps/s">
+  <owner>fmeawad@chromium.org</owner>
+  <summary>
+    The number of swap-ins per second during session restore. Recorded at the
+    end of session restore as an average over the entire period, defined as the
+    period of time when session restore is actively loading tabs, which ends
+    when either all tabs have been loaded and their pages rendered, or tab
+    loading needs to be deferred in cases where the system is under memory
+    pressure.
+  </summary>
+</histogram>
+
+<histogram name="TabManager.SessionRestore.SwapOutPerSecond" units="swaps/s">
+  <owner>fmeawad@chromium.org</owner>
+  <summary>
+    The number of swap-ins per second during session restore. Recorded at the
+    end of session restore as an average over the entire period, defined as the
+    period of time when session restore is actively loading tabs, which ends
+    when either all tabs have been loaded and their pages rendered, or tab
+    loading needs to be deferred in cases where the system is under memory
+    pressure.
+  </summary>
+</histogram>
+
 <histogram name="TabManager.SessionRestore.SwitchToTab" enum="TabLoadingState">
   <owner>fmeawad@chromium.org</owner>
   <summary>
@@ -87580,6 +87754,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="WebRTC.Call.TimeSendingAudioRtpPacketsInSeconds" units="s">
+  <owner>saza@chromium.org</owner>
+  <summary>
+    The amount of time between sending the first and the last audio RTP packets
+    through the audiostreams of a Call object. This is logged when the Call
+    object is destroyed. This is only logged if audio RTP packets are at some
+    point in time received, and is a way to omit temporary objects that do not
+    send any actual media.
+  </summary>
+</histogram>
+
 <histogram name="WebRTC.Call.VideoBitrateReceivedInKbps" units="kbps">
   <owner>holmer@chromium.org</owner>
   <summary>
@@ -89614,6 +89799,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="WinJumplistUpdater.AddCustomCategoryDuration" units="ms">
+  <obsolete>
+    Obsolete 07/26/2017 as it's no longer needed.
+  </obsolete>
   <owner>chengx@chromium.org</owner>
   <summary>Time spent in JumpListUpdater::AddCustomCategory.</summary>
 </histogram>
@@ -89627,11 +89815,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="WinJumplistUpdater.BeginUpdateDuration" units="ms">
+  <obsolete>
+    Obsolete 07/26/2017 as it's no longer needed.
+  </obsolete>
   <owner>chengx@chromium.org</owner>
   <summary>Time spent in JumpListUpdater::BeginUpdate.</summary>
 </histogram>
 
 <histogram name="WinJumplistUpdater.CommitUpdateDuration" units="ms">
+  <obsolete>
+    Obsolete 07/26/2017 as it's no longer needed.
+  </obsolete>
   <owner>chengx@chromium.org</owner>
   <summary>Time spent in JumpListUpdater::CommitUpdate.</summary>
 </histogram>
@@ -92878,6 +93072,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <affected-histogram name="CustomTabs.IntentToFirstCommitNavigationTime2"/>
   <affected-histogram name="CustomTabs.IntentToFirstCommitNavigationTime3"/>
   <affected-histogram name="Startup.FirstCommitNavigationTime2"/>
+  <affected-histogram name="Startup.FirstCommitNavigationTime3"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="InterProcessTimeTicksConversionType" separator="_">
@@ -96784,14 +96979,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram_suffixes>
 
 <histogram_suffixes name="PasswordProtectionTrigger" separator=".">
-  <affected-histogram
-      name="PasswordProtection.NumberOfCachedVerdictBeforeShutdown"/>
+  <affected-histogram name="PasswordProtection.ChromeSettingsAction"/>
   <suffix name="PasswordFieldOnFocus"
       label="Password protection triggered by password field on focus event."/>
   <suffix name="ProtectedPasswordEntry"
       label="Password protection triggered by saved password reuse event."/>
   <suffix name="SyncPasswordEntry"
       label="Password protectiontriggered by sync password reuse event."/>
+  <affected-histogram name="PasswordProtection.ModalWarningDialogAction"/>
+  <affected-histogram
+      name="PasswordProtection.NumberOfCachedVerdictBeforeShutdown"/>
+  <affected-histogram name="PasswordProtection.PageInfoAction"/>
   <affected-histogram name="PasswordProtection.RequestOutcome"/>
   <affected-histogram name="PasswordProtection.Verdict"/>
 </histogram_suffixes>
@@ -99531,6 +99729,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <suffix name="DocumentEnd" label="Scripts with run_at: document_end."/>
   <suffix name="DocumentIdle" label="Scripts with run_at: document_idle."/>
   <affected-histogram name="Extensions.InjectedScriptExecutionTime"/>
+  <affected-histogram name="Extensions.TimeYieldedBetweenContentScriptRuns"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="V8SpecialApps" separator=".">

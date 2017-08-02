@@ -1334,7 +1334,7 @@ class GMockMemberRewriter
       if (id->getName() != "EXPECT_CALL" && id->getName() != "ON_CALL")
         return;
 
-      if (def.getMacroInfo()->getNumArgs() != 2)
+      if (def.getMacroInfo()->getNumParams() != 2)
         return;
 
       // TODO(lukasza): Should check if def.getMacroInfo()->getDefinitionLoc()
@@ -1497,8 +1497,7 @@ class SourceFileCallbacks : public clang::tooling::SourceFileCallbacks {
   ~SourceFileCallbacks() override {}
 
   // clang::tooling::SourceFileCallbacks override:
-  bool handleBeginSource(clang::CompilerInstance& compiler,
-                         llvm::StringRef Filename) override {
+  bool handleBeginSource(clang::CompilerInstance& compiler) override {
     compiler.getPreprocessor().addPPCallbacks(
         gmock_member_rewriter_->CreatePreprocessorCallbacks());
     return true;

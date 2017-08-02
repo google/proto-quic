@@ -353,7 +353,9 @@ TEST(VerifyNameMatchInvalidDataTest, FailOnInvalidPrintableStringChars) {
     EXPECT_FALSE(VerifyNameMatch(SequenceValueFromString(&der),
                                  SequenceValueFromString(&der)));
     std::string normalized_der;
-    EXPECT_FALSE(NormalizeName(SequenceValueFromString(&der), &normalized_der));
+    CertErrors errors;
+    EXPECT_FALSE(
+        NormalizeName(SequenceValueFromString(&der), &normalized_der, &errors));
   }
 }
 
@@ -371,8 +373,9 @@ TEST(VerifyNameMatchInvalidDataTest, FailOnInvalidIA5StringChars) {
     EXPECT_EQ(expected_result, VerifyNameMatch(SequenceValueFromString(&der),
                                                SequenceValueFromString(&der)));
     std::string normalized_der;
-    EXPECT_EQ(expected_result,
-              NormalizeName(SequenceValueFromString(&der), &normalized_der));
+    CertErrors errors;
+    EXPECT_EQ(expected_result, NormalizeName(SequenceValueFromString(&der),
+                                             &normalized_der, &errors));
   }
 }
 
@@ -385,8 +388,9 @@ TEST(VerifyNameMatchInvalidDataTest, FailOnAttributeTypeAndValueExtraData) {
   EXPECT_FALSE(VerifyNameMatch(SequenceValueFromString(&invalid),
                                SequenceValueFromString(&invalid)));
   std::string normalized_der;
-  EXPECT_FALSE(
-      NormalizeName(SequenceValueFromString(&invalid), &normalized_der));
+  CertErrors errors;
+  EXPECT_FALSE(NormalizeName(SequenceValueFromString(&invalid), &normalized_der,
+                             &errors));
 }
 
 TEST(VerifyNameMatchInvalidDataTest, FailOnAttributeTypeAndValueShort) {
@@ -398,8 +402,9 @@ TEST(VerifyNameMatchInvalidDataTest, FailOnAttributeTypeAndValueShort) {
   EXPECT_FALSE(VerifyNameMatch(SequenceValueFromString(&invalid),
                                SequenceValueFromString(&invalid)));
   std::string normalized_der;
-  EXPECT_FALSE(
-      NormalizeName(SequenceValueFromString(&invalid), &normalized_der));
+  CertErrors errors;
+  EXPECT_FALSE(NormalizeName(SequenceValueFromString(&invalid), &normalized_der,
+                             &errors));
 }
 
 TEST(VerifyNameMatchInvalidDataTest, FailOnAttributeTypeAndValueEmpty) {
@@ -410,8 +415,9 @@ TEST(VerifyNameMatchInvalidDataTest, FailOnAttributeTypeAndValueEmpty) {
   EXPECT_FALSE(VerifyNameMatch(SequenceValueFromString(&invalid),
                                SequenceValueFromString(&invalid)));
   std::string normalized_der;
-  EXPECT_FALSE(
-      NormalizeName(SequenceValueFromString(&invalid), &normalized_der));
+  CertErrors errors;
+  EXPECT_FALSE(NormalizeName(SequenceValueFromString(&invalid), &normalized_der,
+                             &errors));
 }
 
 TEST(VerifyNameMatchInvalidDataTest, FailOnBadAttributeType) {
@@ -422,8 +428,9 @@ TEST(VerifyNameMatchInvalidDataTest, FailOnBadAttributeType) {
   EXPECT_FALSE(VerifyNameMatch(SequenceValueFromString(&invalid),
                                SequenceValueFromString(&invalid)));
   std::string normalized_der;
-  EXPECT_FALSE(
-      NormalizeName(SequenceValueFromString(&invalid), &normalized_der));
+  CertErrors errors;
+  EXPECT_FALSE(NormalizeName(SequenceValueFromString(&invalid), &normalized_der,
+                             &errors));
 }
 
 TEST(VerifyNameMatchInvalidDataTest, FailOnAttributeTypeAndValueNotSequence) {
@@ -435,8 +442,9 @@ TEST(VerifyNameMatchInvalidDataTest, FailOnAttributeTypeAndValueNotSequence) {
   EXPECT_FALSE(VerifyNameMatch(SequenceValueFromString(&invalid),
                                SequenceValueFromString(&invalid)));
   std::string normalized_der;
-  EXPECT_FALSE(
-      NormalizeName(SequenceValueFromString(&invalid), &normalized_der));
+  CertErrors errors;
+  EXPECT_FALSE(NormalizeName(SequenceValueFromString(&invalid), &normalized_der,
+                             &errors));
 }
 
 TEST(VerifyNameMatchInvalidDataTest, FailOnRdnNotSet) {
@@ -446,8 +454,9 @@ TEST(VerifyNameMatchInvalidDataTest, FailOnRdnNotSet) {
   EXPECT_FALSE(VerifyNameMatch(SequenceValueFromString(&invalid),
                                SequenceValueFromString(&invalid)));
   std::string normalized_der;
-  EXPECT_FALSE(
-      NormalizeName(SequenceValueFromString(&invalid), &normalized_der));
+  CertErrors errors;
+  EXPECT_FALSE(NormalizeName(SequenceValueFromString(&invalid), &normalized_der,
+                             &errors));
 }
 
 TEST(VerifyNameMatchInvalidDataTest, FailOnEmptyRdn) {
@@ -457,8 +466,9 @@ TEST(VerifyNameMatchInvalidDataTest, FailOnEmptyRdn) {
   EXPECT_FALSE(VerifyNameMatch(SequenceValueFromString(&invalid),
                                SequenceValueFromString(&invalid)));
   std::string normalized_der;
-  EXPECT_FALSE(
-      NormalizeName(SequenceValueFromString(&invalid), &normalized_der));
+  CertErrors errors;
+  EXPECT_FALSE(NormalizeName(SequenceValueFromString(&invalid), &normalized_der,
+                             &errors));
 }
 
 // Matching should fail if a BMPString contains surrogates.
@@ -476,8 +486,9 @@ TEST(VerifyNameMatchInvalidDataTest, FailOnBmpStringSurrogates) {
   EXPECT_FALSE(VerifyNameMatch(SequenceValueFromString(&invalid),
                                SequenceValueFromString(&invalid)));
   std::string normalized_der;
-  EXPECT_FALSE(
-      NormalizeName(SequenceValueFromString(&invalid), &normalized_der));
+  CertErrors errors;
+  EXPECT_FALSE(NormalizeName(SequenceValueFromString(&invalid), &normalized_der,
+                             &errors));
 }
 
 TEST(VerifyNameMatchTest, EmptyNameMatching) {
@@ -488,8 +499,9 @@ TEST(VerifyNameMatchTest, EmptyNameMatching) {
                               SequenceValueFromString(&empty)));
   // An empty name normalized is unchanged.
   std::string normalized_empty_der;
-  EXPECT_TRUE(
-      NormalizeName(SequenceValueFromString(&empty), &normalized_empty_der));
+  CertErrors errors;
+  EXPECT_TRUE(NormalizeName(SequenceValueFromString(&empty),
+                            &normalized_empty_der, &errors));
   EXPECT_EQ(SequenceValueFromString(&empty), der::Input(&normalized_empty_der));
 
   // An empty name is not equal to non-empty name.
@@ -573,13 +585,15 @@ TEST(NameNormalizationTest, TestEverything) {
   std::string raw_der;
   ASSERT_TRUE(LoadTestData("unicode", "mixed", "unnormalized", &raw_der));
   std::string normalized_der;
-  ASSERT_TRUE(
-      NormalizeName(SequenceValueFromString(&raw_der), &normalized_der));
+  CertErrors errors;
+  ASSERT_TRUE(NormalizeName(SequenceValueFromString(&raw_der), &normalized_der,
+                            &errors));
   EXPECT_EQ(SequenceValueFromString(&expected_normalized_der),
             der::Input(&normalized_der));
   // Re-normalizing an already normalized Name should not change it.
   std::string renormalized_der;
-  ASSERT_TRUE(NormalizeName(der::Input(&normalized_der), &renormalized_der));
+  ASSERT_TRUE(
+      NormalizeName(der::Input(&normalized_der), &renormalized_der, &errors));
   EXPECT_EQ(normalized_der, renormalized_der);
 }
 

@@ -169,8 +169,8 @@ if (is_android) {
     # abi in 64-bit Monochrome and WebView.
     build_apk_secondary_abi = true
 
-    # Enables java8 language features (via retrolambda).
-    # work-in-progress (http://crbug.com/642600)
+    # Enables java8 language features (via Desugar).
+    # work-in-progress (http://crbug.com/730711)
     use_java8 = false
 
     # Build incremental targets whenever possible.

@@ -212,11 +212,39 @@ OPENSSL_EXPORT _STACK *sk_deep_copy(const _STACK *sk,
  * This set of macros is used to emit the typed functions that act on a
  * |STACK_OF(T)|. */
 
+#if !defined(BORINGSSL_NO_CXX)
+extern "C++" {
+namespace bssl {
+namespace internal {
+template <typename T>
+struct StackTraits {};
+}
+}
+}
+
+#define BORINGSSL_DEFINE_STACK_TRAITS(name, type, is_const) \
+  extern "C++" {                                            \
+  namespace bssl {                                          \
+  namespace internal {                                      \
+  template <>                                               \
+  struct StackTraits<STACK_OF(name)> {                      \
+    static constexpr bool kIsStack = true;                  \
+    using Type = type;                                      \
+    static constexpr bool kIsConst = is_const;              \
+  };                                                        \
+  }                                                         \
+  }                                                         \
+  }
+
+#else
+#define BORINGSSL_DEFINE_STACK_TRAITS(name, type, is_const)
+#endif
+
 /* Stack functions must be tagged unused to support file-local stack types.
  * Clang's -Wunused-function only allows unused static inline functions if they
  * are defined in a header. */
 
-#define DEFINE_STACK_OF_IMPL(name, ptrtype, constptrtype)                      \
+#define BORINGSSL_DEFINE_STACK_OF_IMPL(name, ptrtype, constptrtype)            \
   DECLARE_STACK_OF(name);                                                      \
                                                                                \
   typedef int (*stack_##name##_cmp_func)(constptrtype *a, constptrtype *b);    \
@@ -323,19 +351,22 @@ OPENSSL_EXPORT _STACK *sk_deep_copy(const _STACK *sk,
 
 /* DEFINE_STACK_OF defines |STACK_OF(type)| to be a stack whose elements are
  * |type| *. */
-#define DEFINE_STACK_OF(type) DEFINE_STACK_OF_IMPL(type, type *, const type *)
+#define DEFINE_STACK_OF(type)                                \
+  BORINGSSL_DEFINE_STACK_OF_IMPL(type, type *, const type *) \
+  BORINGSSL_DEFINE_STACK_TRAITS(type, type, false)
 
 /* DEFINE_CONST_STACK_OF defines |STACK_OF(type)| to be a stack whose elements
  * are const |type| *. */
-#define DEFINE_CONST_STACK_OF(type) \
-  DEFINE_STACK_OF_IMPL(type, const type *, const type *)
+#define DEFINE_CONST_STACK_OF(type)                                \
+  BORINGSSL_DEFINE_STACK_OF_IMPL(type, const type *, const type *) \
+  BORINGSSL_DEFINE_STACK_TRAITS(type, const type, true)
 
 /* DEFINE_SPECIAL_STACK_OF defines |STACK_OF(type)| to be a stack whose elements
  * are |type|, where |type| must be a typedef for a pointer. */
 #define DEFINE_SPECIAL_STACK_OF(type)                          \
   OPENSSL_COMPILE_ASSERT(sizeof(type) == sizeof(void *),       \
                          special_stack_of_non_pointer_##type); \
-  DEFINE_STACK_OF_IMPL(type, type, const type)
+  BORINGSSL_DEFINE_STACK_OF_IMPL(type, type, const type)
 
 
 typedef char *OPENSSL_STRING;
@@ -346,6 +377,109 @@ DEFINE_SPECIAL_STACK_OF(OPENSSL_STRING)
 
 #if defined(__cplusplus)
 }  /* extern C */
+#endif
+
+#if !defined(BORINGSSL_NO_CXX)
+extern "C++" {
+
+#include <type_traits>
+
+namespace bssl {
+
+namespace internal {
+
+// Stacks defined with |DEFINE_CONST_STACK_OF| are freed with |sk_free|.
+template <typename Stack>
+struct DeleterImpl<
+    Stack, typename std::enable_if<StackTraits<Stack>::kIsConst>::type> {
+  static void Free(Stack *sk) { sk_free(reinterpret_cast<_STACK *>(sk)); }
+};
+
+// Stacks defined with |DEFINE_STACK_OF| are freed with |sk_pop_free| and the
+// corresponding type's deleter.
+template <typename Stack>
+struct DeleterImpl<
+    Stack, typename std::enable_if<!StackTraits<Stack>::kIsConst>::type> {
+  static void Free(Stack *sk) {
+    sk_pop_free(
+        reinterpret_cast<_STACK *>(sk),
+        reinterpret_cast<void (*)(void *)>(
+            DeleterImpl<typename StackTraits<Stack>::Type>::Free));
+  }
+};
+
+template <typename Stack>
+class StackIteratorImpl {
+ public:
+  using Type = typename StackTraits<Stack>::Type;
+  // Iterators must be default-constructable.
+  StackIteratorImpl() : sk_(nullptr), idx_(0) {}
+  StackIteratorImpl(const Stack *sk, size_t idx) : sk_(sk), idx_(idx) {}
+
+  bool operator==(StackIteratorImpl other) const {
+    return sk_ == other.sk_ && idx_ == other.idx_;
+  }
+  bool operator!=(StackIteratorImpl other) const {
+    return !(*this == other);
+  }
+
+  Type *operator*() const {
+    return reinterpret_cast<Type *>(
+        sk_value(reinterpret_cast<const _STACK *>(sk_), idx_));
+  }
+
+  StackIteratorImpl &operator++(/* prefix */) {
+    idx_++;
+    return *this;
+  }
+
+  StackIteratorImpl operator++(int /* postfix */) {
+    StackIteratorImpl copy(*this);
+    ++(*this);
+    return copy;
+  }
+
+ private:
+  const Stack *sk_;
+  size_t idx_;
+};
+
+template <typename Stack>
+using StackIterator = typename std::enable_if<StackTraits<Stack>::kIsStack,
+                                              StackIteratorImpl<Stack>>::type;
+
+}  // namespace internal
+
+// PushToStack pushes |elem| to |sk|. It returns true on success and false on
+// allocation failure.
+template <typename Stack>
+static inline
+    typename std::enable_if<!internal::StackTraits<Stack>::kIsConst, bool>::type
+    PushToStack(Stack *sk,
+                UniquePtr<typename internal::StackTraits<Stack>::Type> elem) {
+  if (!sk_push(reinterpret_cast<_STACK *>(sk), elem.get())) {
+    return false;
+  }
+  // sk_push takes ownership on success.
+  elem.release();
+  return true;
+}
+
+}  // namespace bssl
+
+// Define begin() and end() for stack types so C++ range for loops work.
+template <typename Stack>
+static inline bssl::internal::StackIterator<Stack> begin(const Stack *sk) {
+  return bssl::internal::StackIterator<Stack>(sk, 0);
+}
+
+template <typename Stack>
+static inline bssl::internal::StackIterator<Stack> end(const Stack *sk) {
+  return bssl::internal::StackIterator<Stack>(
+      sk, sk_num(reinterpret_cast<const _STACK *>(sk)));
+}
+
+}  // extern C++
 #endif
 
 #endif  /* OPENSSL_HEADER_STACK_H */

@@ -1040,7 +1040,7 @@ bool GetSwapInfoImpl(SwapInfo* swap_info) {
     use_new_zram_interface = PathExists(zram_mm_stat_file);
   }
 
-  if (!use_new_zram_interface) {
+  if (!use_new_zram_interface.value()) {
     ParseZramPath(swap_info);
     return true;
   }

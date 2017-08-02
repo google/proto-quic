@@ -3,11 +3,7 @@
 var protocol = location.protocol.replace('http', 'ws');
 var url = protocol + '//' + location.host + '/echo-with-no-extension';
 
-// TODO(ricea): The limit for ws: is 255, but wss: gets a limit of 30
-// (per-host:port, not ip:port!) because it still uses the HTTP pool code. This
-// should be fixed at some point. When it is, change this number back to 50 (or
-// even larger, if it works).
-const SOCKETS_TO_OPEN = 30;
+const SOCKETS_TO_OPEN = 255;
 
 // PARALLELISM limits the number of connections we try to open simultaneously.
 // This avoids triggering the throttling added in http://crrev.com/972963002,
@@ -43,5 +39,5 @@ for (var i = 0; i < PARALLELISM; ++i) {
 setTimeout(function() {
   console.log("Got stuck after " + connected + " socket(s) connected");
   document.title = "FAIL";
-}, 5000);
+}, 11000);
 </script>

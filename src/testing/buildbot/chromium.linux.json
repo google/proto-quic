@@ -539,7 +539,7 @@
               "name": "shard #${SHARD_INDEX} logcats"
             }
           ],
-          "shards": 6
+          "shards": 8
         },
         "test": "content_browsertests"
       },
@@ -613,7 +613,7 @@
               "device_type": "hammerhead"
             }
           ],
-          "hard_timeout": 600,
+          "hard_timeout": 960,
           "output_links": [
             {
               "link": [
@@ -1594,7 +1594,7 @@
               "device_type": "hammerhead"
             }
           ],
-          "hard_timeout": 960,
+          "hard_timeout": 1500,
           "output_links": [
             {
               "link": [
@@ -2181,7 +2181,7 @@
               "name": "shard #${SHARD_INDEX} logcats"
             }
           ],
-          "shards": 6
+          "shards": 8
         },
         "test": "content_browsertests"
       },
@@ -2255,7 +2255,7 @@
               "device_type": "hammerhead"
             }
           ],
-          "hard_timeout": 600,
+          "hard_timeout": 960,
           "output_links": [
             {
               "link": [
@@ -3236,7 +3236,7 @@
               "device_type": "hammerhead"
             }
           ],
-          "hard_timeout": 960,
+          "hard_timeout": 1500,
           "output_links": [
             {
               "link": [
@@ -3496,7 +3496,7 @@
     "gtest_tests": [
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "base_unittests"
       },
@@ -3514,31 +3514,31 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "cacheinvalidation_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "capture_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "cast_alsa_cma_backend_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "cast_base_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "cast_crash_unittests"
       },
@@ -3550,7 +3550,7 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "cast_media_unittests"
       },
@@ -3568,7 +3568,7 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "cast_shell_unittests"
       },
@@ -3583,97 +3583,97 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "content_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "crypto_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "gpu_ipc_service_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "gpu_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "ipc_tests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "jingle_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "libjingle_xmpp_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "media_blink_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "media_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "midi_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "net_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "sandbox_linux_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "sql_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "storage_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "ui_base_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "url_unittests"
       }

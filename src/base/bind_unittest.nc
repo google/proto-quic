@@ -70,7 +70,7 @@ template <typename T>
 void VoidPolymorphic1(T t) {
 }
 
-#if defined(NCTEST_METHOD_ON_CONST_OBJECT)  // [r"fatal error: call to pointer to member function of type 'void \(\)' drops 'const' qualifier"]
+#if defined(NCTEST_METHOD_ON_CONST_OBJECT)  // [r"fatal error: static_assert failed \"|Param| needs to be constructible from |Unwrapped| type\.\""]
 
 // Method bound to const-object.
 //
@@ -107,7 +107,7 @@ void WontCompile() {
   no_ref_const_cb.Run();
 }
 
-#elif defined(NCTEST_CONST_POINTER)  // [r"fatal error: cannot initialize a parameter of type 'base::NoRef \*' with an lvalue of type 'const base::NoRef \*const'"]
+#elif defined(NCTEST_CONST_POINTER)  // [r"fatal error: static_assert failed \"|Param| needs to be constructible from |Unwrapped| type\.\""]
 
 // Const argument used with non-const pointer parameter of same type.
 //
@@ -119,7 +119,7 @@ void WontCompile() {
   pointer_same_cb.Run();
 }
 
-#elif defined(NCTEST_CONST_POINTER_SUBTYPE)  // [r"fatal error: cannot initialize a parameter of type 'base::NoRefParent \*' with an lvalue of type 'const base::NoRefChild \*const'"]
+#elif defined(NCTEST_CONST_POINTER_SUBTYPE)  // [r"fatal error: static_assert failed \"|Param| needs to be constructible from |Unwrapped| type\.\""]
 
 // Const argument used with non-const pointer parameter of super type.
 //
@@ -148,7 +148,7 @@ void WontCompile() {
   ref_arg_cb.Run(p);
 }
 
-#elif defined(NCTEST_DISALLOW_BIND_TO_NON_CONST_REF_PARAM)  // [r"fatal error: binding value of type 'const base::Parent' to reference to type 'base::Parent' drops 'const' qualifier"]
+#elif defined(NCTEST_DISALLOW_BIND_TO_NON_CONST_REF_PARAM)  // [r"fatal error: static_assert failed \"|Param| needs to be constructible from |Unwrapped| type\.\""]
 
 // Binding functions with reference parameters, unsupported.
 //
@@ -270,6 +270,25 @@ void WontCompile() {
 void WontCompile() {
   const OnceClosure cb = Bind([] {});
   std::move(cb).Run();
+}
+
+#elif defined(NCTEST_DISALLOW_BIND_ONCECALLBACK)  // [r"fatal error: static_assert failed \"BindRepeating cannot bind OnceCallback. Use BindOnce with std::move\(\)\.\""]
+
+void WontCompile() {
+  Bind(BindOnce([](int) {}), 42);
+}
+
+#elif defined(NCTEST_DISALLOW_BINDONCE_LVALUE_ONCECALLBACK)  // [r"fatal error: static_assert failed \"BindOnce requires non-const rvalue for OnceCallback binding\."]
+void WontCompile() {
+  auto cb = BindOnce([](int) {});
+  BindOnce(cb, 42);
+}
+
+#elif defined(NCTEST_DISALLOW_BINDONCE_RVALUE_CONST_ONCECALLBACK)  // [r"fatal error: static_assert failed \"BindOnce requires non-const rvalue for OnceCallback binding\."]
+
+void WontCompile() {
+  const auto cb = BindOnce([](int) {});
+  BindOnce(std::move(cb), 42);
 }
 
 #endif

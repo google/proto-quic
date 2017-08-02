@@ -107,6 +107,10 @@ extern "C" {
 #elif defined(__myriad2__)
 #define OPENSSL_32_BIT
 #else
+/* Note BoringSSL only supports standard 32-bit and 64-bit two's-complement,
+ * little-endian architectures. Functions will not produce the correct answer
+ * on other systems. Run the crypto_test binary, notably
+ * crypto/compiler_test.cc, before adding a new architecture. */
 #error "Unknown target CPU"
 #endif
 
@@ -317,7 +321,6 @@ typedef struct spake2_ctx_st SPAKE2_CTX;
 typedef struct srtp_protection_profile_st SRTP_PROTECTION_PROFILE;
 typedef struct ssl_cipher_st SSL_CIPHER;
 typedef struct ssl_ctx_st SSL_CTX;
-typedef struct ssl_custom_extension SSL_CUSTOM_EXTENSION;
 typedef struct ssl_method_st SSL_METHOD;
 typedef struct ssl_private_key_method_st SSL_PRIVATE_KEY_METHOD;
 typedef struct ssl_session_st SSL_SESSION;
@@ -341,6 +344,9 @@ typedef void *OPENSSL_BLOCK;
 
 #if defined(__cplusplus)
 }  /* extern C */
+#elif !defined(BORINGSSL_NO_CXX)
+#define BORINGSSL_NO_CXX
+#endif
 
 // MSVC doesn't set __cplusplus to 201103 to indicate C++11 support (see
 // https://connect.microsoft.com/VisualStudio/feedback/details/763051/a-value-of-predefined-macro-cplusplus-is-still-199711l)
@@ -365,19 +371,18 @@ extern "C++" {
 #if defined(BORINGSSL_NO_CXX)
 
 #define BORINGSSL_MAKE_DELETER(type, deleter)
-#define BORINGSSL_MAKE_STACK_DELETER(type, deleter)
 
 #else
 
 extern "C++" {
 
-#include <memory>
-
 namespace bssl {
 
 namespace internal {
 
-template <typename T>
+// The Enable parameter is ignored and only exists so specializations can use
+// SFINAE.
+template <typename T, typename Enable = void>
 struct DeleterImpl {};
 
 template <typename T>
@@ -427,18 +432,6 @@ class StackAllocated {
   };                                              \
   }
 
-// This makes a unique_ptr to STACK_OF(type) that owns all elements on the
-// stack, i.e. it uses sk_pop_free() to clean up.
-#define BORINGSSL_MAKE_STACK_DELETER(type, deleter) \
-  namespace internal {                              \
-  template <>                                       \
-  struct DeleterImpl<STACK_OF(type)> {              \
-    static void Free(STACK_OF(type) *ptr) {         \
-      sk_##type##_pop_free(ptr, deleter);           \
-    }                                               \
-  };                                                \
-  }
-
 // Holds ownership of heap-allocated BoringSSL structures. Sample usage:
 //   bssl::UniquePtr<RSA> rsa(RSA_new());
 //   bssl::UniquePtr<BIO> bio(BIO_new(BIO_s_mem()));
@@ -450,7 +443,5 @@ using UniquePtr = std::unique_ptr<T, internal::Deleter<T>>;
 }  /* extern C++ */
 
 #endif  // !BORINGSSL_NO_CXX
-
-#endif
 
 #endif  /* OPENSSL_HEADER_BASE_H */

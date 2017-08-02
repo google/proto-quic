@@ -47,6 +47,10 @@ a sledge hammer.
             =1 {Maybe I'll get one laser.}
             other {Maybe I'll get # lasers.}}
           </message>
+          <message name="IDS_PLURALS_NO_SPACE" desc="A string using the ICU plural format with no space">
+            {NUM_MISSISSIPPIS, plural,
+            =1{OneMississippi}other{ManyMississippis}}
+          </message>
         </messages>
         """)
 
@@ -67,6 +71,10 @@ a sledge hammer."</string>
 <plurals name="plurals">
   <item quantity="one">"Maybe I\'ll get one laser."</item>
   <item quantity="other">"Maybe I\'ll get %d lasers."</item>
+</plurals>
+<plurals name="plurals_no_space">
+  <item quantity="one">"OneMississippi"</item>
+  <item quantity="other">"ManyMississippis"</item>
 </plurals>
 </resources>
 """

@@ -36,7 +36,6 @@ media.mse_cases,"crouleau@chromium.org, videostack-eng@google.com",Internals>Med
 media.tough_video_cases,crouleau@chromium.org,Internals>Media
 media.tough_video_cases_tbmv2,"johnchen@chromium.org, crouleau@chromium.org",Internals>Media
 media_perftests,crouleau@chromium.org,
-memory.blink_memory_mobile,bashi@chromium.org,
 memory.desktop,erikchen@chromium.org,
 memory.long_running_idle_gmail_background_tbmv2,ulan@chromium.org,
 memory.long_running_idle_gmail_tbmv2,ulan@chromium.org,

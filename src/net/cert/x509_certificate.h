@@ -221,9 +221,11 @@ class NET_EXPORT X509Certificate
   bool HasExpired() const;
 
   // Returns true if this object and |other| represent the same certificate.
+  // Does not consider any associated intermediates.
   bool Equals(const X509Certificate* other) const;
 
-  // Returns intermediate certificates added via AddIntermediateCertificate().
+  // Returns the associated intermediate certificates that were specified
+  // during creation of this object, if any.
   // Ownership follows the "get" rule: it is the caller's responsibility to
   // retain the elements of the result.
   const OSCertHandles& GetIntermediateCertificates() const {
@@ -262,7 +264,7 @@ class NET_EXPORT X509Certificate
   // Encodes the entire certificate chain (this certificate and any
   // intermediate certificates stored in |intermediate_ca_certs_|) as a series
   // of PEM encoded strings. Returns true if all certificates were encoded,
-  // storig the result in |*pem_encoded|, with this certificate stored as
+  // storing the result in |*pem_encoded|, with this certificate stored as
   // the first element.
   bool GetPEMEncodedChain(std::vector<std::string>* pem_encoded) const;
 

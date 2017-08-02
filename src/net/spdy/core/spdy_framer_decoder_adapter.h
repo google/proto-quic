@@ -82,6 +82,9 @@ class SpdyFramerDecoderAdapter {
   // Returns the estimate of dynamically allocated memory in bytes.
   virtual size_t EstimateMemoryUsage() const = 0;
 
+  // Get (and lazily initialize) the HPACK decoder state.
+  virtual HpackDecoderAdapter* GetHpackDecoder() = 0;
+
  private:
   SpdyFramerVisitorInterface* visitor_ = nullptr;
   SpdyFramerDebugVisitorInterface* debug_visitor_ = nullptr;

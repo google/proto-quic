@@ -1003,16 +1003,18 @@ void QuicStreamFactory::OnJobComplete(Job* job, int rv) {
 
   ServerIDRequestsMap::iterator requests_iter =
       job_requests_map_.find(server_id);
-  DCHECK(requests_iter != job_requests_map_.end());
+  // TODO(xunjieli): Change following CHECKs back to DCHECKs after
+  // crbug.com/750271 is fixed.
+  CHECK(requests_iter != job_requests_map_.end());
   if (rv == OK) {
     set_require_confirmation(false);
 
     if (!requests_iter->second.empty()) {
       SessionMap::iterator session_it = active_sessions_.find(server_id);
-      DCHECK(session_it != active_sessions_.end());
+      CHECK(session_it != active_sessions_.end());
       QuicChromiumClientSession* session = session_it->second;
       for (QuicStreamRequest* request : requests_iter->second) {
-        DCHECK(request->server_id() == server_id);
+        CHECK(request->server_id() == server_id);
         // Do not notify |request| yet.
         request->SetSession(session->CreateHandle());
       }

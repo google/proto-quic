@@ -149,6 +149,7 @@
 #include <openssl/hmac.h>
 #include <openssl/lhash.h>
 #include <openssl/pem.h>
+#include <openssl/span.h>
 #include <openssl/ssl3.h>
 #include <openssl/thread.h>
 #include <openssl/tls1.h>
@@ -1349,8 +1350,9 @@ OPENSSL_EXPORT int SSL_CIPHER_get_bits(const SSL_CIPHER *cipher,
  *   be used.
  *
  * Unknown rules are silently ignored by legacy APIs, and rejected by APIs with
- * "strict" in the name, which should be preferred. Cipher lists can be long and
- * it's easy to commit typos.
+ * "strict" in the name, which should be preferred. Cipher lists can be long
+ * and it's easy to commit typos. Strict functions will also reject the use of
+ * spaces, semi-colons and commas as alternative separators.
  *
  * The special |@STRENGTH| directive will sort all enabled ciphers by strength.
  *
@@ -1368,7 +1370,7 @@ OPENSSL_EXPORT int SSL_CIPHER_get_bits(const SSL_CIPHER *cipher,
  *   [ECDHE-ECDSA-CHACHA20-POLY1305|ECDHE-ECDSA-AES128-GCM-SHA256]
  *
  * Once an equal-preference group is used, future directives must be
- * opcode-less.
+ * opcode-less. Inside an equal-preference group, spaces are not allowed.
  *
  * TLS 1.3 ciphers do not participate in this mechanism and instead have a
  * built-in preference order. Functions to set cipher lists do not affect TLS
@@ -2517,7 +2519,8 @@ OPENSSL_EXPORT int SSL_set_tlsext_host_name(SSL *ssl, const char *name);
 
 /* SSL_get_servername, for a server, returns the hostname supplied by the
  * client or NULL if there was none. The |type| argument must be
- * |TLSEXT_NAMETYPE_host_name|. */
+ * |TLSEXT_NAMETYPE_host_name|. Note that the returned pointer points inside
+ * |ssl| and is only valid until the next operation on |ssl|. */
 OPENSSL_EXPORT const char *SSL_get_servername(const SSL *ssl, const int type);
 
 /* SSL_get_servername_type, for a server, returns |TLSEXT_NAMETYPE_host_name|
@@ -3983,8 +3986,12 @@ OPENSSL_EXPORT SSL_SESSION *SSL_get1_session(SSL *ssl);
  * This structures are exposed for historical reasons, but access to them is
  * deprecated. */
 
+/* TODO(davidben): Opaquify most or all of |SSL_CTX| and |SSL_SESSION| so these
+ * forward declarations are not needed. */
 typedef struct ssl_protocol_method_st SSL_PROTOCOL_METHOD;
 typedef struct ssl_x509_method_st SSL_X509_METHOD;
+
+DECLARE_STACK_OF(SSL_CUSTOM_EXTENSION)
 
 struct ssl_cipher_st {
   /* name is the OpenSSL name for the cipher. */
@@ -4169,8 +4176,6 @@ struct ssl_cipher_preference_list_st {
   uint8_t *in_group_flags;
 };
 
-DECLARE_STACK_OF(SSL_CUSTOM_EXTENSION)
-
 /* ssl_ctx_st (aka |SSL_CTX|) contains configuration common to several SSL
  * connections. */
 struct ssl_ctx_st {
@@ -4282,7 +4287,7 @@ struct ssl_ctx_st {
   uint32_t mode;
   uint32_t max_cert_list;
 
-  struct cert_st /* CERT */ *cert;
+  struct cert_st *cert;
 
   /* callback that allows applications to peek at protocol messages */
   void (*msg_callback)(int write_p, int version, int content_type,
@@ -4578,6 +4583,8 @@ struct ssl_ctx_st {
 #if defined(__cplusplus)
 } /* extern C */
 
+#if !defined(BORINGSSL_NO_CXX)
+
 extern "C++" {
 
 namespace bssl {
@@ -4586,9 +4593,69 @@ BORINGSSL_MAKE_DELETER(SSL, SSL_free)
 BORINGSSL_MAKE_DELETER(SSL_CTX, SSL_CTX_free)
 BORINGSSL_MAKE_DELETER(SSL_SESSION, SSL_SESSION_free)
 
+enum class OpenRecordResult {
+  kOK,
+  kDiscard,
+  kIncompleteRecord,
+  kAlertCloseNotify,
+  kAlertFatal,
+  kError,
+};
+
+/*  *** EXPERIMENTAL -- DO NOT USE ***
+ *
+ * OpenRecord decrypts the first complete SSL record from |in| in-place, sets
+ * |out| to the decrypted application data, and |out_record_len| to the length
+ * of the encrypted record. Returns:
+ * - kOK if an application-data record was successfully decrypted and verified.
+ * - kDiscard if a record was sucessfully processed, but should be discarded.
+ * - kIncompleteRecord if |in| did not contain a complete record.
+ * - kAlertCloseNotify if a record was successfully processed but is a
+ *   close_notify alert.
+ * - kAlertFatal if a record was successfully processed but is a fatal alert.
+ * - kError if an error occurred or the record is invalid. |*out_alert| will be
+ *   set to an alert to emit. */
+OPENSSL_EXPORT OpenRecordResult OpenRecord(SSL *ssl, Span<uint8_t> *out,
+                                           size_t *out_record_len,
+                                           uint8_t *out_alert,
+                                           Span<uint8_t> in);
+
+OPENSSL_EXPORT size_t SealRecordPrefixLen(const SSL *ssl, size_t plaintext_len);
+
+/* SealRecordSuffixLen returns the length of the suffix written by |SealRecord|.
+ *
+ * |plaintext_len| must be equal to the size of the plaintext passed to
+ * |SealRecord|.
+ *
+ * |plaintext_len| must not exceed |SSL3_RT_MAX_PLAINTEXT_LENGTH|. The returned
+ * suffix length will not exceed |SSL3_RT_MAX_ENCRYPTED_OVERHEAD|. */
+OPENSSL_EXPORT size_t SealRecordSuffixLen(const SSL *ssl, size_t plaintext_len);
+
+/*  *** EXPERIMENTAL -- DO NOT USE ***
+ *
+ * SealRecord encrypts the cleartext of |in| and scatters the resulting TLS
+ * application data record between |out_prefix|, |out|, and |out_suffix|. It
+ * returns true on success or false if an error occurred.
+ *
+ * The length of |out_prefix| must equal |SealRecordPrefixLen|. The length of
+ * |out| must equal the length of |in|, which must not exceed
+ * |SSL3_RT_MAX_PLAINTEXT_LENGTH|. The length of |out_suffix| must equal
+ * |SealRecordSuffixLen|.
+ *
+ * If enabled, |SealRecord| may perform TLS 1.0 CBC 1/n-1 record splitting.
+ * |SealRecordPrefixLen| accounts for the required overhead if that is the case.
+ *
+ * |out| may equal |in| to encrypt in-place but may not otherwise alias.
+ * |out_prefix| and |out_suffix| may not alias anything. */
+OPENSSL_EXPORT bool SealRecord(SSL *ssl, Span<uint8_t> out_prefix,
+                               Span<uint8_t> out, Span<uint8_t> out_suffix,
+                               Span<const uint8_t> in);
+
 }  // namespace bssl
 
 }  /* extern C++ */
+
+#endif  // !defined(BORINGSSL_NO_CXX)
 
 #endif
 

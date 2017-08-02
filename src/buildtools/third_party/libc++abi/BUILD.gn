@@ -4,7 +4,9 @@
 
 source_set("libc++abi") {
   visibility = [ "//buildtools/third_party/libc++" ]
-  if (is_linux && current_cpu == "arm") {
+
+  # This condition should match the one in build/config/c++.
+  if ((is_linux && current_cpu == "arm") || is_fuchsia) {
     deps = [
       "//buildtools/third_party/libunwind",
     ]
@@ -32,7 +34,9 @@ source_set("libc++abi") {
     "trunk/src/stdlib_stdexcept.cpp",
     "trunk/src/stdlib_typeinfo.cpp",
   ]
-  if (is_posix && !is_mac) {
+  # This file should really be included on linux as well, but that
+  # would introduce an unwanted glibc 2.18 dependency.
+  if (is_posix && !is_mac && !is_linux) {
     sources += [ "trunk/src/cxa_thread_atexit.cpp" ]
   }
   configs -= [

@@ -85,7 +85,7 @@ template("mac_toolchain") {
     }
 
     # Supports building with the version of clang shipped with Xcode when
-    # targetting iOS by not respecting clang_base_path.
+    # targeting iOS by not respecting clang_base_path.
     if (toolchain_args.current_os == "ios" && use_xcode_clang) {
       prefix = ""
     } else {

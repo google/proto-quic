@@ -45,7 +45,7 @@ _CHROME_TO_ANDROID_LOCALE_MAP = {
 #     unzip -l $FILE_AP_ | cut -c31- | grep res/draw | cut -d'/' -f 2 | sort \
 #     | uniq | grep -- -tvdpi- | cut -c10-
 # and then manually sorted.
-# Note that we can't just do a cross-product of dimentions because the filenames
+# Note that we can't just do a cross-product of dimensions because the filenames
 # become too big and aapt fails to create the files.
 # This leaves all default drawables (mdpi) in the main apk. Android gets upset
 # though if any drawables are missing from the default drawables/ directory.

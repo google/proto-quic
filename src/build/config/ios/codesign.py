@@ -309,7 +309,7 @@ class CodeSignBundleAction(Action):
         help='disable code signature')
     parser.add_argument(
         '--platform', '-t', required=True,
-        help='platform the signed bundle is targetting')
+        help='platform the signed bundle is targeting')
     parser.set_defaults(no_signature=False)
 
   @staticmethod

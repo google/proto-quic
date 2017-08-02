@@ -3150,6 +3150,11 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="1" label="Has worked at least once"/>
 </enum>
 
+<enum name="BooleanExceeded">
+  <int value="0" label="Not exceeded"/>
+  <int value="1" label="Exceeded"/>
+</enum>
+
 <enum name="BooleanExists">
   <int value="0" label="Does not exist"/>
   <int value="1" label="Exists"/>
@@ -22876,6 +22881,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="-1302904242" label="enable-navigation-tracing"/>
   <int value="-1289678848" label="SystemDownloadManager:enabled"/>
   <int value="-1285021473" label="save-page-as-mhtml"/>
+  <int value="-1284637134" label="pull-to-refresh"/>
   <int value="-1276912933" label="enable-quick-unlock-pin"/>
   <int value="-1271563519" label="enable-appcontainer"/>
   <int value="-1269084216" label="ash-md"/>
@@ -22996,6 +23002,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="-898499262" label="ImprovedA2HS:enabled"/>
   <int value="-898005938" label="disable-pinch-virtual-viewport"/>
   <int value="-894214299" label="fill-on-account-select:enabled"/>
+  <int value="-894185031" label="HighDynamicRange:disabled"/>
   <int value="-891856063" label="MidiManagerAndroid:enabled"/>
   <int value="-885601782" label="enable-contextual-search"/>
   <int value="-884864731" label="WebPaymentsSingleAppUiSkip:enabled"/>
@@ -23187,6 +23194,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="-250721831" label="AndroidAutofillAccessibility:disabled"/>
   <int value="-248223420" label="AutofillKeyboardAccessory:disabled"/>
   <int value="-241353344" label="MidiManagerWinrt:disabled"/>
+  <int value="-239616243" label="HighDynamicRange:enabled"/>
   <int value="-234966279" label="PointerEvent:disabled"/>
   <int value="-234687894"
       label="NonValidatingReloadOnRefreshContentV2:disabled"/>
@@ -23205,6 +23213,7 @@ uploading your change for review.  These are checked by presubmit scripts.
   <int value="-192389983" label="NoStatePrefetch:enabled"/>
   <int value="-183246373" label="enable-multilingual-spellchecker"/>
   <int value="-181093956" label="ScrollAnchoring:enabled"/>
+  <int value="-170986053" label="EnableManualFallbacksFilling:enabled"/>
   <int value="-165756594" label="enable-touch-feedback"/>
   <int value="-159877930" label="MaterialDesignUserManager:disabled"/>
   <int value="-158549277" label="enable-embeddedsearch-api"/>
@@ -23911,6 +23920,7 @@ from previous Chrome versions.
   <int value="2137347307" label="enable-drive-apps-in-app-list"/>
   <int value="2137599770" label="enable-win32k-renderer-lockdown"/>
   <int value="2141463681" label="enable-offer-upload-credit-cards"/>
+  <int value="2142979536" label="EnableManualFallbacksFilling:disabled"/>
 </enum>
 
 <enum name="LoginDatabaseInitError">
@@ -25795,6 +25805,7 @@ from previous Chrome versions.
   <int value="10" label="HEVC"/>
   <int value="11" label="AC3"/>
   <int value="12" label="DOLBYVISION"/>
+  <int value="13" label="FLAC"/>
 </enum>
 
 <enum name="MultiAccountUpdateBubbleUserAction">
@@ -28426,6 +28437,7 @@ from previous Chrome versions.
   <int value="5" label="Add new note"/>
   <int value="6" label="Magnifying glass mode"/>
   <int value="7" label="Laser pointer mode"/>
+  <int value="8" label="Assistant mode"/>
 </enum>
 
 <enum name="PanningModelType">
@@ -29352,6 +29364,14 @@ from previous Chrome versions.
   <int value="1" label="Safe"/>
   <int value="2" label="Low reputation"/>
   <int value="3" label="Phishing"/>
+</enum>
+
+<enum name="PasswordProtectionWarningAction">
+  <int value="0" label="Shown"/>
+  <int value="1" label="Change password"/>
+  <int value="2" label="Ignore"/>
+  <int value="3" label="Close"/>
+  <int value="4" label="Mark as legitimate"/>
 </enum>
 
 <enum name="PasswordReusePasswordFieldDetected">
@@ -33713,6 +33733,7 @@ from previous Chrome versions.
   <int value="25" label="BACKGROUND_FETCH_FAIL"/>
   <int value="26" label="BACKGROUND_FETCHED"/>
   <int value="27" label="NAVIGATION_HINT"/>
+  <int value="28" label="CAN_MAKE_PAYMENT"/>
 </enum>
 
 <enum name="ServiceWorkerPreparationType">
@@ -35976,6 +35997,7 @@ from previous Chrome versions.
   <int value="9" label="Content setting: wildcard update (Deprecated)"/>
   <int value="10" label="UI Suppressed (Smart Logic)"/>
   <int value="11" label="Content setting: allowed while UI suppressed"/>
+  <int value="12" label="Forced filtering toggled on via devtools"/>
 </enum>
 
 <enum name="SubresourceFilterActivationDecision">
@@ -36039,17 +36061,27 @@ from previous Chrome versions.
   <int value="2" label="Load failed"/>
 </enum>
 
+<!--
+These values are based on the server-side type AnswerTriggererKey. Note that not
+all of the types are launched in Chrome but if they're sent erroneously, it
+would be helpful to identify which type is being sent.
+-->
+
 <enum name="SuggestionAnswerType">
   <summary>Type of Answer shown in omnibox suggestion list.</summary>
+  <int value="0" label="Invalid (unknown type)"/>
   <int value="1" label="Dictionary"/>
   <int value="2" label="Finance"/>
   <int value="3" label="Knowledge graph"/>
+  <int value="4" label="Local"/>
   <int value="5" label="Sports"/>
   <int value="6" label="Sunrise"/>
   <int value="7" label="Translation"/>
   <int value="8" label="Weather"/>
   <int value="9" label="When is"/>
   <int value="10" label="Currency"/>
+  <int value="11" label="Local time"/>
+  <int value="12" label="Play install"/>
 </enum>
 
 <enum name="SuggestionsResponseState">

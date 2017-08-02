@@ -1190,10 +1190,10 @@ if (enable_java_templates) {
         defined(invoker.supports_android) && invoker.supports_android &&
         (is_java_debug || dcheck_always_on)
 
-    _retrolambda =
+    _desugar =
         defined(invoker.supports_android) && invoker.supports_android &&
         ((defined(invoker.process_java8) && invoker.process_java8) || use_java8)
-
+  
     _deps = []
     _previous_output_jar = _input_jar_path
 
@@ -1269,14 +1269,17 @@ if (enable_java_templates) {
       _previous_output_jar = _assert_output_jar
     }
 
-    if (_retrolambda) {
-      _retrolambda_target = "${target_name}__retrolambda"
-      _retrolambda_input_jar = _previous_output_jar
-      _retrolambda_output_jar = "$target_out_dir/$target_name-retrolambda.jar"
+    assert(!defined(invoker.alternative_android_sdk_ijar) ||
+        invoker.alternative_android_sdk_ijar != "")
+    assert(!defined(invoker.alternative_android_sdk_ijar_dep) ||
+        invoker.alternative_android_sdk_ijar_dep != "")
+    if (_desugar) {
+      _desugar_target = "${target_name}__desugar"
+      _desugar_input_jar = _previous_output_jar
+      _desugar_output_jar = "$target_out_dir/$target_name-desugar.jar"
 
-      android_sdk_jar = "$android_sdk/android.jar"
-      action(_retrolambda_target) {
-        script = "//build/android/gyp/retrolambda.py"
+      action(_desugar_target) {
+        script = "//build/android/gyp/desugar.py"
         deps = _deps
         if (defined(invoker.deps)) {
           deps += invoker.deps
@@ -1286,27 +1289,35 @@ if (enable_java_templates) {
         }
         inputs = [
           _build_config,
-          _retrolambda_input_jar,
+          _desugar_input_jar,
         ]
         outputs = [
-          _retrolambda_output_jar,
+          _desugar_output_jar,
         ]
+        if (defined(invoker.alternative_android_sdk_ijar)) {
+          deps += [ invoker.alternative_android_sdk_ijar_dep ]
+          _android_sdk_ijar = invoker.alternative_android_sdk_ijar
+        } else {
+          deps += [ "//build/android:android_ijar" ]
+          _android_sdk_ijar = "$root_out_dir/lib.java/android.interface.jar"
+        }
+        inputs += [ _android_sdk_ijar ]
         args = [
           "--input-jar",
-          rebase_path(_retrolambda_input_jar, root_build_dir),
+          rebase_path(_desugar_input_jar, root_build_dir),
           "--output-jar",
-          rebase_path(_retrolambda_output_jar, root_build_dir),
+          rebase_path(_desugar_output_jar, root_build_dir),
           "--classpath=@FileArg($_rebased_build_config:javac:classpath)",
-          "--android-sdk-jar",
-          rebase_path(android_sdk_jar, root_build_dir),
+          "--bootclasspath-entry",
+          rebase_path(_android_sdk_ijar, root_build_dir),
         ]
       }
 
       _deps = []
-      _deps = [ ":$_retrolambda_target" ]
-      _previous_output_jar = _retrolambda_output_jar
+      _deps = [ ":$_desugar_target" ]
+      _previous_output_jar = _desugar_output_jar
     }
-
+    
     _output_jar_target = "${target_name}__copy"
     copy(_output_jar_target) {
       deps = _deps
@@ -1401,7 +1412,7 @@ if (enable_java_templates) {
   #   native_lib_placeholders: List of placeholder filenames to add to the apk
   #     (optional).
   #   native_libs: List of native libraries.
-  #   native_libs_filearg: @FileArg() of additionaly native libraries.
+  #   native_libs_filearg: @FileArg() of additionally native libraries.
   #   write_asset_list: Adds an extra file to the assets, which contains a list of
   #     all other asset files.
   template("package_apk") {
@@ -2053,8 +2064,8 @@ if (enable_java_templates) {
       forward_variables_from(invoker,
                              [
                                "jar_excluded_patterns",
-                               "strip_resource_classes",
                                "process_java8",
+                               "strip_resource_classes",
                              ])
 
       visibility = [
@@ -2346,7 +2357,12 @@ if (enable_java_templates) {
     }
 
     process_java_prebuilt(_process_prebuilt_target_name) {
-      forward_variables_from(invoker, [ "jar_excluded_patterns" ])
+      forward_variables_from(invoker,
+                             [
+                               "alternative_android_sdk_ijar",
+                               "alternative_android_sdk_ijar_dep",
+                               "jar_excluded_patterns",
+                             ])
       supports_android = _supports_android
       build_config = _build_config
       input_jar_path = _javac_jar_path

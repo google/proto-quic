@@ -6,11 +6,20 @@
 
 #include <magenta/syscalls.h>
 
+#include "base/logging.h"
+
 namespace base {
 
 // static
 int64_t SysInfo::AmountOfPhysicalMemoryImpl() {
   return mx_system_get_physmem();
+}
+
+// static
+int64_t SysInfo::AmountOfAvailablePhysicalMemoryImpl() {
+  // TODO(fuchsia): https://crbug.com/706592 This is not exposed.
+  NOTREACHED();
+  return 0;
 }
 
 // static

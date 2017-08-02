@@ -443,7 +443,7 @@ QuicChromiumClientSession::StreamRequest::~StreamRequest() {
   if (stream_)
     stream_->Reset(QUIC_STREAM_CANCELLED);
 
-  if (session_->IsConnected())
+  if (session_)
     session_->CancelRequest(this);
 }
 
@@ -482,8 +482,13 @@ void QuicChromiumClientSession::StreamRequest::OnRequestCompleteFailure(
     int rv) {
   DCHECK_EQ(STATE_REQUEST_STREAM_COMPLETE, next_state_);
   // This method is called even when the request completes synchronously.
-  if (callback_)
-    DoCallback(rv);
+  if (callback_) {
+    // Avoid re-entrancy if the callback calls into the session.
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
+        FROM_HERE,
+        base::Bind(&QuicChromiumClientSession::StreamRequest::DoCallback,
+                   weak_factory_.GetWeakPtr(), rv));
+  }
 }
 
 void QuicChromiumClientSession::StreamRequest::OnIOComplete(int rv) {

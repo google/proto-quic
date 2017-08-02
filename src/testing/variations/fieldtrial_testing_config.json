@@ -816,6 +816,24 @@
             ]
         }
     ],
+    "EnableDialLocalDiscovery": [
+        {
+            "platforms": [
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "EnableDialLocalDiscovery"
+                    ]
+                }
+            ]
+        }
+    ],
     "EnableGoogleCachedCopyTextExperiment": [
         {
             "platforms": [
@@ -860,26 +878,6 @@
             "experiments": [
                 {
                     "name": "Enabled"
-                }
-            ]
-        }
-    ],
-    "EnableSyncUSSDeviceInfo": [
-        {
-            "platforms": [
-                "android",
-                "chromeos",
-                "ios",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled",
-                    "enable_features": [
-                        "EnableSyncUSSDeviceInfo"
-                    ]
                 }
             ]
         }
@@ -1311,6 +1309,32 @@
                     },
                     "enable_features": [
                         "MacAllowBackgroundingProcesses"
+                    ]
+                }
+            ]
+        }
+    ],
+    "MaxDelayableRequestsNetworkOverride": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "MaxDelayable4",
+                    "params": {
+                        "MaxBDPKBits1": "10",
+                        "MaxBDPKBits2": "5000",
+                        "MaxDelayableRequests1": "10",
+                        "MaxDelayableRequests2": "4",
+                        "MaxEffectiveConnectionType": "3G"
+                    },
+                    "enable_features": [
+                        "MaxDelayableRequestsNetworkOverride"
                     ]
                 }
             ]

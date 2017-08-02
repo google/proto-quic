@@ -826,10 +826,7 @@ int HttpCache::DoneWithResponseHeaders(ActiveEntry* entry,
     return OK;
   }
 
-  // TODO(crbug.com/715913, crbug.com/715974, crbug.com/715920,
-  // crbug.com/715911): Convert the CHECKs in this function to DCHECKs once
-  // canary is clear of any crashes.
-  CHECK_EQ(entry->headers_transaction, transaction);
+  DCHECK_EQ(entry->headers_transaction, transaction);
 
   entry->headers_transaction = nullptr;
 
@@ -841,7 +838,20 @@ int HttpCache::DoneWithResponseHeaders(ActiveEntry* entry,
     // Partial requests may have write mode even when there is a writer present
     // since they may be reader for a particular range and writer for another
     // range.
-    CHECK(is_partial || (!entry->writer && entry->done_headers_queue.empty()));
+    if (!is_partial) {
+      // TODO(shivanisha): Convert these to DCHECKs after crbug.com/750725 is
+      // fixed.
+      CHECK(!entry->writer)
+          << "Writer's mode: " << entry->writer->mode() << " entry: " << entry
+          << " writer's entry: " << entry->writer->entry();
+      CHECK(entry->done_headers_queue.empty())
+          << "done_headers_queue size: " << entry->done_headers_queue.size()
+          << " first element's mode: "
+          << (*(entry->done_headers_queue.begin()))->mode()
+          << " first element's entry: "
+          << (*(entry->done_headers_queue.begin()))->entry()
+          << " entry: " << entry;
+    }
 
     if (!entry->writer) {
       entry->writer = transaction;
@@ -852,8 +862,8 @@ int HttpCache::DoneWithResponseHeaders(ActiveEntry* entry,
 
   // If this is not the first transaction in done_headers_queue, it should be a
   // read-mode transaction except if it is a partial request.
-  CHECK(is_partial || (entry->done_headers_queue.empty() ||
-                       !(transaction->mode() & Transaction::WRITE)));
+  DCHECK(is_partial || (entry->done_headers_queue.empty() ||
+                        !(transaction->mode() & Transaction::WRITE)));
 
   entry->done_headers_queue.push_back(transaction);
   ProcessQueuedTransactions(entry);

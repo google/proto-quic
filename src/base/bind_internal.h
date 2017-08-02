@@ -243,6 +243,9 @@ struct FunctorTraits<Callback<R(Args...), copy_mode, repeat_mode>> {
   }
 };
 
+template <typename Functor>
+using MakeFunctorTraits = FunctorTraits<typename std::decay<Functor>::type>;
+
 // InvokeHelper<>
 //
 // There are 2 logical InvokeHelper<> specializations: normal, WeakCalls.
@@ -258,7 +261,7 @@ template <typename ReturnType>
 struct InvokeHelper<false, ReturnType> {
   template <typename Functor, typename... RunArgs>
   static inline ReturnType MakeItSo(Functor&& functor, RunArgs&&... args) {
-    using Traits = FunctorTraits<typename std::decay<Functor>::type>;
+    using Traits = MakeFunctorTraits<Functor>;
     return Traits::Invoke(std::forward<Functor>(functor),
                           std::forward<RunArgs>(args)...);
   }
@@ -278,7 +281,7 @@ struct InvokeHelper<true, ReturnType> {
                               RunArgs&&... args) {
     if (!weak_ptr)
       return;
-    using Traits = FunctorTraits<typename std::decay<Functor>::type>;
+    using Traits = MakeFunctorTraits<Functor>;
     Traits::Invoke(std::forward<Functor>(functor),
                    std::forward<BoundWeakPtr>(weak_ptr),
                    std::forward<RunArgs>(args)...);
@@ -325,8 +328,7 @@ struct Invoker<StorageType, R(UnboundArgs...)> {
                           BoundArgsTuple&& bound,
                           IndexSequence<indices...>,
                           UnboundArgs&&... unbound_args) {
-    static constexpr bool is_method =
-        FunctorTraits<typename std::decay<Functor>::type>::is_method;
+    static constexpr bool is_method = MakeFunctorTraits<Functor>::is_method;
 
     using DecayedArgsTuple = typename std::decay<BoundArgsTuple>::type;
     static constexpr bool is_weak_call =
@@ -342,16 +344,35 @@ struct Invoker<StorageType, R(UnboundArgs...)> {
   }
 };
 
-// Used to implement MakeUnboundRunType.
+// Extracts necessary type info from Functor and BoundArgs.
+// Used to implement MakeUnboundRunType, BindOnce and BindRepeating.
 template <typename Functor, typename... BoundArgs>
-struct MakeUnboundRunTypeImpl {
-  using RunType =
-      typename FunctorTraits<typename std::decay<Functor>::type>::RunType;
+struct BindTypeHelper {
+  static constexpr size_t num_bounds = sizeof...(BoundArgs);
+  using FunctorTraits = MakeFunctorTraits<Functor>;
+
+  // Example:
+  //   When Functor is `double (Foo::*)(int, const std::string&)`, and BoundArgs
+  //   is a template pack of `Foo*` and `int16_t`:
+  //    - RunType is `double(Foo*, int, const std::string&)`,
+  //    - ReturnType is `double`,
+  //    - RunParamsList is `TypeList<Foo*, int, const std::string&>`,
+  //    - BoundParamsList is `TypeList<Foo*, int>`,
+  //    - UnboundParamsList is `TypeList<const std::string&>`,
+  //    - BoundArgsList is `TypeList<Foo*, int16_t>`,
+  //    - UnboundRunType is `double(const std::string&)`.
+  using RunType = typename FunctorTraits::RunType;
   using ReturnType = ExtractReturnType<RunType>;
-  using Args = ExtractArgs<RunType>;
-  using UnboundArgs = DropTypeListItem<sizeof...(BoundArgs), Args>;
-  using Type = MakeFunctionType<ReturnType, UnboundArgs>;
+
+  using RunParamsList = ExtractArgs<RunType>;
+  using BoundParamsList = TakeTypeListItem<num_bounds, RunParamsList>;
+  using UnboundParamsList = DropTypeListItem<num_bounds, RunParamsList>;
+
+  using BoundArgsList = TypeList<BoundArgs...>;
+
+  using UnboundRunType = MakeFunctionType<ReturnType, UnboundParamsList>;
 };
+
 template <typename Functor>
 typename std::enable_if<FunctorTraits<Functor>::is_nullable, bool>::type
 IsNull(const Functor& functor) {
@@ -504,10 +525,10 @@ struct MakeBindStateTypeImpl<true, Functor, Receiver, BoundArgs...> {
 };
 
 template <typename Functor, typename... BoundArgs>
-using MakeBindStateType = typename MakeBindStateTypeImpl<
-    FunctorTraits<typename std::decay<Functor>::type>::is_method,
-    Functor,
-    BoundArgs...>::Type;
+using MakeBindStateType =
+    typename MakeBindStateTypeImpl<MakeFunctorTraits<Functor>::is_method,
+                                   Functor,
+                                   BoundArgs...>::Type;
 
 }  // namespace internal
 
@@ -515,7 +536,7 @@ using MakeBindStateType = typename MakeBindStateTypeImpl<
 // E.g. MakeUnboundRunType<R(A, B, C), A, B> is evaluated to R(C).
 template <typename Functor, typename... BoundArgs>
 using MakeUnboundRunType =
-    typename internal::MakeUnboundRunTypeImpl<Functor, BoundArgs...>::Type;
+    typename internal::BindTypeHelper<Functor, BoundArgs...>::UnboundRunType;
 
 }  // namespace base
 

@@ -555,7 +555,7 @@ other_pids=
 while [ -n "$i" ]; do
   # Identify processes by the inode number of their root directory. Then
   # remove all processes that we know belong to other sessions. We use
-  # "sort | uniq -u" to do what amounts to a "set substraction operation".
+  # "sort | uniq -u" to do what amounts to a "set subtraction operation".
   pids=$({ ls -id1 /proc/*/root/. 2>/dev/null |
          sed -e 's,^[^0-9]*'$i'.*/\([1-9][0-9]*\)/.*$,\1,
                  t

@@ -9,7 +9,6 @@ for more details about the presubmit API built into depot_tools.
 """
 
 import os
-import sys
 
 
 def _CommonChecks(input_api, output_api):
@@ -35,11 +34,14 @@ def _GetPathsToPrepend(input_api):
       chromium_src_dir, 'third_party', 'catapult', 'experimental')
   tracing_dir = input_api.os_path.join(
       chromium_src_dir, 'third_party', 'catapult', 'tracing')
+  py_utils_dir = input_api.os_path.join(
+      chromium_src_dir, 'third_party', 'catapult', 'common', 'py_utils')
   return [
       telemetry_dir,
       input_api.os_path.join(telemetry_dir, 'third_party', 'mock'),
       experimental_dir,
       tracing_dir,
+      py_utils_dir
   ]
 
 
@@ -77,35 +79,24 @@ def _CheckPerfJsonUpToDate(input_api, output_api):
 
 def _CheckWprShaFiles(input_api, output_api):
   """Check whether the wpr sha files have matching URLs."""
-  old_sys_path = sys.path
-  try:
-    perf_dir = input_api.PresubmitLocalPath()
-    py_utils_path = os.path.abspath(os.path.join(
-        perf_dir, '..', '..', 'third_party', 'catapult', 'common', 'py_utils'))
-    sys.path.insert(1, py_utils_path)
-    from py_utils import cloud_storage  # pylint: disable=import-error
-  finally:
-    sys.path = old_sys_path
+  perf_dir = input_api.PresubmitLocalPath()
 
   results = []
+  wpr_archive_shas = []
   for affected_file in input_api.AffectedFiles(include_deletes=False):
     filename = affected_file.AbsoluteLocalPath()
-    if not filename.endswith('wpr.sha1'):
+    if not filename.endswith('.sha1'):
       continue
-    expected_hash = cloud_storage.ReadHash(filename)
-    is_wpr_file_uploaded = any(
-        cloud_storage.Exists(bucket, expected_hash)
-        for bucket in cloud_storage.BUCKET_ALIASES.itervalues())
-    if not is_wpr_file_uploaded:
-      wpr_filename = filename[:-5]
-      results.append(output_api.PresubmitError(
-          'The file matching %s is not in Cloud Storage yet.\n'
-          'You can upload your new WPR archive file with the command:\n'
-          'depot_tools/upload_to_google_storage.py --bucket '
-          '<Your pageset\'s bucket> %s.\nFor more info: see '
-          'http://www.chromium.org/developers/telemetry/'
-          'record_a_page_set#TOC-Upload-the-recording-to-Cloud-Storage' %
-          (filename, wpr_filename)))
+    wpr_archive_shas.append(filename)
+
+  out, return_code = _RunArgs([
+      input_api.python_executable,
+      input_api.os_path.join(perf_dir, 'validate_wpr_archives')] +
+      wpr_archive_shas,
+      input_api)
+  if return_code:
+    results.append(output_api.PresubmitError(
+        'Validating WPR archives failed:', long_text=out))
   return results
 
 

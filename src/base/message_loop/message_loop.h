@@ -167,29 +167,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate,
   void RemoveDestructionObserver(DestructionObserver* destruction_observer);
 
   // Deprecated: use RunLoop instead.
-  //
-  // Signals the Run method to return when it becomes idle. It will continue to
-  // process pending messages and future messages as long as they are enqueued.
-  // Warning: if the MessageLoop remains busy, it may never quit. Only use this
-  // Quit method when looping procedures (such as web pages) have been shut
-  // down.
-  //
-  // This method may only be called on the same thread that called Run, and Run
-  // must still be on the call stack.
-  //
-  // Use QuitClosure variants if you need to Quit another thread's MessageLoop,
-  // but note that doing so is fairly dangerous if the target thread makes
-  // nested calls to MessageLoop::Run.  The problem being that you won't know
-  // which nested run loop you are quitting, so be careful!
-  void QuitWhenIdle();
-
-  // Deprecated: use RunLoop instead.
-  //
-  // This method is a variant of Quit, that does not wait for pending messages
-  // to be processed before returning from Run.
-  void QuitNow();
-
-  // Deprecated: use RunLoop instead.
   // Construct a Closure that will call QuitWhenIdle(). Useful to schedule an
   // arbitrary MessageLoop to QuitWhenIdle.
   static Closure QuitWhenIdleClosure();

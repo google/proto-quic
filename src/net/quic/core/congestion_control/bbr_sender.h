@@ -242,6 +242,10 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   // dropped below the target window.
   QuicByteCount bytes_acked_since_queue_drained_;
 
+  // The muliplier for calculating the max amount of extra CWND to add to
+  // compensate for ack aggregation.
+  float max_aggregation_bytes_multiplier_;
+
   // Minimum RTT estimate.  Automatically expires within 10 seconds (and
   // triggers PROBE_RTT mode) if no new value is sampled during that period.
   QuicTime::Delta min_rtt_;

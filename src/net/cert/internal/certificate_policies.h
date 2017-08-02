@@ -15,6 +15,8 @@
 
 namespace net {
 
+class CertErrors;
+
 // Returns the DER-encoded OID, without tag or length, of the anyPolicy
 // certificate policy defined in RFC 5280 section 4.2.1.4.
 NET_EXPORT const der::Input AnyPolicy();
@@ -45,11 +47,16 @@ NET_EXPORT der::Input PolicyMappingsOid();
 // otherwise the unrecognized qualifiers wil be skipped and not parsed
 // any further.
 //
-// The returned values is only valid as long as |extension_value| is.
+// Returns true on success. On failure returns false and may add errors to
+// |errors|, which must be non-null.
+//
+// The values in |policies| are only valid as long as |extension_value| is (as
+// it references data).
 NET_EXPORT bool ParseCertificatePoliciesExtension(
     const der::Input& extension_value,
     bool fail_parsing_unknown_qualifier_oids,
-    std::vector<der::Input>* policies);
+    std::vector<der::Input>* policies,
+    CertErrors* errors);
 
 struct ParsedPolicyConstraints {
   bool has_require_explicit_policy = false;

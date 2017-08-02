@@ -55,7 +55,6 @@ $L$prologue:
 	mov	r9d,DWORD[20+rdi]
 	mov	r10d,DWORD[24+rdi]
 	mov	r11d,DWORD[28+rdi]
-
 	jmp	NEAR $L$loop
 
 ALIGN	16

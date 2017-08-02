@@ -20,7 +20,8 @@
 
 namespace net {
 
-DEFINE_CERT_ERROR_ID(kRsaModulusTooSmall, "RSA modulus too small");
+DEFINE_CERT_ERROR_ID(SimplePathBuilderDelegate::kRsaModulusTooSmall,
+                     "RSA modulus too small");
 
 namespace {
 

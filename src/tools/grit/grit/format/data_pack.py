@@ -21,13 +21,15 @@ from grit.node import message
 from grit.node import structure
 
 
-PACK_FILE_VERSION = 4
-HEADER_LENGTH = 2 * 4 + 1  # Two uint32s. (file version, number of entries) and
-                           # one uint8 (encoding of text resources)
+PACK_FILE_VERSION = 5
 BINARY, UTF8, UTF16 = range(3)
 
 
 class WrongFileVersion(Exception):
+  pass
+
+
+class CorruptDataPack(Exception):
   pass
 
 
@@ -49,56 +51,100 @@ def Format(root, lang='en', output_dir='.'):
 
 
 def ReadDataPack(input_file):
+  return ReadDataPackFromString(util.ReadFile(input_file, util.BINARY))
+
+
+def ReadDataPackFromString(data):
   """Reads a data pack file and returns a dictionary."""
-  data = util.ReadFile(input_file, util.BINARY)
   original_data = data
 
   # Read the header.
-  version, num_entries, encoding = struct.unpack('<IIB', data[:HEADER_LENGTH])
-  if version != PACK_FILE_VERSION:
-    print 'Wrong file version in ', input_file
-    raise WrongFileVersion
+  version = struct.unpack('<I', data[:4])[0]
+  if version == 4:
+    resource_count, encoding = struct.unpack('<IB', data[4:9])
+    alias_count = 0
+    data = data[9:]
+  elif version == 5:
+    encoding, resource_count, alias_count = struct.unpack('<BxxxHH', data[4:12])
+    data = data[12:]
+  else:
+    raise WrongFileVersion('Found version: ' + str(version))
 
   resources = {}
-  if num_entries == 0:
-    return DataPackContents(resources, encoding)
-
-  # Read the index and data.
-  data = data[HEADER_LENGTH:]
   kIndexEntrySize = 2 + 4  # Each entry is a uint16 and a uint32.
-  for _ in range(num_entries):
-    id, offset = struct.unpack('<HI', data[:kIndexEntrySize])
-    data = data[kIndexEntrySize:]
-    next_id, next_offset = struct.unpack('<HI', data[:kIndexEntrySize])
-    resources[id] = original_data[offset:next_offset]
+  def entry_at_index(idx):
+    offset = idx * kIndexEntrySize
+    return struct.unpack('<HI', data[offset:offset + kIndexEntrySize])
+
+  prev_resource_id, prev_offset = entry_at_index(0)
+  for i in xrange(1, resource_count + 1):
+    resource_id, offset = entry_at_index(i)
+    resources[prev_resource_id] = original_data[prev_offset:offset]
+    prev_resource_id, prev_offset = resource_id, offset
+
+  # Read the alias table.
+  alias_data = data[(resource_count + 1) * kIndexEntrySize:]
+  kAliasEntrySize = 2 + 2  # uint16, uint16
+  def alias_at_index(idx):
+    offset = idx * kAliasEntrySize
+    return struct.unpack('<HH', alias_data[offset:offset + kAliasEntrySize])
+
+  for i in xrange(alias_count):
+    resource_id, index = alias_at_index(i)
+    aliased_id = entry_at_index(index)[0]
+    resources[resource_id] = resources[aliased_id]
 
   return DataPackContents(resources, encoding)
 
 
 def WriteDataPackToString(resources, encoding):
   """Returns a string with a map of id=>data in the data pack format."""
-  ids = sorted(resources.keys())
   ret = []
 
+  # Compute alias map.
+  resource_ids = sorted(resources)
+  # Use reversed() so that for duplicates lower IDs clobber higher ones.
+  id_by_data = {resources[k]: k for k in reversed(resource_ids)}
+  # Map of resource_id -> resource_id, where value < key.
+  alias_map = {k: id_by_data[v] for k, v in resources.iteritems()
+               if id_by_data[v] != k}
+
   # Write file header.
-  ret.append(struct.pack('<IIB', PACK_FILE_VERSION, len(ids), encoding))
-  HEADER_LENGTH = 2 * 4 + 1            # Two uint32s and one uint8.
+  resource_count = len(resources) - len(alias_map)
+  # Padding bytes added for alignment.
+  ret.append(struct.pack('<IBxxxHH', PACK_FILE_VERSION, encoding,
+                         resource_count, len(alias_map)))
+  HEADER_LENGTH = 4 + 4 + 2 + 2
 
-  # Each entry is a uint16 + a uint32s. We have one extra entry for the last
-  # item.
-  index_length = (len(ids) + 1) * (2 + 4)
+  # Each main table entry is: uint16 + uint32 (and an extra entry at the end).
+  # Each alias table entry is: uint16 + uint16.
+  data_offset = HEADER_LENGTH + (resource_count + 1) * 6 + len(alias_map) * 4
 
-  # Write index.
-  data_offset = HEADER_LENGTH + index_length
-  for id in ids:
-    ret.append(struct.pack('<HI', id, data_offset))
-    data_offset += len(resources[id])
+  # Write main table.
+  index_by_id = {}
+  deduped_data = []
+  index = 0
+  for resource_id in resource_ids:
+    if resource_id in alias_map:
+      continue
+    data = resources[resource_id]
+    index_by_id[resource_id] = index
+    ret.append(struct.pack('<HI', resource_id, data_offset))
+    data_offset += len(data)
+    deduped_data.append(data)
+    index += 1
 
+  assert index == resource_count
+  # Add an extra entry at the end.
   ret.append(struct.pack('<HI', 0, data_offset))
 
+  # Write alias table.
+  for resource_id in sorted(alias_map):
+    index = index_by_id[alias_map[resource_id]]
+    ret.append(struct.pack('<HH', resource_id, index))
+
   # Write data.
-  for id in ids:
-    ret.append(resources[id])
+  ret.extend(deduped_data)
   return ''.join(ret)
 
 

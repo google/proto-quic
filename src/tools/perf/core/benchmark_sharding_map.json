@@ -48,7 +48,6 @@
       "benchmarks": [
         "blink_perf.shadow_dom",
         "dromaeo.domcorequery",
-        "memory.blink_memory_mobile",
         "page_cycler_v2.intl_ko_th_vi",
         "power.idle_platform",
         "smoothness.gpu_rasterization_and_decoding.image_decoding_cases",
@@ -279,7 +278,6 @@
       "benchmarks": [
         "blink_perf.shadow_dom",
         "dromaeo.domcorequery",
-        "memory.blink_memory_mobile",
         "page_cycler_v2.intl_ko_th_vi",
         "power.idle_platform",
         "smoothness.gpu_rasterization_and_decoding.image_decoding_cases",
@@ -505,7 +503,6 @@
         "battor.steady_state",
         "blink_perf.canvas",
         "blink_perf.paint",
-        "memory.blink_memory_mobile",
         "power.idle_platform",
         "smoothness.image_decoding_cases",
         "start_with_ext.warm.blank_page"
@@ -716,7 +713,6 @@
       "benchmarks": [
         "blink_perf.shadow_dom",
         "dromaeo.domcorequery",
-        "memory.blink_memory_mobile",
         "page_cycler_v2.intl_ko_th_vi",
         "power.idle_platform",
         "smoothness.gpu_rasterization_and_decoding.image_decoding_cases",
@@ -942,7 +938,6 @@
         "battor.steady_state",
         "blink_perf.canvas",
         "blink_perf.paint",
-        "memory.blink_memory_mobile",
         "power.idle_platform",
         "smoothness.image_decoding_cases",
         "start_with_ext.warm.blank_page"
@@ -1326,7 +1321,6 @@
       "benchmarks": [
         "blink_perf.shadow_dom",
         "dromaeo.domcorequery",
-        "memory.blink_memory_mobile",
         "page_cycler_v2.intl_ko_th_vi",
         "power.idle_platform",
         "smoothness.gpu_rasterization_and_decoding.image_decoding_cases",
@@ -1382,7 +1376,6 @@
     "build17-b1--device7": {
       "benchmarks": [
         "kraken",
-        "memory.blink_memory_mobile",
         "page_cycler_v2.intl_ko_th_vi",
         "power.idle_platform",
         "start_with_ext.warm.blank_page",
@@ -1615,7 +1608,6 @@
       "benchmarks": [
         "blink_perf.shadow_dom",
         "dromaeo.domcorequery",
-        "memory.blink_memory_mobile",
         "page_cycler_v2.intl_ko_th_vi",
         "power.idle_platform",
         "smoothness.gpu_rasterization_and_decoding.image_decoding_cases",
@@ -1936,7 +1928,6 @@
         "loading.mobile",
         "media.mse_cases",
         "media.tough_video_cases_tbmv2",
-        "memory.blink_memory_mobile",
         "memory.long_running_idle_gmail_tbmv2",
         "memory.top_10_mobile_stress",
         "page_cycler_v2_site_isolation.basic_oopif",
@@ -2103,7 +2094,6 @@
         "loading.mobile",
         "media.mse_cases",
         "media.tough_video_cases_tbmv2",
-        "memory.blink_memory_mobile",
         "memory.long_running_idle_gmail_tbmv2",
         "memory.top_10_mobile_stress",
         "page_cycler_v2_site_isolation.basic_oopif",
@@ -2270,7 +2260,6 @@
         "loading.mobile",
         "media.mse_cases",
         "media.tough_video_cases_tbmv2",
-        "memory.blink_memory_mobile",
         "memory.long_running_idle_gmail_tbmv2",
         "memory.top_10_mobile_stress",
         "page_cycler_v2_site_isolation.basic_oopif",
@@ -2437,7 +2426,6 @@
         "loading.mobile",
         "media.mse_cases",
         "media.tough_video_cases_tbmv2",
-        "memory.blink_memory_mobile",
         "memory.long_running_idle_gmail_tbmv2",
         "memory.top_10_mobile_stress",
         "page_cycler_v2_site_isolation.basic_oopif",
@@ -2604,7 +2592,6 @@
         "loading.mobile",
         "media.mse_cases",
         "media.tough_video_cases_tbmv2",
-        "memory.blink_memory_mobile",
         "memory.long_running_idle_gmail_tbmv2",
         "memory.top_10_mobile_stress",
         "page_cycler_v2_site_isolation.basic_oopif",
@@ -2771,7 +2758,6 @@
         "loading.mobile",
         "media.mse_cases",
         "media.tough_video_cases_tbmv2",
-        "memory.blink_memory_mobile",
         "memory.long_running_idle_gmail_tbmv2",
         "memory.top_10_mobile_stress",
         "page_cycler_v2_site_isolation.basic_oopif",
@@ -2810,7 +2796,6 @@
         "loading.mobile",
         "media.mse_cases",
         "media.tough_video_cases_tbmv2",
-        "memory.blink_memory_mobile",
         "memory.long_running_idle_gmail_tbmv2",
         "memory.top_10_mobile_stress",
         "page_cycler_v2_site_isolation.basic_oopif",
@@ -2978,7 +2963,6 @@
     "build137-b1": {
       "benchmarks": [
         "loading.desktop",
-        "memory.blink_memory_mobile",
         "smoothness.gpu_rasterization.polymer",
         "v8.runtimestats.browsing_mobile_classic"
       ]
@@ -3340,7 +3324,6 @@
         "loading.mobile",
         "media.mse_cases",
         "media.tough_video_cases_tbmv2",
-        "memory.blink_memory_mobile",
         "memory.long_running_idle_gmail_tbmv2",
         "memory.top_10_mobile_stress",
         "page_cycler_v2_site_isolation.basic_oopif",
@@ -3380,7 +3363,6 @@
     "build186-b4": {
       "benchmarks": [
         "loading.desktop",
-        "memory.blink_memory_mobile",
         "smoothness.gpu_rasterization.polymer",
         "v8.runtimestats.browsing_mobile_classic"
       ]
@@ -3743,7 +3725,6 @@
         "loading.mobile",
         "media.mse_cases",
         "media.tough_video_cases_tbmv2",
-        "memory.blink_memory_mobile",
         "memory.long_running_idle_gmail_tbmv2",
         "memory.top_10_mobile_stress",
         "page_cycler_v2_site_isolation.basic_oopif",
@@ -3909,7 +3890,6 @@
         "loading.mobile",
         "media.mse_cases",
         "media.tough_video_cases_tbmv2",
-        "memory.blink_memory_mobile",
         "memory.long_running_idle_gmail_tbmv2",
         "memory.top_10_mobile_stress",
         "page_cycler_v2_site_isolation.basic_oopif",
@@ -4076,7 +4056,6 @@
         "loading.mobile",
         "media.mse_cases",
         "media.tough_video_cases_tbmv2",
-        "memory.blink_memory_mobile",
         "memory.long_running_idle_gmail_tbmv2",
         "memory.top_10_mobile_stress",
         "page_cycler_v2_site_isolation.basic_oopif",
@@ -4244,7 +4223,6 @@
         "loading.mobile",
         "media.mse_cases",
         "media.tough_video_cases_tbmv2",
-        "memory.blink_memory_mobile",
         "memory.long_running_idle_gmail_tbmv2",
         "memory.top_10_mobile_stress",
         "page_cycler_v2_site_isolation.basic_oopif",
@@ -4410,7 +4388,6 @@
         "loading.mobile",
         "media.mse_cases",
         "media.tough_video_cases_tbmv2",
-        "memory.blink_memory_mobile",
         "memory.long_running_idle_gmail_tbmv2",
         "memory.top_10_mobile_stress",
         "page_cycler_v2_site_isolation.basic_oopif",
@@ -4577,7 +4554,6 @@
         "loading.mobile",
         "media.mse_cases",
         "media.tough_video_cases_tbmv2",
-        "memory.blink_memory_mobile",
         "memory.long_running_idle_gmail_tbmv2",
         "memory.top_10_mobile_stress",
         "page_cycler_v2_site_isolation.basic_oopif",
@@ -4745,7 +4721,6 @@
         "loading.mobile",
         "media.mse_cases",
         "media.tough_video_cases_tbmv2",
-        "memory.blink_memory_mobile",
         "memory.long_running_idle_gmail_tbmv2",
         "memory.top_10_mobile_stress",
         "page_cycler_v2_site_isolation.basic_oopif",
@@ -4803,7 +4778,6 @@
     "media.mse_cases",
     "media.tough_video_cases",
     "media.tough_video_cases_tbmv2",
-    "memory.blink_memory_mobile",
     "memory.desktop",
     "memory.long_running_idle_gmail_background_tbmv2",
     "memory.long_running_idle_gmail_tbmv2",

@@ -21,7 +21,7 @@ uint64_t RandUint64() {
 void RandBytes(void* output, size_t output_length) {
   size_t remaining = output_length;
   unsigned char* cur = reinterpret_cast<unsigned char*>(output);
-  do {
+  while (remaining > 0) {
     // The syscall has a maximum number of bytes that can be read at once.
     size_t read_len =
         std::min(remaining, static_cast<size_t>(MX_CPRNG_DRAW_MAX_LEN));
@@ -33,7 +33,7 @@ void RandBytes(void* output, size_t output_length) {
     CHECK(remaining >= actual);
     remaining -= actual;
     cur += actual;
-  } while (remaining > 0);
+  }
 }
 
 }  // namespace base

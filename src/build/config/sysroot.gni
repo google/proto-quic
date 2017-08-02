@@ -85,8 +85,6 @@ if (current_os == target_os && current_cpu == target_cpu &&
   } else {
     sysroot = ""
   }
-  sysroot_stamp = rebase_path("$sysroot/.stamp")
-  sysroot_version = read_file(sysroot_stamp, "trim string")
 } else {
   sysroot = ""
 }

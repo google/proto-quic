@@ -709,6 +709,7 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
     CorruptFrameHeader(&hpack_first_frame_header_);
 
     frame_decoder_.reset(new Http2FrameDecoder(this));
+    hpack_decoder_ = nullptr;
   }
 
   void set_spdy_state(SpdyState v) {
@@ -839,11 +840,11 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
     }
   }
 
-  HpackDecoderAdapter* GetHpackDecoder() {
+  HpackDecoderAdapter* GetHpackDecoder() override {
     if (hpack_decoder_ == nullptr) {
-      hpack_decoder_ = outer_framer_->GetHpackDecoderAdapter();
+      hpack_decoder_ = SpdyMakeUnique<HpackDecoderAdapter>();
     }
-    return hpack_decoder_;
+    return hpack_decoder_.get();
   }
 
   void CommonStartHpackBlock() {
@@ -901,7 +902,6 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
       if (first.type == Http2FrameType::HEADERS && first.IsEndStream()) {
         visitor()->OnStreamEnd(first.stream_id);
       }
-      hpack_decoder_ = nullptr;
       has_hpack_first_frame_header_ = false;
       CorruptFrameHeader(&hpack_first_frame_header_);
     } else {
@@ -917,9 +917,9 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
   // If non-null, unknown frames and settings are passed to the extension.
   ExtensionVisitorInterface* extension_ = nullptr;
 
-  // The HPACK decoder that we're using for the HPACK block that is currently
-  // being decoded. Cleared at the end of the block. Owned by the SpdyFramer.
-  HpackDecoderAdapter* hpack_decoder_ = nullptr;
+  // The HPACK decoder to be used for this adapter. User is responsible for
+  // clearing if the adapter is to be used for another connection.
+  std::unique_ptr<HpackDecoderAdapter> hpack_decoder_ = nullptr;
 
   // The HTTP/2 frame decoder. Accessed via a unique_ptr to allow replacement
   // (e.g. in tests) when Reset() is called.

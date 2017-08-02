@@ -24,7 +24,7 @@ and instructions on how to roll a new toolchain.
 2. Create a CL with updated [MAC|IOS]_TOOLCHAIN_VERSION and _SUB_REVISION in
    src/build/mac_toolchain.py with the version created by the previous command.
 
-3. Run the CL thru the trybots to confirm the roll works.
+3. Run the CL through the trybots to confirm the roll works.
 
 ## Why we use a hermetic toolchain.
 

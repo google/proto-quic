@@ -27,12 +27,17 @@ HEADER = """
 #ifndef SERVICES_METRICS_PUBLIC_CPP_UKM_BUILDERS_H
 #define SERVICES_METRICS_PUBLIC_CPP_UKM_BUILDERS_H
 
+#include <map>
+
 #include "services/metrics/public/cpp/ukm_entry_builder_base.h"
 
 namespace ukm {{
 namespace builders {{
 
 {decls}
+
+typedef std::map<uint64_t, const char*> DecodeMap;
+DecodeMap CreateDecodeMap();
 
 }}  // namespace builders
 }}  // namespace ukm
@@ -53,6 +58,12 @@ namespace builders {{
 
 {impls}
 
+std::map<uint64_t, const char*> CreateDecodeMap() {{
+  return {{
+    {decodes}
+  }};
+}}
+
 }}  // namespace builders
 }}  // namespace ukm
 """
@@ -63,19 +74,24 @@ class {name} : public ::ukm::internal::UkmEntryBuilderBase {{
   {name}(ukm::SourceId source_id);
   ~{name}() override;
 
+  static const char kEntryName[];
+
 {setters}
 }};
 """
 
 SETTER_DECL = """
+  static const char k{metric}Name[];
   {name}& Set{metric}(int64_t value);
 """
 
 BUILDER_IMPL = """
+const char {name}::kEntryName[] = "{raw}";
+
 {name}::{name}(ukm::SourceId source_id) :
   ::ukm::internal::UkmEntryBuilderBase(
       source_id,
-      base::HashMetricName("{raw}")) {{
+      base::HashMetricName(kEntryName)) {{
 }}
 
 {name}::~{name}() = default;
@@ -84,10 +100,21 @@ BUILDER_IMPL = """
 """
 
 SETTER_IMPL = """
+const char {name}::k{metric}Name[] = "{raw}";
+
 {name}& {name}::Set{metric}(int64_t value) {{
-  AddMetric(base::HashMetricName("{raw}"), value);
+  AddMetric(base::HashMetricName(k{metric}Name), value);
   return *this;
 }}
+"""
+
+ENTRY_DECODE = """
+    {{base::HashMetricName({name}::kEntryName), {name}::kEntryName}},
+    {metric_decodes}
+"""
+
+METRIC_DECODE = """
+    {{base::HashMetricName({name}::k{metric}Name), {name}::k{metric}Name}},
 """
 
 parser = argparse.ArgumentParser(description='Generate UKM entry builders')
@@ -128,13 +155,26 @@ def GetBuilderImpl(event):
   return BUILDER_IMPL.format(name=builder_name, raw=event['name'],
                              setters=setters)
 
-def GetBody(data):
-  impls = "\n".join(GetBuilderImpl(event) for event in data['events'])
-  return BODY.format(impls=impls)
-
 def WriteBody(outdir, data):
   output = open(os.path.join(outdir, "ukm_builders.cc"), 'w')
   output.write(GetBody(data))
+
+def GetMetricDecode(builder_name, metric):
+  metric_name = sanitize_name(metric['name'])
+  return METRIC_DECODE.format(name=builder_name, metric=metric_name)
+
+def GetEntryDecode(event):
+  builder_name = sanitize_name(event['name'])
+  metric_decodes = "\n".join(GetMetricDecode(builder_name, metric)
+                             for metric in event['metrics'])
+  return ENTRY_DECODE.format(name=builder_name,
+                             metric_decodes=metric_decodes)
+
+def GetBody(data):
+  impls = "\n".join(GetBuilderImpl(event) for event in data['events'])
+  decodes = "\n".join(GetEntryDecode(event) for event in data['events'])
+  return BODY.format(impls=impls, decodes=decodes)
+
 
 def main(argv):
   args = parser.parse_args()

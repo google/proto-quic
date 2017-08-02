@@ -244,29 +244,17 @@ const Value::ListStorage& Value::GetList() const {
   return *list_;
 }
 
-Value::dict_iterator Value::FindKey(const char* key) {
-  return FindKey(std::string(key));
-}
-
-Value::dict_iterator Value::FindKey(const std::string& key) {
+Value::dict_iterator Value::FindKey(StringPiece key) {
   CHECK(is_dict());
   return dict_iterator(dict_->find(key));
 }
 
-Value::const_dict_iterator Value::FindKey(const char* key) const {
-  return FindKey(std::string(key));
-}
-
-Value::const_dict_iterator Value::FindKey(const std::string& key) const {
+Value::const_dict_iterator Value::FindKey(StringPiece key) const {
   CHECK(is_dict());
   return const_dict_iterator(dict_->find(key));
 }
 
-Value::dict_iterator Value::FindKeyOfType(const char* key, Type type) {
-  return FindKeyOfType(std::string(key), type);
-}
-
-Value::dict_iterator Value::FindKeyOfType(const std::string& key, Type type) {
+Value::dict_iterator Value::FindKeyOfType(StringPiece key, Type type) {
   CHECK(is_dict());
   auto iter = dict_->find(key);
   return dict_iterator((iter != dict_->end() && iter->second->IsType(type))
@@ -274,12 +262,7 @@ Value::dict_iterator Value::FindKeyOfType(const std::string& key, Type type) {
                            : dict_->end());
 }
 
-Value::const_dict_iterator Value::FindKeyOfType(const char* key,
-                                                Type type) const {
-  return FindKeyOfType(std::string(key), type);
-}
-
-Value::const_dict_iterator Value::FindKeyOfType(const std::string& key,
+Value::const_dict_iterator Value::FindKeyOfType(StringPiece key,
                                                 Type type) const {
   CHECK(is_dict());
   auto iter = dict_->find(key);
@@ -288,11 +271,7 @@ Value::const_dict_iterator Value::FindKeyOfType(const std::string& key,
                                                            : dict_->end());
 }
 
-Value::dict_iterator Value::SetKey(const char* key, Value value) {
-  return SetKey(std::string(key), std::move(value));
-}
-
-Value::dict_iterator Value::SetKey(const std::string& key, Value value) {
+Value::dict_iterator Value::SetKey(StringPiece key, Value value) {
   CHECK(is_dict());
   auto iter = dict_->find(key);
   if (iter != dict_->end()) {
@@ -301,7 +280,8 @@ Value::dict_iterator Value::SetKey(const std::string& key, Value value) {
   }
 
   return dict_iterator(
-      dict_->emplace(key, MakeUnique<Value>(std::move(value))).first);
+      dict_->emplace(key.as_string(), MakeUnique<Value>(std::move(value)))
+          .first);
 }
 
 Value::dict_iterator Value::SetKey(std::string&& key, Value value) {
@@ -315,6 +295,10 @@ Value::dict_iterator Value::SetKey(std::string&& key, Value value) {
   return dict_iterator(
       dict_->emplace(std::move(key), MakeUnique<Value>(std::move(value)))
           .first);
+}
+
+Value::dict_iterator Value::SetKey(const char* key, Value value) {
+  return SetKey(StringPiece(key), std::move(value));
 }
 
 Value::dict_iterator Value::DictEnd() {
@@ -686,7 +670,7 @@ DictionaryValue::DictionaryValue() : Value(Type::DICTIONARY) {}
 
 bool DictionaryValue::HasKey(StringPiece key) const {
   DCHECK(IsStringUTF8(key));
-  auto current_entry = dict_->find(key.as_string());
+  auto current_entry = dict_->find(key);
   DCHECK((current_entry == dict_->end()) || current_entry->second);
   return current_entry != dict_->end();
 }
@@ -940,7 +924,7 @@ bool DictionaryValue::GetList(StringPiece path, ListValue** out_value) {
 bool DictionaryValue::GetWithoutPathExpansion(StringPiece key,
                                               const Value** out_value) const {
   DCHECK(IsStringUTF8(key));
-  auto entry_iterator = dict_->find(key.as_string());
+  auto entry_iterator = dict_->find(key);
   if (entry_iterator == dict_->end())
     return false;
 
@@ -1069,7 +1053,7 @@ bool DictionaryValue::RemoveWithoutPathExpansion(
     StringPiece key,
     std::unique_ptr<Value>* out_value) {
   DCHECK(IsStringUTF8(key));
-  auto entry_iterator = dict_->find(key.as_string());
+  auto entry_iterator = dict_->find(key);
   if (entry_iterator == dict_->end())
     return false;
 

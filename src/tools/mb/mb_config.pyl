@@ -102,7 +102,7 @@
       'Android deterministic (dbg)': 'android_debug_bot',
       'Browser Side Navigation Linux': 'release_bot',
       'CFI Linux CF': 'cfi_full_cfi_diag_recover_release_static',
-      'CFI Linux ToT': 'cfi_full_clang_tot_release_static',
+      'CFI Linux ToT': 'clang_tot_cfi_full_cfi_diag_thin_lto_release_static_dcheck_always_on',
       'Chromium Linux Goma Canary': 'release_bot',
       'Chromium Linux Goma Canary': 'release_bot',
       'Chromium Linux Goma Canary (clobber)': 'release_bot',
@@ -437,7 +437,7 @@
       'Win Builder (dbg)': 'debug_bot_x86_minimal_symbols',
       'Win x64 Builder': 'release_bot_minimal_symbols',
       'Win x64 Builder (dbg)': 'debug_bot_minimal_symbols',
-      'WinClang64 (dbg)': 'win_clang_debug_bot',
+      'WinClang64 (dbg)': 'win_clang_release_bot',
     },
 
     'internal.client.kitchensync': {
@@ -647,7 +647,7 @@
       'win_chromium_rel_ng': 'gpu_tests_release_trybot_x86_minimal_symbols',
       'win_chromium_syzyasan_rel': 'syzyasan_no_pch_release_x86',
       'win_chromium_x64_rel_ng': 'release_trybot_minimal_symbols',
-      'win_clang': 'win_clang_debug_bot',
+      'win_clang': 'win_clang_release_bot',
       'win_clang_dbg': 'clang_debug_trybot_x86',
       'win_clang_rel': 'clang_official_release_trybot_x86',
       'win_clang_x64_dbg': 'win_clang_debug_bot',
@@ -991,10 +991,6 @@
       'cfi_full', 'cfi_diag', 'cfi_recover', 'release', 'static',
     ],
 
-    'cfi_full_clang_tot_release_static': [
-      'cfi_full', 'clang_tot', 'release', 'static',
-    ],
-
     'cfi_full_cfi_diag_thin_lto_release_static_dcheck_always_on_goma': [
       'cfi_full', 'cfi_diag', 'thin_lto', 'release', 'static', 'dcheck_always_on', 'goma',
     ],
@@ -1088,6 +1084,10 @@
 
     'clang_tot_asan_lsan_static_release': [
       'clang_tot', 'asan', 'lsan', 'static', 'release',
+    ],
+
+    'clang_tot_cfi_full_cfi_diag_thin_lto_release_static_dcheck_always_on': [
+      'clang_tot', 'cfi_full', 'cfi_diag', 'thin_lto', 'release', 'static', 'dcheck_always_on',
     ],
 
     'clang_tot_edge_ubsan_no_recover_hack_static_release': [
@@ -1548,6 +1548,13 @@
       'no_clang', 'debug_bot', 'minimal_symbols',
     ],
 
+    'win_clang_release_bot': [
+      # Now that the default win bots use clang, use a "clang" bot to make sure
+      # things stay compilable with msvc. TODO(thakis): Having a "clang" bot
+      # check that is very confusing, so rename the bot to "msvc".
+      'no_clang', 'release_bot', 'minimal_symbols',
+    ],
+
     'windows_analyze': [
       'no_symbols', 'no_pch', 'shared', 'x86', 'win_analyze',
     ],
@@ -1634,11 +1641,11 @@
     },
 
     'chrome_pgo_phase_1': {
-      'gn_args': 'chrome_pgo_phase=1',
+      'gn_args': 'chrome_pgo_phase=1 is_clang=false',
     },
 
     'chrome_pgo_phase_2': {
-      'gn_args': 'chrome_pgo_phase=2',
+      'gn_args': 'chrome_pgo_phase=2 is_clang=false',
     },
 
     'chrome_with_codecs': {

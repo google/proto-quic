@@ -4,6 +4,7 @@
 
 #include "net/cert/asn1_util.h"
 
+#include "net/cert/internal/parse_certificate.h"
 #include "net/der/input.h"
 #include "net/der/parser.h"
 
@@ -182,7 +183,6 @@ bool ExtractSubjectPublicKeyFromSPKI(base::StringPiece spki,
   return true;
 }
 
-
 bool ExtractCRLURLsFromDERCert(base::StringPiece cert,
                                std::vector<base::StringPiece>* urls_out) {
   urls_out->clear();
@@ -204,11 +204,8 @@ bool ExtractCRLURLsFromDERCert(base::StringPiece cert,
     if (!extension_parser.ReadTag(der::kOid, &oid))
       return false;
 
-    // kCRLDistributionPointsOID is the DER encoding of the OID for the X.509
     // CRL Distribution Points extension.
-    static const uint8_t kCRLDistributionPointsOID[] = {0x55, 0x1d, 0x1f};
-
-    if (oid != der::Input(kCRLDistributionPointsOID))
+    if (oid != CrlDistributionPointsOid())
       continue;
 
     // critical
@@ -220,91 +217,18 @@ bool ExtractCRLURLsFromDERCert(base::StringPiece cert,
     if (!extension_parser.ReadTag(der::kOctetString, &extension_value))
       return false;
 
-    // RFC 5280, section 4.2.1.13.
-    //
-    // CRLDistributionPoints ::= SEQUENCE SIZE (1..MAX) OF DistributionPoint
-    //
-    // DistributionPoint ::= SEQUENCE {
-    //  distributionPoint       [0]     DistributionPointName OPTIONAL,
-    //  reasons                 [1]     ReasonFlags OPTIONAL,
-    //  cRLIssuer               [2]     GeneralNames OPTIONAL }
+    std::vector<ParsedDistributionPoint> distribution_points;
 
-    der::Parser extension_value_parser(extension_value);
-    der::Parser distribution_points_parser;
-    if (!extension_value_parser.ReadSequence(&distribution_points_parser))
-      return false;
-    if (extension_value_parser.HasMore())
+    if (!ParseCrlDistributionPoints(extension_value, &distribution_points))
       return false;
 
-    while (distribution_points_parser.HasMore()) {
-      der::Parser distrib_point_parser;
-      if (!distribution_points_parser.ReadSequence(&distrib_point_parser))
-        return false;
-
-      der::Input name;
-      if (!distrib_point_parser.ReadOptionalTag(
-              der::kTagContextSpecific | der::kTagConstructed | 0, &name,
-              &present)) {
-        return false;
-      }
-      // If it doesn't contain a name then we skip it.
-      if (!present)
+    for (const auto& dp : distribution_points) {
+      // If the distribution point contains a alternative issuer, skip it.
+      if (dp.has_crl_issuer)
         continue;
 
-      if (!distrib_point_parser.SkipOptionalTag(der::kTagContextSpecific | 1,
-                                                &present)) {
-        return false;
-      }
-      // If it contains a subset of reasons then we skip it. We aren't
-      // interested in subsets of CRLs and the RFC states that there MUST be
-      // a CRL that covers all reasons.
-      if (present)
-        continue;
-
-      if (!distrib_point_parser.SkipOptionalTag(
-              der::kTagContextSpecific | der::kTagConstructed | 2, &present)) {
-        return false;
-      }
-      // If it contains a alternative issuer, then we skip it.
-      if (present)
-        continue;
-
-      // DistributionPointName ::= CHOICE {
-      //   fullName                [0]     GeneralNames,
-      //   nameRelativeToCRLIssuer [1]     RelativeDistinguishedName }
-      der::Input general_names;
-      if (!der::Parser(name).ReadOptionalTag(
-              der::kTagContextSpecific | der::kTagConstructed | 0,
-              &general_names, &present)) {
-        return false;
-      }
-      if (!present)
-        continue;
-
-      // GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName
-      // GeneralName ::= CHOICE {
-      //   ...
-      //   uniformResourceIdentifier [6]  IA5String,
-      //   ... }
-      der::Parser general_names_parser(general_names);
-      while (general_names_parser.HasMore()) {
-        der::Input url;
-        if (!general_names_parser.ReadOptionalTag(der::kTagContextSpecific | 6,
-                                                  &url, &present)) {
-          return false;
-        }
-        if (present) {
-          // This does not validate that |url| is a valid IA5String.
-          tmp_urls_out.push_back(url.AsStringPiece());
-        } else {
-          der::Tag unused_tag;
-          der::Input unused_value;
-          if (!general_names_parser.ReadTagAndValue(&unused_tag,
-                                                    &unused_value)) {
-            return false;
-          }
-        }
-      }
+      for (const der::Input& uri : dp.uris)
+        tmp_urls_out.push_back(uri.AsStringPiece());
     }
   }
 

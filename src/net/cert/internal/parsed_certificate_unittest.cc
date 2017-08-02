@@ -44,12 +44,15 @@ scoped_refptr<ParsedCertificate> ParseCertificateFromFile(
           reinterpret_cast<const uint8_t*>(data.data()), data.size(), nullptr)),
       options, &errors);
 
-  VerifyCertErrors(expected_errors, errors, test_file_path);
+  // The errors are baselined for |!allow_invalid_serial_numbers|. So if
+  // requesting a non-default option skip the error checks.
+  // TODO(eroman): This is ugly.
+  if (!options.allow_invalid_serial_numbers)
+    VerifyCertErrors(expected_errors, errors, test_file_path);
 
-  // TODO(crbug.com/634443): Every parse failure being tested should emit error
-  // information.
-  // if (!cert)
-  //   EXPECT_FALSE(errors.empty());
+  // Every parse failure being tested should emit error information.
+  if (!cert)
+    EXPECT_FALSE(errors.ToDebugString().empty());
 
   return cert;
 }
@@ -128,6 +131,84 @@ TEST(ParsedCertificateTest, ExtensionsDataAfterSequence) {
 TEST(ParsedCertificateTest, ExtensionsDuplicateKeyUsage) {
   ASSERT_FALSE(
       ParseCertificateFromFile("extensions_duplicate_key_usage.pem", {}));
+}
+
+// Parses a certificate with a bad key usage extension (BIT STRING with zero
+// elements).
+//
+// TODO(eroman): This should be a verification failure not a parsing failure.
+TEST(ParsedCertificateTest, BadKeyUsage) {
+  ASSERT_FALSE(ParseCertificateFromFile("bad_key_usage.pem", {}));
+}
+
+// TODO(eroman): What is wrong with policy qualifiers?
+TEST(ParsedCertificateTest, BadPolicyQualifiers) {
+  ASSERT_FALSE(ParseCertificateFromFile("bad_policy_qualifiers.pem", {}));
+}
+
+// Parses a certificate that uses an unknown signature algorithm OID (00).
+TEST(ParsedCertificateTest, BadSignatureAlgorithmOid) {
+  ASSERT_FALSE(ParseCertificateFromFile("bad_signature_algorithm_oid.pem", {}));
+}
+
+// TODO(eroman): What is wrong with the validity?
+TEST(ParsedCertificateTest, BadValidity) {
+  ASSERT_FALSE(ParseCertificateFromFile("bad_validity.pem", {}));
+}
+
+// The signature algorithm contains an unexpected parameters field.
+TEST(ParsedCertificateTest, FailedSignatureAlgorithm) {
+  ASSERT_FALSE(ParseCertificateFromFile("failed_signature_algorithm.pem", {}));
+}
+
+TEST(ParsedCertificateTest, IssuerBadPrintableString) {
+  ASSERT_FALSE(ParseCertificateFromFile("issuer_bad_printable_string.pem", {}));
+}
+
+TEST(ParsedCertificateTest, NameConstraintsBadIp) {
+  ASSERT_FALSE(ParseCertificateFromFile("name_constraints_bad_ip.pem", {}));
+}
+
+TEST(ParsedCertificateTest, PolicyQualifiersEmptySequence) {
+  ASSERT_FALSE(
+      ParseCertificateFromFile("policy_qualifiers_empty_sequence.pem", {}));
+}
+
+TEST(ParsedCertificateTest, SubjectBlankSubjectAltNameNotCritical) {
+  ASSERT_FALSE(ParseCertificateFromFile(
+      "subject_blank_subjectaltname_not_critical.pem", {}));
+}
+
+TEST(ParsedCertificateTest, SubjectNotAscii) {
+  ASSERT_FALSE(ParseCertificateFromFile("subject_not_ascii.pem", {}));
+}
+
+TEST(ParsedCertificateTest, SubjectNotPrintableString) {
+  ASSERT_FALSE(
+      ParseCertificateFromFile("subject_not_printable_string.pem", {}));
+}
+
+TEST(ParsedCertificateTest, SubjectAltNameBadIp) {
+  ASSERT_FALSE(ParseCertificateFromFile("subjectaltname_bad_ip.pem", {}));
+}
+
+TEST(ParsedCertificateTest, SubjectAltNameDnsNotAscii) {
+  ASSERT_FALSE(
+      ParseCertificateFromFile("subjectaltname_dns_not_ascii.pem", {}));
+}
+
+TEST(ParsedCertificateTest, SubjectAltNameGeneralNamesEmptySequence) {
+  ASSERT_FALSE(ParseCertificateFromFile(
+      "subjectaltname_general_names_empty_sequence.pem", {}));
+}
+
+TEST(ParsedCertificateTest, SubjectAltNameTrailingData) {
+  ASSERT_FALSE(
+      ParseCertificateFromFile("subjectaltname_trailing_data.pem", {}));
+}
+
+TEST(ParsedCertificateTest, V1ExplicitVersion) {
+  ASSERT_FALSE(ParseCertificateFromFile("v1_explicit_version.pem", {}));
 }
 
 // Parses an Extensions that contains an extended key usages.

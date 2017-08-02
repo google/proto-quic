@@ -22,6 +22,7 @@ config("external_config") {
 config("internal_config") {
   visibility = [ ":*" ]  # Only targets in this file can depend on this.
   defines = [
+    "BORINGSSL_ALLOW_CXX_RUNTIME",
     "BORINGSSL_IMPLEMENTATION",
     "BORINGSSL_NO_STATIC_INITIALIZER",
     "OPENSSL_SMALL",
