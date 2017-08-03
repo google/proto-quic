@@ -13,6 +13,8 @@
 
 namespace net {
 
+class CertErrors;
+
 namespace der {
 class Input;
 }  // namespace der
@@ -21,9 +23,11 @@ class Input;
 // include the Sequence tag).  If successful, returns true and stores the
 // normalized DER-encoded Name into |normalized_rdn_sequence| (not including an
 // outer Sequence tag). Returns false if there was an error parsing or
-// normalizing the input.
+// normalizing the input, and adds error information to |errors|. |errors| must
+// be non-null.
 NET_EXPORT bool NormalizeName(const der::Input& name_rdn_sequence,
-                              std::string* normalized_rdn_sequence);
+                              std::string* normalized_rdn_sequence,
+                              CertErrors* errors);
 
 // Compares DER-encoded X.501 Name values according to RFC 5280 rules.
 // |a_rdn_sequence| and |b_rdn_sequence| should be the DER-encoded RDNSequence

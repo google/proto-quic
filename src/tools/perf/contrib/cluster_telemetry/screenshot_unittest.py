@@ -39,3 +39,34 @@ class ScreenshotUnitTest(page_test_test_case.PageTestTestCase):
     screenshot_pixels = image_util.Pixels(image)
     special_colored_pixel = bytearray([217, 115, 43])
     self.assertTrue(special_colored_pixel in screenshot_pixels)
+
+  @decorators.Enabled('linux')
+  def testIsScreenshotWithinDynamicContentThreshold(self):
+    # TODO(lchoi): This unit test fails on Windows due to an apparent platform
+    # dependent image decoding behavior that will need to be investigated in the
+    # future if Cluster Telemetry ever becomes compatible with Windows.
+    width = 2
+    height = 1
+    num_total_pixels = width * height
+
+    content_pixels = bytearray([0, 0, 0, 128, 128, 128])
+    base_screenshot = image_util.FromRGBPixels(width, height, content_pixels)
+
+    next_pixels = bytearray([1, 1, 1, 128, 128, 128])
+    next_screenshot = image_util.FromRGBPixels(width, height, next_pixels)
+    expected_pixels = bytearray([0, 255, 255, 128, 128, 128])
+    self.assertTrue(screenshot.IsScreenshotWithinDynamicContentThreshold(
+                    base_screenshot, next_screenshot, content_pixels,
+                    num_total_pixels, 0.51))
+    self.assertTrue(expected_pixels == content_pixels)
+
+    next_pixels = bytearray([0, 0, 0, 1, 1, 1])
+    next_screenshot = image_util.FromRGBPixels(2, 1, next_pixels)
+    expected_pixels = bytearray([0, 255, 255, 0, 255, 255])
+    self.assertTrue(screenshot.IsScreenshotWithinDynamicContentThreshold(
+                    base_screenshot, next_screenshot, content_pixels,
+                    num_total_pixels, 0.51))
+    self.assertTrue(expected_pixels == content_pixels)
+    self.assertFalse(screenshot.IsScreenshotWithinDynamicContentThreshold(
+                     base_screenshot, next_screenshot, content_pixels,
+                     num_total_pixels, 0.49))

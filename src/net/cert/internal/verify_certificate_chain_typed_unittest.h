@@ -140,6 +140,16 @@ TYPED_TEST_P(VerifyCertificateChainSingleRootTest, ExtendedKeyUsage) {
   this->RunTest("target-eku-none/clientauth.test");
   this->RunTest("root-eku-clientauth/serverauth.test");
   this->RunTest("root-eku-clientauth/serverauth-ta-with-constraints.test");
+  this->RunTest("intermediate-eku-server-gated-crypto/sha1-eku-any.test");
+  this->RunTest(
+      "intermediate-eku-server-gated-crypto/sha1-eku-clientAuth.test");
+  this->RunTest(
+      "intermediate-eku-server-gated-crypto/sha1-eku-serverAuth.test");
+  this->RunTest("intermediate-eku-server-gated-crypto/sha256-eku-any.test");
+  this->RunTest(
+      "intermediate-eku-server-gated-crypto/sha256-eku-clientAuth.test");
+  this->RunTest(
+      "intermediate-eku-server-gated-crypto/sha256-eku-serverAuth.test");
 }
 
 TYPED_TEST_P(VerifyCertificateChainSingleRootTest,

@@ -354,7 +354,7 @@ def AddInstrumentationTestOptions(parser):
   parser.add_argument(
       '--additional-apk',
       action='append', dest='additional_apks', default=[],
-      type=os.path.realpath,
+      type=_RealPath,
       help='Additional apk that must be installed on '
            'the device when the tests are run')
   parser.add_argument(
@@ -413,7 +413,7 @@ def AddInstrumentationTestOptions(parser):
     PackageReplacement = collections.namedtuple('PackageReplacement',
                                                 ['package', 'replacement_apk'])
     return PackageReplacement(package=split_arg[0],
-                              replacement_apk=os.path.realpath(split_arg[1]))
+                              replacement_apk=_RealPath(split_arg[1]))
   parser.add_argument(
       '--replace-system-package',
       type=package_replacement, default=None,

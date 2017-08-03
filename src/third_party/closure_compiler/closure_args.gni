@@ -63,5 +63,4 @@ default_closure_args = common_closure_args + checking_closure_args
 
 default_disabled_closure_args = [
   "jscomp_off=duplicate",
-  "jscomp_off=misplacedTypeAnnotation",
 ]

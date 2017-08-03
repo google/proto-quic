@@ -42,6 +42,13 @@ const der::Input ServerAuth() {
   return der::Input(server_auth);
 }
 
+// In dotted notation: 2.16.840.1.113730.4.1
+const der::Input NetscapeServerGatedCrypto() {
+  static const uint8_t data[] = {0x60, 0x86, 0x48, 0x01, 0x86,
+                                 0xf8, 0x42, 0x04, 0x01};
+  return der::Input(data);
+}
+
 const der::Input ClientAuth() {
   // From RFC 5280 section 4.2.1.12:
   // id-kp-clientAuth             OBJECT IDENTIFIER ::= { id-kp 2 }

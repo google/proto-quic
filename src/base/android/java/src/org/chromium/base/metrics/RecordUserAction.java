@@ -6,7 +6,6 @@ package org.chromium.base.metrics;
 
 import org.chromium.base.ThreadUtils;
 import org.chromium.base.VisibleForTesting;
-import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
 
 /**
@@ -50,36 +49,5 @@ public class RecordUserAction {
         });
     }
 
-    /**
-     * Interface to a class that receives a callback for each UserAction that is recorded.
-     */
-    public interface UserActionCallback {
-        @CalledByNative("UserActionCallback")
-        void onActionRecorded(String action);
-    }
-
-    private static long sNativeActionCallback;
-
-    /**
-     * Register a callback that is executed for each recorded UserAction.
-     * Only one callback can be registered at a time.
-     * The callback has to be unregistered using removeActionCallbackForTesting().
-     */
-    public static void setActionCallbackForTesting(UserActionCallback callback) {
-        assert sNativeActionCallback == 0;
-        sNativeActionCallback = nativeAddActionCallbackForTesting(callback);
-    }
-
-    /**
-     * Unregister the UserActionCallback.
-     */
-    public static void removeActionCallbackForTesting() {
-        assert sNativeActionCallback != 0;
-        nativeRemoveActionCallbackForTesting(sNativeActionCallback);
-        sNativeActionCallback = 0;
-    }
-
     private static native void nativeRecordUserAction(String action);
-    private static native long nativeAddActionCallbackForTesting(UserActionCallback callback);
-    private static native void nativeRemoveActionCallbackForTesting(long callbackId);
 }

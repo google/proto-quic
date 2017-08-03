@@ -6,6 +6,7 @@
 
 #include "base/memory/ptr_util.h"
 #include "base/message_loop/message_loop.h"
+#include "base/run_loop.h"
 #include "jni/JavaHandlerThreadTest_jni.h"
 
 namespace base {
@@ -57,11 +58,11 @@ void JavaHandlerThreadForTesting::StartMessageLoop() {
 }
 
 void JavaHandlerThreadForTesting::StopMessageLoop() {
-  // Instead of calling MessageLoop::QuitWhenIdle here we call
-  // MessageLoop::QuitNow. This is because QuitWhenIdle will have no effect on
-  // the message loop after MessageLoop::Abort has been called (which should
-  // have happened at this point).
-  static_cast<MessageLoopForUI*>(message_loop_.get())->QuitNow();
+  // Instead of calling RunLoop::QuitCurrentWhenIdleDeprecated here we call
+  // RunLoop::QuitCurrentDeprecated. This is because QuitWhenIdle will have no
+  // effect on the message loop after MessageLoop::Abort has been called (which
+  // should have happened at this point).
+  base::RunLoop::QuitCurrentDeprecated();
   // The message loop must be destroyed on the thread it is attached to.
   message_loop_.reset();
 }

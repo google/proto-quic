@@ -80,7 +80,7 @@ class TestingQuicChromiumClientSession : public QuicChromiumClientSession {
 
 class QuicChromiumClientSessionTest
     : public ::testing::TestWithParam<QuicVersion> {
- protected:
+ public:
   QuicChromiumClientSessionTest()
       : crypto_config_(crypto_test_utils::ProofVerifierForTesting()),
         default_read_(new MockRead(SYNCHRONOUS, ERR_IO_PENDING, 0)),
@@ -103,6 +103,14 @@ class QuicChromiumClientSessionTest
     clock_.AdvanceTime(QuicTime::Delta::FromSeconds(1));
   }
 
+  void ResetHandleOnError(
+      std::unique_ptr<QuicChromiumClientSession::Handle>* handle,
+      int net_error) {
+    EXPECT_NE(OK, net_error);
+    handle->reset();
+  }
+
+ protected:
   void Initialize() {
     if (socket_data_)
       socket_factory_.AddSocketDataProvider(socket_data_.get());
@@ -421,6 +429,53 @@ TEST_P(QuicChromiumClientSessionTest, AsyncStreamRequest) {
   EXPECT_THAT(callback.WaitForResult(), IsOk());
   EXPECT_TRUE(handle->ReleaseStream() != nullptr);
 
+  quic_data.Resume();
+  EXPECT_TRUE(quic_data.AllReadDataConsumed());
+  EXPECT_TRUE(quic_data.AllWriteDataConsumed());
+}
+
+TEST_P(QuicChromiumClientSessionTest, ClosedWithAsyncStreamRequest) {
+  MockQuicData quic_data;
+  quic_data.AddWrite(client_maker_.MakeInitialSettingsPacket(1, nullptr));
+  quic_data.AddRead(ASYNC, ERR_IO_PENDING);
+  quic_data.AddRead(ASYNC, OK);  // EOF
+  quic_data.AddSocketDataToFactory(&socket_factory_);
+
+  Initialize();
+  CompleteCryptoHandshake();
+
+  // Open the maximum number of streams so that a subsequent request
+  // can not proceed immediately.
+  const size_t kMaxOpenStreams = session_->max_open_outgoing_streams();
+  for (size_t i = 0; i < kMaxOpenStreams; i++) {
+    session_->CreateOutgoingDynamicStream(kDefaultPriority);
+  }
+  EXPECT_EQ(kMaxOpenStreams, session_->GetNumOpenOutgoingStreams());
+
+  // Request two streams which will both be pending.
+  std::unique_ptr<QuicChromiumClientSession::Handle> handle =
+      session_->CreateHandle();
+  std::unique_ptr<QuicChromiumClientSession::Handle> handle2 =
+      session_->CreateHandle();
+
+  ASSERT_EQ(ERR_IO_PENDING,
+            handle->RequestStream(
+                /*requires_confirmation=*/false,
+                base::Bind(&QuicChromiumClientSessionTest::ResetHandleOnError,
+                           base::Unretained(this), &handle2)));
+
+  TestCompletionCallback callback2;
+  ASSERT_EQ(ERR_IO_PENDING,
+            handle2->RequestStream(/*requires_confirmation=*/false,
+                                   callback2.callback()));
+
+  session_->connection()->CloseConnection(
+      QUIC_NETWORK_IDLE_TIMEOUT, "Timed out",
+      ConnectionCloseBehavior::SILENT_CLOSE);
+
+  // Pump the message loop to read the connection close packet.
+  base::RunLoop().RunUntilIdle();
+  EXPECT_FALSE(handle2.get());
   quic_data.Resume();
   EXPECT_TRUE(quic_data.AllReadDataConsumed());
   EXPECT_TRUE(quic_data.AllWriteDataConsumed());

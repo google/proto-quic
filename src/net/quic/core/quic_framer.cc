@@ -57,7 +57,7 @@ const uint8_t kPublicHeaderSequenceNumberShift = 4;
 // Special Frame Types encode both a Frame Type and corresponding flags
 // all in the Frame Type byte. Currently defined Special Frame Types are:
 // Stream             : 0b 11xxxxxx
-// Ack                : 0b 01xxxxxx
+// Ack                : 0b 101xxxxx
 //
 // Semantics of the flag bits above (the x bits) depends on the frame type.
 
@@ -66,7 +66,8 @@ const uint8_t kPublicHeaderSequenceNumberShift = 4;
 const uint8_t kQuicFrameTypeSpecialMask = 0xE0;  // 0b 11100000
 const uint8_t kQuicFrameTypeStreamMask_Pre40 = 0x80;
 const uint8_t kQuicFrameTypeStreamMask = 0xC0;
-const uint8_t kQuicFrameTypeAckMask = 0x40;
+const uint8_t kQuicFrameTypeAckMask_Pre40 = 0x40;
+const uint8_t kQuicFrameTypeAckMask = 0xA0;
 
 // Stream type format is 11FSSOOD.
 // Stream frame relative shifts and masks for interpreting the stream flags.
@@ -96,7 +97,7 @@ const uint8_t kQuicSequenceNumberLengthShift = 2;
 
 // Acks may have only one ack block.
 const uint8_t kQuicHasMultipleAckBlocksMask = 0x01;
-const uint8_t kQuicHasMultipleAckBlocksShift = 1;
+const uint8_t kQuicHasMultipleAckBlocksShift_Pre40 = 1;
 
 // Returns the absolute value of the difference between |a| and |b|.
 QuicPacketNumber Delta(QuicPacketNumber a, QuicPacketNumber b) {
@@ -1005,7 +1006,11 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
       }
 
       // Ack Frame
-      if (frame_type & kQuicFrameTypeAckMask) {
+      if ((quic_version_ < QUIC_VERSION_40 &&
+           (frame_type & kQuicFrameTypeAckMask_Pre40)) ||
+          (quic_version_ >= QUIC_VERSION_40 &&
+           ((frame_type & kQuicFrameTypeSpecialMask) ==
+            kQuicFrameTypeAckMask))) {
         QuicAckFrame frame;
         if (!ProcessAckFrame(reader, frame_type, &frame)) {
           return RaiseError(QUIC_INVALID_ACK_DATA);
@@ -1145,6 +1150,10 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
   return true;
 }
 
+uint8_t ExtractBits(uint8_t flags, uint8_t num_bits, uint8_t offset) {
+  return ((flags >> offset) & ~(0xFF << num_bits));
+}
+
 bool QuicFramer::ProcessStreamFrame(QuicDataReader* reader,
                                     uint8_t frame_type,
                                     QuicStreamFrame* frame) {
@@ -1245,14 +1254,17 @@ bool QuicFramer::ProcessAckFrame(QuicDataReader* reader,
                                  QuicAckFrame* ack_frame) {
   // Determine the two lengths from the frame type: largest acked length,
   // ack block length.
+  uint8_t offset = 0u;
   const QuicPacketNumberLength ack_block_length =
-      ReadSequenceNumberLength(frame_type);
-  frame_type >>= kQuicSequenceNumberLengthShift;
+      ReadSequenceNumberLength(ExtractBits(frame_type, 2, offset));
+  offset += kQuicSequenceNumberLengthShift;
   const QuicPacketNumberLength largest_acked_length =
-      ReadSequenceNumberLength(frame_type);
-  frame_type >>= kQuicSequenceNumberLengthShift;
-  frame_type >>= kQuicHasMultipleAckBlocksShift;
-  bool has_ack_blocks = frame_type & kQuicHasMultipleAckBlocksMask;
+      ReadSequenceNumberLength(ExtractBits(frame_type, 2, offset));
+  offset += kQuicSequenceNumberLengthShift;
+  if (quic_version_ < QUIC_VERSION_40) {
+    offset += kQuicHasMultipleAckBlocksShift_Pre40;
+  }
+  bool has_ack_blocks = ExtractBits(frame_type, 1, offset) != 0;
 
   if (!reader->ReadBytesToUInt64(largest_acked_length,
                                  &ack_frame->largest_observed)) {
@@ -1975,8 +1987,9 @@ bool QuicFramer::AppendAckFrameAndTypeByte(const QuicAckFrame& frame,
   // Whether there are multiple ack blocks.
   uint8_t type_byte =
       new_ack_info.num_ack_blocks == 0 ? 0 : kQuicHasMultipleAckBlocksMask;
-  type_byte <<= kQuicHasMultipleAckBlocksShift;
-
+  if (quic_version_ < QUIC_VERSION_40) {
+    type_byte <<= kQuicHasMultipleAckBlocksShift_Pre40;
+  }
   // Largest acked length.
   type_byte <<= kQuicSequenceNumberLengthShift;
   type_byte |= GetPacketNumberFlags(largest_acked_length);
@@ -1985,7 +1998,11 @@ bool QuicFramer::AppendAckFrameAndTypeByte(const QuicAckFrame& frame,
   type_byte <<= kQuicSequenceNumberLengthShift;
   type_byte |= GetPacketNumberFlags(ack_block_length);
 
-  type_byte |= kQuicFrameTypeAckMask;
+  if (quic_version_ < QUIC_VERSION_40) {
+    type_byte |= kQuicFrameTypeAckMask_Pre40;
+  } else {
+    type_byte |= kQuicFrameTypeAckMask;
+  }
 
   if (!writer->WriteUInt8(type_byte)) {
     return false;

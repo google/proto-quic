@@ -58,27 +58,42 @@ void SharedMemoryTracker::DecrementMemoryUsage(
 
 bool SharedMemoryTracker::OnMemoryDump(const trace_event::MemoryDumpArgs& args,
                                        trace_event::ProcessMemoryDump* pmd) {
-  std::vector<std::tuple<UnguessableToken, size_t>> usages;
+  // The fields are shared memory's ID, its resident size and its virtual size
+  // respectively. If a resident size is not available, a virtual size is used
+  // as fallback.
+  std::vector<std::tuple<UnguessableToken, size_t, size_t>> usages;
   {
     AutoLock hold(usages_lock_);
     usages.reserve(usages_.size());
     for (const auto& usage : usages_) {
-      usages.emplace_back(usage.first->mapped_id(), usage.second);
+      const SharedMemory* shared_memory = usage.first;
+      size_t virtual_size = usage.second;
+      size_t size = virtual_size;
+#if defined(COUNT_RESIDENT_BYTES_SUPPORTED)
+      base::Optional<size_t> resident_size =
+          trace_event::ProcessMemoryDump::CountResidentBytesInSharedMemory(
+              *shared_memory);
+      if (resident_size.has_value())
+        size = resident_size.value();
+#endif
+      usages.emplace_back(shared_memory->mapped_id(), size, virtual_size);
     }
   }
   for (const auto& usage : usages) {
     const UnguessableToken& memory_guid = std::get<0>(usage);
     size_t size = std::get<1>(usage);
+    size_t virtual_size = std::get<2>(usage);
     std::string dump_name = GetDumpNameForTracing(memory_guid);
     // Discard duplicates that might be seen in single-process mode.
     if (pmd->GetAllocatorDump(dump_name))
       continue;
     trace_event::MemoryAllocatorDump* local_dump =
         pmd->CreateAllocatorDump(dump_name);
-    // TODO(hajimehoshi): The size is not resident size but virtual size so far.
-    // Fix this to record resident size.
     local_dump->AddScalar(trace_event::MemoryAllocatorDump::kNameSize,
                           trace_event::MemoryAllocatorDump::kUnitsBytes, size);
+    local_dump->AddScalar("virtual_size",
+                          trace_event::MemoryAllocatorDump::kUnitsBytes,
+                          virtual_size);
     auto global_dump_guid = GetGlobalDumpIdForTracing(memory_guid);
     trace_event::MemoryAllocatorDump* global_dump =
         pmd->CreateSharedGlobalAllocatorDump(global_dump_guid);

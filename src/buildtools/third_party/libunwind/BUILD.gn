@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/c++/c++.gni")
+
 config("libunwind_config") {
   # ValueAsBitPattern in Unwind-EHABI.cpp is only used on Debug builds.
   cflags = [ "-Wno-unused-function" ]
@@ -9,7 +11,9 @@ config("libunwind_config") {
 
 source_set("libunwind") {
   visibility = [ "//buildtools/third_party/libc++abi" ]
-  defines = [ "_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS" ]
+  if (libcpp_is_static) {
+    defines = [ "_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS" ]
+  }
   sources = [
     # C++ sources
     "trunk/src/Unwind-EHABI.cpp",

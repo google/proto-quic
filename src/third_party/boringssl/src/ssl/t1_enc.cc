@@ -138,6 +138,8 @@
 #include <assert.h>
 #include <string.h>
 
+#include <utility>
+
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
@@ -150,6 +152,8 @@
 #include "internal.h"
 
 
+namespace bssl {
+
 /* tls1_P_hash computes the TLS P_<hash> function as described in RFC 5246,
  * section 5. It XORs |out_len| bytes to |out|, using |md| as the hash and
  * |secret| as the secret. |seed1| through |seed3| are concatenated to form the
@@ -159,36 +163,33 @@ static int tls1_P_hash(uint8_t *out, size_t out_len, const EVP_MD *md,
                        const uint8_t *seed1, size_t seed1_len,
                        const uint8_t *seed2, size_t seed2_len,
                        const uint8_t *seed3, size_t seed3_len) {
-  HMAC_CTX ctx, ctx_tmp, ctx_init;
+  ScopedHMAC_CTX ctx, ctx_tmp, ctx_init;
   uint8_t A1[EVP_MAX_MD_SIZE];
   unsigned A1_len;
   int ret = 0;
 
   size_t chunk = EVP_MD_size(md);
 
-  HMAC_CTX_init(&ctx);
-  HMAC_CTX_init(&ctx_tmp);
-  HMAC_CTX_init(&ctx_init);
-  if (!HMAC_Init_ex(&ctx_init, secret, secret_len, md, NULL) ||
-      !HMAC_CTX_copy_ex(&ctx, &ctx_init) ||
-      !HMAC_Update(&ctx, seed1, seed1_len) ||
-      !HMAC_Update(&ctx, seed2, seed2_len) ||
-      !HMAC_Update(&ctx, seed3, seed3_len) ||
-      !HMAC_Final(&ctx, A1, &A1_len)) {
+  if (!HMAC_Init_ex(ctx_init.get(), secret, secret_len, md, NULL) ||
+      !HMAC_CTX_copy_ex(ctx.get(), ctx_init.get()) ||
+      !HMAC_Update(ctx.get(), seed1, seed1_len) ||
+      !HMAC_Update(ctx.get(), seed2, seed2_len) ||
+      !HMAC_Update(ctx.get(), seed3, seed3_len) ||
+      !HMAC_Final(ctx.get(), A1, &A1_len)) {
     goto err;
   }
 
   for (;;) {
     unsigned len;
     uint8_t hmac[EVP_MAX_MD_SIZE];
-    if (!HMAC_CTX_copy_ex(&ctx, &ctx_init) ||
-        !HMAC_Update(&ctx, A1, A1_len) ||
+    if (!HMAC_CTX_copy_ex(ctx.get(), ctx_init.get()) ||
+        !HMAC_Update(ctx.get(), A1, A1_len) ||
         /* Save a copy of |ctx| to compute the next A1 value below. */
-        (out_len > chunk && !HMAC_CTX_copy_ex(&ctx_tmp, &ctx)) ||
-        !HMAC_Update(&ctx, seed1, seed1_len) ||
-        !HMAC_Update(&ctx, seed2, seed2_len) ||
-        !HMAC_Update(&ctx, seed3, seed3_len) ||
-        !HMAC_Final(&ctx, hmac, &len)) {
+        (out_len > chunk && !HMAC_CTX_copy_ex(ctx_tmp.get(), ctx.get())) ||
+        !HMAC_Update(ctx.get(), seed1, seed1_len) ||
+        !HMAC_Update(ctx.get(), seed2, seed2_len) ||
+        !HMAC_Update(ctx.get(), seed3, seed3_len) ||
+        !HMAC_Final(ctx.get(), hmac, &len)) {
       goto err;
     }
     assert(len == chunk);
@@ -209,7 +210,7 @@ static int tls1_P_hash(uint8_t *out, size_t out_len, const EVP_MD *md,
     }
 
     /* Calculate the next A1 value. */
-    if (!HMAC_Final(&ctx_tmp, A1, &A1_len)) {
+    if (!HMAC_Final(ctx_tmp.get(), A1, &A1_len)) {
       goto err;
     }
   }
@@ -217,9 +218,6 @@ static int tls1_P_hash(uint8_t *out, size_t out_len, const EVP_MD *md,
   ret = 1;
 
 err:
-  HMAC_CTX_cleanup(&ctx);
-  HMAC_CTX_cleanup(&ctx_tmp);
-  HMAC_CTX_cleanup(&ctx_init);
   OPENSSL_cleanse(A1, sizeof(A1));
   return ret;
 }
@@ -264,15 +262,13 @@ static int ssl3_prf(uint8_t *out, size_t out_len, const uint8_t *secret,
                     size_t secret_len, const char *label, size_t label_len,
                     const uint8_t *seed1, size_t seed1_len,
                     const uint8_t *seed2, size_t seed2_len) {
-  EVP_MD_CTX md5;
-  EVP_MD_CTX sha1;
+  ScopedEVP_MD_CTX md5;
+  ScopedEVP_MD_CTX sha1;
   uint8_t buf[16], smd[SHA_DIGEST_LENGTH];
   uint8_t c = 'A';
   size_t i, j, k;
 
   k = 0;
-  EVP_MD_CTX_init(&md5);
-  EVP_MD_CTX_init(&sha1);
   for (i = 0; i < out_len; i += MD5_DIGEST_LENGTH) {
     k++;
     if (k > sizeof(buf)) {
@@ -285,41 +281,38 @@ static int ssl3_prf(uint8_t *out, size_t out_len, const uint8_t *secret,
       buf[j] = c;
     }
     c++;
-    if (!EVP_DigestInit_ex(&sha1, EVP_sha1(), NULL)) {
+    if (!EVP_DigestInit_ex(sha1.get(), EVP_sha1(), NULL)) {
       OPENSSL_PUT_ERROR(SSL, ERR_LIB_EVP);
       return 0;
     }
-    EVP_DigestUpdate(&sha1, buf, k);
-    EVP_DigestUpdate(&sha1, secret, secret_len);
+    EVP_DigestUpdate(sha1.get(), buf, k);
+    EVP_DigestUpdate(sha1.get(), secret, secret_len);
     /* |label| is ignored for SSLv3. */
     if (seed1_len) {
-      EVP_DigestUpdate(&sha1, seed1, seed1_len);
+      EVP_DigestUpdate(sha1.get(), seed1, seed1_len);
     }
     if (seed2_len) {
-      EVP_DigestUpdate(&sha1, seed2, seed2_len);
+      EVP_DigestUpdate(sha1.get(), seed2, seed2_len);
     }
-    EVP_DigestFinal_ex(&sha1, smd, NULL);
+    EVP_DigestFinal_ex(sha1.get(), smd, NULL);
 
-    if (!EVP_DigestInit_ex(&md5, EVP_md5(), NULL)) {
+    if (!EVP_DigestInit_ex(md5.get(), EVP_md5(), NULL)) {
       OPENSSL_PUT_ERROR(SSL, ERR_LIB_EVP);
       return 0;
     }
-    EVP_DigestUpdate(&md5, secret, secret_len);
-    EVP_DigestUpdate(&md5, smd, SHA_DIGEST_LENGTH);
+    EVP_DigestUpdate(md5.get(), secret, secret_len);
+    EVP_DigestUpdate(md5.get(), smd, SHA_DIGEST_LENGTH);
     if (i + MD5_DIGEST_LENGTH > out_len) {
-      EVP_DigestFinal_ex(&md5, smd, NULL);
+      EVP_DigestFinal_ex(md5.get(), smd, NULL);
       OPENSSL_memcpy(out, smd, out_len - i);
     } else {
-      EVP_DigestFinal_ex(&md5, out, NULL);
+      EVP_DigestFinal_ex(md5.get(), out, NULL);
     }
 
     out += MD5_DIGEST_LENGTH;
   }
 
   OPENSSL_cleanse(smd, SHA_DIGEST_LENGTH);
-  EVP_MD_CTX_cleanup(&md5);
-  EVP_MD_CTX_cleanup(&sha1);
-
   return 1;
 }
 
@@ -330,8 +323,8 @@ static int tls1_setup_key_block(SSL_HANDSHAKE *hs) {
   }
 
   SSL_SESSION *session = ssl->session;
-  if (hs->new_session != NULL) {
-    session = hs->new_session;
+  if (hs->new_session) {
+    session = hs->new_session.get();
   }
 
   const EVP_AEAD *aead = NULL;
@@ -428,19 +421,60 @@ int tls1_change_cipher_state(SSL_HANDSHAKE *hs, int which) {
     iv = server_write_iv;
   }
 
-  SSL_AEAD_CTX *aead_ctx = SSL_AEAD_CTX_new(
-      is_read ? evp_aead_open : evp_aead_seal, ssl3_protocol_version(ssl), SSL_is_dtls(ssl),
-      hs->new_cipher, key, key_len, mac_secret, mac_secret_len, iv, iv_len);
-  if (aead_ctx == NULL) {
+  UniquePtr<SSLAEADContext> aead_ctx = SSLAEADContext::Create(
+      is_read ? evp_aead_open : evp_aead_seal, ssl3_protocol_version(ssl),
+      SSL_is_dtls(ssl), hs->new_cipher, key, key_len, mac_secret,
+      mac_secret_len, iv, iv_len);
+  if (!aead_ctx) {
     return 0;
   }
 
   if (is_read) {
-    return ssl->method->set_read_state(ssl, aead_ctx);
+    return ssl->method->set_read_state(ssl, std::move(aead_ctx));
   }
 
-  return ssl->method->set_write_state(ssl, aead_ctx);
+  return ssl->method->set_write_state(ssl, std::move(aead_ctx));
 }
+
+int tls1_generate_master_secret(SSL_HANDSHAKE *hs, uint8_t *out,
+                                const uint8_t *premaster,
+                                size_t premaster_len) {
+  const SSL *ssl = hs->ssl;
+  if (hs->extended_master_secret) {
+    uint8_t digests[EVP_MAX_MD_SIZE];
+    size_t digests_len;
+    if (!hs->transcript.GetHash(digests, &digests_len) ||
+        !tls1_prf(hs->transcript.Digest(), out, SSL3_MASTER_SECRET_SIZE,
+                  premaster, premaster_len, TLS_MD_EXTENDED_MASTER_SECRET_CONST,
+                  TLS_MD_EXTENDED_MASTER_SECRET_CONST_SIZE, digests,
+                  digests_len, NULL, 0)) {
+      return 0;
+    }
+  } else {
+    if (ssl3_protocol_version(ssl) == SSL3_VERSION) {
+      if (!ssl3_prf(out, SSL3_MASTER_SECRET_SIZE, premaster, premaster_len,
+                    TLS_MD_MASTER_SECRET_CONST, TLS_MD_MASTER_SECRET_CONST_SIZE,
+                    ssl->s3->client_random, SSL3_RANDOM_SIZE,
+                    ssl->s3->server_random, SSL3_RANDOM_SIZE)) {
+        return 0;
+      }
+    } else {
+      if (!tls1_prf(hs->transcript.Digest(), out, SSL3_MASTER_SECRET_SIZE,
+                    premaster, premaster_len, TLS_MD_MASTER_SECRET_CONST,
+                    TLS_MD_MASTER_SECRET_CONST_SIZE, ssl->s3->client_random,
+                    SSL3_RANDOM_SIZE, ssl->s3->server_random,
+                    SSL3_RANDOM_SIZE)) {
+        return 0;
+      }
+    }
+  }
+
+  return SSL3_MASTER_SECRET_SIZE;
+}
+
+}  // namespace bssl
+
+using namespace bssl;
 
 size_t SSL_get_key_block_len(const SSL *ssl) {
   return 2 * ((size_t)ssl->s3->tmp.new_mac_secret_len +
@@ -468,43 +502,6 @@ int SSL_generate_key_block(const SSL *ssl, uint8_t *out, size_t out_len) {
                   TLS_MD_KEY_EXPANSION_CONST, TLS_MD_KEY_EXPANSION_CONST_SIZE,
                   ssl->s3->server_random, SSL3_RANDOM_SIZE,
                   ssl->s3->client_random, SSL3_RANDOM_SIZE);
-}
-
-int tls1_generate_master_secret(SSL_HANDSHAKE *hs, uint8_t *out,
-                                const uint8_t *premaster,
-                                size_t premaster_len) {
-  const SSL *ssl = hs->ssl;
-  if (hs->extended_master_secret) {
-    uint8_t digests[EVP_MAX_MD_SIZE];
-    size_t digests_len;
-    if (!SSL_TRANSCRIPT_get_hash(&hs->transcript, digests, &digests_len) ||
-        !tls1_prf(SSL_TRANSCRIPT_md(&hs->transcript), out,
-                  SSL3_MASTER_SECRET_SIZE, premaster, premaster_len,
-                  TLS_MD_EXTENDED_MASTER_SECRET_CONST,
-                  TLS_MD_EXTENDED_MASTER_SECRET_CONST_SIZE, digests,
-                  digests_len, NULL, 0)) {
-      return 0;
-    }
-  } else {
-    if (ssl3_protocol_version(ssl) == SSL3_VERSION) {
-      if (!ssl3_prf(out, SSL3_MASTER_SECRET_SIZE, premaster, premaster_len,
-                    TLS_MD_MASTER_SECRET_CONST, TLS_MD_MASTER_SECRET_CONST_SIZE,
-                    ssl->s3->client_random, SSL3_RANDOM_SIZE,
-                    ssl->s3->server_random, SSL3_RANDOM_SIZE)) {
-        return 0;
-      }
-    } else {
-      if (!tls1_prf(SSL_TRANSCRIPT_md(&hs->transcript), out,
-                    SSL3_MASTER_SECRET_SIZE, premaster, premaster_len,
-                    TLS_MD_MASTER_SECRET_CONST, TLS_MD_MASTER_SECRET_CONST_SIZE,
-                    ssl->s3->client_random, SSL3_RANDOM_SIZE,
-                    ssl->s3->server_random, SSL3_RANDOM_SIZE)) {
-        return 0;
-      }
-    }
-  }
-
-  return SSL3_MASTER_SECRET_SIZE;
 }
 
 int SSL_export_keying_material(SSL *ssl, uint8_t *out, size_t out_len,

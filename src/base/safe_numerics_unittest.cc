@@ -9,6 +9,15 @@
 #include <type_traits>
 
 #include "base/compiler_specific.h"
+
+// WARNING: This block must come before the base/numerics headers are included.
+// These tests deliberately cause arithmetic boundary errors. If the compiler is
+// aggressive enough, it can const detect these errors, so we disable warnings.
+#if defined(OS_WIN)
+#pragma warning(disable : 4756)  // Arithmetic overflow.
+#pragma warning(disable : 4293)  // Invalid shift.
+#endif
+
 #include "base/logging.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/numerics/safe_math.h"
@@ -24,13 +33,6 @@ namespace base {
 namespace internal {
 
 using std::numeric_limits;
-
-// These tests deliberately cause arithmetic boundary errors. If the compiler is
-// aggressive enough, it can const detect these errors, so we disable warnings.
-#if defined(OS_WIN)
-#pragma warning(disable : 4756)  // Arithmetic overflow.
-#pragma warning(disable : 4293)  // Invalid shift.
-#endif
 
 // This is a helper function for finding the maximum value in Src that can be
 // wholy represented as the destination floating-point type.
@@ -834,7 +836,7 @@ constexpr RangeConstraint RangeCheckToEnum(const RangeCheck constraint) {
       << " on line " << line
 
 template <typename Dst, typename Src>
-void TestStrictComparison() {
+void TestStrictComparison(const char* dst, const char* src, int line) {
   using DstLimits = numeric_limits<Dst>;
   using SrcLimits = numeric_limits<Src>;
   static_assert(StrictNumeric<Src>(SrcLimits::lowest()) < DstLimits::max(), "");
@@ -912,6 +914,24 @@ void TestStrictComparison() {
                      SrcLimits::lowest()));
   EXPECT_EQ(DstLimits::max(), ClampMax(MakeStrictNum(1), MakeClampedNum(0),
                                        DstLimits::max(), SrcLimits::lowest()));
+
+  if (IsValueInRangeForNumericType<Dst>(SrcLimits::max())) {
+    TEST_EXPECTED_VALUE(Dst(SrcLimits::max()), (CommonMax<Dst, Src>()));
+    TEST_EXPECTED_VALUE(Dst(SrcLimits::max()),
+                        (CommonMaxOrMin<Dst, Src>(false)));
+  } else {
+    TEST_EXPECTED_VALUE(DstLimits::max(), (CommonMax<Dst, Src>()));
+    TEST_EXPECTED_VALUE(DstLimits::max(), (CommonMaxOrMin<Dst, Src>(false)));
+  }
+
+  if (IsValueInRangeForNumericType<Dst>(SrcLimits::lowest())) {
+    TEST_EXPECTED_VALUE(Dst(SrcLimits::lowest()), (CommonMin<Dst, Src>()));
+    TEST_EXPECTED_VALUE(Dst(SrcLimits::lowest()),
+                        (CommonMaxOrMin<Dst, Src>(true)));
+  } else {
+    TEST_EXPECTED_VALUE(DstLimits::lowest(), (CommonMin<Dst, Src>()));
+    TEST_EXPECTED_VALUE(DstLimits::lowest(), (CommonMaxOrMin<Dst, Src>(true)));
+  }
 }
 
 template <typename Dst, typename Src>
@@ -931,7 +951,7 @@ struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_VALUE_PRESERVING> {
                          MaxExponent<Dst>::value >= MaxExponent<Src>::value))),
                   "Comparison must be sign preserving and value preserving");
 
-    TestStrictComparison<Dst, Src>();
+    TestStrictComparison<Dst, Src>(dst, src, line);
 
     const CheckedNumeric<Dst> checked_dst = SrcLimits::max();
     const ClampedNumeric<Dst> clamped_dst = SrcLimits::max();
@@ -980,7 +1000,7 @@ struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_NARROW> {
     static_assert(MaxExponent<Dst>::value <= MaxExponent<Src>::value,
                   "Destination must be narrower than source");
 
-    TestStrictComparison<Dst, Src>();
+    TestStrictComparison<Dst, Src>(dst, src, line);
 
     const CheckedNumeric<Dst> checked_dst;
     TEST_EXPECTED_FAILURE(checked_dst + SrcLimits::max());
@@ -1035,7 +1055,7 @@ struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL> {
     static_assert(SrcLimits::is_signed, "Source must be signed");
     static_assert(!DstLimits::is_signed, "Destination must be unsigned");
 
-    TestStrictComparison<Dst, Src>();
+    TestStrictComparison<Dst, Src>(dst, src, line);
 
     const CheckedNumeric<Dst> checked_dst;
     TEST_EXPECTED_VALUE(SrcLimits::max(), checked_dst + SrcLimits::max());
@@ -1068,7 +1088,7 @@ struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_NARROW> {
     static_assert(SrcLimits::is_signed, "Source must be signed.");
     static_assert(!DstLimits::is_signed, "Destination must be unsigned.");
 
-    TestStrictComparison<Dst, Src>();
+    TestStrictComparison<Dst, Src>(dst, src, line);
 
     const CheckedNumeric<Dst> checked_dst;
     TEST_EXPECTED_VALUE(1, checked_dst + static_cast<Src>(1));
@@ -1127,7 +1147,7 @@ struct TestNumericConversion<Dst, Src, UNSIGN_TO_SIGN_NARROW_OR_EQUAL> {
     static_assert(!SrcLimits::is_signed, "Source must be unsigned.");
     static_assert(DstLimits::is_signed, "Destination must be signed.");
 
-    TestStrictComparison<Dst, Src>();
+    TestStrictComparison<Dst, Src>(dst, src, line);
 
     const CheckedNumeric<Dst> checked_dst;
     TEST_EXPECTED_VALUE(1, checked_dst + static_cast<Src>(1));

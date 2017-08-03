@@ -27,6 +27,8 @@
 #include "internal.h"
 
 
+namespace bssl {
+
 /* BIO uses int instead of size_t. No lengths will exceed uint16_t, so this will
  * not overflow. */
 static_assert(0xffff <= INT_MAX, "uint16_t does not fit in int");
@@ -289,3 +291,5 @@ int ssl_write_buffer_flush(SSL *ssl) {
 void ssl_write_buffer_clear(SSL *ssl) {
   clear_buffer(&ssl->s3->write_buffer);
 }
+
+}  // namespace bssl

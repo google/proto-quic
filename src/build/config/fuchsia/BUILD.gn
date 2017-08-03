@@ -9,9 +9,11 @@ assert(is_fuchsia)
 assert(is_posix)
 
 config("compiler") {
+  sdk_version_file = rebase_path("$fuchsia_sdk/.hash")
+  sdk_version = read_file(sdk_version_file, "trim string")
   defines = [
-    # To force full builds after sysroot updates.
-    "SYSROOT_VERSION=$sysroot_version",
+    # To force full builds after SDK updates in case of ABI changes.
+    "FUCHSIA_SDK_VERSION=$sdk_version",
   ]
   cflags = []
   ldflags = []
@@ -37,6 +39,5 @@ config("compiler") {
   libs = [
     "mxio",
     "magenta",
-    "unwind",
   ]
 }

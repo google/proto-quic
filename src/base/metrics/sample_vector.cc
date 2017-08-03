@@ -336,7 +336,9 @@ bool PersistentSampleVector::MountExistingCountsStorage() const {
   // Mount the counts array in position.
   set_counts(
       static_cast<HistogramBase::AtomicCount*>(persistent_counts_.Get()));
-  return true;
+
+  // The above shouldn't fail but can if the data is corrupt or incomplete.
+  return counts() != nullptr;
 }
 
 HistogramBase::AtomicCount*

@@ -33,6 +33,7 @@ def _ExtractMain(args):
 
 def _PrintMain(args):
   pak = data_pack.ReadDataPack(args.pak_file)
+  id_map = {id(v): k for k, v in sorted(pak.resources.items(), reverse=True)}
   encoding = 'binary'
   if pak.encoding == 1:
     encoding = 'utf-8'
@@ -57,8 +58,13 @@ def _PrintMain(args):
       except UnicodeDecodeError:
         pass
     sha1 = hashlib.sha1(data).hexdigest()[:10]
-    line = u'Entry(id={}, len={}, sha1={}): {}'.format(
-        resource_id, len(data), sha1, desc)
+    canonical_id = id_map[id(data)]
+    if resource_id == canonical_id:
+      line = u'Entry(id={}, len={}, sha1={}): {}'.format(
+          resource_id, len(data), sha1, desc)
+    else:
+      line = u'Entry(id={}, alias_of={}): {}'.format(
+          resource_id, canonical_id, desc)
     print line.encode('utf-8')
 
 

@@ -119,17 +119,6 @@ def BuildBootfs(output_directory, runtime_deps_path, test_name, child_args,
        for loc in locations_to_add],
       locations_to_add)
 
-  # Add extra .so's that are required for running to system/lib
-  sysroot_libs = [
-    'libc++abi.so.1',
-    'libc++.so.2',
-    'libunwind.so.1',
-  ]
-  sysroot_lib_path = os.path.join(SDK_ROOT, 'sysroot', 'x86_64-fuchsia', 'lib')
-  for lib in sysroot_libs:
-    target_source_pairs.append(
-        ('lib/' + lib, os.path.join(sysroot_lib_path, lib)))
-
   if test_launcher_filter_file:
     test_launcher_filter_file = os.path.normpath(
             os.path.join(output_directory, test_launcher_filter_file))

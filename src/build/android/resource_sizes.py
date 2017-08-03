@@ -570,12 +570,17 @@ def PrintPakAnalysis(apk_filename, min_pak_resource_size, out_dir):
   # Calculate aggregate stats about resources across pak files.
   resource_count_map = collections.defaultdict(int)
   resource_size_map = collections.defaultdict(int)
+  seen_data_ids = set()
+  alias_overhead_bytes = 4
   resource_overhead_bytes = 6
   for pak in paks:
-    for r in pak.resources:
-      resource_count_map[r] += 1
-      resource_size_map[r] += len(pak.resources[r]) + resource_overhead_bytes
-
+    for k, v in pak.resources.iteritems():
+      resource_count_map[k] += 1
+      if id(v) not in seen_data_ids:
+        seen_data_ids.add(id(v))
+        resource_size_map[k] += resource_overhead_bytes + len(v)
+      else:
+        resource_size_map[k] += alias_overhead_bytes
   # Output the overall resource summary.
   total_resource_size = sum(resource_size_map.values())
   total_resource_count = len(resource_count_map)

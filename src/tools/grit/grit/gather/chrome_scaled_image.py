@@ -40,7 +40,7 @@ _SPECIAL_CHUNKS = frozenset('csCl npTc'.split())
 
 '''Any ancillary chunk not in this list is deleted from the PNG.'''
 _ANCILLARY_CHUNKS_TO_LEAVE = frozenset(
-    'bKGD cHRM gAMA iCCP pHYs sBIT sRGB tRNS'.split())
+    'bKGD cHRM gAMA iCCP pHYs sBIT sRGB tRNS acTL fcTL fdAT'.split())
 
 
 def _MoveSpecialChunksToFront(data):

@@ -76,6 +76,8 @@ static_library("test_support") {
     "scoped_async_task_scheduler.h",
     "scoped_command_line.cc",
     "scoped_command_line.h",
+    "scoped_environment_variable_override.cc",
+    "scoped_environment_variable_override.h",
     "scoped_feature_list.cc",
     "scoped_feature_list.h",
     "scoped_locale.cc",

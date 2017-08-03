@@ -34,7 +34,7 @@ def main():
                     help="user-specified SDK path; bypasses verification")
   parser.add_option("--print_sdk_path",
                     action="store_true", dest="print_sdk_path", default=False,
-                    help="Additionaly print the path the SDK (appears first).")
+                    help="Additionally print the path the SDK (appears first).")
   parser.add_option("--developer_dir", help='Path to Xcode.')
   options, args = parser.parse_args()
   if len(args) != 1:

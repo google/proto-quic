@@ -86,8 +86,16 @@ _STRING_TEMPLATE = u'<string name="%s">"%s"</string>\n'
 # Some strings are output as a <plurals> element.
 _PLURALS_TEMPLATE = '<plurals name="%s">\n%s</plurals>\n'
 _PLURALS_ITEM_TEMPLATE = '  <item quantity="%s">%s</item>\n'
-_PLURALS_PATTERN = lazy_re.compile(r'\{[A-Z_]+,\s*plural,(?P<items>.*)\}$', flags=re.S)
-_PLURALS_ITEM_PATTERN = lazy_re.compile(r'(?P<quantity>\S+)\s*\{(?P<value>.*?)\}')
+
+# Matches e.g. "{HELLO, plural, HOW ARE YOU DOING}", while capturing
+# "HOW ARE YOU DOING" in <items>.
+_PLURALS_PATTERN = lazy_re.compile(r'\{[A-Z_]+,\s*plural,(?P<items>.*)\}$',
+                                   flags=re.S)
+
+# Repeatedly matched against the <items> capture in _PLURALS_PATTERN,
+# to match "<quantity>{<value>}".
+_PLURALS_ITEM_PATTERN = lazy_re.compile(r'(?P<quantity>\S+?)\s*'
+                                        '\{(?P<value>.*?)\}')
 _PLURALS_QUANTITY_MAP = {
   '=0': 'zero',
   'zero': 'zero',

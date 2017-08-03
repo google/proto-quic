@@ -127,6 +127,8 @@
 #include "internal.h"
 
 
+namespace bssl {
+
 /* TODO(davidben): 28 comes from the size of IP + UDP header. Is this reasonable
  * for these values? Notably, why is kMinMTU a function of the transport
  * protocol's overhead rather than, say, what's needed to hold a minimally-sized
@@ -152,6 +154,7 @@ static void dtls1_hm_fragment_free(hm_fragment *frag) {
 }
 
 static hm_fragment *dtls1_hm_fragment_new(const struct hm_header_st *msg_hdr) {
+  ScopedCBB cbb;
   hm_fragment *frag = (hm_fragment *)OPENSSL_malloc(sizeof(hm_fragment));
   if (frag == NULL) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
@@ -170,15 +173,13 @@ static hm_fragment *dtls1_hm_fragment_new(const struct hm_header_st *msg_hdr) {
     goto err;
   }
 
-  CBB cbb;
-  if (!CBB_init_fixed(&cbb, frag->data, DTLS1_HM_HEADER_LENGTH) ||
-      !CBB_add_u8(&cbb, msg_hdr->type) ||
-      !CBB_add_u24(&cbb, msg_hdr->msg_len) ||
-      !CBB_add_u16(&cbb, msg_hdr->seq) ||
-      !CBB_add_u24(&cbb, 0 /* frag_off */) ||
-      !CBB_add_u24(&cbb, msg_hdr->msg_len) ||
-      !CBB_finish(&cbb, NULL, NULL)) {
-    CBB_cleanup(&cbb);
+  if (!CBB_init_fixed(cbb.get(), frag->data, DTLS1_HM_HEADER_LENGTH) ||
+      !CBB_add_u8(cbb.get(), msg_hdr->type) ||
+      !CBB_add_u24(cbb.get(), msg_hdr->msg_len) ||
+      !CBB_add_u16(cbb.get(), msg_hdr->seq) ||
+      !CBB_add_u24(cbb.get(), 0 /* frag_off */) ||
+      !CBB_add_u24(cbb.get(), msg_hdr->msg_len) ||
+      !CBB_finish(cbb.get(), NULL, NULL)) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
     goto err;
   }
@@ -320,9 +321,9 @@ start:
    * the unencrypted epoch (we never renegotiate). Other cases fall through and
    * fail with a fatal error. */
   if ((rr->type == SSL3_RT_APPLICATION_DATA &&
-       ssl->s3->aead_read_ctx != NULL) ||
+       !ssl->s3->aead_read_ctx->is_null_cipher()) ||
       (rr->type == SSL3_RT_CHANGE_CIPHER_SPEC &&
-       ssl->s3->aead_read_ctx == NULL)) {
+       ssl->s3->aead_read_ctx->is_null_cipher())) {
     rr->length = 0;
     goto start;
   }
@@ -548,10 +549,10 @@ static int add_outgoing(SSL *ssl, int is_ccs, uint8_t *data, size_t len) {
   }
 
   if (!is_ccs) {
-    /* TODO(svaldez): Move this up a layer to fix abstraction for SSL_TRANSCRIPT
+    /* TODO(svaldez): Move this up a layer to fix abstraction for SSLTranscript
      * on hs. */
     if (ssl->s3->hs != NULL &&
-        !SSL_TRANSCRIPT_update(&ssl->s3->hs->transcript, data, len)) {
+        !ssl->s3->hs->transcript.Update(data, len)) {
       OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
       OPENSSL_free(data);
       return 0;
@@ -624,14 +625,14 @@ static enum seal_result_t seal_next_message(SSL *ssl, uint8_t *out,
   assert(ssl->d1->outgoing_written < ssl->d1->outgoing_messages_len);
   assert(msg == &ssl->d1->outgoing_messages[ssl->d1->outgoing_written]);
 
-  /* DTLS renegotiation is unsupported, so only epochs 0 (NULL cipher) and 1
-   * (negotiated cipher) exist. */
-  assert(ssl->d1->w_epoch == 0 || ssl->d1->w_epoch == 1);
-  assert(msg->epoch <= ssl->d1->w_epoch);
   enum dtls1_use_epoch_t use_epoch = dtls1_use_current_epoch;
-  if (ssl->d1->w_epoch == 1 && msg->epoch == 0) {
+  if (ssl->d1->w_epoch >= 1 && msg->epoch == ssl->d1->w_epoch - 1) {
     use_epoch = dtls1_use_previous_epoch;
+  } else if (msg->epoch != ssl->d1->w_epoch) {
+    OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
+    return seal_error;
   }
+
   size_t overhead = dtls_max_seal_overhead(ssl, use_epoch);
   size_t prefix = dtls_seal_prefix_len(ssl, use_epoch);
 
@@ -677,18 +678,17 @@ static enum seal_result_t seal_next_message(SSL *ssl, uint8_t *out,
   }
 
   /* Assemble a fragment, to be sealed in-place. */
-  CBB cbb;
+  ScopedCBB cbb;
   uint8_t *frag = out + prefix;
   size_t max_frag = max_out - prefix, frag_len;
-  if (!CBB_init_fixed(&cbb, frag, max_frag) ||
-      !CBB_add_u8(&cbb, hdr.type) ||
-      !CBB_add_u24(&cbb, hdr.msg_len) ||
-      !CBB_add_u16(&cbb, hdr.seq) ||
-      !CBB_add_u24(&cbb, ssl->d1->outgoing_offset) ||
-      !CBB_add_u24(&cbb, todo) ||
-      !CBB_add_bytes(&cbb, CBS_data(&body), todo) ||
-      !CBB_finish(&cbb, NULL, &frag_len)) {
-    CBB_cleanup(&cbb);
+  if (!CBB_init_fixed(cbb.get(), frag, max_frag) ||
+      !CBB_add_u8(cbb.get(), hdr.type) ||
+      !CBB_add_u24(cbb.get(), hdr.msg_len) ||
+      !CBB_add_u16(cbb.get(), hdr.seq) ||
+      !CBB_add_u24(cbb.get(), ssl->d1->outgoing_offset) ||
+      !CBB_add_u24(cbb.get(), todo) ||
+      !CBB_add_bytes(cbb.get(), CBS_data(&body), todo) ||
+      !CBB_finish(cbb.get(), NULL, &frag_len)) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
     return seal_error;
   }
@@ -812,3 +812,5 @@ int dtls1_retransmit_outgoing_messages(SSL *ssl) {
 unsigned int dtls1_min_mtu(void) {
   return kMinMTU;
 }
+
+}  // namespace bssl

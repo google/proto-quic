@@ -4,9 +4,12 @@
 
 #include "base/unguessable_token.h"
 
+#include <memory>
 #include <sstream>
 #include <type_traits>
 
+#include "base/value_conversions.h"
+#include "base/values.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -64,6 +67,15 @@ TEST(UnguessableTokenTest, VerifySerialization) {
 
   UnguessableToken Deserialized = UnguessableToken::Deserialize(high, low);
   EXPECT_EQ(token, Deserialized);
+}
+
+TEST(UnguessableTokenTest, VerifyValueSerialization) {
+  UnguessableToken token = UnguessableToken::Create();
+  std::unique_ptr<Value> value = CreateUnguessableTokenValue(token);
+
+  UnguessableToken deserialized;
+  EXPECT_TRUE(GetValueAsUnguessableToken(*value, &deserialized));
+  EXPECT_EQ(token, deserialized);
 }
 
 TEST(UnguessableTokenTest, VerifyToString) {

@@ -25,6 +25,10 @@ class SignatureAlgorithm;
 //   * EC named curve can be P-256, P-384, P-521.
 class NET_EXPORT SimplePathBuilderDelegate : public CertPathBuilderDelegate {
  public:
+  // Error emitted when a public key is rejected because it is an RSA key with a
+  // modulus size that is too small.
+  static const CertErrorId kRsaModulusTooSmall;
+
   explicit SimplePathBuilderDelegate(size_t min_rsa_modulus_length_bits);
 
   // Accepts RSA PKCS#1, RSASSA-PSS or ECDA using any of the SHA* digests
@@ -43,8 +47,6 @@ class NET_EXPORT SimplePathBuilderDelegate : public CertPathBuilderDelegate {
  private:
   const size_t min_rsa_modulus_length_bits_;
 };
-
-extern const CertErrorId kRsaModulusTooSmall;
 
 }  // namespace net
 

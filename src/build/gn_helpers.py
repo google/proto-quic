@@ -182,7 +182,7 @@ class GNValueParser(object):
 
     - GN strings (double-quoted as in '"asdf"') will be converted to Python
       strings with GN escaping rules. GN string interpolation (embedded
-      variables preceeded by $) are not supported and will be returned as
+      variables preceded by $) are not supported and will be returned as
       literals.
 
     - GN lists ('[1, "asdf", 3]') will be converted to Python lists.

@@ -246,6 +246,7 @@ template("test") {
         data_deps = []
       }
       data_deps += [ ":$_test_runner_target" ]
+      deps += [ "//build/config:exe_and_shlib_deps" ]
     }
   } else if (is_ios) {
     import("//build/config/ios/ios_sdk.gni")

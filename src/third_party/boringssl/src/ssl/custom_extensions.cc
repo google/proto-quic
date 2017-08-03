@@ -25,6 +25,8 @@
 #include "internal.h"
 
 
+namespace bssl {
+
 void SSL_CUSTOM_EXTENSION_free(SSL_CUSTOM_EXTENSION *custom_extension) {
   OPENSSL_free(custom_extension);
 }
@@ -245,6 +247,10 @@ static int custom_ext_append(STACK_OF(SSL_CUSTOM_EXTENSION) **stack,
 
   return 1;
 }
+
+}  // namespace bssl
+
+using namespace bssl;
 
 int SSL_CTX_add_client_custom_ext(SSL_CTX *ctx, unsigned extension_value,
                                   SSL_custom_ext_add_cb add_cb,

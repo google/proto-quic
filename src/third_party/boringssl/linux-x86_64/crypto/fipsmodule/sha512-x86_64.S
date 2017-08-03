@@ -44,7 +44,6 @@ sha512_block_data_order:
 	movq	40(%rdi),%r9
 	movq	48(%rdi),%r10
 	movq	56(%rdi),%r11
-
 	jmp	.Lloop
 
 .align	16

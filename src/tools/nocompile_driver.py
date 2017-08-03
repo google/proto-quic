@@ -220,7 +220,7 @@ def StartTest(sourcefile_path, cflags, config):
   expectations = config['expectations']
   if expectations is not None:
     cmdline.append('-D%s' % name)
-  cmdline.extend(['-std=c++11', '-o', '/dev/null', '-c', '-x', 'c++',
+  cmdline.extend(['-o', '/dev/null', '-c', '-x', 'c++',
                   sourcefile_path])
 
   process = subprocess.Popen(cmdline, stdout=subprocess.PIPE,

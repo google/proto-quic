@@ -217,7 +217,7 @@ def _OnStaleMd5(changes, options, javac_cmd, java_files, classpath_inputs):
       jar_srcs = _FilterJavaFiles(jar_srcs, options.javac_includes)
       java_files.extend(jar_srcs)
       if changed_paths:
-        # Set the mtime of all sources to 0 since we use the absense of .class
+        # Set the mtime of all sources to 0 since we use the absence of .class
         # files to tell jmake which files are stale.
         for path in jar_srcs:
           os.utime(path, (0, 0))

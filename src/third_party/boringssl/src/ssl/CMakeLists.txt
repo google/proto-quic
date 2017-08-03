@@ -21,8 +21,8 @@ add_library(
   ssl_buffer.cc
   ssl_cert.cc
   ssl_cipher.cc
-  ssl_ecdh.cc
   ssl_file.cc
+  ssl_key_share.cc
   ssl_lib.cc
   ssl_privkey.cc
   ssl_session.cc
@@ -45,6 +45,7 @@ target_link_libraries(ssl crypto)
 add_executable(
   ssl_test
 
+  span_test.cc
   ssl_test.cc
 
   $<TARGET_OBJECTS:gtest_main>

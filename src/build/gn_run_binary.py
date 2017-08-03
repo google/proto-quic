@@ -16,7 +16,7 @@ import sys
 # also be on the path.
 path = './' + sys.argv[1]
 
-# The rest of the arguements are passed directly to the executable.
+# The rest of the arguments are passed directly to the executable.
 args = [path] + sys.argv[2:]
 
 ret = subprocess.call(args)

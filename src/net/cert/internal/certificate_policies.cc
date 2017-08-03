@@ -6,6 +6,8 @@
 
 #include "net/cert/internal/certificate_policies.h"
 
+#include "net/cert/internal/cert_error_params.h"
+#include "net/cert/internal/cert_errors.h"
 #include "net/der/input.h"
 #include "net/der/parse_values.h"
 #include "net/der/parser.h"
@@ -14,6 +16,21 @@
 namespace net {
 
 namespace {
+
+// ---------------------------------------------------------------
+// Errors
+// ---------------------------------------------------------------
+
+DEFINE_CERT_ERROR_ID(kPolicyQualifiersEmptySequence,
+                     "The policy qualifiers SEQUENCE is empty");
+DEFINE_CERT_ERROR_ID(kUnknownPolicyQualifierOid,
+                     "Unknown policy qualifier OID (not CPS or User Notice)");
+DEFINE_CERT_ERROR_ID(kPoliciesEmptySequence, "Policies is an empty SEQUENCE");
+DEFINE_CERT_ERROR_ID(kPoliciesDuplicateOid, "Policies contains duplicate OIDs");
+DEFINE_CERT_ERROR_ID(kPolicyInformationTrailingData,
+                     "PolicyInformation has trailing data");
+DEFINE_CERT_ERROR_ID(kFailedParsingPolicyQualifiers,
+                     "Failed parsing policy qualifiers");
 
 // -- policyQualifierIds for Internet policy qualifiers
 //
@@ -40,24 +57,37 @@ const der::Input UserNoticeId() {
 // TODO(mattm): parse and return the policyQualifiers, since the cert viewer
 // still needs to display them.
 bool ParsePolicyQualifiers(bool restrict_to_known_qualifiers,
-                           der::Parser* policy_qualifiers_sequence_parser) {
+                           der::Parser* policy_qualifiers_sequence_parser,
+                           CertErrors* errors) {
+  DCHECK(errors);
+
   // If it is present, the policyQualifiers sequence should have at least 1
   // element.
-  if (!policy_qualifiers_sequence_parser->HasMore())
+  //
+  //      policyQualifiers   SEQUENCE SIZE (1..MAX) OF
+  //                              PolicyQualifierInfo OPTIONAL }
+  if (!policy_qualifiers_sequence_parser->HasMore()) {
+    errors->AddError(kPolicyQualifiersEmptySequence);
     return false;
+  }
   while (policy_qualifiers_sequence_parser->HasMore()) {
+    // PolicyQualifierInfo ::= SEQUENCE {
     der::Parser policy_information_parser;
     if (!policy_qualifiers_sequence_parser->ReadSequence(
             &policy_information_parser)) {
       return false;
     }
+    //      policyQualifierId  PolicyQualifierId,
     der::Input qualifier_oid;
     if (!policy_information_parser.ReadTag(der::kOid, &qualifier_oid))
       return false;
     if (restrict_to_known_qualifiers && qualifier_oid != CpsPointerId() &&
         qualifier_oid != UserNoticeId()) {
+      errors->AddError(kUnknownPolicyQualifierOid,
+                       CreateCertErrorParams1Der("oid", qualifier_oid));
       return false;
     }
+    //      qualifier          ANY DEFINED BY policyQualifierId }
     der::Tag tag;
     der::Input value;
     if (!policy_information_parser.ReadTagAndValue(&tag, &value))
@@ -141,7 +171,10 @@ der::Input PolicyMappingsOid() {
 //      utf8String       UTF8String     (SIZE (1..200)) }
 bool ParseCertificatePoliciesExtension(const der::Input& extension_value,
                                        bool fail_parsing_unknown_qualifier_oids,
-                                       std::vector<der::Input>* policies) {
+                                       std::vector<der::Input>* policies,
+                                       CertErrors* errors) {
+  DCHECK(errors);
+  // certificatePolicies ::= SEQUENCE SIZE (1..MAX) OF PolicyInformation
   der::Parser extension_parser(extension_value);
   der::Parser policies_sequence_parser;
   if (!extension_parser.ReadSequence(&policies_sequence_parser))
@@ -150,15 +183,19 @@ bool ParseCertificatePoliciesExtension(const der::Input& extension_value,
   if (extension_parser.HasMore())
     return false;
   // The certificatePolicies sequence should have at least 1 element.
-  if (!policies_sequence_parser.HasMore())
+  if (!policies_sequence_parser.HasMore()) {
+    errors->AddError(kPoliciesEmptySequence);
     return false;
+  }
 
   policies->clear();
 
   while (policies_sequence_parser.HasMore()) {
+    // PolicyInformation ::= SEQUENCE {
     der::Parser policy_information_parser;
     if (!policies_sequence_parser.ReadSequence(&policy_information_parser))
       return false;
+    //      policyIdentifier   CertPolicyId,
     der::Input policy_oid;
     if (!policy_information_parser.ReadTag(der::kOid, &policy_oid))
       return false;
@@ -170,29 +207,37 @@ bool ParseCertificatePoliciesExtension(const der::Input& extension_value,
         std::lower_bound(policies->begin(), policies->end(), policy_oid);
     // RFC 5280 section 4.2.1.4: A certificate policy OID MUST NOT appear more
     // than once in a certificate policies extension.
-    if (i != policies->end() && *i == policy_oid)
+    if (i != policies->end() && *i == policy_oid) {
+      errors->AddError(kPoliciesDuplicateOid,
+                       CreateCertErrorParams1Der("oid", policy_oid));
       return false;
+    }
 
     policies->insert(i, policy_oid);
 
     if (!policy_information_parser.HasMore())
       continue;
 
+    //      policyQualifiers   SEQUENCE SIZE (1..MAX) OF
+    //                              PolicyQualifierInfo OPTIONAL }
     der::Parser policy_qualifiers_sequence_parser;
     if (!policy_information_parser.ReadSequence(
             &policy_qualifiers_sequence_parser)) {
       return false;
     }
     // Should not have trailing data after policyQualifiers sequence.
-    if (policy_information_parser.HasMore())
+    if (policy_information_parser.HasMore()) {
+      errors->AddError(kPolicyInformationTrailingData);
       return false;
+    }
 
     // RFC 5280 section 4.2.1.4: When qualifiers are used with the special
     // policy anyPolicy, they MUST be limited to the qualifiers identified in
     // this section.
     if (!ParsePolicyQualifiers(
             fail_parsing_unknown_qualifier_oids || policy_oid == AnyPolicy(),
-            &policy_qualifiers_sequence_parser)) {
+            &policy_qualifiers_sequence_parser, errors)) {
+      errors->AddError(kFailedParsingPolicyQualifiers);
       return false;
     }
   }

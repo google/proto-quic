@@ -16,6 +16,8 @@
 
 namespace net {
 
+class CertErrors;
+
 namespace der {
 class Input;
 }  // namespace der
@@ -48,9 +50,11 @@ struct NET_EXPORT GeneralNames {
   ~GeneralNames();
 
   // Create a GeneralNames object representing the DER-encoded
-  // |general_names_tlv|.
+  // |general_names_tlv|. Returns nullptr on failure, and may fill |errors| with
+  // additional information. |errors| must be non-null.
   static std::unique_ptr<GeneralNames> Create(
-      const der::Input& general_names_tlv);
+      const der::Input& general_names_tlv,
+      CertErrors* errors);
 
   // ASCII hostnames.
   std::vector<std::string> dns_names;
@@ -87,7 +91,8 @@ class NET_EXPORT NameConstraints {
   // The object lifetime is not bound to the lifetime of |extension_value| data.
   static std::unique_ptr<NameConstraints> Create(
       const der::Input& extension_value,
-      bool is_critical);
+      bool is_critical,
+      CertErrors* errors);
 
   // Tests if a certificate is allowed by the name constraints.
   // |subject_rdn_sequence| should be the DER-encoded value of the subject's
@@ -132,7 +137,8 @@ class NET_EXPORT NameConstraints {
 
  private:
   bool Parse(const der::Input& extension_value,
-             bool is_critical) WARN_UNUSED_RESULT;
+             bool is_critical,
+             CertErrors* errors) WARN_UNUSED_RESULT;
 
   GeneralNames permitted_subtrees_;
   GeneralNames excluded_subtrees_;

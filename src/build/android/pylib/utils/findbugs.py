@@ -109,7 +109,7 @@ def Run(exclude, classes_to_analyze, auxiliary_classes, output_file,
     auxiliary_classes: the classes help to analyze, refer to FindBug's
                        -auxclasspath command line option.
     output_file: An optional path to dump XML results to.
-    findbug_args: A list of addtional command line options to pass to Findbugs.
+    findbug_args: A list of additional command line options to pass to Findbugs.
   """
   # TODO(jbudorick): Get this from the build system.
   system_classes = [

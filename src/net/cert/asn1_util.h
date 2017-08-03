@@ -39,6 +39,8 @@ NET_EXPORT_PRIVATE bool ExtractSubjectPublicKeyFromSPKI(
 // The nested set of GeneralNames is flattened into a single list because
 // having several CRLs with one location is equivalent to having one CRL with
 // several locations as far as a CRL filter is concerned.
+//
+// TODO(eroman): This appears to be unused, can it be deleted?
 NET_EXPORT_PRIVATE bool ExtractCRLURLsFromDERCert(
     base::StringPiece cert,
     std::vector<base::StringPiece>* urls_out);

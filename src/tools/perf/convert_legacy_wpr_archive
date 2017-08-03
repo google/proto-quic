@@ -75,7 +75,7 @@ def upload(page_sets_json_file, bucket):
     count = 0
     with open(page_sets_json_file, 'r+') as json_file:
       content = json_file.read()
-      m = re.findall(r'"(\w*).wprgo"', content)
+      m = re.findall(r'"([a-zA-Z0-9_\.]+).wprgo"', content)
       if not m:
         raise Exception("No .wprgo files to upload in ", page_sets_json_file)
       # get rid of duplicates.
@@ -153,7 +153,7 @@ def main():
                                             py_utils.GetHostOsName())
   with open(page_sets_json_file, 'r+') as json_file:
     content = json_file.read()
-    m = re.findall(r'"(\w*).wpr"', content)
+    m = re.findall(r'"([a-zA-Z0-9_\.]+).wpr"', content)
     if not m:
       raise Exception("No .wpr files found in ", page_sets_json_file)
     # get rid of duplicates.
@@ -170,6 +170,7 @@ def main():
         output.write(dump_requests(archive))
       wpr_cmd = [path_util.GetWprDir() + '/replay.py',
                  '--port=8080', '--ssl_port=8089', '--no-dns_forwarding',
+                 '--inject_scripts=',
                  wpr_file]
       print wpr_cmd
       wpr_server = subprocess.Popen(' '.join(wpr_cmd), shell=True)

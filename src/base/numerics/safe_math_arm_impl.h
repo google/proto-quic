@@ -106,7 +106,7 @@ struct ClampedMulFastAsmOp {
       V result;
       if (CheckedMulFastAsmOp<T, U>::Do(x, y, &result))
         return result;
-      return GetMaxOrMin<V>(IsValueNegative(x) ^ IsValueNegative(y));
+      return CommonMaxOrMin<V>(IsValueNegative(x) ^ IsValueNegative(y));
     }
 
     assert((FastIntegerArithmeticPromotion<T, U>::is_contained));

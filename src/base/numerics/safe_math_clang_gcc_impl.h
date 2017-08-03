@@ -119,7 +119,7 @@ struct ClampedAddFastOp {
     // TODO(jschuh) C++14 constexpr allows a compile-time constant optimization.
     return !__builtin_add_overflow(x, y, &result)
                ? result
-               : GetMaxOrMin<V>(IsValueNegative(y));
+               : CommonMaxOrMin<V>(IsValueNegative(y));
   }
 };
 
@@ -135,7 +135,7 @@ struct ClampedSubFastOp {
     // TODO(jschuh) C++14 constexpr allows a compile-time constant optimization.
     return !__builtin_sub_overflow(x, y, &result)
                ? result
-               : GetMaxOrMin<V>(!IsValueNegative(y));
+               : CommonMaxOrMin<V>(!IsValueNegative(y));
   }
 };
 
@@ -150,7 +150,7 @@ struct ClampedMulFastOp {
     V result;
     return CheckedMulFastOp<T, U>::Do(x, y, &result)
                ? result
-               : GetMaxOrMin<V>(IsValueNegative(x) ^ IsValueNegative(y));
+               : CommonMaxOrMin<V>(IsValueNegative(x) ^ IsValueNegative(y));
   }
 };
 

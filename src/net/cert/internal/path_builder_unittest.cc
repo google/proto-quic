@@ -9,6 +9,7 @@
 #include "base/path_service.h"
 #include "net/cert/internal/cert_error_params.h"
 #include "net/cert/internal/cert_issuer_source_static.h"
+#include "net/cert/internal/common_cert_errors.h"
 #include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/internal/simple_path_builder_delegate.h"
 #include "net/cert/internal/test_helpers.h"
@@ -1256,7 +1257,7 @@ TEST_F(PathBuilderDistrustTest, TargetIntermediateRoot) {
     ASSERT_EQ(1u, best_path->path.certs.size());
     EXPECT_EQ(best_path->path.certs[0], test_.chain[0]);
     EXPECT_TRUE(best_path->errors.ContainsHighSeverityErrors());
-    best_path->errors.ContainsError(kCertIsDistrusted);
+    best_path->errors.ContainsError(cert_errors::kDistrustedByTrustStore);
   }
 
   // Try path building when only the intermediate is blacklisted - should fail.
@@ -1272,7 +1273,7 @@ TEST_F(PathBuilderDistrustTest, TargetIntermediateRoot) {
     EXPECT_EQ(best_path->path.certs[0], test_.chain[0]);
     EXPECT_EQ(best_path->path.certs[1], test_.chain[1]);
     EXPECT_TRUE(best_path->errors.ContainsHighSeverityErrors());
-    best_path->errors.ContainsError(kCertIsDistrusted);
+    best_path->errors.ContainsError(cert_errors::kDistrustedByTrustStore);
   }
 
   // Try path building when only the root is blacklisted - should fail.
@@ -1289,7 +1290,7 @@ TEST_F(PathBuilderDistrustTest, TargetIntermediateRoot) {
     EXPECT_EQ(best_path->path.certs[1], test_.chain[1]);
     EXPECT_EQ(best_path->path.certs[2], test_.chain[2]);
     EXPECT_TRUE(best_path->errors.ContainsHighSeverityErrors());
-    best_path->errors.ContainsError(kCertIsDistrusted);
+    best_path->errors.ContainsError(cert_errors::kDistrustedByTrustStore);
   }
 }
 

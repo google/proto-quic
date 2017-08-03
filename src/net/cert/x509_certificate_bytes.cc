@@ -79,7 +79,8 @@ bool GetNormalizedCertIssuer(CRYPTO_BUFFER* cert,
   if (!GetSequenceValue(tbs.issuer_tlv, &issuer_value))
     return false;
 
-  return NormalizeName(issuer_value, out_normalized_issuer);
+  CertErrors errors;
+  return NormalizeName(issuer_value, out_normalized_issuer, &errors);
 }
 
 // Fills |principal| from the DER encoded |name_tlv|, returning true on success
@@ -229,8 +230,9 @@ bool X509Certificate::GetSubjectAltName(
     return false;
   }
 
+  CertErrors errors;
   std::unique_ptr<GeneralNames> subject_alt_names =
-      GeneralNames::Create(subject_alt_names_extension.value);
+      GeneralNames::Create(subject_alt_names_extension.value, &errors);
   if (!subject_alt_names)
     return false;
 
@@ -251,11 +253,12 @@ bool X509Certificate::GetSubjectAltName(
 bool X509Certificate::IsIssuedByEncoded(
     const std::vector<std::string>& valid_issuers) {
   std::vector<std::string> normalized_issuers;
+  CertErrors errors;
   for (const auto& raw_issuer : valid_issuers) {
     der::Input issuer_value;
     std::string normalized_issuer;
     if (!GetSequenceValue(der::Input(&raw_issuer), &issuer_value) ||
-        !NormalizeName(issuer_value, &normalized_issuer)) {
+        !NormalizeName(issuer_value, &normalized_issuer, &errors)) {
       continue;
     }
     normalized_issuers.push_back(std::move(normalized_issuer));
@@ -442,15 +445,16 @@ bool X509Certificate::IsSelfSigned(OSCertHandle cert_handle) {
   }
 
   der::Input subject_value;
+  CertErrors errors;
   std::string normalized_subject;
   if (!GetSequenceValue(tbs.subject_tlv, &subject_value) ||
-      !NormalizeName(subject_value, &normalized_subject)) {
+      !NormalizeName(subject_value, &normalized_subject, &errors)) {
     return false;
   }
   der::Input issuer_value;
   std::string normalized_issuer;
   if (!GetSequenceValue(tbs.issuer_tlv, &issuer_value) ||
-      !NormalizeName(issuer_value, &normalized_issuer)) {
+      !NormalizeName(issuer_value, &normalized_issuer, &errors)) {
     return false;
   }
 

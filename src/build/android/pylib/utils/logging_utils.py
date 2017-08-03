@@ -94,7 +94,7 @@ def SuppressLogging(level=logging.ERROR):
   """Momentarilly suppress logging events from all loggers.
 
   TODO(jbudorick): This is not thread safe. Log events from other threads might
-  also inadvertently dissapear.
+  also inadvertently disappear.
 
   Example:
 

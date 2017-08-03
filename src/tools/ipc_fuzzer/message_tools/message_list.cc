@@ -51,10 +51,22 @@ static bool check_msgtable() {
   exemptions.push_back(LayoutTestMsgStart);
   exemptions.push_back(MetroViewerMsgStart);
   exemptions.push_back(CCMsgStart);  // Nothing but param traits.
+  exemptions.push_back(CastCryptoMsgStart);   // Reserved for chromecast.
+  exemptions.push_back(CastChannelMsgStart);  // Reserved for chromecast.
+  exemptions.push_back(CastMediaMsgStart);    // Reserved for chromecast.
+  exemptions.push_back(IPCTestMsgStart);
 
 #if defined(DISABLE_NACL)
   exemptions.push_back(NaClMsgStart);
 #endif  // defined(DISABLE_NACL)
+
+#if !BUILDFLAG(ENABLE_WEBRTC)
+  exemptions.push_back(WebRtcLoggingMsgStart);
+#endif
+
+#if !BUILDFLAG(USE_BROWSER_SPELLCHECKER)
+  exemptions.push_back(SpellCheckMsgStart);
+#endif
 
 #if !defined(OS_ANDROID)
   exemptions.push_back(JavaBridgeMsgStart);
@@ -62,15 +74,22 @@ static bool check_msgtable() {
   exemptions.push_back(EncryptedMediaMsgStart);
   exemptions.push_back(GinJavaBridgeMsgStart);
   exemptions.push_back(AndroidWebViewMsgStart);
+  exemptions.push_back(SyncCompositorMsgStart);
+  exemptions.push_back(ExtensionWorkerMsgStart);
+  exemptions.push_back(SurfaceViewManagerMsgStart);
 #endif  // !defined(OS_ANDROID)
-
-#if !defined(OS_POSIX)
-  exemptions.push_back(CastMediaMsgStart); // FIXME: Add support for types.
-#endif  // !defined(OS_POSIX)
 
 #if !defined(USE_OZONE)
   exemptions.push_back(OzoneGpuMsgStart);
 #endif  // !defined(USE_OZONE)
+
+#if !defined(OS_WIN) && !defined(OS_MACOSX)
+  exemptions.push_back(ChromeUtilityExtensionsMsgStart);
+#endif
+
+#if !defined(OS_WIN)
+  exemptions.push_back(DWriteFontProxyMsgStart);
+#endif
 
   for (size_t i = 0; i < MSGTABLE_SIZE; ++i) {
     int class_id = IPC_MESSAGE_ID_CLASS(msgtable[i].id);

@@ -858,11 +858,11 @@ chrome.automation.AutomationNode.prototype.liveRelevant;
 chrome.automation.AutomationNode.prototype.liveAtomic;
 
 /**
- * The value of aria-busy for a live region.
+ * The value of aria-busy for a live region or any other element.
  * @type {(boolean|undefined)}
- * @see https://developer.chrome.com/extensions/automation#type-liveBusy
+ * @see https://developer.chrome.com/extensions/automation#type-busy
  */
-chrome.automation.AutomationNode.prototype.liveBusy;
+chrome.automation.AutomationNode.prototype.busy;
 
 /**
  * The type of live region if this node is inside a live region.

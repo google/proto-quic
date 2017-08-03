@@ -17,6 +17,7 @@
 #include "base/containers/adapters.h"
 #include "base/memory/ptr_util.h"
 #include "base/strings/string16.h"
+#include "base/strings/string_piece.h"
 #include "base/strings/utf_string_conversions.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -584,11 +585,11 @@ TEST(ValuesTest, SetKey) {
   storage.emplace("dict", MakeUnique<Value>(Value::Type::DICTIONARY));
 
   Value dict(Value::Type::DICTIONARY);
-  dict.SetKey("null", Value(Value::Type::NONE));
-  dict.SetKey("bool", Value(Value::Type::BOOLEAN));
-  dict.SetKey("int", Value(Value::Type::INTEGER));
-  dict.SetKey("double", Value(Value::Type::DOUBLE));
-  dict.SetKey("string", Value(Value::Type::STRING));
+  dict.SetKey(StringPiece("null"), Value(Value::Type::NONE));
+  dict.SetKey(StringPiece("bool"), Value(Value::Type::BOOLEAN));
+  dict.SetKey(std::string("int"), Value(Value::Type::INTEGER));
+  dict.SetKey(std::string("double"), Value(Value::Type::DOUBLE));
+  dict.SetKey(std::string("string"), Value(Value::Type::STRING));
   dict.SetKey("blob", Value(Value::Type::BINARY));
   dict.SetKey("list", Value(Value::Type::LIST));
   dict.SetKey("dict", Value(Value::Type::DICTIONARY));

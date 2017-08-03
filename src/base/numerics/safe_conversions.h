@@ -32,17 +32,55 @@ struct SaturateFastAsmOp {
     return CheckOnFailure::template HandleFailure<Dst>();
   }
 };
+#endif  // BASE_HAS_OPTIMIZED_SAFE_CONVERSIONS
+#undef BASE_HAS_OPTIMIZED_SAFE_CONVERSIONS
 
-template <typename Dst, typename Src>
+// The following special case a few specific integer conversions where we can
+// eke out better performance than range checking.
+template <typename Dst, typename Src, typename Enable = void>
 struct IsValueInRangeFastOp {
   static const bool is_supported = false;
-  static constexpr bool Do(Src) {
+  static constexpr bool Do(Src value) {
     // Force a compile failure if instantiated.
     return CheckOnFailure::template HandleFailure<bool>();
   }
 };
-#endif  // BASE_HAS_OPTIMIZED_SAFE_CONVERSIONS
-#undef BASE_HAS_OPTIMIZED_SAFE_CONVERSIONS
+
+// Signed to signed range comparison.
+template <typename Dst, typename Src>
+struct IsValueInRangeFastOp<
+    Dst,
+    Src,
+    typename std::enable_if<
+        std::is_integral<Dst>::value && std::is_integral<Src>::value &&
+        std::is_signed<Dst>::value && std::is_signed<Src>::value &&
+        !IsTypeInRangeForNumericType<Dst, Src>::value>::type> {
+  static const bool is_supported = true;
+
+  static constexpr bool Do(Src value) {
+    // Just downcast to the smaller type, sign extend it back to the original
+    // type, and then see if it matches the original value.
+    return value == static_cast<Dst>(value);
+  }
+};
+
+// Signed to unsigned range comparison.
+template <typename Dst, typename Src>
+struct IsValueInRangeFastOp<
+    Dst,
+    Src,
+    typename std::enable_if<
+        std::is_integral<Dst>::value && std::is_integral<Src>::value &&
+        !std::is_signed<Dst>::value && std::is_signed<Src>::value &&
+        !IsTypeInRangeForNumericType<Dst, Src>::value>::type> {
+  static const bool is_supported = true;
+
+  static constexpr bool Do(Src value) {
+    // We cast a signed as unsigned to overflow negative values to the top,
+    // then compare against whichever maximum is smaller, as our upper bound.
+    return as_unsigned(value) <= as_unsigned(CommonMax<Src, Dst>());
+  }
+};
 
 // Convenience function that returns true if the supplied value is in range
 // for the destination type.
@@ -63,7 +101,8 @@ constexpr Dst checked_cast(Src value) {
   // This throws a compile-time error on evaluating the constexpr if it can be
   // determined at compile-time as failing, otherwise it will CHECK at runtime.
   using SrcType = typename internal::UnderlyingType<Src>::type;
-  return IsValueInRangeForNumericType<Dst, SrcType>(value)
+  return BASE_NUMERICS_LIKELY(
+             (IsValueInRangeForNumericType<Dst, SrcType>(value)))
              ? static_cast<Dst>(static_cast<SrcType>(value))
              : CheckHandler::template HandleFailure<Dst>();
 }
@@ -105,6 +144,41 @@ constexpr Dst saturated_cast_impl(Src value, RangeCheck constraint) {
                     : S<Dst>::NaN());
 }
 
+// We can reduce the number of conditions and get slightly better performance
+// for normal signed and unsigned integer ranges. And in the specific case of
+// Arm, we can use the optimized saturation instructions.
+template <typename Dst, typename Src, typename Enable = void>
+struct SaturateFastOp {
+  static const bool is_supported = false;
+  static constexpr Dst Do(Src value) {
+    // Force a compile failure if instantiated.
+    return CheckOnFailure::template HandleFailure<Dst>();
+  }
+};
+
+template <typename Dst, typename Src>
+struct SaturateFastOp<
+    Dst,
+    Src,
+    typename std::enable_if<std::is_integral<Src>::value &&
+                            std::is_integral<Dst>::value>::type> {
+  static const bool is_supported = true;
+  static Dst Do(Src value) {
+    if (SaturateFastAsmOp<Dst, Src>::is_supported)
+      return SaturateFastAsmOp<Dst, Src>::Do(value);
+
+    // The exact order of the following is structured to hit the correct
+    // optimization heuristics across compilers. Do not change without
+    // checking the emitted code.
+    Dst saturated = CommonMaxOrMin<Dst, Src>(
+        IsMaxInRangeForNumericType<Dst, Src>() ||
+        (!IsMinInRangeForNumericType<Dst, Src>() && IsValueNegative(value)));
+    return BASE_NUMERICS_LIKELY(IsValueInRangeForNumericType<Dst>(value))
+               ? static_cast<Dst>(value)
+               : saturated;
+  }
+};
+
 // saturated_cast<> is analogous to static_cast<> for numeric types, except
 // that the specified numeric conversion will saturate by default rather than
 // overflow or underflow, and NaN assignment to an integral will return 0.
@@ -115,10 +189,10 @@ template <typename Dst,
 constexpr Dst saturated_cast(Src value) {
   using SrcType = typename UnderlyingType<Src>::type;
   return !IsCompileTimeConstant(value) &&
-                 SaturateFastAsmOp<Dst, SrcType>::is_supported &&
+                 SaturateFastOp<Dst, SrcType>::is_supported &&
                  std::is_same<SaturationHandler<Dst>,
                               SaturationDefaultLimits<Dst>>::value
-             ? SaturateFastAsmOp<Dst, SrcType>::Do(value)
+             ? SaturateFastOp<Dst, SrcType>::Do(value)
              : saturated_cast_impl<Dst, SaturationHandler, SrcType>(
                    value,
                    DstRangeRelationToSrcRange<Dst, SaturationHandler, SrcType>(

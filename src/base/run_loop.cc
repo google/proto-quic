@@ -48,11 +48,10 @@ RunLoop::Delegate::~Delegate() {
     tls_delegate.Get().Set(nullptr);
 }
 
-RunLoop* RunLoop::Delegate::Client::GetTopMostRunLoop() const {
+bool RunLoop::Delegate::Client::ShouldQuitWhenIdle() const {
   DCHECK_CALLED_ON_VALID_THREAD(outer_->bound_thread_checker_);
   DCHECK(outer_->bound_);
-  return outer_->active_run_loops_.empty() ? nullptr
-                                           : outer_->active_run_loops_.top();
+  return outer_->active_run_loops_.top()->quit_when_idle_received_;
 }
 
 bool RunLoop::Delegate::Client::IsNested() const {
@@ -82,8 +81,8 @@ RunLoop::RunLoop()
     : delegate_(tls_delegate.Get().Get()),
       origin_task_runner_(ThreadTaskRunnerHandle::Get()),
       weak_factory_(this) {
-  // A RunLoop::Delegate must be bound to this thread prior to using RunLoop.
-  DCHECK(delegate_);
+  DCHECK(delegate_) << "A RunLoop::Delegate must be bound to this thread prior "
+                       "to using RunLoop.";
   DCHECK(origin_task_runner_);
 }
 
@@ -272,7 +271,7 @@ void RunLoop::AfterRun() {
   RunLoop* previous_run_loop =
       active_run_loops_.empty() ? nullptr : active_run_loops_.top();
 
-  // Execute deferred QuitNow, if any:
+  // Execute deferred Quit, if any:
   if (previous_run_loop && previous_run_loop->quit_called_)
     delegate_->Quit();
 }

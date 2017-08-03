@@ -10,4 +10,5 @@
 -SignalsTest.*
 -SharedBufferTest.PassSharedBufferLocal
 -EmbedderTest.*
+-MessageTest.ExtendPayloadWithHandlesAttached
 -MessageTest.Serialize*

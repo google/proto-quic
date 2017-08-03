@@ -26,6 +26,7 @@
 #include "base/path_service.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/test/scoped_environment_variable_override.h"
 #include "base/test/test_file_util.h"
 #include "base/threading/platform_thread.h"
 #include "build/build_config.h"
@@ -57,43 +58,6 @@
 namespace base {
 
 namespace {
-
-// Overrides PATH environment variable to |value| for the lifetime of this
-// class. Upon destruction, the previous value is restored.
-class ScopedPathOverride {
- public:
-  ScopedPathOverride(const std::string& value);
-  ~ScopedPathOverride();
-
-  base::Environment* GetEnv() { return environment_.get(); }
-  bool IsOverridden() { return overridden_; }
-
- private:
-  static const char kPath[];
-  std::unique_ptr<base::Environment> environment_;
-  bool overridden_;
-  bool was_set_;
-  std::string old_value_;
-};
-
-const char ScopedPathOverride::kPath[] = "PATH";
-
-ScopedPathOverride::ScopedPathOverride(const std::string& value)
-    : environment_(base::Environment::Create()),
-      overridden_(false),
-      was_set_(false) {
-  was_set_ = environment_->GetVar(kPath, &old_value_);
-  overridden_ = environment_->SetVar(kPath, value);
-}
-
-ScopedPathOverride::~ScopedPathOverride() {
-  if (overridden_) {
-    if (was_set_)
-      environment_->SetVar(kPath, old_value_);
-    else
-      environment_->UnSetVar(kPath);
-  }
-}
 
 // To test that NormalizeFilePath() deals with NTFS reparse points correctly,
 // we need functions to create and delete reparse points.
@@ -915,7 +879,8 @@ TEST_F(FileUtilTest, ExecutableExistsInPath) {
   ASSERT_TRUE(CreateDirectory(dir1));
   ASSERT_TRUE(CreateDirectory(dir2));
 
-  ScopedPathOverride scoped_env(dir1.value() + ":" + dir2.value());
+  test::ScopedEnvironmentVariableOverride scoped_env(
+      "PATH", dir1.value() + ":" + dir2.value());
   ASSERT_TRUE(scoped_env.IsOverridden());
 
   const FilePath::CharType kRegularFileName[] = FPL("regular_file");

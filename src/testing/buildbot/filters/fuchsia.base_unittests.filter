@@ -25,16 +25,6 @@
 -FileUtilProxyTest.Touch
 -FileUtilTest.FileToFILE
 -LoggingTest.CheckCausesDistinctBreakpoints
--MemoryMappedFileTest.ExtendableFile
--MemoryMappedFileTest.MapLargePartialRegionInTheMiddle
--MemoryMappedFileTest.MapPartialRegionAtBeginning
--MemoryMappedFileTest.MapPartialRegionAtEnd
--MemoryMappedFileTest.MapSmallFile
--MemoryMappedFileTest.MapSmallPartialRegionInTheMiddle
--MemoryMappedFileTest.MapWholeFileByFD
--MemoryMappedFileTest.MapWholeFileByPath
--MemoryMappedFileTest.MapWholeFileUsingRegion
--MemoryMappedFileTest.WriteableFile
 -NativeLibraryTest.LoadLibrary
 -NativeLibraryTest.LoadLibraryPreferOwnSymbols
 -PartitionAllocTest.Basic
@@ -72,15 +62,9 @@
 -ProcessTest.TerminateCurrentProcessImmediatelyWithNonZeroExitCode
 -ProcessTest.TerminateCurrentProcessImmediatelyWithZeroExitCode
 -ProcessTest.WaitForExitWithTimeout
--ProcessUtilTest.DelayedTermination
--ProcessUtilTest.FDRemapping
 -ProcessUtilTest.GetTerminationStatusCrash
 -ProcessUtilTest.GetTerminationStatusSigKill
 -ProcessUtilTest.GetTerminationStatusSigTerm
--ProcessUtilTest.ImmediateTermination
--ProcessUtilTest.KillSlowChild
--ProcessUtilTest.PreExecHook
--ProcessUtilTest.SpawnChild
 -SysInfoTest.AmountOfFreeDiskSpace
 -SysInfoTest.AmountOfMem
 -SysInfoTest.AmountOfTotalDiskSpace
@@ -93,3 +77,15 @@
 
 # CancelableSyncSocket tests fail: http://crbug.com/741783
 -CancelableSyncSocket*
+
+# These tests are occasionally flaking. See https://crbug.com/738275. Please be
+# pretty confident you've fixed their rarely-flakiness before re-enabling.
+-AllModes/TaskSchedulerSingleThreadTaskRunnerManagerCommonTest.*
+-AllocationRegisterTest.InsertRemoveRandomOrder
+-MemoryPeakDetectorTest.StdDev
+-MemoryPeakDetectorTest.Throttle
+-ObserverListThreadSafeTest.CrossThreadObserver
+-OneTraitsExecutionModePair/TaskSchedulerImplTest.*
+-ProcessUtilTest.DelayedTermination
+-ProcessUtilTest.ImmediateTermination
+-TraceCategoryTest.ThreadRaces

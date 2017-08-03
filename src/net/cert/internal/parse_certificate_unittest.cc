@@ -6,9 +6,11 @@
 
 #include "base/strings/stringprintf.h"
 #include "net/cert/internal/cert_errors.h"
+#include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/internal/test_helpers.h"
 #include "net/der/input.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "third_party/boringssl/src/include/openssl/pool.h"
 
 namespace net {
 
@@ -405,6 +407,105 @@ TEST(ParseKeyUsageTest, Empty) {
 
   der::BitString key_usage;
   ASSERT_FALSE(ParseKeyUsage(der::Input(der), &key_usage));
+}
+
+// Test fixture for testing ParseCrlDistributionPoints.
+//
+// Test data is encoded in certificate files. This fixture is responsible for
+// reading and parsing the certificates to get at the extension under test.
+class ParseCrlDistributionPointsTest : public ::testing::Test {
+ public:
+ protected:
+  bool GetCrlDps(const char* file_name,
+                 std::vector<ParsedDistributionPoint>* dps) {
+    std::string cert_bytes;
+    // Read the test certificate file.
+    const PemBlockMapping mappings[] = {
+        {"CERTIFICATE", &cert_bytes},
+    };
+    std::string test_file_path = GetFilePath(file_name);
+    EXPECT_TRUE(ReadTestDataFromPemFile(test_file_path, mappings));
+
+    // Extract the CRLDP from the test Certificate.
+    CertErrors errors;
+    scoped_refptr<ParsedCertificate> cert = ParsedCertificate::Create(
+        bssl::UniquePtr<CRYPTO_BUFFER>(CRYPTO_BUFFER_new(
+            reinterpret_cast<const uint8_t*>(cert_bytes.data()),
+            cert_bytes.size(), nullptr)),
+        {}, &errors);
+
+    if (!cert)
+      return false;
+
+    auto it = cert->extensions().find(CrlDistributionPointsOid());
+    if (it == cert->extensions().end())
+      return false;
+
+    der::Input crl_dp_tlv = it->second.value;
+
+    // Keep the certificate data alive, since this function will return
+    // der::Inputs that reference it. Run the function under test (for parsing
+    //
+    // TODO(eroman): The use of ParsedCertificate in this test should be removed
+    // in lieu of lazy parsing.
+    keep_alive_certs_.push_back(cert);
+
+    return ParseCrlDistributionPoints(crl_dp_tlv, dps);
+  }
+
+ private:
+  ParsedCertificateList keep_alive_certs_;
+};
+
+TEST_F(ParseCrlDistributionPointsTest, OneUriNoIssuer) {
+  std::vector<ParsedDistributionPoint> dps;
+  ASSERT_TRUE(GetCrlDps("crldp_1uri_noissuer.pem", &dps));
+
+  ASSERT_EQ(1u, dps.size());
+  const ParsedDistributionPoint& dp1 = dps.front();
+  EXPECT_FALSE(dp1.has_crl_issuer);
+  ASSERT_EQ(1u, dp1.uris.size());
+  EXPECT_EQ(dp1.uris.front().AsString(),
+            std::string("http://www.example.com/foo.crl"));
+}
+
+TEST_F(ParseCrlDistributionPointsTest, ThreeUrisNoIssuer) {
+  std::vector<ParsedDistributionPoint> dps;
+  ASSERT_TRUE(GetCrlDps("crldp_3uri_noissuer.pem", &dps));
+
+  ASSERT_EQ(1u, dps.size());
+  const ParsedDistributionPoint& dp1 = dps.front();
+  EXPECT_FALSE(dp1.has_crl_issuer);
+  ASSERT_EQ(3u, dp1.uris.size());
+  EXPECT_EQ(dp1.uris[0].AsString(),
+            std::string("http://www.example.com/foo1.crl"));
+  EXPECT_EQ(dp1.uris[1].AsString(),
+            std::string("http://www.example.com/blah.crl"));
+  EXPECT_EQ(dp1.uris[2].AsString(), std::string("not-even-a-url"));
+}
+
+TEST_F(ParseCrlDistributionPointsTest, CrlIssuerAsDirname) {
+  std::vector<ParsedDistributionPoint> dps;
+  ASSERT_TRUE(GetCrlDps("crldp_issuer_as_dirname.pem", &dps));
+
+  ASSERT_EQ(1u, dps.size());
+  const ParsedDistributionPoint& dp1 = dps.front();
+  EXPECT_TRUE(dp1.has_crl_issuer);
+  // TODO(eroman): This has directory names under the fullName which are not
+  // being parsed or reflected here.
+  ASSERT_EQ(0u, dp1.uris.size());
+}
+
+TEST_F(ParseCrlDistributionPointsTest, FullnameAsDirname) {
+  std::vector<ParsedDistributionPoint> dps;
+  ASSERT_TRUE(GetCrlDps("crldp_full_name_as_dirname.pem", &dps));
+
+  ASSERT_EQ(1u, dps.size());
+  const ParsedDistributionPoint& dp1 = dps.front();
+  EXPECT_FALSE(dp1.has_crl_issuer);
+  // TODO(eroman): This has 1 directory name under the fullName which is not
+  // being reflected here.
+  ASSERT_EQ(0u, dp1.uris.size());
 }
 
 }  // namespace

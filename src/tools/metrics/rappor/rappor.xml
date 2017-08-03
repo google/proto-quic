@@ -2283,6 +2283,14 @@ now we are only interested in H264, VP8 and VP9.
   </summary>
 </rappor-metric>
 
+<rappor-metric name="SubresourceFilter.UIShown" type="UMA_RAPPOR_TYPE">
+  <owner>csharrison@chromium.org</owner>
+  <summary>
+    The eTLD+1 that caused the SubresourceFilter UI to show that ads are being
+    blocked on the site.
+  </summary>
+</rappor-metric>
+
 <rappor-metric name="VR.FullScreenMode" type="ETLD_PLUS_ONE">
   <owner>billorr@chromium.org</owner>
   <summary>

@@ -105,8 +105,7 @@ MessageLoop::~MessageLoop() {
   // There should be no active RunLoops on this thread, unless this MessageLoop
   // isn't bound to the current thread (see other condition at the top of this
   // method).
-  DCHECK((!pump_ && current() != this) ||
-         !run_loop_client_->GetTopMostRunLoop());
+  DCHECK((!pump_ && current() != this) || !RunLoop::IsRunningOnCurrentThread());
 #endif
 
 #if defined(OS_WIN)
@@ -221,20 +220,6 @@ void MessageLoop::RemoveDestructionObserver(
     DestructionObserver* destruction_observer) {
   DCHECK_EQ(this, current());
   destruction_observers_.RemoveObserver(destruction_observer);
-}
-
-void MessageLoop::QuitWhenIdle() {
-  DCHECK_EQ(this, current());
-  DCHECK(run_loop_client_->GetTopMostRunLoop())
-      << "Must be inside Run to call QuitWhenIdle";
-  run_loop_client_->GetTopMostRunLoop()->QuitWhenIdle();
-}
-
-void MessageLoop::QuitNow() {
-  DCHECK_EQ(this, current());
-  DCHECK(run_loop_client_->GetTopMostRunLoop())
-      << "Must be inside Run to call Quit";
-  pump_->Quit();
 }
 
 bool MessageLoop::IsType(Type type) const {
@@ -367,7 +352,7 @@ void MessageLoop::Run() {
 
 void MessageLoop::Quit() {
   DCHECK_EQ(this, current());
-  QuitNow();
+  pump_->Quit();
 }
 
 void MessageLoop::SetThreadTaskRunnerHandle() {
@@ -580,7 +565,7 @@ bool MessageLoop::DoIdleWork() {
   if (ProcessNextDelayedNonNestableTask())
     return true;
 
-  if (run_loop_client_->GetTopMostRunLoop()->quit_when_idle_received_)
+  if (run_loop_client_->ShouldQuitWhenIdle())
     pump_->Quit();
 
   // When we return we will do a kernel wait for more tasks.

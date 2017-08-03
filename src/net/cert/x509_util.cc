@@ -10,6 +10,7 @@
 #include "crypto/ec_private_key.h"
 #include "crypto/rsa_private_key.h"
 #include "net/base/hash_value.h"
+#include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/name_constraints.h"
 #include "net/cert/internal/parse_certificate.h"
 #include "net/cert/internal/parse_name.h"
@@ -122,11 +123,12 @@ bool ParseCertificateSandboxed(const base::StringPiece& certificate,
   if (!ParseExtensions(parsed_tbs_cert.extensions_tlv, &extensions))
     return false;
 
+  CertErrors unused_errors;
   std::vector<std::string> san;
   auto iter = extensions.find(SubjectAltNameOid());
   if (iter != extensions.end()) {
     std::unique_ptr<GeneralNames> subject_alt_names =
-        GeneralNames::Create(iter->second.value);
+        GeneralNames::Create(iter->second.value, &unused_errors);
     if (subject_alt_names) {
       *dns_names = subject_alt_names->dns_names;
       for (const auto& ip : subject_alt_names->ip_addresses)

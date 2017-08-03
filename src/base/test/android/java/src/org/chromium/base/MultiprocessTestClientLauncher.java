@@ -4,7 +4,6 @@
 
 package org.chromium.base;
 
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -92,12 +91,6 @@ public final class MultiprocessTestClientLauncher {
     private final ChildProcessLauncher.Delegate mLauncherDelegate =
             new ChildProcessLauncher.Delegate() {
                 @Override
-                public void onBeforeConnectionAllocated(Bundle serviceBundle) {}
-
-                @Override
-                public void onBeforeConnectionSetup(Bundle connectionBundle) {}
-
-                @Override
                 public void onConnectionEstablished(ChildProcessConnection connection) {
                     assert isRunningOnLauncherThread();
                     int pid = connection.getPid();
@@ -145,8 +138,8 @@ public final class MultiprocessTestClientLauncher {
                     "org.chromium.native_test.NUM_TEST_CLIENT_SERVICES", false /* bindToCaller */,
                     false /* bindAsExternalService */, false /* useStrongBinding */);
         }
-        mLauncher = ChildProcessLauncher.createWithConnectionAllocator(sLauncherHandler,
-                mLauncherDelegate, commandLine, filesToMap, sConnectionAllocator, mCallback);
+        mLauncher = new ChildProcessLauncher(sLauncherHandler, mLauncherDelegate, commandLine,
+                filesToMap, sConnectionAllocator, mCallback);
     }
 
     private boolean waitForConnection(long timeoutMs) {

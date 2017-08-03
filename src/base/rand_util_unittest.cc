@@ -52,6 +52,11 @@ TEST(RandUtilTest, RandBytes) {
   EXPECT_GT(std::unique(buffer, buffer + buffer_size) - buffer, 25);
 }
 
+// Verify that calling base::RandBytes with an empty buffer doesn't fail.
+TEST(RandUtilTest, RandBytes0) {
+  base::RandBytes(nullptr, 0);
+}
+
 TEST(RandUtilTest, RandBytesAsString) {
   std::string random_string = base::RandBytesAsString(1);
   EXPECT_EQ(1U, random_string.size());

@@ -158,8 +158,7 @@ class PerfDataGeneratorTest(unittest.TestCase):
     expected_generated_test = {
         'override_compile_targets': ['telemetry_perf_tests'],
         'args': ['system_health.common_desktop', '-v', '--upload-results',
-                 '--output-format=chartjson', '--browser=release',
-                 '--output-format=json-test-results'],
+                 '--output-format=chartjson', '--browser=release'],
         'swarming': {
           'ignore_task_failure': False,
           'dimension_sets': [{'os': 'SkyNet', 'id': 'T-850', 'pool': 'T-RIP'}],

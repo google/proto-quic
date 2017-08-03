@@ -35,12 +35,12 @@ namespace {
 
 std::unique_ptr<base::Value> NetLogSpdyStreamErrorCallback(
     SpdyStreamId stream_id,
-    int status,
+    int net_error,
     const SpdyString* description,
     NetLogCaptureMode /* capture_mode */) {
   auto dict = base::MakeUnique<base::DictionaryValue>();
   dict->SetInteger("stream_id", static_cast<int>(stream_id));
-  dict->SetInteger("status", status);
+  dict->SetString("net_error", ErrorToShortString(net_error));
   dict->SetString("description", *description);
   return std::move(dict);
 }
@@ -636,10 +636,10 @@ int SpdyStream::OnDataSent(size_t frame_size) {
   }
 }
 
-void SpdyStream::LogStreamError(int status, const SpdyString& description) {
+void SpdyStream::LogStreamError(int error, const SpdyString& description) {
   net_log_.AddEvent(NetLogEventType::HTTP2_STREAM_ERROR,
                     base::Bind(&NetLogSpdyStreamErrorCallback, stream_id_,
-                               status, &description));
+                               error, &description));
 }
 
 void SpdyStream::OnClose(int status) {

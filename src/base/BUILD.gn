@@ -2335,7 +2335,10 @@ test("base_unittests") {
   }
 
   if (use_partition_alloc) {
-    sources += [ "allocator/partition_allocator/partition_alloc_unittest.cc" ]
+    sources += [
+      "allocator/partition_allocator/partition_alloc_unittest.cc",
+      "allocator/partition_allocator/spin_lock_unittest.cc",
+    ]
   }
 
   if (is_mac) {
@@ -2697,7 +2700,6 @@ if (is_android) {
       "test/android/javatests/src/org/chromium/base/test/util/TestFileUtil.java",
       "test/android/javatests/src/org/chromium/base/test/util/TestThread.java",
       "test/android/javatests/src/org/chromium/base/test/util/TimeoutScale.java",
-      "test/android/javatests/src/org/chromium/base/test/util/UserActionTester.java",
       "test/android/javatests/src/org/chromium/base/test/util/UrlUtils.java",
       "test/android/javatests/src/org/chromium/base/test/util/parameter/CommandLineParameter.java",
       "test/android/javatests/src/org/chromium/base/test/util/parameter/SkipCommandLineParameterization.java",

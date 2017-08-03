@@ -43,7 +43,6 @@ L$prologue:
 	movq	40(%rdi),%r9
 	movq	48(%rdi),%r10
 	movq	56(%rdi),%r11
-
 	jmp	L$loop
 
 .p2align	4

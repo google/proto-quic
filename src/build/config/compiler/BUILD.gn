@@ -104,6 +104,9 @@ declare_args() {
   # on by default when goma is enabled because setting this to true may make
   # it harder to debug binaries.
   strip_absolute_paths_from_debug_symbols = false
+
+  # Allow projects that wish to stay on C++11 to override Chromium's default.
+  use_cxx11 = false
 }
 
 if (is_clang && !is_nacl) {
@@ -182,8 +185,6 @@ config("compiler") {
   }
 
   configs += [
-    "//build/config/c++:c++flags",
-
     # See the definitions below.
     ":compiler_cpu_abi",
     ":compiler_codegen",
@@ -438,7 +439,7 @@ config("compiler") {
   # Print absolute paths in diagnostics. There is no precedent for doing this
   # on Linux/Mac (GCC doesn't support it), but MSVC does this with /FC and
   # Windows developers rely on it (crbug.com/636109) so only do this on Windows.
-  if (is_clang && is_win) {
+  if (msvc_use_absolute_paths && is_clang && is_win) {
     cflags += [ "-fdiagnostics-absolute-paths" ]
   }
 
@@ -459,14 +460,23 @@ config("compiler") {
     # TODO(thakis): Eventually switch this to c++11 instead,
     # http://crbug.com/427584
     cflags_c += [ "-std=gnu11" ]
-    cflags_cc += [ "-std=gnu++11" ]
+    if (use_cxx11) {
+      # Override Chromium's default for projects that wish to stay on C++11.
+      cflags_cc += [ "-std=gnu++11" ]
+    } else {
+      cflags_cc += [ "-std=gnu++14" ]
+    }
   } else if (!is_win && !is_nacl) {
     # TODO(mcgrathr) - the NaCl GCC toolchain doesn't support either gnu11/gnu++11
     # or c11/c++11; we technically don't need this toolchain any more, but there
     # are still a few buildbots using it, so until those are turned off
     # we need the !is_nacl clause and the (is_nacl && is_clang) clause, above.
     cflags_c += [ "-std=c11" ]
-    cflags_cc += [ "-std=c++11" ]
+    if (use_cxx11) {
+      cflags_cc += [ "-std=c++11" ]
+    } else {
+      cflags_cc += [ "-std=c++14" ]
+    }
   }
 
   if (is_mac) {
@@ -490,7 +500,7 @@ config("compiler") {
       cflags += [ "-flto=thin" ]
       ldflags += [ "-flto=thin" ]
 
-      # Limit the parallelism to avoid too agressive competition between
+      # Limit the parallelism to avoid too aggressive competition between
       # linker jobs. This is still suboptimal to a potential dynamic
       # resource allocation scheme, but should be good enough.
       if (use_lld) {
@@ -1341,7 +1351,7 @@ config("no_size_t_to_int_warning") {
 # Some code presumes that pointers to structures/objects are compatible
 # regardless of whether what they point to is already known to be valid.
 # gcc 4.9 and earlier had no way of suppressing this warning without
-# supressing the rest of them.  Here we centralize the identification of
+# suppressing the rest of them.  Here we centralize the identification of
 # the gcc 4.9 toolchains.
 config("no_incompatible_pointer_warnings") {
   cflags = []
@@ -1756,11 +1766,9 @@ config("symbols") {
     # builds, currently get
     # "third_party/binutils/Linux_x64/Release/bin/ld.gold: warning:
     # /tmp/lto-llvm-0b5201.o: corrupt debug info in .debug_info"
-    # TODO(thakis): Re-enable on fuchsia once lld can process R_X86_64_DTPOFF64
-    # relocations, https://crbug.com/735101
     if (!is_mac && !is_ios && !is_nacl && target_cpu != "x86" &&
         (use_gold || use_lld) && !allow_posix_link_time_opt &&
-        !is_official_build && !is_fuchsia) {
+        !is_official_build) {
       ldflags += [ "-Wl,--gdb-index" ]
     }
   }

@@ -22,14 +22,17 @@ This script will then update the corresponding .pem file
 """
 
 import sys
-sys.path += ['../verify_certificate_chain_unittest']
+import os
+
+script_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path += [os.path.join(script_dir, '..',
+                          'verify_certificate_chain_unittest')]
 
 import common
 
 import os
 import sys
 import re
-
 
 # Regular expression to find the failed errors in test stdout.
 #  * Group 1 of the match is file path (relative to //src) where the
@@ -55,12 +58,10 @@ ACTUAL:
 #    immediately above it.
 errors_block_regex = re.compile(r""".*
 -----END .*?-----
-
 (.*?
 -----BEGIN ERRORS-----
 .*?
------END ERRORS-----
-)""", re.MULTILINE | re.DOTALL)
+-----END ERRORS-----)""", re.MULTILINE | re.DOTALL)
 
 
 def read_file_to_string(path):
@@ -85,13 +86,17 @@ def fixup_pem_file(path, actual_errors):
   """Updates the ERRORS block in the test .pem file"""
   contents = read_file_to_string(path)
 
+  errors_block_text = '\n' + common.text_data_to_pem('ERRORS', actual_errors)
+  # Strip the trailing newline.
+  errors_block_text = errors_block_text[:-1]
+
   m = errors_block_regex.search(contents)
 
   if not m:
-    contents += '\n' + common.text_data_to_pem('ERRORS', actual_errors)
+    contents += errors_block_text
   else:
     contents = replace_string(contents, m.start(1), m.end(1),
-                              common.text_data_to_pem('ERRORS', actual_errors))
+                              errors_block_text)
 
   # Update the file.
   write_string_to_file(contents, path)

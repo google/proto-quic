@@ -4,6 +4,7 @@
 
 #include "net/cert/internal/parsed_certificate.h"
 
+#include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/certificate_policies.h"
 #include "net/cert/internal/extended_key_usage.h"
 #include "net/cert/internal/name_constraints.h"
@@ -15,6 +16,36 @@
 namespace net {
 
 namespace {
+
+DEFINE_CERT_ERROR_ID(kFailedParsingCertificate, "Failed parsing Certificate");
+DEFINE_CERT_ERROR_ID(kFailedParsingTbsCertificate,
+                     "Failed parsing TBSCertificate");
+DEFINE_CERT_ERROR_ID(kFailedParsingSignatureAlgorithm,
+                     "Failed parsing SignatureAlgorithm");
+DEFINE_CERT_ERROR_ID(kFailedReadingIssuerOrSubject,
+                     "Failed reading issuer or subject");
+DEFINE_CERT_ERROR_ID(kFailedNormalizingSubject, "Failed normalizing subject");
+DEFINE_CERT_ERROR_ID(kFailedNormalizingIssuer, "Failed normalizing issuer");
+DEFINE_CERT_ERROR_ID(kFailedParsingExtensions, "Failed parsing extensions");
+DEFINE_CERT_ERROR_ID(kFailedParsingBasicConstraints,
+                     "Failed parsing basic constraints");
+DEFINE_CERT_ERROR_ID(kFailedParsingKeyUsage, "Failed parsing key usage");
+DEFINE_CERT_ERROR_ID(kFailedParsingEku, "Failed parsing extended key usage");
+DEFINE_CERT_ERROR_ID(kFailedParsingSubjectAltName,
+                     "Failed parsing subjectAltName");
+DEFINE_CERT_ERROR_ID(kSubjectAltNameNotCritical,
+                     "Empty subject and subjectAltName is not critical");
+DEFINE_CERT_ERROR_ID(kFailedParsingNameConstraints,
+                     "Failed parsing name constraints");
+DEFINE_CERT_ERROR_ID(kFailedParsingAia, "Failed parsing authority info access");
+DEFINE_CERT_ERROR_ID(kFailedParsingPolicies,
+                     "Failed parsing certificate policies");
+DEFINE_CERT_ERROR_ID(kFailedParsingPolicyConstraints,
+                     "Failed parsing policy constraints");
+DEFINE_CERT_ERROR_ID(kFailedParsingPolicyMappings,
+                     "Failed parsing policy mappings");
+DEFINE_CERT_ERROR_ID(kFailedParsingInhibitAnyPolicy,
+                     "Failed parsing inhibit any policy");
 
 WARN_UNUSED_RESULT bool GetSequenceValue(const der::Input& tlv,
                                          der::Input* value) {
@@ -79,7 +110,12 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
     der::Input static_data,
     const ParseCertificateOptions& options,
     CertErrors* errors) {
-  // TODO(crbug.com/634443): Add errors
+  if (!errors) {
+    CertErrors unused_errors;
+    return CreateInternal(std::move(backing_data), static_data, options,
+                          &unused_errors);
+  }
+
   scoped_refptr<ParsedCertificate> result(new ParsedCertificate);
   if (backing_data) {
     result->cert_data_ = std::move(backing_data);
@@ -92,28 +128,40 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
   if (!ParseCertificate(result->cert_, &result->tbs_certificate_tlv_,
                         &result->signature_algorithm_tlv_,
                         &result->signature_value_, errors)) {
+    errors->AddError(kFailedParsingCertificate);
     return nullptr;
   }
 
   if (!ParseTbsCertificate(result->tbs_certificate_tlv_, options, &result->tbs_,
                            errors)) {
+    errors->AddError(kFailedParsingTbsCertificate);
     return nullptr;
   }
 
   // Attempt to parse the signature algorithm contained in the Certificate.
   result->signature_algorithm_ =
       SignatureAlgorithm::Create(result->signature_algorithm_tlv_, errors);
-  if (!result->signature_algorithm_)
+  if (!result->signature_algorithm_) {
+    errors->AddError(kFailedParsingSignatureAlgorithm);
     return nullptr;
+  }
 
   der::Input subject_value;
-  if (!GetSequenceValue(result->tbs_.subject_tlv, &subject_value) ||
-      !NormalizeName(subject_value, &result->normalized_subject_)) {
+  if (!GetSequenceValue(result->tbs_.subject_tlv, &subject_value)) {
+    errors->AddError(kFailedReadingIssuerOrSubject);
+    return nullptr;
+  }
+  if (!NormalizeName(subject_value, &result->normalized_subject_, errors)) {
+    errors->AddError(kFailedNormalizingSubject);
     return nullptr;
   }
   der::Input issuer_value;
-  if (!GetSequenceValue(result->tbs_.issuer_tlv, &issuer_value) ||
-      !NormalizeName(issuer_value, &result->normalized_issuer_)) {
+  if (!GetSequenceValue(result->tbs_.issuer_tlv, &issuer_value)) {
+    errors->AddError(kFailedReadingIssuerOrSubject);
+    return nullptr;
+  }
+  if (!NormalizeName(issuer_value, &result->normalized_issuer_, errors)) {
+    errors->AddError(kFailedNormalizingIssuer);
     return nullptr;
   }
 
@@ -122,6 +170,7 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
     // ParseExtensions() ensures there are no duplicates, and maps the (unique)
     // OID to the extension value.
     if (!ParseExtensions(result->tbs_.extensions_tlv, &result->extensions_)) {
+      errors->AddError(kFailedParsingExtensions);
       return nullptr;
     }
 
@@ -130,22 +179,29 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
     // Basic constraints.
     if (result->GetExtension(BasicConstraintsOid(), &extension)) {
       result->has_basic_constraints_ = true;
-      if (!ParseBasicConstraints(extension.value, &result->basic_constraints_))
+      if (!ParseBasicConstraints(extension.value,
+                                 &result->basic_constraints_)) {
+        errors->AddError(kFailedParsingBasicConstraints);
         return nullptr;
+      }
     }
 
     // Key Usage.
     if (result->GetExtension(KeyUsageOid(), &extension)) {
       result->has_key_usage_ = true;
-      if (!ParseKeyUsage(extension.value, &result->key_usage_))
+      if (!ParseKeyUsage(extension.value, &result->key_usage_)) {
+        errors->AddError(kFailedParsingKeyUsage);
         return nullptr;
+      }
     }
 
     // Extended Key Usage.
     if (result->GetExtension(ExtKeyUsageOid(), &extension)) {
       result->has_extended_key_usage_ = true;
-      if (!ParseEKUExtension(extension.value, &result->extended_key_usage_))
+      if (!ParseEKUExtension(extension.value, &result->extended_key_usage_)) {
+        errors->AddError(kFailedParsingEku);
         return nullptr;
+      }
     }
 
     // Subject alternative name.
@@ -153,10 +209,12 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
                              &result->subject_alt_names_extension_)) {
       // RFC 5280 section 4.2.1.6:
       // SubjectAltName ::= GeneralNames
-      result->subject_alt_names_ =
-          GeneralNames::Create(result->subject_alt_names_extension_.value);
-      if (!result->subject_alt_names_)
+      result->subject_alt_names_ = GeneralNames::Create(
+          result->subject_alt_names_extension_.value, errors);
+      if (!result->subject_alt_names_) {
+        errors->AddError(kFailedParsingSubjectAltName);
         return nullptr;
+      }
       // RFC 5280 section 4.1.2.6:
       // If subject naming information is present only in the subjectAltName
       // extension (e.g., a key bound only to an email address or URI), then the
@@ -164,6 +222,7 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
       // MUST be critical.
       if (subject_value.Length() == 0 &&
           !result->subject_alt_names_extension_.critical) {
+        errors->AddError(kSubjectAltNameNotCritical);
         return nullptr;
       }
     }
@@ -171,9 +230,11 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
     // Name constraints.
     if (result->GetExtension(NameConstraintsOid(), &extension)) {
       result->name_constraints_ =
-          NameConstraints::Create(extension.value, extension.critical);
-      if (!result->name_constraints_)
+          NameConstraints::Create(extension.value, extension.critical, errors);
+      if (!result->name_constraints_) {
+        errors->AddError(kFailedParsingNameConstraints);
         return nullptr;
+      }
     }
 
     // Authority information access.
@@ -182,8 +243,10 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
       result->has_authority_info_access_ = true;
       if (!ParseAuthorityInfoAccess(
               result->authority_info_access_extension_.value,
-              &result->ca_issuers_uris_, &result->ocsp_uris_))
+              &result->ca_issuers_uris_, &result->ocsp_uris_)) {
+        errors->AddError(kFailedParsingAia);
         return nullptr;
+      }
     }
 
     // Policies.
@@ -191,7 +254,8 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
       result->has_policy_oids_ = true;
       if (!ParseCertificatePoliciesExtension(
               extension.value, false /*fail_parsing_unknown_qualifier_oids*/,
-              &result->policy_oids_)) {
+              &result->policy_oids_, errors)) {
+        errors->AddError(kFailedParsingPolicies);
         return nullptr;
       }
     }
@@ -201,6 +265,7 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
       result->has_policy_constraints_ = true;
       if (!ParsePolicyConstraints(extension.value,
                                   &result->policy_constraints_)) {
+        errors->AddError(kFailedParsingPolicyConstraints);
         return nullptr;
       }
     }
@@ -209,6 +274,7 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
     if (result->GetExtension(PolicyMappingsOid(), &extension)) {
       result->has_policy_mappings_ = true;
       if (!ParsePolicyMappings(extension.value, &result->policy_mappings_)) {
+        errors->AddError(kFailedParsingPolicyMappings);
         return nullptr;
       }
     }
@@ -218,6 +284,7 @@ scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
       result->has_inhibit_any_policy_ = true;
       if (!ParseInhibitAnyPolicy(extension.value,
                                  &result->inhibit_any_policy_)) {
+        errors->AddError(kFailedParsingInhibitAnyPolicy);
         return nullptr;
       }
     }

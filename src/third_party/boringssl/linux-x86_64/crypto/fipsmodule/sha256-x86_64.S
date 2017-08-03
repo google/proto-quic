@@ -44,7 +44,6 @@ sha256_block_data_order:
 	movl	20(%rdi),%r9d
 	movl	24(%rdi),%r10d
 	movl	28(%rdi),%r11d
-
 	jmp	.Lloop
 
 .align	16

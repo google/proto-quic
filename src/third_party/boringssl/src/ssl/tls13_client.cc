@@ -18,6 +18,8 @@
 #include <limits.h>
 #include <string.h>
 
+#include <utility>
+
 #include <openssl/bytestring.h>
 #include <openssl/digest.h>
 #include <openssl/err.h>
@@ -27,6 +29,8 @@
 #include "../crypto/internal.h"
 #include "internal.h"
 
+
+namespace bssl {
 
 enum client_hs_state_t {
   state_process_hello_retry_request = 0,
@@ -126,13 +130,13 @@ static enum ssl_hs_wait_t do_process_hello_retry_request(SSL_HANDSHAKE *hs) {
 
     /* Check that the HelloRetryRequest does not request the key share that
      * was provided in the initial ClientHello. */
-    if (SSL_ECDH_CTX_get_id(&hs->ecdh_ctx) == group_id) {
+    if (hs->key_share->GroupID() == group_id) {
       ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
       OPENSSL_PUT_ERROR(SSL, SSL_R_WRONG_CURVE);
       return ssl_hs_error;
     }
 
-    SSL_ECDH_CTX_cleanup(&hs->ecdh_ctx);
+    hs->key_share.reset();
     hs->retry_group = group_id;
   }
 
@@ -151,7 +155,10 @@ static enum ssl_hs_wait_t do_process_hello_retry_request(SSL_HANDSHAKE *hs) {
 
 static enum ssl_hs_wait_t do_send_second_client_hello(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
-  if (!ssl->method->set_write_state(ssl, NULL) ||
+  /* Restore the null cipher. We may have switched due to 0-RTT. */
+  bssl::UniquePtr<SSLAEADContext> null_ctx = SSLAEADContext::CreateNullCipher();
+  if (!null_ctx ||
+      !ssl->method->set_write_state(ssl, std::move(null_ctx)) ||
       !ssl_write_client_hello(hs)) {
     return ssl_hs_error;
   }
@@ -275,14 +282,14 @@ static enum ssl_hs_wait_t do_process_server_hello(SSL_HANDSHAKE *hs) {
     ssl->s3->session_reused = 1;
     /* Only authentication information carries over in TLS 1.3. */
     hs->new_session = SSL_SESSION_dup(ssl->session, SSL_SESSION_DUP_AUTH_ONLY);
-    if (hs->new_session == NULL) {
+    if (!hs->new_session) {
       ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
       return ssl_hs_error;
     }
     ssl_set_session(ssl, NULL);
 
     /* Resumption incorporates fresh key material, so refresh the timeout. */
-    ssl_session_renew_timeout(ssl, hs->new_session,
+    ssl_session_renew_timeout(ssl, hs->new_session.get(),
                               ssl->session_ctx->session_psk_dhe_timeout);
   } else if (!ssl_get_new_session(hs, 0)) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
@@ -449,9 +456,9 @@ static enum ssl_hs_wait_t do_process_certificate_request(SSL_HANDSHAKE *hs) {
   }
 
   uint8_t alert = SSL_AD_DECODE_ERROR;
-  STACK_OF(CRYPTO_BUFFER) *ca_names =
+  UniquePtr<STACK_OF(CRYPTO_BUFFER)> ca_names =
       ssl_parse_client_CA_list(ssl, &alert, &cbs);
-  if (ca_names == NULL) {
+  if (!ca_names) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
     return ssl_hs_error;
   }
@@ -461,14 +468,12 @@ static enum ssl_hs_wait_t do_process_certificate_request(SSL_HANDSHAKE *hs) {
   if (!CBS_get_u16_length_prefixed(&cbs, &extensions) ||
       CBS_len(&cbs) != 0) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
-    sk_CRYPTO_BUFFER_pop_free(ca_names, CRYPTO_BUFFER_free);
     OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
     return ssl_hs_error;
   }
 
   hs->cert_request = 1;
-  sk_CRYPTO_BUFFER_pop_free(hs->ca_names, CRYPTO_BUFFER_free);
-  hs->ca_names = ca_names;
+  hs->ca_names = std::move(ca_names);
   ssl->ctx->x509_method->hs_flush_cached_ca_names(hs);
 
   if (!ssl_hash_current_message(hs)) {
@@ -625,11 +630,11 @@ static enum ssl_hs_wait_t do_complete_second_flight(SSL_HANDSHAKE *hs) {
       return ssl_hs_channel_id_lookup;
     }
 
-    CBB cbb, body;
-    if (!ssl->method->init_message(ssl, &cbb, &body, SSL3_MT_CHANNEL_ID) ||
+    ScopedCBB cbb;
+    CBB body;
+    if (!ssl->method->init_message(ssl, cbb.get(), &body, SSL3_MT_CHANNEL_ID) ||
         !tls1_write_channel_id(hs, &body) ||
-        !ssl_add_message_cbb(ssl, &cbb)) {
-      CBB_cleanup(&cbb);
+        !ssl_add_message_cbb(ssl, cbb.get())) {
       return ssl_hs_error;
     }
   }
@@ -714,8 +719,8 @@ enum ssl_hs_wait_t tls13_client_handshake(SSL_HANDSHAKE *hs) {
 }
 
 int tls13_process_new_session_ticket(SSL *ssl) {
-  bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_dup(
-      ssl->s3->established_session, SSL_SESSION_INCLUDE_NONAUTH));
+  UniquePtr<SSL_SESSION> session(SSL_SESSION_dup(ssl->s3->established_session,
+                                                 SSL_SESSION_INCLUDE_NONAUTH));
   if (!session) {
     return 0;
   }
@@ -780,9 +785,11 @@ int tls13_process_new_session_ticket(SSL *ssl) {
 }
 
 void ssl_clear_tls13_state(SSL_HANDSHAKE *hs) {
-  SSL_ECDH_CTX_cleanup(&hs->ecdh_ctx);
+  hs->key_share.reset();
 
   OPENSSL_free(hs->key_share_bytes);
   hs->key_share_bytes = NULL;
   hs->key_share_bytes_len = 0;
 }
+
+}  // namespace bssl

@@ -119,7 +119,7 @@ class LocalDeviceMonkeyTestRun(local_device_test_run.LocalDeviceTestRun):
     finally:
       try:
         # Kill the monkey test process on the device. If you manually
-        # interupt the test run, this will prevent the monkey test from
+        # interrupt the test run, this will prevent the monkey test from
         # continuing to run.
         device.KillAll('com.android.commands.monkey')
       except device_errors.CommandFailedError:

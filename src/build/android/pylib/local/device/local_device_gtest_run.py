@@ -292,7 +292,7 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
             host_device_tuples_substituted,
             delete_device_stale=True)
         if not host_device_tuples:
-          dev.RunShellCommand(['rm', '-rf', device_root], check_return=True)
+          dev.RemovePath(device_root, force=True, recursive=True, rename=True)
           dev.RunShellCommand(['mkdir', '-p', device_root], check_return=True)
 
       def init_tool_and_start_servers():

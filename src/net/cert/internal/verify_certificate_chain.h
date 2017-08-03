@@ -236,11 +236,6 @@ NET_EXPORT void VerifyCertificateChain(
     std::set<der::Input>* user_constrained_policy_set,
     CertPathErrors* errors);
 
-// TODO(crbug.com/634443): Move exported errors to a central location?
-NET_EXPORT extern const CertErrorId kValidityFailedNotAfter;
-NET_EXPORT extern const CertErrorId kValidityFailedNotBefore;
-NET_EXPORT extern const CertErrorId kCertIsDistrusted;
-
 }  // namespace net
 
 #endif  // NET_CERT_INTERNAL_VERIFY_CERTIFICATE_CHAIN_H_

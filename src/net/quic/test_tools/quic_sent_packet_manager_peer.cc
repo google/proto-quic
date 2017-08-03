@@ -83,17 +83,6 @@ bool QuicSentPacketManagerPeer::HasPendingPackets(
 }
 
 // static
-QuicTime QuicSentPacketManagerPeer::GetSentTime(
-    const QuicSentPacketManager* sent_packet_manager,
-    QuicPacketNumber packet_number) {
-  DCHECK(sent_packet_manager->unacked_packets_.IsUnacked(packet_number));
-
-  return sent_packet_manager->unacked_packets_
-      .GetTransmissionInfo(packet_number)
-      .sent_time;
-}
-
-// static
 bool QuicSentPacketManagerPeer::IsRetransmission(
     QuicSentPacketManager* sent_packet_manager,
     QuicPacketNumber packet_number) {
@@ -147,13 +136,6 @@ size_t QuicSentPacketManagerPeer::GetNumRetransmittablePackets(
 QuicByteCount QuicSentPacketManagerPeer::GetBytesInFlight(
     const QuicSentPacketManager* sent_packet_manager) {
   return sent_packet_manager->unacked_packets_.bytes_in_flight();
-}
-
-// static
-QuicSentPacketManager::NetworkChangeVisitor*
-QuicSentPacketManagerPeer::GetNetworkChangeVisitor(
-    const QuicSentPacketManager* sent_packet_manager) {
-  return sent_packet_manager->network_change_visitor_;
 }
 
 // static

@@ -252,15 +252,20 @@ def _ExtractOwners(xml_node):
   return owners
 
 
-def _GetDateFromString(date_str):
-  """Converts |date_str| to datetime.date object if the string matches
-  'YYYY/MM/DD' format. Otherwise returns None.
+def _ValidateDateString(date_str):
+  """Check if |date_str| matches 'YYYY/MM/DD'.
+
+  Args:
+    date_str: string
+
+  Returns:
+    True iff |date_str| matches 'YYYY/MM/DD' format.
   """
   try:
-    date = datetime.datetime.strptime(date_str, EXPIRY_DATE_PATTERN).date()
+    _ = datetime.datetime.strptime(date_str, EXPIRY_DATE_PATTERN).date()
   except ValueError:
-    date = None
-  return date
+    return False
+  return True
 
 
 def _ProcessBaseHistogramAttribute(node, histogram_entry):
@@ -294,16 +299,13 @@ def _ExtractHistogramsFromXmlTree(tree, enums):
     # Handle expiry dates.
     if histogram.hasAttribute('expiry_date'):
       expiry_date_str = histogram.getAttribute('expiry_date')
-      expiry_date = _GetDateFromString(expiry_date_str)
-      if expiry_date is None:
+      if _ValidateDateString(expiry_date_str):
+        histogram_entry['expiry_date'] = expiry_date_str
+      else:
         logging.error(
             'Expiry date of histogram %s does not match expected format: "%s",'
-            ' found %s.',
-            name, EXPIRY_DATE_PATTERN, expiry_date_str)
+            ' found %s.', name, EXPIRY_DATE_PATTERN, expiry_date_str)
         have_errors = True
-      else:
-        histogram_entry['expiry_date'] = expiry_date.strftime(
-            EXPIRY_DATE_PATTERN)
 
     # Find <owner> tag.
     owners = _ExtractOwners(histogram)

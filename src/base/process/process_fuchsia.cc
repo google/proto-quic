@@ -129,17 +129,19 @@ void Process::Close() {
 bool Process::Terminate(int exit_code, bool wait) const {
   // exit_code isn't supportable.
   mx_status_t status = mx_task_kill(process_);
+  // TODO(scottmg): Put these LOG/CHECK back to DLOG/DCHECK after
+  // https://crbug.com/750756 is diagnosed.
   if (status == MX_OK && wait) {
     mx_signals_t signals;
     status = mx_object_wait_one(process_, MX_TASK_TERMINATED,
                                 mx_deadline_after(MX_SEC(60)), &signals);
     if (status != MX_OK) {
-      DLOG(ERROR) << "Error waiting for process exit: " << status;
+      LOG(ERROR) << "Error waiting for process exit: " << status;
     } else {
-      DCHECK(signals & MX_TASK_TERMINATED);
+      CHECK(signals & MX_TASK_TERMINATED);
     }
   } else if (status != MX_OK) {
-    DLOG(ERROR) << "Unable to terminate process: " << status;
+    LOG(ERROR) << "Unable to terminate process: " << status;
   }
 
   return status >= 0;
@@ -159,17 +161,26 @@ bool Process::WaitForExitWithTimeout(TimeDelta timeout, int* exit_code) const {
   mx_signals_t signals_observed = 0;
   mx_status_t status = mx_object_wait_one(process_, MX_TASK_TERMINATED,
                                           deadline, &signals_observed);
+
+  // TODO(scottmg): Make these LOGs into DLOGs after https://crbug.com/750756 is
+  // fixed.
   *exit_code = -1;
-  if (status != MX_OK && status != MX_ERR_TIMED_OUT)
+  if (status != MX_OK && status != MX_ERR_TIMED_OUT) {
+    LOG(ERROR) << "mx_object_wait_one failed, status=" << status;
     return false;
-  if (status == MX_ERR_TIMED_OUT && !signals_observed)
+  }
+  if (status == MX_ERR_TIMED_OUT && !signals_observed) {
+    LOG(ERROR) << "mx_object_wait_one timed out, and no signals";
     return false;
+  }
 
   mx_info_process_t proc_info;
   status = mx_object_get_info(process_, MX_INFO_PROCESS, &proc_info,
                               sizeof(proc_info), nullptr, nullptr);
-  if (status != MX_OK)
+  if (status != MX_OK) {
+    LOG(ERROR) << "mx_object_get_info failed, status=" << status;
     return false;
+  }
 
   *exit_code = proc_info.return_code;
   return true;

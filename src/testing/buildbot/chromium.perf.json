@@ -1577,67 +1577,6 @@
       },
       {
         "args": [
-          "memory.blink_memory_mobile",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=android-chromium"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "memory.blink_memory_mobile",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build13-b1--device7",
-              "os": "Android",
-              "pool": "Chrome-perf"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 10800,
-          "ignore_task_failure": false,
-          "io_timeout": 3600,
-          "upload_test_results": false
-        }
-      },
-      {
-        "args": [
-          "memory.blink_memory_mobile",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "memory.blink_memory_mobile.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build13-b1--device7",
-              "os": "Android",
-              "pool": "Chrome-perf"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 10800,
-          "ignore_task_failure": true,
-          "io_timeout": 3600,
-          "upload_test_results": false
-        }
-      },
-      {
-        "args": [
           "memory.long_running_idle_gmail_background_tbmv2",
           "-v",
           "--upload-results",
@@ -3807,8 +3746,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=android-chromium",
-          "--output-format=json-test-results"
+          "--browser=android-chromium"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_mobile",
@@ -3839,7 +3777,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -3870,8 +3807,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=android-chromium",
-          "--output-format=json-test-results"
+          "--browser=android-chromium"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_mobile",
@@ -3902,7 +3838,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -6354,67 +6289,6 @@
       },
       {
         "args": [
-          "memory.blink_memory_mobile",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=android-chromium"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "memory.blink_memory_mobile",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build73-b1--device7",
-              "os": "Android",
-              "pool": "Chrome-perf"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 10800,
-          "ignore_task_failure": false,
-          "io_timeout": 3600,
-          "upload_test_results": false
-        }
-      },
-      {
-        "args": [
-          "memory.blink_memory_mobile",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "memory.blink_memory_mobile.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build73-b1--device7",
-              "os": "Android",
-              "pool": "Chrome-perf"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 10800,
-          "ignore_task_failure": true,
-          "io_timeout": 3600,
-          "upload_test_results": false
-        }
-      },
-      {
-        "args": [
           "memory.long_running_idle_gmail_background_tbmv2",
           "-v",
           "--upload-results",
@@ -8584,8 +8458,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=android-chromium",
-          "--output-format=json-test-results"
+          "--browser=android-chromium"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_mobile",
@@ -8616,7 +8489,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -8647,8 +8519,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=android-chromium",
-          "--output-format=json-test-results"
+          "--browser=android-chromium"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_mobile",
@@ -8679,7 +8550,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -10390,37 +10260,6 @@
       },
       {
         "args": [
-          "memory.blink_memory_mobile",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=android-webview",
-          "--webview-embedder-apk=../../out/Release/apks/SystemWebViewShell.apk"
-        ],
-        "isolate_name": "telemetry_perf_webview_tests",
-        "name": "memory.blink_memory_mobile",
-        "override_compile_targets": [
-          "telemetry_perf_webview_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build164-b1--device7",
-              "os": "Android",
-              "pool": "Chrome-perf"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 10800,
-          "ignore_task_failure": false,
-          "io_timeout": 3600,
-          "upload_test_results": false
-        }
-      },
-      {
-        "args": [
           "memory.long_running_idle_gmail_background_tbmv2",
           "-v",
           "--upload-results",
@@ -11542,7 +11381,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=android-webview",
-          "--output-format=json-test-results",
           "--webview-embedder-apk=../../out/Release/apks/SystemWebViewShell.apk"
         ],
         "isolate_name": "telemetry_perf_webview_tests",
@@ -11574,7 +11412,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=android-webview",
-          "--output-format=json-test-results",
           "--webview-embedder-apk=../../out/Release/apks/SystemWebViewShell.apk"
         ],
         "isolate_name": "telemetry_perf_webview_tests",
@@ -13637,67 +13474,6 @@
       },
       {
         "args": [
-          "memory.blink_memory_mobile",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=android-chromium"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "memory.blink_memory_mobile",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build15-b1--device7",
-              "os": "Android",
-              "pool": "Chrome-perf"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 10800,
-          "ignore_task_failure": false,
-          "io_timeout": 3600,
-          "upload_test_results": false
-        }
-      },
-      {
-        "args": [
-          "memory.blink_memory_mobile",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "memory.blink_memory_mobile.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build15-b1--device7",
-              "os": "Android",
-              "pool": "Chrome-perf"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 10800,
-          "ignore_task_failure": true,
-          "io_timeout": 3600,
-          "upload_test_results": false
-        }
-      },
-      {
-        "args": [
           "memory.long_running_idle_gmail_background_tbmv2",
           "-v",
           "--upload-results",
@@ -15867,8 +15643,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=android-chromium",
-          "--output-format=json-test-results"
+          "--browser=android-chromium"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_mobile",
@@ -15899,7 +15674,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -15930,8 +15704,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=android-chromium",
-          "--output-format=json-test-results"
+          "--browser=android-chromium"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_mobile",
@@ -15962,7 +15735,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -17704,37 +17476,6 @@
       },
       {
         "args": [
-          "memory.blink_memory_mobile",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=android-webview",
-          "--webview-embedder-apk=../../out/Release/apks/SystemWebViewShell.apk"
-        ],
-        "isolate_name": "telemetry_perf_webview_tests",
-        "name": "memory.blink_memory_mobile",
-        "override_compile_targets": [
-          "telemetry_perf_webview_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build112-b1--device7",
-              "os": "Android",
-              "pool": "Chrome-perf"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 10800,
-          "ignore_task_failure": false,
-          "io_timeout": 3600,
-          "upload_test_results": false
-        }
-      },
-      {
-        "args": [
           "memory.long_running_idle_gmail_background_tbmv2",
           "-v",
           "--upload-results",
@@ -18856,7 +18597,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=android-webview",
-          "--output-format=json-test-results",
           "--webview-embedder-apk=../../out/Release/apks/SystemWebViewShell.apk"
         ],
         "isolate_name": "telemetry_perf_webview_tests",
@@ -18888,7 +18628,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=android-webview",
-          "--output-format=json-test-results",
           "--webview-embedder-apk=../../out/Release/apks/SystemWebViewShell.apk"
         ],
         "isolate_name": "telemetry_perf_webview_tests",
@@ -20951,67 +20690,6 @@
       },
       {
         "args": [
-          "memory.blink_memory_mobile",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=android-chromium"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "memory.blink_memory_mobile",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build9-b1--device7",
-              "os": "Android",
-              "pool": "Chrome-perf"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 10800,
-          "ignore_task_failure": false,
-          "io_timeout": 3600,
-          "upload_test_results": false
-        }
-      },
-      {
-        "args": [
-          "memory.blink_memory_mobile",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "memory.blink_memory_mobile.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build9-b1--device7",
-              "os": "Android",
-              "pool": "Chrome-perf"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 10800,
-          "ignore_task_failure": true,
-          "io_timeout": 3600,
-          "upload_test_results": false
-        }
-      },
-      {
-        "args": [
           "memory.long_running_idle_gmail_background_tbmv2",
           "-v",
           "--upload-results",
@@ -23181,8 +22859,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=android-chromium",
-          "--output-format=json-test-results"
+          "--browser=android-chromium"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_mobile",
@@ -23213,7 +22890,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -23244,8 +22920,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=android-chromium",
-          "--output-format=json-test-results"
+          "--browser=android-chromium"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_mobile",
@@ -23276,7 +22951,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -25606,67 +25280,6 @@
       },
       {
         "args": [
-          "memory.blink_memory_mobile",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=android-chromium"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "memory.blink_memory_mobile",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build17-b1--device7",
-              "os": "Android",
-              "pool": "Chrome-perf"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 10800,
-          "ignore_task_failure": false,
-          "io_timeout": 3600,
-          "upload_test_results": false
-        }
-      },
-      {
-        "args": [
-          "memory.blink_memory_mobile",
-          "-v",
-          "--upload-results",
-          "--output-format=chartjson",
-          "--browser=reference",
-          "--output-trace-tag=_ref"
-        ],
-        "isolate_name": "telemetry_perf_tests",
-        "name": "memory.blink_memory_mobile.reference",
-        "override_compile_targets": [
-          "telemetry_perf_tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "android_devices": "1",
-              "id": "build17-b1--device7",
-              "os": "Android",
-              "pool": "Chrome-perf"
-            }
-          ],
-          "expiration": 36000,
-          "hard_timeout": 10800,
-          "ignore_task_failure": true,
-          "io_timeout": 3600,
-          "upload_test_results": false
-        }
-      },
-      {
-        "args": [
           "memory.long_running_idle_gmail_background_tbmv2",
           "-v",
           "--upload-results",
@@ -27836,8 +27449,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=android-chromium",
-          "--output-format=json-test-results"
+          "--browser=android-chromium"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_mobile",
@@ -27868,7 +27480,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -27899,8 +27510,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=android-chromium",
-          "--output-format=json-test-results"
+          "--browser=android-chromium"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_mobile",
@@ -27931,7 +27541,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -33209,8 +32818,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_desktop",
@@ -33241,7 +32849,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -33272,8 +32879,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_desktop",
@@ -33304,7 +32910,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -38291,8 +37896,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_desktop",
@@ -38323,7 +37927,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -38354,8 +37957,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_desktop",
@@ -38386,7 +37988,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -43352,8 +42953,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_desktop",
@@ -43384,7 +42984,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -43415,8 +43014,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_desktop",
@@ -43447,7 +43045,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -48413,8 +48010,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_desktop",
@@ -48445,7 +48041,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -48476,8 +48071,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_desktop",
@@ -48508,7 +48102,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -53453,8 +53046,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_desktop",
@@ -53485,7 +53077,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -53516,8 +53107,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_desktop",
@@ -53548,7 +53138,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -58514,8 +58103,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_desktop",
@@ -58546,7 +58134,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -58577,8 +58164,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_desktop",
@@ -58609,7 +58195,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -63575,8 +63160,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_desktop",
@@ -63607,7 +63191,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -63638,8 +63221,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_desktop",
@@ -63670,7 +63252,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -68615,8 +68196,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release_x64",
-          "--output-format=json-test-results"
+          "--browser=release_x64"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_desktop",
@@ -68647,7 +68227,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -68678,8 +68257,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release_x64",
-          "--output-format=json-test-results"
+          "--browser=release_x64"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_desktop",
@@ -68710,7 +68288,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -73676,8 +73253,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release_x64",
-          "--output-format=json-test-results"
+          "--browser=release_x64"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_desktop",
@@ -73708,7 +73284,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -73739,8 +73314,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release_x64",
-          "--output-format=json-test-results"
+          "--browser=release_x64"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_desktop",
@@ -73771,7 +73345,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -78800,8 +78373,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release_x64",
-          "--output-format=json-test-results"
+          "--browser=release_x64"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_desktop",
@@ -78832,7 +78404,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -78863,8 +78434,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release_x64",
-          "--output-format=json-test-results"
+          "--browser=release_x64"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_desktop",
@@ -78895,7 +78465,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -83903,8 +83472,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release_x64",
-          "--output-format=json-test-results"
+          "--browser=release_x64"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_desktop",
@@ -83935,7 +83503,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -83966,8 +83533,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release_x64",
-          "--output-format=json-test-results"
+          "--browser=release_x64"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_desktop",
@@ -83998,7 +83564,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -89006,8 +88571,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release_x64",
-          "--output-format=json-test-results"
+          "--browser=release_x64"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_desktop",
@@ -89038,7 +88602,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -89069,8 +88632,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release_x64",
-          "--output-format=json-test-results"
+          "--browser=release_x64"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_desktop",
@@ -89101,7 +88663,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -94088,8 +93649,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_desktop",
@@ -94120,7 +93680,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -94151,8 +93710,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release",
-          "--output-format=json-test-results"
+          "--browser=release"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_desktop",
@@ -94183,7 +93741,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -99170,8 +98727,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release_x64",
-          "--output-format=json-test-results"
+          "--browser=release_x64"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_desktop",
@@ -99202,7 +98758,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -99233,8 +98788,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release_x64",
-          "--output-format=json-test-results"
+          "--browser=release_x64"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_desktop",
@@ -99265,7 +98819,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -104273,8 +103826,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release_x64",
-          "--output-format=json-test-results"
+          "--browser=release_x64"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.common_desktop",
@@ -104305,7 +103857,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",
@@ -104336,8 +103887,7 @@
           "-v",
           "--upload-results",
           "--output-format=chartjson",
-          "--browser=release_x64",
-          "--output-format=json-test-results"
+          "--browser=release_x64"
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_desktop",
@@ -104368,7 +103918,6 @@
           "--upload-results",
           "--output-format=chartjson",
           "--browser=reference",
-          "--output-format=json-test-results",
           "--output-trace-tag=_ref"
         ],
         "isolate_name": "telemetry_perf_tests",

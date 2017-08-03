@@ -17,6 +17,8 @@
 #include <assert.h>
 #include <string.h>
 
+#include <utility>
+
 #include <openssl/aead.h>
 #include <openssl/bytestring.h>
 #include <openssl/digest.h>
@@ -28,13 +30,15 @@
 #include "internal.h"
 
 
+namespace bssl {
+
 static int init_key_schedule(SSL_HANDSHAKE *hs, uint16_t version,
                               int algorithm_prf) {
-  if (!SSL_TRANSCRIPT_init_hash(&hs->transcript, version, algorithm_prf)) {
+  if (!hs->transcript.InitHash(version, algorithm_prf)) {
     return 0;
   }
 
-  hs->hash_len = SSL_TRANSCRIPT_digest_len(&hs->transcript);
+  hs->hash_len = hs->transcript.DigestLen();
 
   /* Initialize the secret to the zero key. */
   OPENSSL_memset(hs->secret, 0, hs->hash_len);
@@ -48,7 +52,7 @@ int tls13_init_key_schedule(SSL_HANDSHAKE *hs) {
     return 0;
   }
 
-  SSL_TRANSCRIPT_free_buffer(&hs->transcript);
+  hs->transcript.FreeBuffer();
   return 1;
 }
 
@@ -60,9 +64,8 @@ int tls13_init_early_key_schedule(SSL_HANDSHAKE *hs) {
 
 int tls13_advance_key_schedule(SSL_HANDSHAKE *hs, const uint8_t *in,
                                size_t len) {
-  return HKDF_extract(hs->secret, &hs->hash_len,
-                      SSL_TRANSCRIPT_md(&hs->transcript), in, len, hs->secret,
-                      hs->hash_len);
+  return HKDF_extract(hs->secret, &hs->hash_len, hs->transcript.Digest(), in,
+                      len, hs->secret, hs->hash_len);
 }
 
 static int hkdf_expand_label(uint8_t *out, const EVP_MD *digest,
@@ -71,20 +74,20 @@ static int hkdf_expand_label(uint8_t *out, const EVP_MD *digest,
                              const uint8_t *hash, size_t hash_len, size_t len) {
   static const char kTLS13LabelVersion[] = "TLS 1.3, ";
 
-  CBB cbb, child;
+  ScopedCBB cbb;
+  CBB child;
   uint8_t *hkdf_label;
   size_t hkdf_label_len;
-  if (!CBB_init(&cbb, 2 + 1 + strlen(kTLS13LabelVersion) + label_len + 1 +
-                          hash_len) ||
-      !CBB_add_u16(&cbb, len) ||
-      !CBB_add_u8_length_prefixed(&cbb, &child) ||
+  if (!CBB_init(cbb.get(), 2 + 1 + strlen(kTLS13LabelVersion) + label_len + 1 +
+                               hash_len) ||
+      !CBB_add_u16(cbb.get(), len) ||
+      !CBB_add_u8_length_prefixed(cbb.get(), &child) ||
       !CBB_add_bytes(&child, (const uint8_t *)kTLS13LabelVersion,
                      strlen(kTLS13LabelVersion)) ||
       !CBB_add_bytes(&child, label, label_len) ||
-      !CBB_add_u8_length_prefixed(&cbb, &child) ||
+      !CBB_add_u8_length_prefixed(cbb.get(), &child) ||
       !CBB_add_bytes(&child, hash, hash_len) ||
-      !CBB_finish(&cbb, &hkdf_label, &hkdf_label_len)) {
-    CBB_cleanup(&cbb);
+      !CBB_finish(cbb.get(), &hkdf_label, &hkdf_label_len)) {
     return 0;
   }
 
@@ -101,12 +104,11 @@ static int derive_secret(SSL_HANDSHAKE *hs, uint8_t *out, size_t len,
                          const uint8_t *label, size_t label_len) {
   uint8_t context_hash[EVP_MAX_MD_SIZE];
   size_t context_hash_len;
-  if (!SSL_TRANSCRIPT_get_hash(&hs->transcript, context_hash,
-                               &context_hash_len)) {
+  if (!hs->transcript.GetHash(context_hash, &context_hash_len)) {
     return 0;
   }
 
-  return hkdf_expand_label(out, SSL_TRANSCRIPT_md(&hs->transcript), hs->secret,
+  return hkdf_expand_label(out, hs->transcript.Digest(), hs->secret,
                            hs->hash_len, label, label_len, context_hash,
                            context_hash_len, len);
 }
@@ -148,19 +150,19 @@ int tls13_set_traffic_key(SSL *ssl, enum evp_aead_direction_t direction,
     return 0;
   }
 
-  SSL_AEAD_CTX *traffic_aead =
-      SSL_AEAD_CTX_new(direction, version, SSL_is_dtls(ssl), session->cipher,
-                       key, key_len, NULL, 0, iv, iv_len);
-  if (traffic_aead == NULL) {
+  UniquePtr<SSLAEADContext> traffic_aead = SSLAEADContext::Create(
+      direction, version, SSL_is_dtls(ssl), session->cipher, key, key_len, NULL,
+      0, iv, iv_len);
+  if (!traffic_aead) {
     return 0;
   }
 
   if (direction == evp_aead_open) {
-    if (!ssl->method->set_read_state(ssl, traffic_aead)) {
+    if (!ssl->method->set_read_state(ssl, std::move(traffic_aead))) {
       return 0;
     }
   } else {
-    if (!ssl->method->set_write_state(ssl, traffic_aead)) {
+    if (!ssl->method->set_write_state(ssl, std::move(traffic_aead))) {
       return 0;
     }
   }
@@ -309,11 +311,9 @@ int tls13_finished_mac(SSL_HANDSHAKE *hs, uint8_t *out, size_t *out_len,
 
   uint8_t context_hash[EVP_MAX_MD_SIZE];
   size_t context_hash_len;
-  if (!SSL_TRANSCRIPT_get_hash(&hs->transcript, context_hash,
-                               &context_hash_len) ||
-      !tls13_verify_data(SSL_TRANSCRIPT_md(&hs->transcript), out, out_len,
-                         traffic_secret, hs->hash_len, context_hash,
-                         context_hash_len)) {
+  if (!hs->transcript.GetHash(context_hash, &context_hash_len) ||
+      !tls13_verify_data(hs->transcript.Digest(), out, out_len, traffic_secret,
+                         hs->hash_len, context_hash, context_hash_len)) {
     return 0;
   }
   return 1;
@@ -379,20 +379,16 @@ int tls13_write_psk_binder(SSL_HANDSHAKE *hs, uint8_t *msg, size_t len) {
     return 0;
   }
 
-  EVP_MD_CTX ctx;
-  EVP_MD_CTX_init(&ctx);
+  ScopedEVP_MD_CTX ctx;
   uint8_t context[EVP_MAX_MD_SIZE];
   unsigned context_len;
-  if (!EVP_DigestInit_ex(&ctx, digest, NULL) ||
-      !EVP_DigestUpdate(&ctx, hs->transcript.buffer->data,
-                        hs->transcript.buffer->length) ||
-      !EVP_DigestUpdate(&ctx, msg, len - hash_len - 3) ||
-      !EVP_DigestFinal_ex(&ctx, context, &context_len)) {
-    EVP_MD_CTX_cleanup(&ctx);
+  if (!EVP_DigestInit_ex(ctx.get(), digest, NULL) ||
+      !EVP_DigestUpdate(ctx.get(), hs->transcript.buffer_data(),
+                        hs->transcript.buffer_len()) ||
+      !EVP_DigestUpdate(ctx.get(), msg, len - hash_len - 3) ||
+      !EVP_DigestFinal_ex(ctx.get(), context, &context_len)) {
     return 0;
   }
-
-  EVP_MD_CTX_cleanup(&ctx);
 
   uint8_t verify_data[EVP_MAX_MD_SIZE] = {0};
   if (!tls13_psk_binder(verify_data, digest, ssl->session->master_key,
@@ -407,7 +403,7 @@ int tls13_write_psk_binder(SSL_HANDSHAKE *hs, uint8_t *msg, size_t len) {
 
 int tls13_verify_psk_binder(SSL_HANDSHAKE *hs, SSL_SESSION *session,
                             CBS *binders) {
-  size_t hash_len = SSL_TRANSCRIPT_digest_len(&hs->transcript);
+  size_t hash_len = hs->transcript.DigestLen();
 
   /* Get the full ClientHello, including message header. It must be large enough
    * to exclude the binders. */
@@ -423,14 +419,13 @@ int tls13_verify_psk_binder(SSL_HANDSHAKE *hs, SSL_SESSION *session,
   uint8_t context[EVP_MAX_MD_SIZE];
   unsigned context_len;
   if (!EVP_Digest(CBS_data(&message), CBS_len(&message) - CBS_len(binders) - 2,
-                  context, &context_len, SSL_TRANSCRIPT_md(&hs->transcript),
-                  NULL)) {
+                  context, &context_len, hs->transcript.Digest(), NULL)) {
     return 0;
   }
 
   uint8_t verify_data[EVP_MAX_MD_SIZE] = {0};
   CBS binder;
-  if (!tls13_psk_binder(verify_data, SSL_TRANSCRIPT_md(&hs->transcript),
+  if (!tls13_psk_binder(verify_data, hs->transcript.Digest(),
                         session->master_key, session->master_key_length,
                         context, context_len, hash_len) ||
       /* We only consider the first PSK, so compare against the first binder. */
@@ -452,3 +447,5 @@ int tls13_verify_psk_binder(SSL_HANDSHAKE *hs, SSL_SESSION *session,
 
   return 1;
 }
+
+}  // namespace bssl

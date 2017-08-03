@@ -289,7 +289,7 @@ class NET_EXPORT_PRIVATE SpdyStream {
   void OnClose(int status);
 
   // Called by the SpdySession to log stream related errors.
-  void LogStreamError(int status, const SpdyString& description);
+  void LogStreamError(int error, const SpdyString& description);
 
   // If this stream is active, reset it, and close it otherwise. In
   // either case the stream is deleted.

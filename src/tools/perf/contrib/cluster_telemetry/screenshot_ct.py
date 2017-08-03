@@ -26,6 +26,22 @@ class ScreenshotCT(perf_benchmark.PerfBenchmark):
                       help='Output directory for the PNG files')
     parser.add_option('--wait-time', type='float', default=0,
                       help='Wait time before the benchmark is started')
+    parser.add_option('--dc-detect', action='store_true', dest='dc_detect',
+                      default=False, help='Detects dynamic content by marking'
+                      'pixels that were not consistent across multiple '
+                      'screenshots with cyan')
+    parser.add_option('--dc-wait-time', type='float', default=1,
+                      help='Wait time in between screenshots. Only applicable '
+                      'if dc_detect flag is true.')
+    parser.add_option('--dc-extra-screenshots', type='int', default=1,
+                      help='Number of extra screenshots taken to detect '
+                      'dynamic content. Only applicable if dc_detect flag is '
+                      'true.')
+    parser.add_option('--dc-threshold', type='float', default=0.5,
+                      help='Maximum tolerable percentage of dynamic content '
+                      'pixels. Raises an exception if percentage of dynamic '
+                      'content is beyond this threshold. Only applicable if '
+                      'dc_detect flag is true.')
 
   @classmethod
   def ProcessCommandLineArgs(cls, parser, args):
@@ -34,7 +50,9 @@ class ScreenshotCT(perf_benchmark.PerfBenchmark):
       parser.error('Please specify --png-outdir')
 
   def CreatePageTest(self, options):
-    return screenshot.Screenshot(options.png_outdir)
+    return screenshot.Screenshot(options.png_outdir, options.wait_time,
+      options.dc_detect, options.dc_wait_time, options.dc_extra_screenshots,
+      options.dc_threshold)
 
   def CreateStorySet(self, options):
     return page_set.CTPageSet(
