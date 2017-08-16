@@ -6718,4 +6718,37 @@ TEST_F(SpdyNetworkTransactionTest, InsecureUrlCreatesSecureSpdySession) {
   EXPECT_THAT(out.rv, IsError(ERR_SPDY_INADEQUATE_TRANSPORT_SECURITY));
 };
 
+TEST_F(SpdyNetworkTransactionTest, RequestHeadersCallback) {
+  SpdySerializedFrame req(
+      spdy_util_.ConstructSpdyGet(nullptr, 0, 1, DEFAULT_PRIORITY, true));
+  MockWrite writes[] = {CreateMockWrite(req, 0)};
+
+  SpdySerializedFrame resp(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
+  SpdySerializedFrame body(spdy_util_.ConstructSpdyDataFrame(1, true));
+  MockRead reads[] = {
+      CreateMockRead(resp, 1), CreateMockRead(body, 2),
+      MockRead(ASYNC, 0, 3)  // EOF
+  };
+
+  HttpRawRequestHeaders raw_headers;
+
+  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
+  HttpRequestInfo request_info(CreateGetRequest());
+  NormalSpdyTransactionHelper helper(request_info, DEFAULT_PRIORITY,
+                                     NetLogWithSource(), nullptr);
+  helper.RunPreTestSetup();
+  helper.AddData(&data);
+  helper.trans()->SetRequestHeadersCallback(base::Bind(
+      &HttpRawRequestHeaders::Assign, base::Unretained(&raw_headers)));
+  helper.StartDefaultTest();
+  helper.FinishDefaultTestWithoutVerification();
+  EXPECT_FALSE(raw_headers.headers().empty());
+  std::string value;
+  EXPECT_TRUE(raw_headers.FindHeaderForTest(":path", &value));
+  EXPECT_EQ("/", value);
+  EXPECT_TRUE(raw_headers.FindHeaderForTest(":method", &value));
+  EXPECT_EQ("GET", value);
+  EXPECT_TRUE(raw_headers.request_line().empty());
+}
+
 }  // namespace net

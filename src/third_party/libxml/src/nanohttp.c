@@ -1534,7 +1534,8 @@ retry:
 	xmlGenericError(xmlGenericErrorContext,
 		"\nRedirect to: %s\n", ctxt->location);
 #endif
-	while ( xmlNanoHTTPRecv(ctxt) > 0 ) ;
+	while ( xmlNanoHTTPRecv(ctxt) > 0 )
+            ;
         if (nbRedirects < XML_NANO_HTTP_MAX_REDIR) {
 	    nbRedirects++;
 	    if (redirURL != NULL)

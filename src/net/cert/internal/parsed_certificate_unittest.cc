@@ -141,7 +141,8 @@ TEST(ParsedCertificateTest, BadKeyUsage) {
   ASSERT_FALSE(ParseCertificateFromFile("bad_key_usage.pem", {}));
 }
 
-// TODO(eroman): What is wrong with policy qualifiers?
+// Parses a certificate that has a PolicyQualifierInfo that is missing the
+// qualifier field.
 TEST(ParsedCertificateTest, BadPolicyQualifiers) {
   ASSERT_FALSE(ParseCertificateFromFile("bad_policy_qualifiers.pem", {}));
 }
@@ -151,7 +152,8 @@ TEST(ParsedCertificateTest, BadSignatureAlgorithmOid) {
   ASSERT_FALSE(ParseCertificateFromFile("bad_signature_algorithm_oid.pem", {}));
 }
 
-// TODO(eroman): What is wrong with the validity?
+//  The validity encodes time as UTCTime but following the BER rules rather than
+//  DER rules (i.e. YYMMDDHHMMZ instead of YYMMDDHHMMSSZ).
 TEST(ParsedCertificateTest, BadValidity) {
   ASSERT_FALSE(ParseCertificateFromFile("bad_validity.pem", {}));
 }
@@ -505,6 +507,32 @@ TEST(ParsedCertificateTest, SerialNumber37BytesLong) {
       0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e,
       0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25};
   EXPECT_EQ(der::Input(expected_serial), cert->tbs().serial_number);
+}
+
+// Tests a serial number which is zero. RFC 5280 says they should be positive,
+// however also recommends supporting non-positive ones, so parsing here
+// is expected to succeed.
+TEST(ParsedCertificateTest, SerialNumberZero) {
+  scoped_refptr<ParsedCertificate> cert =
+      ParseCertificateFromFile("serial_zero.pem", {});
+  ASSERT_TRUE(cert);
+
+  static const uint8_t expected_serial[] = {0x00};
+  EXPECT_EQ(der::Input(expected_serial), cert->tbs().serial_number);
+}
+
+// Tests a serial number which not a number (NULL).
+TEST(ParsedCertificateTest, SerialNotNumber) {
+  scoped_refptr<ParsedCertificate> cert =
+      ParseCertificateFromFile("serial_not_number.pem", {});
+  ASSERT_FALSE(cert);
+}
+
+// Tests a serial number which uses a non-minimal INTEGER encoding
+TEST(ParsedCertificateTest, SerialNotMinimal) {
+  scoped_refptr<ParsedCertificate> cert =
+      ParseCertificateFromFile("serial_not_minimal.pem", {});
+  ASSERT_FALSE(cert);
 }
 
 // Tests parsing a certificate that has an inhibitAnyPolicy extension.

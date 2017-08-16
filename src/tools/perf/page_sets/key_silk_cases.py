@@ -770,13 +770,3 @@ class KeySilkCasesPageSet(story.StorySet):
               KeySilkCasesPage.RunPageInteractions), (
               'Pages in this page set must not override KeySilkCasesPage\' '
               'RunPageInteractions method.')
-
-
-class KeySilkCasesStoryExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    self.DisableStory('https://polymer-topeka.appspot.com/',
-                      [story.expectations.ALL], 'crbug.com/507865')
-    self.DisableStory('http://plus.google.com/app/basic/stream',
-                      [story.expectations.ALL], 'crbug.com/338838')
-    self.DisableStory('inbox_app.html?slide_drawer',
-                      [story.expectations.ALL], 'crbug.com/446332')

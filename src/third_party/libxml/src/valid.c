@@ -5738,7 +5738,7 @@ xmlValidatePushElement(xmlValidCtxtPtr ctxt, xmlDocPtr doc,
 	xmlElementPtr elemDecl;
 
 	/*
-	 * Check the new element agaisnt the content model of the new elem.
+	 * Check the new element against the content model of the new elem.
 	 */
 	if (state->elemDecl != NULL) {
 	    elemDecl = state->elemDecl;
@@ -5830,7 +5830,7 @@ xmlValidatePushCData(xmlValidCtxtPtr ctxt, const xmlChar *data, int len) {
 	xmlElementPtr elemDecl;
 
 	/*
-	 * Check the new element agaisnt the content model of the new elem.
+	 * Check the new element against the content model of the new elem.
 	 */
 	if (state->elemDecl != NULL) {
 	    elemDecl = state->elemDecl;
@@ -5904,7 +5904,7 @@ xmlValidatePopElement(xmlValidCtxtPtr ctxt, xmlDocPtr doc ATTRIBUTE_UNUSED,
 	xmlElementPtr elemDecl;
 
 	/*
-	 * Check the new element agaisnt the content model of the new elem.
+	 * Check the new element against the content model of the new elem.
 	 */
 	if (state->elemDecl != NULL) {
 	    elemDecl = state->elemDecl;

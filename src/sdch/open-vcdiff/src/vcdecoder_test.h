@@ -16,6 +16,7 @@
 #define OPEN_VCDIFF_VCDECODER_TEST_H_
 
 #include "google/vcdecoder.h"
+#include <stdint.h>  // utf8_t
 #include <string>
 #include "checksum.h"
 #include "testing.h"
@@ -80,23 +81,23 @@ class VCDiffDecoderTest : public testing::Test {
   // Assuming the length of the given string can be expressed as a VarintBE
   // of length N, this function returns the byte at position which_byte, where
   // 0 <= which_byte < N.
-  static char GetByteFromStringLength(const char* s, int which_byte);
+  static uint8_t GetByteFromStringLength(const char* s, int which_byte);
 
   // Assuming the length of the given string can be expressed as a one-byte
   // VarintBE, this function returns that byte value.
-  static char StringLengthAsByte(const char* s) {
+  static uint8_t StringLengthAsByte(const char* s) {
     return GetByteFromStringLength(s, 0);
   }
 
   // Assuming the length of the given string can be expressed as a two-byte
   // VarintBE, this function returns the first byte of its representation.
-  static char FirstByteOfStringLength(const char* s) {
+  static uint8_t FirstByteOfStringLength(const char* s) {
     return GetByteFromStringLength(s, 0);
   }
 
   // Assuming the length of the given string can be expressed as a two-byte
   // VarintBE, this function returns the second byte of its representation.
-  static char SecondByteOfStringLength(const char* s) {
+  static uint8_t SecondByteOfStringLength(const char* s) {
     return GetByteFromStringLength(s, 1);
   }
 
@@ -124,8 +125,8 @@ class VCDiffDecoderTest : public testing::Test {
  private:
   // These values should only be accessed via UseStandardFileHeader() and
   // UseInterleavedFileHeader().
-  static const char kStandardFileHeader[];
-  static const char kInterleavedFileHeader[];
+  static const uint8_t kStandardFileHeader[];
+  static const uint8_t kInterleavedFileHeader[];
 
   // These two counters are used by FuzzOneByteInDeltaFile() to iterate through
   // different ways to corrupt the delta file.
@@ -141,8 +142,8 @@ class VCDiffStandardDecoderTest : public VCDiffDecoderTest {
   virtual ~VCDiffStandardDecoderTest() {}
 
  private:
-  static const char kWindowHeader[];
-  static const char kWindowBody[];
+  static const uint8_t kWindowHeader[];
+  static const uint8_t kWindowBody[];
 };
 
 class VCDiffInterleavedDecoderTest : public VCDiffDecoderTest {
@@ -151,8 +152,8 @@ class VCDiffInterleavedDecoderTest : public VCDiffDecoderTest {
   virtual ~VCDiffInterleavedDecoderTest() {}
 
  private:
-  static const char kWindowHeader[];
-  static const char kWindowBody[];
+  static const uint8_t kWindowHeader[];
+  static const uint8_t kWindowBody[];
 };
 
 }  // namespace open_vcdiff

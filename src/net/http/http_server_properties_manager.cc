@@ -1425,7 +1425,7 @@ void HttpServerPropertiesManager::SaveBrokenAlternativeServicesToPrefs(
       int broken_count = it->second;
       base::DictionaryValue entry_dict;
       AddAlternativeServiceFieldsToDictionaryValue(alt_service, &entry_dict);
-      entry_dict.SetIntegerWithoutPathExpansion(kBrokenCountKey, broken_count);
+      entry_dict.SetKey(kBrokenCountKey, base::Value(broken_count));
       json_list_index_map[alt_service] = json_list->GetList().size();
       json_list->GetList().push_back(std::move(entry_dict));
     }

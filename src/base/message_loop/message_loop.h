@@ -132,7 +132,7 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate,
   // Returns the MessageLoop object for the current thread, or null if none.
   static MessageLoop* current();
 
-  typedef std::unique_ptr<MessagePump>(MessagePumpFactory)();
+  using MessagePumpFactory = std::unique_ptr<MessagePump>();
   // Uses the given base::MessagePumpForUIFactory to override the default
   // MessagePump implementation for 'TYPE_UI'. Returns true if the factory
   // was successfully registered.
@@ -225,10 +225,20 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate,
   // - With NestableTasksAllowed set to true, the task #2 will run right away.
   //   Otherwise, it will get executed right after task #1 completes at "thread
   //   message loop level".
+  //
+  // DEPRECATED: Use RunLoop::Type on the relevant RunLoop instead of these
+  // methods.
+  // TODO(gab): Migrate usage and delete these methods.
   void SetNestableTasksAllowed(bool allowed);
   bool NestableTasksAllowed() const;
 
   // Enables nestable tasks on |loop| while in scope.
+  // DEPRECATED: This should not be used when the nested loop is driven by
+  // RunLoop (use RunLoop::Type::KNestableTasksAllowed instead). It can however
+  // still be useful in a few scenarios where re-entrancy is caused by a native
+  // message loop.
+  // TODO(gab): Remove usage of this class alongside RunLoop and rename it to
+  // ScopedApplicationTasksAllowedInNativeNestedLoop(?).
   class ScopedNestableTaskAllower {
    public:
     explicit ScopedNestableTaskAllower(MessageLoop* loop)
@@ -334,6 +344,7 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate,
   // RunLoop::Delegate:
   void Run() override;
   void Quit() override;
+  void EnsureWorkScheduled() override;
 
   // Called to process any delayed non-nestable tasks.
   bool ProcessNextDelayedNonNestableTask();
@@ -401,7 +412,9 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate,
   ObserverList<DestructionObserver> destruction_observers_;
 
   // A recursion block that prevents accidentally running additional tasks when
-  // insider a (accidentally induced?) nested message pump.
+  // insider a (accidentally induced?) nested message pump. Deprecated in favor
+  // of run_loop_client_->ProcessingTasksAllowed(), equivalent until then (both
+  // need to be checked in conditionals).
   bool nestable_tasks_allowed_;
 
   // pump_factory_.Run() is called to create a message pump for this loop
@@ -497,7 +510,8 @@ class BASE_EXPORT MessageLoopForUI : public MessageLoop {
   void Abort();
 #endif
 
-#if defined(USE_OZONE) || (defined(USE_X11) && !defined(USE_GLIB))
+#if (defined(USE_OZONE) && !defined(OS_FUCHSIA)) || \
+    (defined(USE_X11) && !defined(USE_GLIB))
   // Please see MessagePumpLibevent for definition.
   bool WatchFileDescriptor(
       int fd,
@@ -547,12 +561,15 @@ class BASE_EXPORT MessageLoopForIO : public MessageLoop {
   typedef MessagePumpForIO::IOHandler IOHandler;
   typedef MessagePumpForIO::IOContext IOContext;
 #elif defined(OS_FUCHSIA)
-  typedef MessagePumpFuchsia::Watcher Watcher;
-  typedef MessagePumpFuchsia::FileDescriptorWatcher FileDescriptorWatcher;
+  typedef MessagePumpFuchsia::FdWatcher Watcher;
+  typedef MessagePumpFuchsia::FdWatchController FileDescriptorWatcher;
 
   enum Mode{WATCH_READ = MessagePumpFuchsia::WATCH_READ,
             WATCH_WRITE = MessagePumpFuchsia::WATCH_WRITE,
             WATCH_READ_WRITE = MessagePumpFuchsia::WATCH_READ_WRITE};
+
+  typedef MessagePumpFuchsia::MxHandleWatchController MxHandleWatchController;
+  typedef MessagePumpFuchsia::MxHandleWatcher MxHandleWatcher;
 #elif defined(OS_IOS)
   typedef MessagePumpIOSForIO::Watcher Watcher;
   typedef MessagePumpIOSForIO::FileDescriptorWatcher
@@ -564,9 +581,8 @@ class BASE_EXPORT MessageLoopForIO : public MessageLoop {
     WATCH_READ_WRITE = MessagePumpIOSForIO::WATCH_READ_WRITE
   };
 #elif defined(OS_POSIX)
-  typedef MessagePumpLibevent::Watcher Watcher;
-  typedef MessagePumpLibevent::FileDescriptorWatcher
-      FileDescriptorWatcher;
+  using Watcher = MessagePumpLibevent::Watcher;
+  using FileDescriptorWatcher = MessagePumpLibevent::FileDescriptorWatcher;
 
   enum Mode {
     WATCH_READ = MessagePumpLibevent::WATCH_READ,
@@ -589,6 +605,15 @@ class BASE_EXPORT MessageLoopForIO : public MessageLoop {
                            Watcher* delegate);
 #endif  // defined(OS_IOS) || defined(OS_POSIX)
 #endif  // !defined(OS_NACL_SFI)
+
+#if defined(OS_FUCHSIA)
+  // Additional watch API for native platform resources.
+  bool WatchMxHandle(mx_handle_t handle,
+                     bool persistent,
+                     mx_signals_t signals,
+                     MxHandleWatchController* controller,
+                     MxHandleWatcher* delegate);
+#endif
 };
 
 // Do not add any member variables to MessageLoopForIO!  This is important b/c

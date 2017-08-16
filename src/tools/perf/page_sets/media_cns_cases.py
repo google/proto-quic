@@ -119,10 +119,3 @@ class MediaCnsCasesPageSet(story.StorySet):
       else:
         name = url.split('/')[-1]
       self.AddStory(SeekBeforeAndAfterPlayheadPage(url, self, name=name))
-
-
-class MediaCnsCasesPageSetStoryExpectations(
-    story.expectations.StoryExpectations):
-
-  def SetExpectations(self):
-    pass

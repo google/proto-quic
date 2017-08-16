@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import fnmatch
-import imp
 import logging
 import posixpath
 import signal
@@ -24,28 +23,6 @@ from pylib.local.device import local_device_environment
 _SIGTERM_TEST_LOG = (
   '  Suite execution terminated, probably due to swarming timeout.\n'
   '  Your test may not have run.')
-
-
-def IncrementalInstall(device, apk_helper, installer_script):
-  """Performs an incremental install.
-
-  Args:
-    device: Device to install on.
-    apk_helper: ApkHelper instance for the _incremental.apk.
-    installer_script: Path to the installer script for the incremental apk.
-  """
-  try:
-    install_wrapper = imp.load_source('install_wrapper', installer_script)
-  except IOError:
-    raise Exception('Incremental install script not found: %s\n' %
-                    installer_script)
-  params = install_wrapper.GetInstallParameters()
-
-  from incremental_install import installer
-  installer.Install(device, apk_helper, split_globs=params['splits'],
-                    native_libs=params['native_libs'],
-                    dex_files=params['dex_files'],
-                    permissions=None)  # Auto-grant permissions from manifest.
 
 
 def SubstituteDeviceRoot(device_path, device_root):

@@ -11,7 +11,6 @@
 #include <errno.h>
 #include <unistd.h>
 
-#include "base/debug/alias.h"
 #include "base/posix/eintr_wrapper.h"
 #endif
 
@@ -31,16 +30,11 @@ void ScopedFDCloseTraits::Free(int fd) {
   // a single open directory would bypass the entire security model.
   int ret = IGNORE_EINTR(close(fd));
 
-  // TODO(davidben): Remove this once it's been determined whether
-  // https://crbug.com/603354 is caused by EBADF or a network filesystem
-  // returning some other error.
-  int close_errno = errno;
-  base::debug::Alias(&close_errno);
-
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) || defined(OS_MACOSX) || defined(OS_FUCHSIA)
   // NB: Some file descriptors can return errors from close() e.g. network
-  // filesystems such as NFS and Linux input devices. On Linux, errors from
-  // close other than EBADF do not indicate failure to actually close the fd.
+  // filesystems such as NFS and Linux input devices. On Linux, macOS, and
+  // Fuchsia's POSIX layer, errors from close other than EBADF do not indicate
+  // failure to actually close the fd.
   if (ret != 0 && errno != EBADF)
     ret = 0;
 #endif

@@ -159,6 +159,8 @@ class MockHttpStream : public HttpStream {
     can_reuse_connection_ = can_reuse_connection;
   }
 
+  void SetRequestHeadersCallback(RequestHeadersCallback callback) override {}
+
  private:
   int ReadResponseBodyImpl(IOBuffer* buf, int buf_len);
   void CompleteRead();

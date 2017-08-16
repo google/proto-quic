@@ -17,16 +17,11 @@
 #include "crypto/rsa_private_key.h"
 #include "net/base/net_errors.h"
 #include "net/cert/asn1_util.h"
-#include "net/cert/x509_util_nss.h"
 #include "net/test/cert_test_util.h"
 #include "net/test/test_certificate_data.h"
 #include "net/test/test_data_directory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "url/url_features.h"
-
-#if defined(USE_NSS_CERTS)
-#include <cert.h>
-#endif
 
 using base::HexEncode;
 using base::Time;
@@ -585,29 +580,6 @@ TEST(X509CertificateTest, ParseSubjectAltNames) {
   EXPECT_EQ(0u, ip_addresses.size());
 }
 
-#if defined(USE_NSS_CERTS)
-TEST(X509CertificateTest, ParseClientSubjectAltNames) {
-  base::FilePath certs_dir = GetTestCertsDirectory();
-
-  // This cert contains one rfc822Name field, and one Microsoft UPN
-  // otherName field.
-  scoped_refptr<X509Certificate> san_cert =
-      ImportCertFromFile(certs_dir, "client_3.pem");
-  ASSERT_NE(static_cast<X509Certificate*>(NULL), san_cert.get());
-
-  std::vector<std::string> rfc822_names;
-  net::x509_util::GetRFC822SubjectAltNames(san_cert->os_cert_handle(),
-                                           &rfc822_names);
-  ASSERT_EQ(1U, rfc822_names.size());
-  EXPECT_EQ("santest@example.com", rfc822_names[0]);
-
-  std::vector<std::string> upn_names;
-  net::x509_util::GetUPNSubjectAltNames(san_cert->os_cert_handle(), &upn_names);
-  ASSERT_EQ(1U, upn_names.size());
-  EXPECT_EQ("santest@ad.corp.example.com", upn_names[0]);
-}
-#endif  // defined(USE_NSS_CERTS)
-
 TEST(X509CertificateTest, ExtractSPKIFromDERCert) {
   base::FilePath certs_dir = GetTestCertsDirectory();
   scoped_refptr<X509Certificate> cert =
@@ -941,20 +913,6 @@ TEST(X509CertificateTest, IsIssuedByEncodedWithIntermediates) {
 TEST(X509CertificateTest, FreeNullHandle) {
   X509Certificate::FreeOSCertHandle(NULL);
 }
-
-#if defined(USE_NSS_CERTS)
-TEST(X509CertificateTest, GetDefaultNickname) {
-  base::FilePath certs_dir = GetTestCertsDirectory();
-
-  scoped_refptr<X509Certificate> test_cert(
-      ImportCertFromFile(certs_dir, "no_subject_common_name_cert.pem"));
-  ASSERT_NE(static_cast<X509Certificate*>(NULL), test_cert.get());
-
-  std::string nickname = test_cert->GetDefaultNickname(USER_CERT);
-  EXPECT_EQ("wtc@google.com's COMODO Client Authentication and "
-            "Secure Email CA ID", nickname);
-}
-#endif
 
 const struct CertificateFormatTestData {
   const char* file_name;

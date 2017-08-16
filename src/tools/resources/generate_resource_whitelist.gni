@@ -33,6 +33,10 @@ template("generate_resource_whitelist") {
     sources = [
       "//tools/resources/dummy.c",
     ]
+
+    # dummy.c should be built without -finstrument-functions (crbug.com/750120).
+    configs -= [ "//build/config/android:default_cygprofile_instrumentation" ]
+    configs += [ "//build/config/android:no_cygprofile_instrumentation" ]
   }
   action(target_name) {
     deps = [

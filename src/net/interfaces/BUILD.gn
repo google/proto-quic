@@ -8,6 +8,7 @@ mojom("interfaces") {
   sources = [
     "host_resolver_service.mojom",
     "ip_address.mojom",
+    "ip_endpoint.mojom",
     "proxy_resolver_service.mojom",
   ]
   public_deps = [

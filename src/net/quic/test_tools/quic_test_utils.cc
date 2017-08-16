@@ -238,7 +238,11 @@ QuicArenaScopedPtr<QuicAlarm> MockAlarmFactory::CreateAlarm(
   }
 }
 
-QuicBufferAllocator* MockQuicConnectionHelper::GetBufferAllocator() {
+QuicBufferAllocator* MockQuicConnectionHelper::GetStreamFrameBufferAllocator() {
+  return &buffer_allocator_;
+}
+
+QuicBufferAllocator* MockQuicConnectionHelper::GetStreamSendBufferAllocator() {
   return &buffer_allocator_;
 }
 
@@ -379,21 +383,6 @@ QuicConsumedData MockQuicSession::ConsumeAllData(
   return QuicConsumedData(data.total_length, state != NO_FIN);
 }
 
-QuicConsumedData MockQuicSession::ConsumeAndSaveAllData(
-    QuicStream* stream,
-    QuicStreamId id,
-    const QuicIOVector& data,
-    QuicStreamOffset offset,
-    StreamSendingState state,
-    const QuicReferenceCountedPointer<QuicAckListenerInterface>& ack_listener) {
-  QuicConsumedData consumed =
-      QuicConsumedData(data.total_length, state != NO_FIN);
-  if (streams_own_data() && data.total_length > 0) {
-    SaveStreamData(id, data, 0, offset, data.total_length);
-  }
-  return consumed;
-}
-
 MockQuicCryptoStream::MockQuicCryptoStream(QuicSession* session)
     : QuicCryptoStream(session), params_(new QuicCryptoNegotiatedParameters) {}
 
@@ -446,21 +435,6 @@ size_t MockQuicSpdySession::WriteHeaders(
   return WriteHeadersMock(id, write_headers_, fin, priority, ack_listener);
 }
 
-QuicConsumedData MockQuicSpdySession::ConsumeAndSaveAllData(
-    QuicStream* stream,
-    QuicStreamId id,
-    const QuicIOVector& data,
-    QuicStreamOffset offset,
-    StreamSendingState state,
-    const QuicReferenceCountedPointer<QuicAckListenerInterface>& ack_listener) {
-  QuicConsumedData consumed =
-      QuicConsumedData(data.total_length, state != NO_FIN);
-  if (streams_own_data() && data.total_length > 0) {
-    SaveStreamData(id, data, 0, offset, data.total_length);
-  }
-  return consumed;
-}
-
 TestQuicSpdyServerSession::TestQuicSpdyServerSession(
     QuicConnection* connection,
     const QuicConfig& config,
@@ -510,7 +484,7 @@ TestQuicSpdyClientSession::TestQuicSpdyClientSession(
     const QuicConfig& config,
     const QuicServerId& server_id,
     QuicCryptoClientConfig* crypto_config)
-    : QuicClientSessionBase(connection, &push_promise_index_, config) {
+    : QuicSpdyClientSessionBase(connection, &push_promise_index_, config) {
   crypto_stream_.reset(new QuicCryptoClientStream(
       server_id, this, crypto_test_utils::ProofVerifyContextForTesting(),
       crypto_config, this));

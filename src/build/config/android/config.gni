@@ -69,18 +69,6 @@ if (is_android) {
     default_android_keystore_password = "chromium"
   }
 
-  # TODO(paulmiller): Remove; superseded by google_play_services_package.
-  if (!defined(google_play_services_library)) {
-    google_play_services_library =
-        "//third_party/android_tools:google_play_services_default_java"
-  }
-
-  # TODO(paulmiller): Remove; superseded by google_play_services_package.
-  if (!defined(google_play_services_resources)) {
-    google_play_services_resources =
-        "//third_party/android_tools:google_play_services_default_resources"
-  }
-
   # google_play_services_package contains the path where individual client
   # targets (e.g. google_play_services_base_java) are located.
   if (!defined(google_play_services_package)) {
@@ -92,7 +80,7 @@ if (is_android) {
   }
 
   webview_public_framework_jar =
-      "//third_party/android_platform/webview/frameworks_7.1.1_r28.jar"
+      "//third_party/android_system_sdk/android_system.jar"
   if (!defined(webview_framework_jar)) {
     webview_framework_jar = webview_public_framework_jar
   }
@@ -142,6 +130,9 @@ if (is_android) {
     # off will enable proguard.
     is_java_debug = is_debug
 
+    # Mark APKs as android:debuggable="true".
+    debuggable_apks = !is_official_build
+
     # Set to true to enable the Errorprone compiler
     use_errorprone_java_compiler = false
 
@@ -169,18 +160,10 @@ if (is_android) {
     # abi in 64-bit Monochrome and WebView.
     build_apk_secondary_abi = true
 
-    # Enables java8 language features (via Desugar).
-    # work-in-progress (http://crbug.com/730711)
-    use_java8 = false
-
     # Build incremental targets whenever possible.
     # Ex. with this arg set to true, the chrome_public_apk target result in
     # chrome_public_apk_incremental being built.
     incremental_apk_by_default = false
-
-    # Allow concurrent proguarding and final dexing.
-    # TODO(jbudorick): Remove this once pools are supported for actions.
-    enable_concurrent_apk_finalization = false
   }
 
   # We need a second declare_args block to make sure we are using the overridden

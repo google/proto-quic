@@ -23,6 +23,7 @@
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
 #include "net/base/cache_type.h"
+#include "net/disk_cache/backend_cleanup_tracker.h"
 #include "net/disk_cache/simple/simple_experiment.h"
 #include "net/disk_cache/simple/simple_index_delegate.h"
 #include "net/disk_cache/simple/simple_index_file.h"
@@ -112,8 +113,9 @@ class SimpleIndexTest  : public testing::Test, public SimpleIndexDelegate {
   void SetUp() override {
     std::unique_ptr<MockSimpleIndexFile> index_file(new MockSimpleIndexFile());
     index_file_ = index_file->AsWeakPtr();
-    index_.reset(
-        new SimpleIndex(NULL, this, net::DISK_CACHE, std::move(index_file)));
+    index_.reset(new SimpleIndex(/* io_thread = */ nullptr,
+                                 /* cleanup_tracker = */ nullptr, this,
+                                 net::DISK_CACHE, std::move(index_file)));
 
     index_->Initialize(base::Time());
   }

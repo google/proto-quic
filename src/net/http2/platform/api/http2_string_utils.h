@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "net/http2/platform/api/http2_string.h"
+#include "net/http2/platform/api/http2_string_piece.h"
 #include "net/http2/platform/impl/http2_string_utils_impl.h"
 
 namespace net {
@@ -25,6 +26,18 @@ inline void Http2StrAppend(Http2String* output, const Args&... args) {
 template <typename... Args>
 inline Http2String Http2StringPrintf(const Args&... args) {
   return Http2StringPrintfImpl(std::forward<const Args&>(args)...);
+}
+
+inline Http2String Http2HexEncode(const void* bytes, size_t size) {
+  return Http2HexEncodeImpl(bytes, size);
+}
+
+inline Http2String Http2HexDecode(Http2StringPiece data) {
+  return Http2HexDecodeImpl(data);
+}
+
+inline Http2String Http2HexDump(Http2StringPiece data) {
+  return Http2HexDumpImpl(data);
 }
 
 }  // namespace net

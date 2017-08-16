@@ -46,7 +46,13 @@ struct ParsedTbsCertificate;
 //     Note: Non-conforming CAs may issue certificates with serial numbers
 //     that are negative or zero.  Certificate users SHOULD be prepared to
 //     gracefully handle such certificates.
-NET_EXPORT bool VerifySerialNumber(const der::Input& value) WARN_UNUSED_RESULT;
+//
+// |errors| must be a non-null destination for any errors/warnings. If
+// |warnings_only| is set to true, then what would ordinarily be errors are
+// instead added as warnings.
+NET_EXPORT bool VerifySerialNumber(const der::Input& value,
+                                   bool warnings_only,
+                                   CertErrors* errors) WARN_UNUSED_RESULT;
 
 struct NET_EXPORT ParseCertificateOptions {
   // If set to true, then parsing will skip checks on the certificate's serial

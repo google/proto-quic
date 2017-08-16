@@ -35,7 +35,7 @@ TEST(BindObjcBlockTest, TestScopedClosureRunnerExitScope) {
 TEST(BindObjcBlockTest, TestScopedClosureRunnerRelease) {
   int run_count = 0;
   int* ptr = &run_count;
-  base::Closure c;
+  base::OnceClosure c;
   {
     base::ScopedClosureRunner runner(base::BindBlock(^{
         (*ptr)++;
@@ -44,7 +44,7 @@ TEST(BindObjcBlockTest, TestScopedClosureRunnerRelease) {
     EXPECT_EQ(0, run_count);
   }
   EXPECT_EQ(0, run_count);
-  c.Run();
+  std::move(c).Run();
   EXPECT_EQ(1, run_count);
 }
 

@@ -11,7 +11,6 @@ from infra_libs.event_mon.protos.chrome_infra_log_pb2 import (
   ChromeInfraEvent, ServiceEvent)
 from infra_libs.event_mon import router as ev_router
 
-DEFAULT_SERVICE_ACCOUNT_CREDS = 'service-account-event-mon.json'
 RUNTYPES = set(('dry', 'test', 'prod', 'file'))
 
 # Remote endpoints
@@ -37,33 +36,20 @@ def add_argparse_options(parser):
                      'do not do it.'
                      )
   group.add_argument('--event-mon-run-type', default='dry',
-                      choices=RUNTYPES,
-                      help='Determine how to send data. "dry" does not send\n'
-                      'anything. "test" sends to the test endpoint, \n'
-                      '"prod" to the actual production endpoint, and "file" \n'
-                      'writes to a file.')
+                     choices=RUNTYPES,
+                     help='Determine how to send data. "dry" does not send\n'
+                     'anything. "test" sends to the test endpoint, \n'
+                     '"prod" to the actual production endpoint, and "file" \n'
+                     'writes to a file.')
   group.add_argument('--event-mon-output-file', default='event_mon.output',
                      help='File into which LogEventLite serialized protos are\n'
                      'written when --event-mon-run-type is "file"')
   group.add_argument('--event-mon-service-name',
-                      help='Service name to use in log events.')
+                     help='Service name to use in log events.')
   group.add_argument('--event-mon-hostname',
-                      help='Hostname to use in log events.')
+                     help='Hostname to use in log events.')
   group.add_argument('--event-mon-appengine-name',
-                      help='App name to use in log events.')
-  group.add_argument('--event-mon-service-account-creds',
-                     default=DEFAULT_SERVICE_ACCOUNT_CREDS,
-                     metavar='JSON_FILE',
-                     help="Path to a json file containing a service account's"
-                     "\ncredentials. This is relative to the path specified\n"
-                     "in --event-mon-service-accounts-creds-root\n"
-                     "Defaults to '%(default)s'")
-  group.add_argument('--event-mon-service-accounts-creds-root',
-                     metavar='DIR',
-                     default=infra_libs.SERVICE_ACCOUNTS_CREDS_ROOT,
-                     help="Directory containing service accounts credentials.\n"
-                     "Defaults to %(default)s"
-                     )
+                     help='App name to use in log events.')
   group.add_argument('--event-mon-http-timeout', default=10, type=int,
                      help='Timeout in seconds for HTTP requests to send events')
   group.add_argument('--event-mon-http-retry-backoff', default=2., type=float,
@@ -83,8 +69,6 @@ def process_argparse_options(args):  # pragma: no cover
     hostname=args.event_mon_hostname,
     service_name=args.event_mon_service_name,
     appengine_name=args.event_mon_appengine_name,
-    service_account_creds=args.event_mon_service_account_creds,
-    service_accounts_creds_root=args.event_mon_service_accounts_creds_root,
     output_file=args.event_mon_output_file,
     dry_run=args.dry_run,
     http_timeout=args.event_mon_http_timeout,
@@ -96,8 +80,6 @@ def setup_monitoring(run_type='dry',
                      hostname=None,
                      service_name=None,
                      appengine_name=None,
-                     service_account_creds=None,
-                     service_accounts_creds_root=None,
                      output_file=None,
                      dry_run=False,
                      http_timeout=10,
@@ -122,13 +104,6 @@ def setup_monitoring(run_type='dry',
 
     appengine_name (str): name of the appengine app, if running on appengine.
 
-    service_account_creds (str): path to a json file containing a service
-      account's credentials obtained from a Google Cloud project. **Path is
-      relative to service_account_creds_root**, which is not the current path by
-      default. See infra_libs.authentication for details.
-
-    service_account_creds_root (str): path containing credentials files.
-
     output_file (str): file where to write the output in run_type == 'file'
       mode.
 
@@ -144,50 +119,46 @@ def setup_monitoring(run_type='dry',
   global _router
   logging.debug('event_mon: setting up monitoring.')
 
-  if not _router:
-    default_event = ChromeInfraEvent()
+  if _router:
+    return
 
-    hostname = hostname or socket.getfqdn()
-    # hostname might be empty string or None on some systems, who knows.
-    if hostname:  # pragma: no branch
-      default_event.event_source.host_name = hostname
-    else:  # pragma: no cover
-      logging.warning('event_mon: unable to determine hostname.')
+  default_event = ChromeInfraEvent()
 
-    if service_name:
-      default_event.event_source.service_name = service_name
-    if appengine_name:
-      default_event.event_source.appengine_name = appengine_name
+  hostname = hostname or socket.getfqdn()
+  # hostname might be empty string or None on some systems, who knows.
+  if hostname:  # pragma: no branch
+    default_event.event_source.host_name = hostname
+  else:  # pragma: no cover
+    logging.warning('event_mon: unable to determine hostname.')
 
-    _cache['default_event'] = default_event
-    if run_type in ('prod', 'test'):
-      _cache['service_account_creds'] = service_account_creds
-      _cache['service_accounts_creds_root'] = service_accounts_creds_root
+  if service_name:
+    default_event.event_source.service_name = service_name
+  if appengine_name:
+    default_event.event_source.appengine_name = appengine_name
+
+  _cache['default_event'] = default_event
+
+  if run_type not in RUNTYPES:
+    logging.error('Unknown run_type (%s). Setting to "dry"', run_type)
+    run_type = 'dry'
+
+  if run_type == 'dry':
+    # If we are running on AppEngine or devserver, use logging module.
+    server_software = os.environ.get('SERVER_SOFTWARE', '')
+    if (server_software.startswith('Google App Engine') or
+        server_software.startswith('Development')):
+      _router = ev_router._LoggingStreamRouter()
     else:
-      _cache['service_account_creds'] = None
-      _cache['service_accounts_creds_root'] = None
-
-    if run_type not in RUNTYPES:
-      logging.error('Unknown run_type (%s). Setting to "dry"', run_type)
-      run_type = 'dry'
-
-    if run_type == 'dry':
-      # If we are running on AppEngine or devserver, use logging module.
-      server_software = os.environ.get('SERVER_SOFTWARE', '')
-      if (server_software.startswith('Google App Engine') or
-          server_software.startswith('Development')):
-        _router = ev_router._LoggingStreamRouter()
-      else:
-        _router = ev_router._TextStreamRouter()
-    elif run_type == 'file':
-      _router = ev_router._LocalFileRouter(output_file,
-                                           dry_run=dry_run)
-    else:
-      _router = ev_router._HttpRouter(_cache,
-                                      ENDPOINTS.get(run_type),
-                                      dry_run=dry_run,
-                                      timeout=http_timeout,
-                                      retry_backoff=http_retry_backoff)
+      _router = ev_router._TextStreamRouter()
+  elif run_type == 'file':
+    _router = ev_router._LocalFileRouter(output_file,
+                                         dry_run=dry_run)
+  else:
+    _router = ev_router._HttpRouter(_cache,
+                                    ENDPOINTS.get(run_type),
+                                    dry_run=dry_run,
+                                    timeout=http_timeout,
+                                    retry_backoff=http_retry_backoff)
 
 
 def get_default_event():

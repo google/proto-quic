@@ -13,6 +13,11 @@
 #include "net/base/parse_number.h"
 #include "net/cert/x509_certificate.h"
 
+#if BUILDFLAG(USE_BYTE_CERTS)
+#include "net/cert/internal/parse_name.h"
+#include "net/der/input.h"
+#endif
+
 namespace net {
 
 namespace {
@@ -38,6 +43,64 @@ CertPrincipal::CertPrincipal(const std::string& name) : common_name(name) {}
 
 CertPrincipal::~CertPrincipal() {
 }
+
+#if BUILDFLAG(USE_BYTE_CERTS)
+bool CertPrincipal::ParseDistinguishedName(const void* ber_name_data,
+                                           size_t length) {
+  RDNSequence rdns;
+  if (!ParseName(
+          der::Input(reinterpret_cast<const uint8_t*>(ber_name_data), length),
+          &rdns))
+    return false;
+
+  for (const RelativeDistinguishedName& rdn : rdns) {
+    for (const X509NameAttribute& name_attribute : rdn) {
+      if (name_attribute.type == TypeCommonNameOid()) {
+        if (common_name.empty() &&
+            !name_attribute.ValueAsString(&common_name)) {
+          return false;
+        }
+      } else if (name_attribute.type == TypeLocalityNameOid()) {
+        if (locality_name.empty() &&
+            !name_attribute.ValueAsString(&locality_name)) {
+          return false;
+        }
+      } else if (name_attribute.type == TypeStateOrProvinceNameOid()) {
+        if (state_or_province_name.empty() &&
+            !name_attribute.ValueAsString(&state_or_province_name)) {
+          return false;
+        }
+      } else if (name_attribute.type == TypeCountryNameOid()) {
+        if (country_name.empty() &&
+            !name_attribute.ValueAsString(&country_name)) {
+          return false;
+        }
+      } else if (name_attribute.type == TypeStreetAddressOid()) {
+        std::string s;
+        if (!name_attribute.ValueAsString(&s))
+          return false;
+        street_addresses.push_back(s);
+      } else if (name_attribute.type == TypeOrganizationNameOid()) {
+        std::string s;
+        if (!name_attribute.ValueAsString(&s))
+          return false;
+        organization_names.push_back(s);
+      } else if (name_attribute.type == TypeOrganizationUnitNameOid()) {
+        std::string s;
+        if (!name_attribute.ValueAsString(&s))
+          return false;
+        organization_unit_names.push_back(s);
+      } else if (name_attribute.type == TypeDomainComponentOid()) {
+        std::string s;
+        if (!name_attribute.ValueAsString(&s))
+          return false;
+        domain_components.push_back(s);
+      }
+    }
+  }
+  return true;
+}
+#endif
 
 std::string CertPrincipal::GetDisplayName() const {
   if (!common_name.empty())

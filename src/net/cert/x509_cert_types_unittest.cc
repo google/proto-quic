@@ -6,6 +6,7 @@
 
 #include "base/strings/string_piece.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 #include "net/test/test_certificate_data.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -13,7 +14,8 @@ namespace net {
 
 namespace {
 
-#if (defined(OS_MACOSX) && !defined(OS_IOS)) || defined(OS_WIN)
+#if BUILDFLAG(USE_BYTE_CERTS) || (defined(OS_MACOSX) && !defined(OS_IOS)) || \
+    defined(OS_WIN)
 TEST(X509TypesTest, ParseDNVerisign) {
   CertPrincipal verisign;
   EXPECT_TRUE(verisign.ParseDistinguishedName(VerisignDN, sizeof(VerisignDN)));

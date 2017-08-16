@@ -6,10 +6,10 @@
 #define BASE_PENDING_TASK_H_
 
 #include <array>
-#include <queue>
 
 #include "base/base_export.h"
 #include "base/callback.h"
+#include "base/containers/queue.h"
 #include "base/location.h"
 #include "base/time/time.h"
 #include "base/tracking_info.h"
@@ -51,7 +51,7 @@ struct BASE_EXPORT PendingTask : public TrackingInfo {
   bool is_high_res;
 };
 
-using TaskQueue = std::queue<PendingTask>;
+using TaskQueue = base::queue<PendingTask>;
 
 // PendingTasks are sorted by their |delayed_run_time| property.
 using DelayedTaskQueue = std::priority_queue<base::PendingTask>;

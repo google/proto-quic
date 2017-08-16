@@ -46,6 +46,7 @@ namespace ntlm {
 // [2] http://davenport.sourceforge.net/ntlm.html
 class NET_EXPORT_PRIVATE NtlmBufferReader {
  public:
+  explicit NtlmBufferReader(const Buffer& buffer);
   explicit NtlmBufferReader(base::StringPiece buffer);
 
   // This class does not take ownership of |ptr|, so the caller must ensure
@@ -165,9 +166,7 @@ class NET_EXPORT_PRIVATE NtlmBufferReader {
   void AdvanceCursor(size_t count) { SetCursor(GetCursor() + count); }
 
   // Returns a constant pointer to the start of the buffer.
-  const uint8_t* GetBufferPtr() const {
-    return reinterpret_cast<const uint8_t*>(buffer_.data());
-  }
+  const uint8_t* GetBufferPtr() const { return buffer_.data(); }
 
   // Returns a pointer to the underlying buffer at the current cursor
   // position.
@@ -179,7 +178,7 @@ class NET_EXPORT_PRIVATE NtlmBufferReader {
     return *(GetBufferAtCursor());
   }
 
-  const base::StringPiece buffer_;
+  const Buffer buffer_;
   size_t cursor_;
 
   DISALLOW_COPY_AND_ASSIGN(NtlmBufferReader);

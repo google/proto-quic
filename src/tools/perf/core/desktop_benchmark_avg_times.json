@@ -9,6 +9,7 @@
     "blink_perf.dom": 98.51104682236321,
     "blink_perf.events": 66.05652102455497,
     "blink_perf.layout": 453.38422619201697,
+    "blink_perf.owp_storage": 30.0, 
     "blink_perf.paint": 51.07198746293505,
     "blink_perf.parser": 400.27208882935196,
     "blink_perf.shadow_dom": 81.56559749378646,

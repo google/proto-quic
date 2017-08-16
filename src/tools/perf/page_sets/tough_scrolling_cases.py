@@ -55,7 +55,3 @@ class ToughScrollingCasesPageSet(story.StorySet):
           speed,
           self,
           synthetic_gesture_source))
-
-class ToughScrollingCasesStoryExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    pass

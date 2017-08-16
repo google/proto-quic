@@ -26,9 +26,6 @@
 #
 # NOTE: operands are arranged in NASM / Intel order (e.g. dest, src)
 
-import os
-import sys
-
 from sys import stdout, version_info
 
 scriptname = "gen_x86_insn.py"
@@ -42,7 +39,8 @@ ordered_cpu_features = [
     "SSE3", "SVM", "PadLock", "SSSE3", "SSE41", "SSE42", "SSE4a", "SSE5",
     "AVX", "FMA", "AES", "CLMUL", "MOVBE", "XOP", "FMA4", "F16C",
     "FSGSBASE", "RDRAND", "XSAVEOPT", "EPTVPID", "SMX", "AVX2", "BMI1",
-    "BMI2", "INVPCID", "LZCNT"]
+    "BMI2", "INVPCID", "LZCNT", "TBM", "TSX", "SHA", "SMAP", "RDSEED", "ADX",
+    "PRFCHW"]
 unordered_cpu_features = ["Priv", "Prot", "Undoc", "Obs"]
 
 # Predefined VEX prefix field values
@@ -2267,7 +2265,7 @@ add_group("call",
 
 add_group("call",
     opersize=16,
-    def_opersize_64=64,
+    not64=True, #there should not be 16bit call in 64bit mode
     opcode=[0xE8],
     operands=[Operand(type="Imm", size=16, tmod="Near", dest="JmpRel")])
 add_group("call",
@@ -6946,7 +6944,7 @@ for sz in [128, 256]:
         prefix=0x66,
         opcode=[0x0F, 0x38, 0x59],
         operands=[Operand(type="SIMDReg", size=sz, dest="Spare"),
-                  Operand(type="RM", size=64, relaxed=True, dest="EA")])
+                  Operand(type="SIMDRM", size=64, relaxed=True, dest="EA")])
 
 add_insn("vpbroadcastq", "vpbroadcastq_avx2")
 
@@ -7117,6 +7115,45 @@ add_group("gather_32x_32y_128",
               Operand(type="SIMDReg", size=128, dest="VEX")])
 add_insn("vgatherqps", "gather_32x_32y_128", modifiers=[0x93])
 add_insn("vpgatherqd", "gather_32x_32y_128", modifiers=[0x91])
+
+#####################################################################
+# Intel TSX instructions
+#####################################################################
+add_prefix("xacquire",     "ACQREL",  0xF2)
+add_prefix("xrelease",     "ACQREL",  0xF3)
+
+add_group("tsx_xabort",
+    cpu=["TSX"],
+    opcode=[0xC6, 0xF8],
+    operands=[Operand(type="Imm", size=8, relaxed=True, dest="Imm")])
+add_insn("xabort", "tsx_xabort")
+
+
+
+add_group("tsx_xbegin",
+    cpu=["TSX"],
+    opcode=[0xC7, 0xF8],
+    operands=[Operand(type="Imm", size=32,  tmod="Near", dest="JmpRel")])
+
+add_group("tsx_xbegin",
+    cpu=["TSX"],
+    opersize=16,
+    not64=True, #there should not be 16bit xbegin in 64bit mode
+    opcode=[0xC7, 0xF8],
+    operands=[Operand(type="Imm", size=16,  tmod="Near", dest="JmpRel")])
+add_insn("xbegin", "tsx_xbegin")
+
+add_group("tsx_0x0F_0x01",
+    cpu=["TSX"],
+    modifiers=["Op2Add"],
+    opcode=[0x0F, 0x01, 0x00],
+    operands=[])
+add_insn("xend", "tsx_0x0F_0x01", modifiers=[0xD5])
+add_insn("xtest", "tsx_0x0F_0x01", modifiers=[0xD6])
+
+
+
+
 
 #####################################################################
 # Intel FMA instructions
@@ -7335,25 +7372,23 @@ for comb, combval in zip(["lql","hql","lqh","hqh"], [0x00,0x01,0x10,0x11]):
 
 # RDRAND
 add_group("rdrand",
-    cpu=["RDRAND"],
+    modifiers=['SpAdd'],
     opersize=16,
     opcode=[0x0F, 0xC7],
-    spare=6,
     operands=[Operand(type="Reg", size=16, dest="EA")])
 add_group("rdrand",
     #suffix="l",
-    cpu=["RDRAND"],
+    modifiers=['SpAdd'],
     opersize=32,
     opcode=[0x0F, 0xC7],
-    spare=6,
     operands=[Operand(type="Reg", size=32, dest="EA")])
 add_group("rdrand",
-    cpu=["RDRAND"],
+    modifiers=['SpAdd'],
     opersize=64,
     opcode=[0x0F, 0xC7],
-    spare=6,
     operands=[Operand(type="Reg", size=64, dest="EA")])
-add_insn("rdrand", "rdrand")
+add_insn("rdrand", "rdrand", modifiers=[6], cpu=["RDRAND"])
+add_insn("rdseed", "rdrand", modifiers=[7], cpu=["RDSEED"])
 
 # FSGSBASE instructions
 add_group("fs_gs_base",
@@ -7641,7 +7676,7 @@ add_insn("vphaddubd", "vphaddsub", modifiers=[0xD2])
 add_insn("vphaddubq", "vphaddsub", modifiers=[0xD3])
 add_insn("vphadduwd", "vphaddsub", modifiers=[0xD6])
 add_insn("vphadduwq", "vphaddsub", modifiers=[0xD7])
-add_insn("vphaddudq", "vphaddsub", modifiers=[0xD8])
+add_insn("vphaddudq", "vphaddsub", modifiers=[0xDB])
 
 add_insn("vphsubbw", "vphaddsub", modifiers=[0xE1])
 add_insn("vphsubwd", "vphaddsub", modifiers=[0xE2])
@@ -7896,7 +7931,7 @@ add_insn("movbe", "movbe")
 add_insn("tzcnt", "cnt", modifiers=[0xBC], cpu=["BMI1"])
 # LZCNT is present as AMD ext
 
-for sfx, sz in zip("wlq", [32, 64]):
+for sfx, sz in zip("lq", [32, 64]):
     add_group("vex_gpr_ndd_rm_0F38_regext",
         suffix=sfx,
         modifiers=["PreAdd", "Op2Add", "SpAdd" ],
@@ -7915,7 +7950,7 @@ add_insn("blsmsk", "vex_gpr_ndd_rm_0F38_regext", modifiers=[0x00, 0xF3, 2],
 add_insn("blsi",   "vex_gpr_ndd_rm_0F38_regext", modifiers=[0x00, 0xF3, 3],
          cpu=["BMI1"])
 
-for sfx, sz in zip("wlq", [32, 64]):
+for sfx, sz in zip("lq", [32, 64]):
     add_group("vex_gpr_reg_rm_0F_imm8",
         suffix=sfx,
         modifiers=["PreAdd", "Op1Add", "Op2Add"],
@@ -7964,8 +7999,6 @@ for sfx, sz in zip("lq", [32, 64]):  # no 16-bit forms
 
 add_insn("bzhi", "vex_gpr_reg_rm_nds_0F", modifiers=[0x00, 0x38, 0xF5],
          cpu=["BMI2"])
-add_insn("bextr","vex_gpr_reg_rm_nds_0F", modifiers=[0x00, 0x38, 0xF7],
-         cpu=["BMI1"])
 add_insn("shlx", "vex_gpr_reg_rm_nds_0F", modifiers=[0x66, 0x38, 0xF7],
          cpu=["BMI2"])
 add_insn("shrx", "vex_gpr_reg_rm_nds_0F", modifiers=[0xF2, 0x38, 0xF7],
@@ -7976,7 +8009,31 @@ add_insn("sarx", "vex_gpr_reg_rm_nds_0F", modifiers=[0xF3, 0x38, 0xF7],
 add_insn("mulx", "vex_gpr_reg_nds_rm_0F", modifiers=[0xF2, 0x38, 0xF6],
          cpu=["BMI2"])
 
+for sfx, sz in zip("lq", [32, 64]):  # no 16-bit forms
+    add_group("bextr",
+        cpu=["BMI1"],
+        suffix=sfx,
+        opersize=sz,
+        prefix=0x00,
+        opcode=[0x0F, 0x38, 0xF7],
+        vex=0,
+        operands=[Operand(type="Reg", size=sz, dest="Spare"),
+                  Operand(type="RM", size=sz, relaxed=True, dest="EA"),
+                  Operand(type="Reg", size=sz, dest="VEX")])
+    add_group("bextr", # TBM alternate form of bextr
+        cpu=["TBM"],
+        suffix=sfx,
+        opersize=sz,
+        prefix=0x00,
+        opcode=[0x0A, 0x10],
+        xop=128,
+        xopw=(sz==64),
+        onlyavx=True,
+        operands=[Operand(type="Reg", size=sz, dest="Spare"),
+                  Operand(type="RM", size=sz, relaxed=True, dest="EA"),
+                  Operand(type="Imm", size=32, relaxed=True, dest="Imm")])
 
+add_insn("bextr", "bextr")
 
 #####################################################################
 # Intel INVPCID instruction
@@ -7998,12 +8055,111 @@ add_group("invpcid",
               Operand(type="Mem", size=128, relaxed=True, dest="EA")])
 add_insn("invpcid", "invpcid")
 
+
+#####################################################################
+# Intel SHA instructions
+#####################################################################
+add_group("intel_SHA1MSG1",
+	cpu=["SHA"],
+	opcode=[0x0F, 0x38, 0xC9],
+	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+		Operand(type="SIMDRM", size=128, dest="EA", relaxed=True)])
+add_group("intel_SHA1MSG2",
+	cpu=["SHA"],
+	opcode=[0x0F, 0x38, 0xCA],
+	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+		Operand(type="SIMDRM", size=128, dest="EA", relaxed=True)])
+add_group("intel_SHA1NEXTE",
+	cpu=["SHA"],
+	opcode=[0x0F, 0x38, 0xC8],
+	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+		Operand(type="SIMDRM", size=128, dest="EA", relaxed=True)])
+add_group("intel_SHA1RNDS4",
+	cpu=["SHA"],
+	opcode=[0x0F, 0x3A, 0xCC],
+	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+		Operand(type="SIMDRM", size=128, dest="EA", relaxed=True),
+		Operand(type="Imm", size=8, dest="Imm", relaxed=True)])
+add_group("intel_SHA256MSG1",
+	cpu=["SHA"],
+	opcode=[0x0F, 0x38, 0xCC],
+	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+		Operand(type="SIMDRM", size=128, dest="EA", relaxed=True)])
+add_group("intel_SHA256MSG2",
+	cpu=["SHA"],
+	opcode=[0x0F, 0x38, 0xCD],
+	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+		Operand(type="SIMDRM", size=128, dest="EA", relaxed=True)])
+add_group("intel_SHA256RNDS2",
+	cpu=["SHA"],
+	opcode=[0x0F, 0x38, 0xCB],
+	operands=[Operand(type="SIMDReg", size=128, dest="Spare"),
+		Operand(type="SIMDReg", size=128, dest="EA")])
+
+add_insn("SHA1MSG1", "intel_SHA1MSG1")
+add_insn("SHA1MSG2", "intel_SHA1MSG2")
+add_insn("SHA1NEXTE", "intel_SHA1NEXTE")
+add_insn("SHA1RNDS4", "intel_SHA1RNDS4")
+add_insn("SHA256MSG1", "intel_SHA256MSG1")
+add_insn("SHA256MSG2", "intel_SHA256MSG2")
+add_insn("SHA256RNDS2", "intel_SHA256RNDS2")
+
+#####################################################################
+# Intel SMAP instructions
+#####################################################################
+add_insn("clac", "threebyte", modifiers=[0x0F, 0x01, 0xCA], cpu=["SMAP"])
+add_insn("stac", "threebyte", modifiers=[0x0F, 0x01, 0xCB], cpu=["SMAP"])
+
+#####################################################################
+# Intel ADX instructions
+#####################################################################
+for sfx, sz in zip("lq", [32, 64]):
+    add_group("vex_gpr_ndd_rm_0F38",
+        suffix=sfx,
+        modifiers=["PreAdd", "Op2Add"],
+        opersize=sz,
+        prefix=0x00,
+        opcode=[0x0F, 0x38, 0x00],
+        operands=[Operand(type="Reg", size=sz, dest="Spare"),
+                  Operand(type="RM", size=sz, relaxed=True, dest="EA")])
+
+add_insn("adcx", "vex_gpr_ndd_rm_0F38", modifiers=[0x66, 0xF6], cpu=["ADX"])
+add_insn("adox", "vex_gpr_ndd_rm_0F38", modifiers=[0xF3, 0xF6], cpu=["ADX"])
+
+
+#####################################################################
+# AMD trailing bit manipulation (TBM)
+#####################################################################
+
+for sfx, sz in zip("lq", [32, 64]):  # no 16-bit forms
+    add_group("xop_gpr_reg_rm_09",
+        cpu=["TBM"],
+        suffix=sfx,
+        modifiers=["Op1Add","SpAdd"],
+        opersize=sz,
+        prefix=0x00,
+        opcode=[0x09, 0x00],
+        xop=128,
+        xopw=(sz==64),
+        operands=[Operand(type="Reg", size=sz, dest="VEX"),
+                  Operand(type="RM", size=sz, relaxed=True, dest="EA")])
+
+add_insn("blcfill", "xop_gpr_reg_rm_09", modifiers=[0x01, 1])
+add_insn("blci",    "xop_gpr_reg_rm_09", modifiers=[0x02, 6])
+add_insn("blcic",   "xop_gpr_reg_rm_09", modifiers=[0x01, 5])
+add_insn("blcmsk",  "xop_gpr_reg_rm_09", modifiers=[0x02, 1])
+add_insn("blcs",    "xop_gpr_reg_rm_09", modifiers=[0x01, 3])
+add_insn("blsfill", "xop_gpr_reg_rm_09", modifiers=[0x01, 2])
+add_insn("blsic",   "xop_gpr_reg_rm_09", modifiers=[0x01, 6])
+add_insn("t1mskc",  "xop_gpr_reg_rm_09", modifiers=[0x01, 7])
+add_insn("tzmsk",   "xop_gpr_reg_rm_09", modifiers=[0x01, 4])
+
 #####################################################################
 # AMD 3DNow! instructions
 #####################################################################
 
 add_insn("prefetch", "twobytemem", modifiers=[0x00, 0x0F, 0x0D], cpu=["3DNow"])
-add_insn("prefetchw", "twobytemem", modifiers=[0x01, 0x0F, 0x0D], cpu=["3DNow"])
+add_insn("prefetchw", "twobytemem", modifiers=[0x01, 0x0F, 0x0D], cpu=["PRFCHW"])
 add_insn("femms", "twobyte", modifiers=[0x0F, 0x0E], cpu=["3DNow"])
 
 add_group("now3d",
@@ -8035,7 +8191,7 @@ add_insn("pfsub", "now3d", modifiers=[0x9A])
 add_insn("pfsubr", "now3d", modifiers=[0xAA])
 add_insn("pi2fd", "now3d", modifiers=[0x0D])
 add_insn("pi2fw", "now3d", modifiers=[0x0C], cpu=["Athlon", "3DNow"])
-add_insn("pmulhrwa", "now3d", modifiers=[0xB7])
+add_insn("pmulhrw", "now3d", modifiers=[0xB7])
 add_insn("pswapd", "now3d", modifiers=[0xBB], cpu=["Athlon", "3DNow"])
 
 #####################################################################
@@ -8327,11 +8483,7 @@ for val, suf in enumerate(["", "z", "y", "yz", "x", "xz", "xy", "xyz"]):
 # Output generation
 #####################################################################
 
-out_dir = ""
-if len(sys.argv) > 1:
-  out_dir = sys.argv[1]
-
-output_groups(file(os.path.join(out_dir, "x86insns.c"), "wt"))
-output_gas_insns(file(os.path.join(out_dir, "x86insn_gas.gperf"), "wt"))
-output_nasm_insns(file(os.path.join(out_dir, "x86insn_nasm.gperf"), "wt"))
+output_groups(open("x86insns.c", "wt"))
+output_gas_insns(open("x86insn_gas.gperf", "wt"))
+output_nasm_insns(open("x86insn_nasm.gperf", "wt"))
 

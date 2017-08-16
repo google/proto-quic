@@ -198,7 +198,7 @@ class QUIC_EXPORT_PRIVATE PacketNumberQueue {
 
   // Adds packets between [lower, higher) to the set of packets in the queue. It
   // is undefined behavior to call this with |higher| < |lower|.
-  void Add(QuicPacketNumber lower, QuicPacketNumber higher);
+  void AddRange(QuicPacketNumber lower, QuicPacketNumber higher);
 
   // Removes packets with values less than |higher| from the set of packets in
   // the queue. Returns true if packets were removed.
@@ -244,7 +244,7 @@ class QUIC_EXPORT_PRIVATE PacketNumberQueue {
 
  private:
   // TODO(lilika): Remove QuicIntervalSet<QuicPacketNumber>
-  // once FLAGS_quic_reloadable_flag_quic_frames_deque is removed
+  // once FLAGS_quic_reloadable_flag_quic_frames_deque2 is removed
   QuicIntervalSet<QuicPacketNumber> packet_number_intervals_;
   std::deque<Interval<QuicPacketNumber>> packet_number_deque_;
   bool use_deque_;

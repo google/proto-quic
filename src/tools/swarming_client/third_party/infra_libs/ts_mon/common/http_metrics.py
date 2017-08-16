@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+from infra_libs.ts_mon.common import distribution
 from infra_libs.ts_mon.common import metrics
 
 
@@ -11,22 +12,35 @@ STATUS_ERROR = 901
 STATUS_TIMEOUT = 902
 STATUS_EXCEPTION = 909
 
+
+# 90% of durations are in the range 11-1873ms.  Growth factor 10^0.06 puts that
+# range into 37 buckets.  Max finite bucket value is 12 minutes.
+_duration_bucketer = distribution.GeometricBucketer(10**0.06)
+
+# 90% of sizes are in the range 0.17-217014 bytes.  Growth factor 10^0.1 puts
+# that range into 54 buckets.  Max finite bucket value is 6.3GB.
+_size_bucketer = distribution.GeometricBucketer(10**0.1)
+
+
 request_bytes = metrics.CumulativeDistributionMetric('http/request_bytes',
     'Bytes sent per http request (body only).', [
         metrics.StringField('name'),
         metrics.StringField('client'),
-    ])
+    ],
+    bucketer=_size_bucketer)
 response_bytes = metrics.CumulativeDistributionMetric('http/response_bytes',
     'Bytes received per http request (content only).', [
         metrics.StringField('name'),
         metrics.StringField('client'),
-    ])
+    ],
+    bucketer=_size_bucketer)
 durations = metrics.CumulativeDistributionMetric('http/durations',
     'Time elapsed between sending a request and getting a'
     ' response (including parsing) in milliseconds.', [
         metrics.StringField('name'),
         metrics.StringField('client'),
-    ])
+    ],
+    bucketer=_duration_bucketer)
 response_status = metrics.CounterMetric('http/response_status',
     'Number of responses received by HTTP status code.', [
         metrics.IntegerField('status'),
@@ -41,21 +55,24 @@ server_request_bytes = metrics.CumulativeDistributionMetric(
         metrics.IntegerField('status'),
         metrics.StringField('name'),
         metrics.BooleanField('is_robot'),
-    ])
+    ],
+    bucketer=_size_bucketer)
 server_response_bytes = metrics.CumulativeDistributionMetric(
     'http/server_response_bytes',
     'Bytes sent per http request (content only).', [
         metrics.IntegerField('status'),
         metrics.StringField('name'),
         metrics.BooleanField('is_robot'),
-    ])
+    ],
+    bucketer=_size_bucketer)
 server_durations = metrics.CumulativeDistributionMetric('http/server_durations',
     'Time elapsed between receiving a request and sending a'
     ' response (including parsing) in milliseconds.', [
         metrics.IntegerField('status'),
         metrics.StringField('name'),
         metrics.BooleanField('is_robot'),
-    ])
+    ],
+    bucketer=_duration_bucketer)
 server_response_status = metrics.CounterMetric('http/server_response_status',
     'Number of responses sent by HTTP status code.', [
         metrics.IntegerField('status'),

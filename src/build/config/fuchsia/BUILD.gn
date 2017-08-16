@@ -29,15 +29,31 @@ config("compiler") {
   asmflags = cflags
 
   ldflags += [
+    # TODO(thakis): Once Fuchsia's libclang_rt.builtin no longer has upstream
+    # patches, we might want to make tools/clang/scripts/update.py build it
+    # and bundle it with the clang package instead of using the library from
+    # the SDK, https://crbug.com/724204
+    # Note: Intentionally 6.0.0 instead of $clang_version because the clang
+    # version of the toolchain_libs directory in the Fuchsia SDK can be
+    # different from the version of Chromium's clang.
+    "-resource-dir",
+    rebase_path(fuchsia_sdk, root_build_dir) + "/toolchain_libs/clang/6.0.0",
+
     # The stack defaults to 256k on Fuchsia (see
     # https://fuchsia.googlesource.com/magenta/+/master/system/private/magenta/stack.h#9),
     # but on other platforms it's much higher, so a variety of code assumes more
     # will be available. Raise to 8M which matches e.g. macOS.
     "-Wl,-z,stack-size=0x800000",
+
+    # We always want mxio or else e.g. stdio wouldn't be initialized if mxio
+    # happens to not be directly referenced. The common POSIX-y compiler setup
+    # uses -Wl,--as-needed which drops it if it's simply "-lmxio" from a libs
+    # setting. Disable --as-needed, add mxio, and then set back to --as-needed.
+    # https://crbug.com/731217.
+    "-Wl,--no-as-needed",
+    "-lmxio",
+    "-Wl,--as-needed",
   ]
 
-  libs = [
-    "mxio",
-    "magenta",
-  ]
+  libs = [ "magenta" ]
 }

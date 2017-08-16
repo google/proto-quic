@@ -30,6 +30,13 @@ config("runtime_library") {
   libs = []
 
   if (use_custom_libcxx) {
+    if (libcpp_is_static) {
+      # Don't leak any symbols on a static build.
+      defines = [
+        "_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+        "_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
+      ]
+    }
     if (!is_clang) {
       # Gcc has a built-in abs() definition with default visibility.
       # If it was not disabled, it would conflict with libc++'s abs()
@@ -51,45 +58,7 @@ config("runtime_library") {
     }
 
     # Make sure we don't link against libc++ or libstdc++.
-    ldflags += [ "-nodefaultlibs" ]
-
-    # Unfortunately, there's no way to disable linking against just
-    # libc++ (besides using clang instead of clang++); -nodefaultlibs
-    # removes all of the default libraries, so add back the ones that we
-    # need.
-    libs += [
-      "c",
-      "m",
-    ]
-
-    if (!is_mac && !is_fuchsia) {
-      libs += [
-        "gcc_s",
-        "rt",
-      ]
-    } else if (is_fuchsia) {
-      # TODO(thakis): Once Fuchsia's libclang_rt.builtin no longer has upstream
-      # patches, we might want to make tools/clang/scripts/update.py build it
-      # and bundle it with the clang package instead of using the library from
-      # the SDK, https://crbug.com/724204
-      # If clang grows a flag like -nodefaultlibs++, then this here should use
-      # -resource-dir instead.
-      # Note: Intentionally 6.0.0 instead of $clang_version because the clang
-      # version of the toolchain_libs directory in the Fuchsia SDK can be
-      # different from the version of Chromium's clang.
-      lib_dirs += [ "$fuchsia_sdk/toolchain_libs/clang/6.0.0/lib/fuchsia" ]
-
-      # TODO(fuchsia): We probably want to support more archs one day.
-      libs += [ "clang_rt.builtins-x86_64" ]
-    }
-
-    if (is_mac && using_sanitizer) {
-      lib_dirs += [ "//third_party/llvm-build/Release+Asserts/lib/clang/$clang_version/lib/darwin" ]
-
-      if (is_asan) {
-        libs += [ "clang_rt.asan_osx_dynamic" ]
-      }
-    }
+    ldflags += [ "-nostdlib++" ]
   }
 
   if (!is_mac && !is_ios && sysroot != "") {

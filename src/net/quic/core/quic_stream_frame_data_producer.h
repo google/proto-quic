@@ -12,17 +12,10 @@ namespace net {
 
 class QuicDataWriter;
 
-// Pure virtual class to save and retrieve stream data.
+// Pure virtual class to retrieve stream data.
 class QUIC_EXPORT_PRIVATE QuicStreamFrameDataProducer {
  public:
   virtual ~QuicStreamFrameDataProducer() {}
-
-  // Save |data_length| data starts at |iov_offset| in |iov|.
-  virtual void SaveStreamData(QuicStreamId id,
-                              QuicIOVector iov,
-                              size_t iov_offset,
-                              QuicStreamOffset offset,
-                              QuicByteCount data_length) = 0;
 
   // Let |writer| write |data_length| data with |offset| of stream |id|. Returns
   // false when the writing fails either because stream is closed or

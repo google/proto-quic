@@ -166,7 +166,7 @@ const QuicHttpResponseCache::Response* QuicHttpResponseCache::GetResponse(
   if (it == responses_.end()) {
     DVLOG(1) << "Get response for resource failed: host " << host << " path "
              << path;
-    if (default_response_.get()) {
+    if (default_response_) {
       return default_response_.get();
     }
     return nullptr;

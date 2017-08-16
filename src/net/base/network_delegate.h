@@ -108,7 +108,7 @@ class NET_EXPORT NetworkDelegate {
                      const base::FilePath& original_path,
                      const base::FilePath& absolute_path) const;
   bool CanEnablePrivacyMode(const GURL& url,
-                            const GURL& first_party_for_cookies) const;
+                            const GURL& site_for_cookies) const;
 
   bool AreExperimentalCookieFeaturesEnabled() const;
 
@@ -293,9 +293,8 @@ class NET_EXPORT NetworkDelegate {
   // Returns true if the given |url| has to be requested over connection that
   // is not tracked by the server. Usually is false, unless user privacy
   // settings block cookies from being get or set.
-  virtual bool OnCanEnablePrivacyMode(
-      const GURL& url,
-      const GURL& first_party_for_cookies) const = 0;
+  virtual bool OnCanEnablePrivacyMode(const GURL& url,
+                                      const GURL& site_for_cookies) const = 0;
 
   // Returns true if the embedder has enabled the experimental features, and
   // false otherwise.

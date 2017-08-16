@@ -22,36 +22,25 @@ namespace {
 // On error, returns the empty string.
 std::string ExtractGNBuildCommands(const base::FilePath& build_ninja_file) {
   std::string file_contents;
-  if (!base::ReadFileToString(build_ninja_file, &file_contents)) {
+  if (!base::ReadFileToString(build_ninja_file, &file_contents))
     return std::string();
-  }
 
-  std::vector<std::string> lines = base::SplitString(
+  std::vector<base::StringPiece> lines = base::SplitStringPiece(
       file_contents, "\n", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
 
   std::string result;
   int num_blank_lines = 0;
   for (const auto& line : lines) {
-    result += line;
-    result += "\n";
-    if (line.empty()) {
+    line.AppendToString(&result);
+    result.push_back('\n');
+    if (line.empty())
       ++num_blank_lines;
-    }
     if (num_blank_lines == 2)
       break;
   }
 
   return result;
 }
-
-const char kDefaultNinjaFile[] =
-    "rule gn\n"
-    "  command = gn -q gen //out/%s/\n"
-    "  description = Regenerating ninja files\n"
-    "\n"
-    "build build.ninja: gn\n"
-    "  generator = 1\n"
-    "  depfile = build.ninja.d\n";
 
 }  // namespace
 
@@ -96,6 +85,13 @@ int RunClean(const std::vector<std::string>& args) {
   // will automatically rerun GN the next time Ninja is run.
   base::FilePath build_ninja_file = build_dir.AppendASCII("build.ninja");
   std::string build_commands = ExtractGNBuildCommands(build_ninja_file);
+  if (build_commands.empty()) {
+    // Couldn't parse the build.ninja file.
+    Err(Location(), "Couldn't read build.ninja in this directory.",
+        "Try running \"gn gen\" on it and then re-running \"gn clean\".")
+        .PrintToStdout();
+    return 1;
+  }
 
   // Read the args.gn file, if any. Not all GN builds have one.
   base::FilePath gn_args_file = build_dir.AppendASCII("args.gn");
@@ -115,25 +111,11 @@ int RunClean(const std::vector<std::string>& args) {
   }
 
   // Write the build.ninja file sufficiently to regenerate itself.
-  if (!build_commands.empty()) {
-    if (base::WriteFile(build_ninja_file, build_commands.data(),
-                        static_cast<int>(build_commands.size())) == -1) {
-      Err(Location(), std::string("Failed to write build.ninja."))
-          .PrintToStdout();
-      return 1;
-    }
-  } else {
-    // Couldn't parse the build.ninja file, write a default thing.
-    std::vector<base::FilePath::StringType> components;
-    build_ninja_file.GetComponents(&components);
-    std::string default_build_file = base::StringPrintf(
-        kDefaultNinjaFile, components[components.size() - 2].c_str());
-    if (base::WriteFile(build_ninja_file, default_build_file.data(),
-                        static_cast<int>(default_build_file.size())) == -1) {
-      Err(Location(), std::string("Failed to write build.ninja."))
-          .PrintToStdout();
-      return 1;
-    }
+  if (base::WriteFile(build_ninja_file, build_commands.data(),
+                      static_cast<int>(build_commands.size())) == -1) {
+    Err(Location(), std::string("Failed to write build.ninja."))
+        .PrintToStdout();
+    return 1;
   }
 
   // Write a .d file for the build which references a nonexistant file.

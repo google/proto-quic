@@ -31,6 +31,10 @@ DEFINE_CERT_ERROR_ID(kPolicyInformationTrailingData,
                      "PolicyInformation has trailing data");
 DEFINE_CERT_ERROR_ID(kFailedParsingPolicyQualifiers,
                      "Failed parsing policy qualifiers");
+DEFINE_CERT_ERROR_ID(kMissingQualifier,
+                     "PolicyQualifierInfo is missing qualifier");
+DEFINE_CERT_ERROR_ID(kPolicyQualifierInfoTrailingData,
+                     "PolicyQualifierInfo has trailing data");
 
 // -- policyQualifierIds for Internet policy qualifiers
 //
@@ -90,11 +94,15 @@ bool ParsePolicyQualifiers(bool restrict_to_known_qualifiers,
     //      qualifier          ANY DEFINED BY policyQualifierId }
     der::Tag tag;
     der::Input value;
-    if (!policy_information_parser.ReadTagAndValue(&tag, &value))
+    if (!policy_information_parser.ReadTagAndValue(&tag, &value)) {
+      errors->AddError(kMissingQualifier);
       return false;
+    }
     // Should not have trailing data after qualifier.
-    if (policy_information_parser.HasMore())
+    if (policy_information_parser.HasMore()) {
+      errors->AddError(kPolicyQualifierInfoTrailingData);
       return false;
+    }
   }
   return true;
 }

@@ -182,6 +182,25 @@ TEST(ParseValuesTest, TimesCompare) {
   EXPECT_TRUE(time1 >= time1);
 }
 
+TEST(ParseValuesTest, UTCTimeRange) {
+  GeneralizedTime time;
+  ASSERT_TRUE(
+      ParseGeneralizedTime(FromStringLiteral("20140218161200Z"), &time));
+  EXPECT_TRUE(time.InUTCTimeRange());
+
+  time.year = 1950;
+  EXPECT_TRUE(time.InUTCTimeRange());
+
+  time.year = 1949;
+  EXPECT_FALSE(time.InUTCTimeRange());
+
+  time.year = 2049;
+  EXPECT_TRUE(time.InUTCTimeRange());
+
+  time.year = 2050;
+  EXPECT_FALSE(time.InUTCTimeRange());
+}
+
 struct Uint64TestData {
   bool should_pass;
   const uint8_t input[9];

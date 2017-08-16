@@ -147,7 +147,7 @@ NativeLibrary LoadNativeLibraryHelper(const FilePath& library_path,
 }  // namespace
 
 std::string NativeLibraryLoadError::ToString() const {
-  return StringPrintf("%u", code);
+  return StringPrintf("%lu", code);
 }
 
 // static

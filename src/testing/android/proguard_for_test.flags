@@ -30,6 +30,15 @@
     public static ** valueOf(java.lang.String);
 }
 
+# Keey any annotation used by tests for instrumentation runner to list out 
+# test annotation information
+-keep @interface android.support.test.**
+-keep @interface org.chromium.base.test.**
+-keep @interface org.junit.**
+-keep @interface android.test.**
+
+-keepattributes *Annotation*
+
 # We have some "library class WebView depends on program class SslCertificate"
 # warnings, and they don't affect us.
 -dontwarn android.webkit.WebView*

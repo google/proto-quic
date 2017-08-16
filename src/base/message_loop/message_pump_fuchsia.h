@@ -6,6 +6,7 @@
 #define BASE_MESSAGE_LOOP_MESSAGE_PUMP_FUCHSIA_H_
 
 #include "base/base_export.h"
+#include "base/fuchsia/scoped_mx_handle.h"
 #include "base/location.h"
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
@@ -19,40 +20,59 @@ namespace base {
 
 class BASE_EXPORT MessagePumpFuchsia : public MessagePump {
  public:
-  class Watcher {
+  // Implemented by callers to receive notifications of handle & fd events.
+  class MxHandleWatcher {
    public:
-    // Called from MessageLoop::Run when an FD can be read from/written to
-    // without blocking
-    virtual void OnFileCanReadWithoutBlocking(int fd) = 0;
-    virtual void OnFileCanWriteWithoutBlocking(int fd) = 0;
+    virtual void OnMxHandleSignalled(mx_handle_t handle,
+                                     mx_signals_t signals) = 0;
 
    protected:
-    virtual ~Watcher() {}
+    virtual ~MxHandleWatcher() {}
   };
 
-  // Object returned by WatchFileDescriptor to manage further watching.
-  class FileDescriptorWatcher {
+  class FdWatcher {
    public:
-    explicit FileDescriptorWatcher(const tracked_objects::Location& from_here);
-    ~FileDescriptorWatcher();  // Implicitly calls StopWatchingFileDescriptor.
+    virtual void OnFileCanReadWithoutBlocking(int fd) = 0;
+    virtual void OnFileCanWriteWithoutBlocking(int fd) = 0;
+   protected:
+    virtual ~FdWatcher() {}
+  };
 
-    // Stop watching the FD, always safe to call.  No-op if there's nothing
+  // Manages an active watch on an mx_handle_t.
+  class MxHandleWatchController {
+   public:
+    explicit MxHandleWatchController(
+        const tracked_objects::Location& from_here);
+    // Deleting the Controller implicitly calls StopWatchingMxHandle.
+    virtual ~MxHandleWatchController();
+
+    // Stop watching the handle, always safe to call.  No-op if there's nothing
     // to do.
-    bool StopWatchingFileDescriptor();
+    bool StopWatchingMxHandle();
 
     const tracked_objects::Location& created_from_location() {
       return created_from_location_;
     }
 
-   private:
+   protected:
+    // This bool is used by the pump when invoking the MxHandleWatcher callback,
+    // and by the FdHandleWatchController when invoking read & write callbacks,
+    // to cope with the possibility of the caller deleting the *Watcher within
+    // the callback. The pump sets |was_stopped_| to a location on the stack,
+    // and the Watcher writes to it, if set, when deleted, allowing the pump
+    // to check the value on the stack to short-cut any post-callback work.
+    bool* was_stopped_ = nullptr;
+
+   protected:
     friend class MessagePumpFuchsia;
 
-    // Start watching the FD.
-    bool WaitBegin();
+    // Start watching the handle.
+    virtual bool WaitBegin();
 
-    // Stop watching the FD. Returns the set of events the watcher is interested
-    // in based on the observed bits from the underlying packet.
-    uint32_t WaitEnd(uint32_t observed);
+    // Called by MessagePumpFuchsia when the handle is signalled. Accepts the
+    // set of signals that fired, and returns the intersection with those the
+    // caller is interested in.
+    mx_signals_t WaitEnd(mx_signals_t observed);
 
     // Returns the key to use to uniquely identify this object's wait operation.
     uint64_t wait_key() const {
@@ -62,33 +82,51 @@ class BASE_EXPORT MessagePumpFuchsia : public MessagePump {
     const tracked_objects::Location created_from_location_;
 
     // Set directly from the inputs to WatchFileDescriptor.
-    Watcher* watcher_ = nullptr;
+    MxHandleWatcher* watcher_ = nullptr;
+    mx_handle_t handle_ = MX_HANDLE_INVALID;
+    mx_signals_t desired_signals_ = 0;
+
+    // Used to safely access resources owned by the associated message pump.
+    WeakPtr<MessagePumpFuchsia> weak_pump_;
+
+    // A watch may be marked as persistent, which means it remains active even
+    // after triggering.
+    bool persistent_ = false;
+
+    // Used to determine whether an asynchronous wait operation is active on
+    // this controller.
+    bool has_begun_ = false;
+
+    DISALLOW_COPY_AND_ASSIGN(MxHandleWatchController);
+  };
+
+  // Object returned by WatchFileDescriptor to manage further watching.
+  class FdWatchController : public MxHandleWatchController,
+                            public MxHandleWatcher {
+   public:
+    explicit FdWatchController(const tracked_objects::Location& from_here);
+    ~FdWatchController() override;
+
+    bool StopWatchingFileDescriptor();
+
+   private:
+    friend class MessagePumpFuchsia;
+
+    // Determines the desires signals, and begins waiting on the handle.
+    bool WaitBegin() override;
+
+    // MxHandleWatcher interface.
+    void OnMxHandleSignalled(mx_handle_t handle, mx_signals_t signals) override;
+
+    // Set directly from the inputs to WatchFileDescriptor.
+    FdWatcher* watcher_ = nullptr;
     int fd_ = -1;
     uint32_t desired_events_ = 0;
 
     // Set by WatchFileDescriptor to hold a reference to the descriptor's mxio.
     mxio_t* io_ = nullptr;
 
-    // Set to the mxio's waitable handle, while a wait is pending (i.e. between
-    // WaitBegin and WaitEnd calls), and MX_HANDLE_INVALID otherwise.
-    mx_handle_t handle_ = MX_HANDLE_INVALID;
-
-    // Used to safely access resources owned by the associated message pump.
-    WeakPtr<MessagePumpFuchsia> weak_pump_;
-
-    // This bool is used during calling |Watcher| callbacks. This object's
-    // lifetime is owned by the user of this class. If the message loop is woken
-    // up in the case where it needs to call both the readable and writable
-    // callbacks, we need to take care not to call the second one if this object
-    // is destroyed by the first one. The bool points to the stack, and is set
-    // to true in ~FileDescriptorWatcher() to handle this case.
-    bool* was_destroyed_ = nullptr;
-
-    // A watch may be marked as persistent, which means it remains active even
-    // after triggering.
-    bool persistent_ = false;
-
-    DISALLOW_COPY_AND_ASSIGN(FileDescriptorWatcher);
+    DISALLOW_COPY_AND_ASSIGN(FdWatchController);
   };
 
   enum Mode {
@@ -98,13 +136,17 @@ class BASE_EXPORT MessagePumpFuchsia : public MessagePump {
   };
 
   MessagePumpFuchsia();
-  ~MessagePumpFuchsia() override;
 
+  bool WatchMxHandle(mx_handle_t handle,
+                     bool persistent,
+                     mx_signals_t signals,
+                     MxHandleWatchController* controller,
+                     MxHandleWatcher* delegate);
   bool WatchFileDescriptor(int fd,
                            bool persistent,
                            int mode,
-                           FileDescriptorWatcher* controller,
-                           Watcher* delegate);
+                           FdWatchController* controller,
+                           FdWatcher* delegate);
 
   // MessagePump implementation:
   void Run(Delegate* delegate) override;
@@ -116,7 +158,7 @@ class BASE_EXPORT MessagePumpFuchsia : public MessagePump {
   // This flag is set to false when Run should return.
   bool keep_running_;
 
-  mx_handle_t port_;
+  ScopedMxHandle port_;
 
   // The time at which we should call DoDelayedWork.
   TimeTicks delayed_work_time_;

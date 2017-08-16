@@ -35,7 +35,7 @@ struct FeatureComparator {
   explicit FeatureComparator(const std::string& name);
   ~FeatureComparator();
 
-  void CompareFeature(SimpleFeature* feature);
+  void CompareFeature(const SimpleFeature* feature);
 
   std::string name;
   std::vector<std::string> blacklist;
@@ -66,7 +66,7 @@ FeatureComparator::FeatureComparator(const std::string& name)
 
 FeatureComparator::~FeatureComparator() {}
 
-void FeatureComparator::CompareFeature(SimpleFeature* feature) {
+void FeatureComparator::CompareFeature(const SimpleFeature* feature) {
   ASSERT_TRUE(feature);
   EXPECT_EQ(name, feature->name());
   ExpectVectorsEqual(blacklist, feature->blacklist(), name);
@@ -95,22 +95,22 @@ TEST(FeaturesGenerationTest, FeaturesTest) {
   CompilerTestFeatureProvider provider;
 
   auto GetAsSimpleFeature = [&provider](const std::string& name) {
-    Feature* feature = provider.GetFeature(name);
+    const Feature* feature = provider.GetFeature(name);
     // Shame we can't test this more safely, but if our feature is declared as
     // the wrong class, things should blow up in a spectacular fashion.
-    return static_cast<SimpleFeature*>(feature);
+    return static_cast<const SimpleFeature*>(feature);
   };
 
   auto GetAsComplexFeature = [&provider](const std::string& name) {
-    Feature* feature = provider.GetFeature(name);
+    const Feature* feature = provider.GetFeature(name);
     // Shame we can't test this more safely, but if our feature is declared as
     // the wrong class, things should blow up in a spectacular fashion.
-    return static_cast<ComplexFeature*>(feature);
+    return static_cast<const ComplexFeature*>(feature);
   };
 
   // Check some simple features for accuracy.
   {
-    SimpleFeature* feature = GetAsSimpleFeature("alpha");
+    const SimpleFeature* feature = GetAsSimpleFeature("alpha");
     FeatureComparator comparator("alpha");
     comparator.dependencies = {"permission:alpha"};
     comparator.contexts = {Feature::BLESSED_EXTENSION_CONTEXT};
@@ -120,7 +120,7 @@ TEST(FeaturesGenerationTest, FeaturesTest) {
     comparator.CompareFeature(feature);
   }
   {
-    SimpleFeature* feature = GetAsSimpleFeature("beta");
+    const SimpleFeature* feature = GetAsSimpleFeature("beta");
     FeatureComparator comparator("beta");
     comparator.contexts = {Feature::BLESSED_EXTENSION_CONTEXT};
     comparator.channel.reset(
@@ -134,7 +134,7 @@ TEST(FeaturesGenerationTest, FeaturesTest) {
     comparator.CompareFeature(feature);
   }
   {
-    SimpleFeature* feature = GetAsSimpleFeature("gamma");
+    const SimpleFeature* feature = GetAsSimpleFeature("gamma");
     FeatureComparator comparator("gamma");
     comparator.channel.reset(
         new version_info::Channel(version_info::Channel::BETA));
@@ -157,7 +157,7 @@ TEST(FeaturesGenerationTest, FeaturesTest) {
   {
     // Features that specify 'noparent' should not inherit features from any
     // other feature.
-    SimpleFeature* feature = GetAsSimpleFeature("gamma.unparented");
+    const SimpleFeature* feature = GetAsSimpleFeature("gamma.unparented");
     FeatureComparator comparator("gamma.unparented");
     comparator.blacklist = {"ddd"};
     comparator.contexts = {Feature::UNBLESSED_EXTENSION_CONTEXT};
@@ -166,7 +166,7 @@ TEST(FeaturesGenerationTest, FeaturesTest) {
     comparator.CompareFeature(feature);
   }
   {
-    ComplexFeature* complex_feature =
+    const ComplexFeature* complex_feature =
         GetAsComplexFeature("gamma.complex_unparented");
     FeatureComparator comparator("gamma.complex_unparented");
     comparator.contexts = {Feature::UNBLESSED_EXTENSION_CONTEXT};
@@ -178,7 +178,7 @@ TEST(FeaturesGenerationTest, FeaturesTest) {
       comparator.CompareFeature(static_cast<SimpleFeature*>(feature.get()));
   }
   {
-    SimpleFeature* feature = GetAsSimpleFeature("delta");
+    const SimpleFeature* feature = GetAsSimpleFeature("delta");
     FeatureComparator comparator("delta");
     comparator.contexts = {Feature::BLESSED_EXTENSION_CONTEXT,
                            Feature::WEBUI_CONTEXT};
@@ -190,7 +190,7 @@ TEST(FeaturesGenerationTest, FeaturesTest) {
     comparator.CompareFeature(feature);
   }
   {
-    SimpleFeature* feature = GetAsSimpleFeature("allEnum");
+    const SimpleFeature* feature = GetAsSimpleFeature("allEnum");
     FeatureComparator comparator("allEnum");
     comparator.contexts = {Feature::BLESSED_EXTENSION_CONTEXT,
                            Feature::BLESSED_WEB_PAGE_CONTEXT,
@@ -210,7 +210,7 @@ TEST(FeaturesGenerationTest, FeaturesTest) {
   }
   {
     // Omega is imported from a second .json file.
-    SimpleFeature* feature = GetAsSimpleFeature("omega");
+    const SimpleFeature* feature = GetAsSimpleFeature("omega");
     FeatureComparator comparator("omega");
     comparator.contexts = {Feature::WEB_PAGE_CONTEXT};
     comparator.channel.reset(
@@ -220,24 +220,24 @@ TEST(FeaturesGenerationTest, FeaturesTest) {
   }
   {
     // Features specifying 'nocompile' should not be generated at all.
-    SimpleFeature* feature = GetAsSimpleFeature("uncompiled");
+    const SimpleFeature* feature = GetAsSimpleFeature("uncompiled");
     EXPECT_FALSE(feature);
   }
 
   // Test complex features.
   {
-    ComplexFeature* feature = GetAsComplexFeature("complex");
+    const ComplexFeature* feature = GetAsComplexFeature("complex");
     ASSERT_TRUE(feature);
     EXPECT_EQ(2u, feature->features_.size());
     // Find the default parent. This is a little tedious because it might not
     // be guaranteed that the default_parent is in a specific index, but it
     // specifies channel as 'stable'.
-    SimpleFeature* default_parent = nullptr;
-    SimpleFeature* other_parent = nullptr;
+    const SimpleFeature* default_parent = nullptr;
+    const SimpleFeature* other_parent = nullptr;
     {
-      SimpleFeature* parent1 =
+      const SimpleFeature* parent1 =
           static_cast<SimpleFeature*>(feature->features_[0].get());
-      SimpleFeature* parent2 =
+      const SimpleFeature* parent2 =
           static_cast<SimpleFeature*>(feature->features_[1].get());
       if (parent1->channel() == version_info::Channel::STABLE) {
         default_parent = parent1;
@@ -257,7 +257,7 @@ TEST(FeaturesGenerationTest, FeaturesTest) {
       comparator.CompareFeature(default_parent);
       // Check the child of the complex feature. It should inherit its
       // properties from the default parent.
-      SimpleFeature* child_feature = GetAsSimpleFeature("complex.child");
+      const SimpleFeature* child_feature = GetAsSimpleFeature("complex.child");
       comparator.name = "complex.child";
       comparator.platforms = {Feature::WIN_PLATFORM};
       comparator.dependencies = {"permission:complex.child"};
@@ -277,7 +277,7 @@ TEST(FeaturesGenerationTest, FeaturesTest) {
 
   // Test API aliases.
   {
-    SimpleFeature* feature = GetAsSimpleFeature("alias");
+    const SimpleFeature* feature = GetAsSimpleFeature("alias");
     FeatureComparator comparator("alias");
     comparator.contexts = {Feature::BLESSED_EXTENSION_CONTEXT};
     comparator.channel.reset(
@@ -286,7 +286,7 @@ TEST(FeaturesGenerationTest, FeaturesTest) {
     comparator.CompareFeature(feature);
   }
   {
-    SimpleFeature* feature = GetAsSimpleFeature("alias_source");
+    const SimpleFeature* feature = GetAsSimpleFeature("alias_source");
     FeatureComparator comparator("alias_source");
     comparator.contexts = {Feature::BLESSED_EXTENSION_CONTEXT};
     comparator.channel.reset(
@@ -295,37 +295,37 @@ TEST(FeaturesGenerationTest, FeaturesTest) {
     comparator.CompareFeature(feature);
   }
   {
-    Feature* feature = provider.GetFeature("complex_alias");
+    const Feature* feature = provider.GetFeature("complex_alias");
     ASSERT_EQ("", feature->alias());
     ASSERT_EQ("complex_alias_source", feature->source());
   }
   {
-    Feature* feature = provider.GetFeature("complex_alias_source");
+    const Feature* feature = provider.GetFeature("complex_alias_source");
     ASSERT_EQ("complex_alias", feature->alias());
     ASSERT_EQ("", feature->source());
   }
   {
-    Feature* feature = provider.GetFeature("parent_source");
+    const Feature* feature = provider.GetFeature("parent_source");
     ASSERT_EQ("parent_source_alias", feature->alias());
     ASSERT_EQ("", feature->source());
   }
   {
-    Feature* feature = provider.GetFeature("parent_source.child");
+    const Feature* feature = provider.GetFeature("parent_source.child");
     ASSERT_EQ("parent_source_alias", feature->alias());
     ASSERT_EQ("", feature->source());
   }
   {
-    Feature* feature = provider.GetFeature("parent_source.child_source");
+    const Feature* feature = provider.GetFeature("parent_source.child_source");
     ASSERT_EQ("parent_source_child_alias", feature->alias());
     ASSERT_EQ("", feature->source());
   }
   {
-    Feature* feature = provider.GetFeature("alias_parent");
+    const Feature* feature = provider.GetFeature("alias_parent");
     ASSERT_EQ("", feature->alias());
     ASSERT_EQ("", feature->source());
   }
   {
-    Feature* feature = provider.GetFeature("alias_parent.child");
+    const Feature* feature = provider.GetFeature("alias_parent.child");
     ASSERT_EQ("", feature->alias());
     ASSERT_EQ("child_source", feature->source());
   }

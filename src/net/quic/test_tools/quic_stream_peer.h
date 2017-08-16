@@ -46,6 +46,10 @@ class QuicStreamPeer {
 
   static QuicStreamSendBuffer& SendBuffer(QuicStream* stream);
 
+  static void set_ack_listener(
+      QuicStream* stream,
+      QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
+
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicStreamPeer);
 };

@@ -63,18 +63,17 @@ const NetworkChangeNotifier::NetworkHandle
     NetworkChangeNotifier::kInvalidNetworkHandle = -1;
 
 // The main observer class that records UMAs for network events.
-class HistogramWatcher
-    : public NetworkChangeNotifier::ConnectionTypeObserver,
-      public NetworkChangeNotifier::IPAddressObserver,
-      public NetworkChangeNotifier::DNSObserver,
-      public NetworkChangeNotifier::NetworkChangeObserver {
+class NetworkChangeNotifier::HistogramWatcher : public ConnectionTypeObserver,
+                                                public IPAddressObserver,
+                                                public DNSObserver,
+                                                public NetworkChangeObserver {
  public:
   HistogramWatcher()
       : last_ip_address_change_(base::TimeTicks::Now()),
         last_connection_change_(base::TimeTicks::Now()),
         last_dns_change_(base::TimeTicks::Now()),
         last_network_change_(base::TimeTicks::Now()),
-        last_connection_type_(NetworkChangeNotifier::CONNECTION_UNKNOWN),
+        last_connection_type_(CONNECTION_UNKNOWN),
         offline_packets_received_(0),
         bytes_read_since_last_connection_change_(0),
         peak_kbps_since_last_connection_change_(0) {}
@@ -87,22 +86,22 @@ class HistogramWatcher
   void Init() {
     DCHECK(thread_checker_.CalledOnValidThread());
     DCHECK(g_network_change_notifier);
-    NetworkChangeNotifier::AddConnectionTypeObserver(this);
-    NetworkChangeNotifier::AddIPAddressObserver(this);
-    NetworkChangeNotifier::AddDNSObserver(this);
-    NetworkChangeNotifier::AddNetworkChangeObserver(this);
+    AddConnectionTypeObserver(this);
+    AddIPAddressObserver(this);
+    AddDNSObserver(this);
+    AddNetworkChangeObserver(this);
   }
 
   ~HistogramWatcher() override {
     DCHECK(thread_checker_.CalledOnValidThread());
     DCHECK(g_network_change_notifier);
-    NetworkChangeNotifier::RemoveConnectionTypeObserver(this);
-    NetworkChangeNotifier::RemoveIPAddressObserver(this);
-    NetworkChangeNotifier::RemoveDNSObserver(this);
-    NetworkChangeNotifier::RemoveNetworkChangeObserver(this);
+    RemoveConnectionTypeObserver(this);
+    RemoveIPAddressObserver(this);
+    RemoveDNSObserver(this);
+    RemoveNetworkChangeObserver(this);
   }
 
-  // NetworkChangeNotifier::IPAddressObserver implementation.
+  // IPAddressObserver implementation.
   void OnIPAddressChanged() override {
     DCHECK(thread_checker_.CalledOnValidThread());
     UMA_HISTOGRAM_MEDIUM_TIMES("NCN.IPAddressChange",
@@ -112,58 +111,57 @@ class HistogramWatcher
         last_ip_address_change_ - last_connection_change_);
   }
 
-  // NetworkChangeNotifier::ConnectionTypeObserver implementation.
-  void OnConnectionTypeChanged(
-      NetworkChangeNotifier::ConnectionType type) override {
+  // ConnectionTypeObserver implementation.
+  void OnConnectionTypeChanged(ConnectionType type) override {
     DCHECK(thread_checker_.CalledOnValidThread());
     base::TimeTicks now = base::TimeTicks::Now();
     int32_t kilobytes_read = bytes_read_since_last_connection_change_ / 1000;
     base::TimeDelta state_duration = SinceLast(&last_connection_change_);
     if (bytes_read_since_last_connection_change_) {
       switch (last_connection_type_) {
-        case NetworkChangeNotifier::CONNECTION_UNKNOWN:
+        case CONNECTION_UNKNOWN:
           UMA_HISTOGRAM_TIMES("NCN.CM.FirstReadOnUnknown",
                               first_byte_after_connection_change_);
           UMA_HISTOGRAM_TIMES("NCN.CM.FastestRTTOnUnknown",
                               fastest_RTT_since_last_connection_change_);
           break;
-        case NetworkChangeNotifier::CONNECTION_ETHERNET:
+        case CONNECTION_ETHERNET:
           UMA_HISTOGRAM_TIMES("NCN.CM.FirstReadOnEthernet",
                               first_byte_after_connection_change_);
           UMA_HISTOGRAM_TIMES("NCN.CM.FastestRTTOnEthernet",
                               fastest_RTT_since_last_connection_change_);
           break;
-        case NetworkChangeNotifier::CONNECTION_WIFI:
+        case CONNECTION_WIFI:
           UMA_HISTOGRAM_TIMES("NCN.CM.FirstReadOnWifi",
                               first_byte_after_connection_change_);
           UMA_HISTOGRAM_TIMES("NCN.CM.FastestRTTOnWifi",
                               fastest_RTT_since_last_connection_change_);
           break;
-        case NetworkChangeNotifier::CONNECTION_2G:
+        case CONNECTION_2G:
           UMA_HISTOGRAM_TIMES("NCN.CM.FirstReadOn2G",
                               first_byte_after_connection_change_);
           UMA_HISTOGRAM_TIMES("NCN.CM.FastestRTTOn2G",
                               fastest_RTT_since_last_connection_change_);
           break;
-        case NetworkChangeNotifier::CONNECTION_3G:
+        case CONNECTION_3G:
           UMA_HISTOGRAM_TIMES("NCN.CM.FirstReadOn3G",
                               first_byte_after_connection_change_);
           UMA_HISTOGRAM_TIMES("NCN.CM.FastestRTTOn3G",
                               fastest_RTT_since_last_connection_change_);
           break;
-        case NetworkChangeNotifier::CONNECTION_4G:
+        case CONNECTION_4G:
           UMA_HISTOGRAM_TIMES("NCN.CM.FirstReadOn4G",
                               first_byte_after_connection_change_);
           UMA_HISTOGRAM_TIMES("NCN.CM.FastestRTTOn4G",
                               fastest_RTT_since_last_connection_change_);
           break;
-        case NetworkChangeNotifier::CONNECTION_NONE:
+        case CONNECTION_NONE:
           UMA_HISTOGRAM_TIMES("NCN.CM.FirstReadOnNone",
                               first_byte_after_connection_change_);
           UMA_HISTOGRAM_TIMES("NCN.CM.FastestRTTOnNone",
                               fastest_RTT_since_last_connection_change_);
           break;
-        case NetworkChangeNotifier::CONNECTION_BLUETOOTH:
+        case CONNECTION_BLUETOOTH:
           UMA_HISTOGRAM_TIMES("NCN.CM.FirstReadOnBluetooth",
                               first_byte_after_connection_change_);
           UMA_HISTOGRAM_TIMES("NCN.CM.FastestRTTOnBluetooth",
@@ -172,78 +170,78 @@ class HistogramWatcher
     }
     if (peak_kbps_since_last_connection_change_) {
       switch (last_connection_type_) {
-        case NetworkChangeNotifier::CONNECTION_UNKNOWN:
+        case CONNECTION_UNKNOWN:
           UMA_HISTOGRAM_COUNTS_1M("NCN.CM.PeakKbpsOnUnknown",
                                   peak_kbps_since_last_connection_change_);
           break;
-        case NetworkChangeNotifier::CONNECTION_ETHERNET:
+        case CONNECTION_ETHERNET:
           UMA_HISTOGRAM_COUNTS_1M("NCN.CM.PeakKbpsOnEthernet",
                                   peak_kbps_since_last_connection_change_);
           break;
-        case NetworkChangeNotifier::CONNECTION_WIFI:
+        case CONNECTION_WIFI:
           UMA_HISTOGRAM_COUNTS_1M("NCN.CM.PeakKbpsOnWifi",
                                   peak_kbps_since_last_connection_change_);
           break;
-        case NetworkChangeNotifier::CONNECTION_2G:
+        case CONNECTION_2G:
           UMA_HISTOGRAM_COUNTS_1M("NCN.CM.PeakKbpsOn2G",
                                   peak_kbps_since_last_connection_change_);
           break;
-        case NetworkChangeNotifier::CONNECTION_3G:
+        case CONNECTION_3G:
           UMA_HISTOGRAM_COUNTS_1M("NCN.CM.PeakKbpsOn3G",
                                   peak_kbps_since_last_connection_change_);
           break;
-        case NetworkChangeNotifier::CONNECTION_4G:
+        case CONNECTION_4G:
           UMA_HISTOGRAM_COUNTS_1M("NCN.CM.PeakKbpsOn4G",
                                   peak_kbps_since_last_connection_change_);
           break;
-        case NetworkChangeNotifier::CONNECTION_NONE:
+        case CONNECTION_NONE:
           UMA_HISTOGRAM_COUNTS_1M("NCN.CM.PeakKbpsOnNone",
                                   peak_kbps_since_last_connection_change_);
           break;
-        case NetworkChangeNotifier::CONNECTION_BLUETOOTH:
+        case CONNECTION_BLUETOOTH:
           UMA_HISTOGRAM_COUNTS_1M("NCN.CM.PeakKbpsOnBluetooth",
                                   peak_kbps_since_last_connection_change_);
           break;
       }
     }
     switch (last_connection_type_) {
-      case NetworkChangeNotifier::CONNECTION_UNKNOWN:
+      case CONNECTION_UNKNOWN:
         UMA_HISTOGRAM_LONG_TIMES("NCN.CM.TimeOnUnknown", state_duration);
         UMA_HISTOGRAM_COUNTS_1M("NCN.CM.KBTransferedOnUnknown", kilobytes_read);
         break;
-      case NetworkChangeNotifier::CONNECTION_ETHERNET:
+      case CONNECTION_ETHERNET:
         UMA_HISTOGRAM_LONG_TIMES("NCN.CM.TimeOnEthernet", state_duration);
         UMA_HISTOGRAM_COUNTS_1M("NCN.CM.KBTransferedOnEthernet",
                                 kilobytes_read);
         break;
-      case NetworkChangeNotifier::CONNECTION_WIFI:
+      case CONNECTION_WIFI:
         UMA_HISTOGRAM_LONG_TIMES("NCN.CM.TimeOnWifi", state_duration);
         UMA_HISTOGRAM_COUNTS_1M("NCN.CM.KBTransferedOnWifi", kilobytes_read);
         break;
-      case NetworkChangeNotifier::CONNECTION_2G:
+      case CONNECTION_2G:
         UMA_HISTOGRAM_LONG_TIMES("NCN.CM.TimeOn2G", state_duration);
         UMA_HISTOGRAM_COUNTS_1M("NCN.CM.KBTransferedOn2G", kilobytes_read);
         break;
-      case NetworkChangeNotifier::CONNECTION_3G:
+      case CONNECTION_3G:
         UMA_HISTOGRAM_LONG_TIMES("NCN.CM.TimeOn3G", state_duration);
         UMA_HISTOGRAM_COUNTS_1M("NCN.CM.KBTransferedOn3G", kilobytes_read);
         break;
-      case NetworkChangeNotifier::CONNECTION_4G:
+      case CONNECTION_4G:
         UMA_HISTOGRAM_LONG_TIMES("NCN.CM.TimeOn4G", state_duration);
         UMA_HISTOGRAM_COUNTS_1M("NCN.CM.KBTransferedOn4G", kilobytes_read);
         break;
-      case NetworkChangeNotifier::CONNECTION_NONE:
+      case CONNECTION_NONE:
         UMA_HISTOGRAM_LONG_TIMES("NCN.CM.TimeOnNone", state_duration);
         UMA_HISTOGRAM_COUNTS_1M("NCN.CM.KBTransferedOnNone", kilobytes_read);
         break;
-      case NetworkChangeNotifier::CONNECTION_BLUETOOTH:
+      case CONNECTION_BLUETOOTH:
         UMA_HISTOGRAM_LONG_TIMES("NCN.CM.TimeOnBluetooth", state_duration);
         UMA_HISTOGRAM_COUNTS_1M("NCN.CM.KBTransferedOnBluetooth",
                                 kilobytes_read);
         break;
     }
 
-    if (type != NetworkChangeNotifier::CONNECTION_NONE) {
+    if (type != CONNECTION_NONE) {
       UMA_HISTOGRAM_MEDIUM_TIMES("NCN.OnlineChange", state_duration);
 
       if (offline_packets_received_) {
@@ -262,7 +260,7 @@ class HistogramWatcher
       UMA_HISTOGRAM_MEDIUM_TIMES("NCN.OfflineChange", state_duration);
     }
 
-    NetworkChangeNotifier::LogOperatorCodeHistogram(type);
+    LogOperatorCodeHistogram(type);
 
     UMA_HISTOGRAM_MEDIUM_TIMES(
         "NCN.IPAddressChangeToConnectionTypeChange",
@@ -275,17 +273,17 @@ class HistogramWatcher
     polling_interval_ = base::TimeDelta::FromSeconds(1);
   }
 
-  // NetworkChangeNotifier::DNSObserver implementation.
+  // DNSObserver implementation.
   void OnDNSChanged() override {
     DCHECK(thread_checker_.CalledOnValidThread());
     UMA_HISTOGRAM_MEDIUM_TIMES("NCN.DNSConfigChange",
                                SinceLast(&last_dns_change_));
   }
 
-  // NetworkChangeNotifier::NetworkChangeObserver implementation.
-  void OnNetworkChanged(NetworkChangeNotifier::ConnectionType type) override {
+  // NetworkChangeObserver implementation.
+  void OnNetworkChanged(ConnectionType type) override {
     DCHECK(thread_checker_.CalledOnValidThread());
-    if (type != NetworkChangeNotifier::CONNECTION_NONE) {
+    if (type != CONNECTION_NONE) {
       UMA_HISTOGRAM_MEDIUM_TIMES("NCN.NetworkOnlineChange",
                                  SinceLast(&last_network_change_));
     } else {
@@ -323,7 +321,7 @@ class HistogramWatcher
         peak_kbps_since_last_connection_change_ = kbps;
     }
 
-    if (last_connection_type_ != NetworkChangeNotifier::CONNECTION_NONE)
+    if (last_connection_type_ != CONNECTION_NONE)
       return;
 
     UMA_HISTOGRAM_MEDIUM_TIMES("NCN.OfflineDataRecv",
@@ -334,11 +332,9 @@ class HistogramWatcher
     if ((now - last_polled_connection_) > polling_interval_) {
       polling_interval_ *= 2;
       last_polled_connection_ = now;
-      last_polled_connection_type_ =
-          NetworkChangeNotifier::GetConnectionType();
+      last_polled_connection_type_ = GetConnectionType();
     }
-    if (last_polled_connection_type_ ==
-        NetworkChangeNotifier::CONNECTION_NONE) {
+    if (last_polled_connection_type_ == CONNECTION_NONE) {
       UMA_HISTOGRAM_MEDIUM_TIMES("NCN.PollingOfflineDataRecv",
                                  now - last_connection_change_);
     }
@@ -361,15 +357,15 @@ class HistogramWatcher
   // |polling_interval_| is initialized by |OnConnectionTypeChanged| on our
   // first transition to offline and on subsequent transitions.  Once offline,
   // |polling_interval_| doubles as offline data is received and we poll
-  // with |NetworkChangeNotifier::GetConnectionType| to verify the connection
+  // with |GetConnectionType| to verify the connection
   // state.
   base::TimeDelta polling_interval_;
   // |last_connection_type_| is the last value passed to
   // |OnConnectionTypeChanged|.
-  NetworkChangeNotifier::ConnectionType last_connection_type_;
+  ConnectionType last_connection_type_;
   // |last_polled_connection_type_| is last result from calling
-  // |NetworkChangeNotifier::GetConnectionType| in |NotifyDataReceived|.
-  NetworkChangeNotifier::ConnectionType last_polled_connection_type_;
+  // |GetConnectionType| in |NotifyDataReceived|.
+  ConnectionType last_polled_connection_type_;
   // Count of how many times NotifyDataReceived() has been called while the
   // NetworkChangeNotifier thought network connection was offline.
   int32_t offline_packets_received_;

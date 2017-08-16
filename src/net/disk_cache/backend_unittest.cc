@@ -26,6 +26,7 @@
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
 #include "net/base/test_completion_callback.h"
+#include "net/disk_cache/backend_cleanup_tracker.h"
 #include "net/disk_cache/blockfile/backend_impl.h"
 #include "net/disk_cache/blockfile/entry_impl.h"
 #include "net/disk_cache/blockfile/experiments.h"
@@ -66,7 +67,10 @@ std::unique_ptr<disk_cache::BackendImpl> CreateExistingEntryCache(
   net::TestCompletionCallback cb;
 
   std::unique_ptr<disk_cache::BackendImpl> cache(
-      base::MakeUnique<disk_cache::BackendImpl>(cache_path, nullptr, nullptr));
+      base::MakeUnique<disk_cache::BackendImpl>(cache_path,
+                                                /* cleanup_tracker = */ nullptr,
+                                                /* cache_thread = */ nullptr,
+                                                /* net_log = */ nullptr));
   int rv = cache->Init(cb.callback());
   if (cb.GetResult(rv) != net::OK)
     return std::unique_ptr<disk_cache::BackendImpl>();
@@ -502,6 +506,145 @@ TEST_F(DiskCacheTest, CreateBackend) {
   base::RunLoop().RunUntilIdle();
 }
 
+TEST_F(DiskCacheTest, MemBackendPostCleanupCallback) {
+  net::TestCompletionCallback cb;
+
+  net::TestClosure on_cleanup;
+
+  std::unique_ptr<disk_cache::Backend> cache;
+  int rv = disk_cache::CreateCacheBackend(
+      net::MEMORY_CACHE, net::CACHE_BACKEND_DEFAULT, base::FilePath(), 0, false,
+      nullptr, &cache, on_cleanup.closure(), cb.callback());
+  ASSERT_THAT(cb.GetResult(rv), IsOk());
+  ASSERT_TRUE(cache.get());
+  // The callback should be posted after backend is destroyed.
+  base::RunLoop().RunUntilIdle();
+  EXPECT_FALSE(on_cleanup.have_result());
+
+  cache.reset();
+
+  EXPECT_FALSE(on_cleanup.have_result());
+  base::RunLoop().RunUntilIdle();
+  EXPECT_TRUE(on_cleanup.have_result());
+}
+
+TEST_F(DiskCacheTest, CreateBackendDouble) {
+  // Make sure that creation for the second backend for same path happens
+  // after the first one completes.
+  net::TestCompletionCallback cb, cb2;
+
+  std::unique_ptr<disk_cache::Backend> cache, cache2;
+
+  int rv = disk_cache::CreateCacheBackend(
+      net::DISK_CACHE, net::CACHE_BACKEND_DEFAULT, cache_path_, 0, false,
+      nullptr, &cache, cb.callback());
+
+  int rv2 = disk_cache::CreateCacheBackend(
+      net::DISK_CACHE, net::CACHE_BACKEND_DEFAULT, cache_path_, 0, false,
+      nullptr, &cache2, cb2.callback());
+
+  EXPECT_THAT(cb.GetResult(rv), IsOk());
+  EXPECT_TRUE(cache.get());
+  disk_cache::FlushCacheThreadForTesting();
+
+  // No cache 2 yet.
+  EXPECT_EQ(net::ERR_IO_PENDING, rv2);
+  EXPECT_FALSE(cb2.have_result());
+
+  cache.reset();
+
+  // Now cache2 should exist.
+  EXPECT_THAT(cb2.GetResult(rv2), IsOk());
+  EXPECT_TRUE(cache2.get());
+}
+
+TEST_F(DiskCacheBackendTest, CreateBackendDoubleOpenEntry) {
+  // Demonstrate the creation sequencing with an open entry. This is done
+  // with SimpleCache since the block-file cache cancels most of I/O on
+  // destruction and blocks for what it can't cancel.
+
+  // Don't try to sanity-check things as a blockfile cache
+  SetSimpleCacheMode();
+
+  // Make sure that creation for the second backend for same path happens
+  // after the first one completes, and all of its ops complete.
+  net::TestCompletionCallback cb, cb2;
+
+  std::unique_ptr<disk_cache::Backend> cache, cache2;
+
+  int rv = disk_cache::CreateCacheBackend(
+      net::DISK_CACHE, net::CACHE_BACKEND_SIMPLE, cache_path_, 0, false,
+      nullptr, &cache, cb.callback());
+
+  int rv2 = disk_cache::CreateCacheBackend(
+      net::DISK_CACHE, net::CACHE_BACKEND_SIMPLE, cache_path_, 0, false,
+      nullptr, &cache2, cb2.callback());
+
+  EXPECT_THAT(cb.GetResult(rv), IsOk());
+  ASSERT_TRUE(cache.get());
+  disk_cache::FlushCacheThreadForTesting();
+
+  // No cache 2 yet.
+  EXPECT_EQ(net::ERR_IO_PENDING, rv2);
+  EXPECT_FALSE(cb2.have_result());
+
+  disk_cache::Entry* entry = nullptr;
+  rv = cache->CreateEntry("key", &entry, cb.callback());
+  ASSERT_EQ(net::OK, cb.GetResult(rv));
+
+  cache.reset();
+
+  // Still doesn't exist.
+  EXPECT_FALSE(cb2.have_result());
+
+  entry->Close();
+
+  // Now should exist.
+  EXPECT_THAT(cb2.GetResult(rv2), IsOk());
+  EXPECT_TRUE(cache2.get());
+}
+
+TEST_F(DiskCacheBackendTest, CreateBackendPostCleanup) {
+  // Test for the explicit PostCleanupCallback parameter to CreateCacheBackend.
+
+  // Extravagant size payload to make reproducing races easier.
+  const int kBufSize = 256 * 1024;
+  scoped_refptr<net::IOBuffer> buffer(new net::IOBuffer(kBufSize));
+  CacheTestFillBuffer(buffer->data(), kBufSize, true);
+
+  SetSimpleCacheMode();
+  CleanupCacheDir();
+
+  base::RunLoop run_loop;
+  net::TestCompletionCallback cb;
+  std::unique_ptr<disk_cache::Backend> cache;
+
+  int rv = disk_cache::CreateCacheBackend(
+      net::DISK_CACHE, net::CACHE_BACKEND_SIMPLE, cache_path_, 0, false,
+      nullptr, &cache, run_loop.QuitClosure(), cb.callback());
+  EXPECT_THAT(cb.GetResult(rv), IsOk());
+  ASSERT_TRUE(cache.get());
+
+  disk_cache::Entry* entry = nullptr;
+  rv = cache->CreateEntry("key", &entry, cb.callback());
+  ASSERT_EQ(net::OK, cb.GetResult(rv));
+  EXPECT_EQ(kBufSize, WriteData(entry, 0, 0, buffer.get(), kBufSize, false));
+  entry->Close();
+
+  cache.reset();
+
+  // Wait till the post-cleanup callback.
+  run_loop.Run();
+
+  // All of the payload should be on disk, despite stream 0 being written
+  // back in the async Close()
+  base::FilePath entry_path = cache_path_.AppendASCII(
+      disk_cache::simple_util::GetFilenameFromKeyAndFileIndex("key", 0));
+  int64_t size = 0;
+  EXPECT_TRUE(base::GetFileSize(entry_path, &size));
+  EXPECT_GT(size, kBufSize);
+}
+
 // Tests that |BackendImpl| fails to initialize with a missing file.
 TEST_F(DiskCacheBackendTest, CreateBackend_MissingFile) {
   ASSERT_TRUE(CopyTestCache("bad_entry"));
@@ -511,7 +654,8 @@ TEST_F(DiskCacheBackendTest, CreateBackend_MissingFile) {
 
   bool prev = base::ThreadRestrictions::SetIOAllowed(false);
   std::unique_ptr<disk_cache::BackendImpl> cache(
-      base::MakeUnique<disk_cache::BackendImpl>(cache_path_, nullptr, nullptr));
+      base::MakeUnique<disk_cache::BackendImpl>(cache_path_, nullptr, nullptr,
+                                                nullptr));
   int rv = cache->Init(cb.callback());
   EXPECT_THAT(cb.GetResult(rv), IsError(net::ERR_FAILED));
   base::ThreadRestrictions::SetIOAllowed(prev);
@@ -2155,7 +2299,8 @@ TEST_F(DiskCacheTest, WrongVersion) {
   net::TestCompletionCallback cb;
 
   std::unique_ptr<disk_cache::BackendImpl> cache(
-      base::MakeUnique<disk_cache::BackendImpl>(cache_path_, nullptr, nullptr));
+      base::MakeUnique<disk_cache::BackendImpl>(cache_path_, nullptr, nullptr,
+                                                nullptr));
   int rv = cache->Init(cb.callback());
   ASSERT_THAT(cb.GetResult(rv), IsError(net::ERR_FAILED));
 }
@@ -2210,7 +2355,8 @@ TEST_F(DiskCacheTest, SimpleCacheControlRestart) {
 
   const int kRestartCount = 5;
   for (int i = 0; i < kRestartCount; ++i) {
-    cache.reset(new disk_cache::BackendImpl(cache_path_, nullptr, nullptr));
+    cache.reset(
+        new disk_cache::BackendImpl(cache_path_, nullptr, nullptr, nullptr));
     int rv = cache->Init(cb.callback());
     ASSERT_THAT(cb.GetResult(rv), IsOk());
     EXPECT_EQ(1, cache->GetEntryCount());
@@ -2249,7 +2395,7 @@ TEST_F(DiskCacheTest, SimpleCacheControlLeave) {
   const int kRestartCount = 5;
   for (int i = 0; i < kRestartCount; ++i) {
     std::unique_ptr<disk_cache::BackendImpl> cache(
-        base::MakeUnique<disk_cache::BackendImpl>(cache_path_, nullptr,
+        base::MakeUnique<disk_cache::BackendImpl>(cache_path_, nullptr, nullptr,
                                                   nullptr));
     int rv = cache->Init(cb.callback());
     ASSERT_THAT(cb.GetResult(rv), IsOk());
@@ -3204,7 +3350,7 @@ TEST_F(DiskCacheTest, Backend_UsageStatsTimer) {
   // Want to use our thread since we call SyncInit ourselves.
   std::unique_ptr<disk_cache::BackendImpl> cache(
       base::MakeUnique<disk_cache::BackendImpl>(
-          cache_path_, base::ThreadTaskRunnerHandle::Get(), nullptr));
+          cache_path_, nullptr, base::ThreadTaskRunnerHandle::Get(), nullptr));
   ASSERT_TRUE(NULL != cache.get());
   cache->SetUnitTestMode();
   ASSERT_THAT(cache->SyncInit(), IsOk());
@@ -3220,7 +3366,7 @@ TEST_F(DiskCacheBackendTest, TimerNotCreated) {
   // Want to use our thread since we call SyncInit ourselves.
   std::unique_ptr<disk_cache::BackendImpl> cache(
       base::MakeUnique<disk_cache::BackendImpl>(
-          cache_path_, base::ThreadTaskRunnerHandle::Get(), nullptr));
+          cache_path_, nullptr, base::ThreadTaskRunnerHandle::Get(), nullptr));
   ASSERT_TRUE(NULL != cache.get());
   cache->SetUnitTestMode();
   ASSERT_NE(net::OK, cache->SyncInit());
@@ -3766,8 +3912,8 @@ TEST_F(DiskCacheBackendTest, SimpleCacheOverBlockfileCache) {
 
   // Check that the |SimpleBackendImpl| does not favor this structure.
   disk_cache::SimpleBackendImpl* simple_cache =
-      new disk_cache::SimpleBackendImpl(cache_path_, 0, net::DISK_CACHE,
-                                        nullptr, nullptr);
+      new disk_cache::SimpleBackendImpl(cache_path_, nullptr, 0,
+                                        net::DISK_CACHE, nullptr, nullptr);
   net::TestCompletionCallback cb;
   int rv = simple_cache->Init(cb.callback());
   EXPECT_NE(net::OK, cb.GetResult(rv));
@@ -3792,7 +3938,7 @@ TEST_F(DiskCacheBackendTest, BlockfileCacheOverSimpleCache) {
 
   // Check that the |BackendImpl| does not favor this structure.
   disk_cache::BackendImpl* cache =
-      new disk_cache::BackendImpl(cache_path_, nullptr, nullptr);
+      new disk_cache::BackendImpl(cache_path_, nullptr, nullptr, nullptr);
   cache->SetUnitTestMode();
   net::TestCompletionCallback cb;
   int rv = cache->Init(cb.callback());
@@ -3996,6 +4142,24 @@ TEST_F(DiskCacheBackendTest, SimpleCacheLateDoom) {
   InitCache();
   EXPECT_EQ(disk_cache::SimpleIndex::INITIALIZE_METHOD_LOADED,
             simple_cache_impl_->index()->init_method());
+}
+
+TEST_F(DiskCacheBackendTest, SimpleCacheNegMaxSize) {
+  SetMaxSize(-1);
+  SetSimpleCacheMode();
+  InitCache();
+  // We don't know what it will pick, but it's limited to what
+  // disk_cache::PreferredCacheSize would return, scaled by the size experiment,
+  // which only goes as much as 2x. It definitely should not be MAX_UINT64.
+  EXPECT_NE(simple_cache_impl_->index()->max_size(),
+            std::numeric_limits<uint64_t>::max());
+
+  int max_default_size =
+      2 * disk_cache::PreferredCacheSize(std::numeric_limits<int32_t>::max());
+
+  ASSERT_GE(max_default_size, 0);
+  EXPECT_LT(simple_cache_impl_->index()->max_size(),
+            static_cast<unsigned>(max_default_size));
 }
 
 TEST_F(DiskCacheBackendTest, SimpleLastModified) {

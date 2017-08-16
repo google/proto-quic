@@ -365,12 +365,6 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
   // Must be called from the same thread this object was constructed on.
   void Shutdown(int max_new_blocking_tasks_after_shutdown);
 
-  // Check if Shutdown was called for given threading pool. This method is used
-  // for aborting time consuming operation to avoid blocking shutdown.
-  //
-  // Can be called from any thread.
-  bool IsShutdownInProgress();
-
  protected:
   ~SequencedWorkerPool() override;
 

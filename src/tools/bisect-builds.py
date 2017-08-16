@@ -543,13 +543,14 @@ def RunRevision(context, revision, zip_file, profile, num_runs, command, args):
   # Hack: Chrome OS archives are missing icudtl.dat; try to copy it from
   # the local directory.
   if context.platform == 'chromeos':
-    icudtl_path = 'third_party/icu/common/icudtl.dat'
-    if not os.access(icudtl_path, os.F_OK):
-      print 'Couldn\'t find: ' + icudtl_path
-      print ('The path might have changed. Please look for the data under '
-             'third_party/icu and update bisect-build.py')
-      sys.exit()
-    os.system('cp %s %s/chrome-linux/' % (icudtl_path, tempdir))
+    if not os.access('%s/chrome-linux/icudtl.dat' % tempdir, os.F_OK):
+      icudtl_path = 'third_party/icu/common/icudtl.dat'
+      if not os.access(icudtl_path, os.F_OK):
+        print 'Couldn\'t find: ' + icudtl_path
+        print ('The path might have changed. Please look for the data under '
+               'third_party/icu and update bisect-build.py')
+        sys.exit()
+      os.system('cp %s %s/chrome-linux/' % (icudtl_path, tempdir))
 
   os.chdir(tempdir)
 

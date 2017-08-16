@@ -8,6 +8,7 @@
 
 import argparse
 import glob
+import json
 import logging
 import os
 import posixpath
@@ -83,31 +84,43 @@ def Uninstall(device, package, enable_device_cache=False):
   logging.info('Uninstall took %s seconds.', main_timer.GetDelta())
 
 
-def Install(device, apk, split_globs=None, native_libs=None, dex_files=None,
-            enable_device_cache=False, use_concurrency=True,
-            show_proguard_warning=False, permissions=(),
-            allow_downgrade=True):
+def Install(device, install_json, apk=None, enable_device_cache=False,
+            use_concurrency=True, permissions=()):
   """Installs the given incremental apk and all required supporting files.
 
   Args:
-    device: A DeviceUtils instance.
-    apk: The path to the apk, or an ApkHelper instance.
-    split_globs: Glob patterns for any required apk splits (optional).
-    native_libs: List of app's native libraries (optional).
-    dex_files: List of .dex.jar files that comprise the app's Dalvik code.
+    device: A DeviceUtils instance (to install to).
+    install_json: Path to .json file or already parsed .json object.
+    apk: An existing ApkHelper instance for the apk (optional).
     enable_device_cache: Whether to enable on-device caching of checksums.
     use_concurrency: Whether to speed things up using multiple threads.
-    show_proguard_warning: Whether to print a warning about Proguard not being
-        enabled after installing.
     permissions: A list of the permissions to grant, or None to grant all
                  non-blacklisted permissions in the manifest.
   """
+  if isinstance(install_json, basestring):
+    with open(install_json) as f:
+      install_dict = json.load(f)
+  else:
+    install_dict = install_json
+
+  if install_dict.get('dont_even_try'):
+    raise Exception(install_dict['dont_even_try'])
+
   main_timer = time_profile.TimeProfile()
   install_timer = time_profile.TimeProfile()
   push_native_timer = time_profile.TimeProfile()
   push_dex_timer = time_profile.TimeProfile()
 
-  apk = apk_helper.ToHelper(apk)
+  def fix_path(p):
+    return os.path.normpath(os.path.join(constants.GetOutDirectory(), p))
+
+  if not apk:
+    apk = apk_helper.ToHelper(fix_path(install_dict['apk_path']))
+  split_globs = [fix_path(p) for p in install_dict['split_globs']]
+  native_libs = [fix_path(p) for p in install_dict['native_libs']]
+  dex_files = [fix_path(p) for p in install_dict['dex_files']]
+  show_proguard_warning = install_dict.get('show_proguard_warning')
+
   apk_package = apk.GetPackageName()
   device_incremental_dir = _GetDeviceIncrementalDir(apk_package)
 
@@ -119,11 +132,9 @@ def Install(device, apk, split_globs=None, native_libs=None, dex_files=None,
       for split_glob in split_globs:
         splits.extend((f for f in glob.glob(split_glob)))
       device.InstallSplitApk(apk, splits, reinstall=True,
-                             allow_cached_props=True, permissions=permissions,
-                             allow_downgrade=allow_downgrade)
+                             allow_cached_props=True, permissions=permissions)
     else:
-      device.Install(apk, reinstall=True, permissions=permissions,
-                     allow_downgrade=allow_downgrade)
+      device.Install(apk, reinstall=True, permissions=permissions)
     install_timer.Stop(log=False)
 
   # Push .so and .dex files to the device (if they have changed).
@@ -227,23 +238,8 @@ def Install(device, apk, split_globs=None, native_libs=None, dex_files=None,
 
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument('apk_path',
-                      help='The path to the APK to install.')
-  parser.add_argument('--split',
-                      action='append',
-                      dest='splits',
-                      help='A glob matching the apk splits. '
-                           'Can be specified multiple times.')
-  parser.add_argument('--native_lib',
-                      dest='native_libs',
-                      help='Path to native library (repeatable)',
-                      action='append',
-                      default=[])
-  parser.add_argument('--dex-file',
-                      dest='dex_files',
-                      help='Path to dex files (repeatable)',
-                      action='append',
-                      default=[])
+  parser.add_argument('json_path',
+                      help='The path to the generated incremental apk .json.')
   parser.add_argument('-d', '--device', dest='device',
                       help='Target device for apk to install on.')
   parser.add_argument('--uninstall',
@@ -263,37 +259,20 @@ def main():
                       dest='cache',
                       help='Do not use cached information about what files are '
                            'currently on the target device.')
-  parser.add_argument('--show-proguard-warning',
-                      action='store_true',
-                      default=False,
-                      help='Print a warning about proguard being disabled')
-  parser.add_argument('--dont-even-try',
-                      help='Prints this message and exits.')
   parser.add_argument('-v',
                       '--verbose',
                       dest='verbose_count',
                       default=0,
                       action='count',
                       help='Verbose level (multiple times for more)')
-  parser.add_argument('--disable-downgrade',
-                      action='store_false',
-                      default=True,
-                      dest='allow_downgrade',
-                      help='Disable install of apk with lower version number'
-                           'than the version already on the device.')
 
   args = parser.parse_args()
 
   run_tests_helper.SetLogLevel(args.verbose_count)
-  constants.SetBuildType('Debug')
   if args.output_directory:
     constants.SetOutputDirectory(args.output_directory)
 
   devil_chromium.Initialize(output_directory=constants.GetOutDirectory())
-
-  if args.dont_even_try:
-    logging.fatal(args.dont_even_try)
-    return 1
 
   # Retries are annoying when commands fail for legitimate reasons. Might want
   # to enable them if this is ever used on bots though.
@@ -302,15 +281,14 @@ def main():
       default_retries=0,
       enable_device_files_cache=True)[0]
 
-  apk = apk_helper.ToHelper(args.apk_path)
   if args.uninstall:
+    with open(args.json_path) as f:
+      install_dict = json.load(f)
+    apk = apk_helper.ToHelper(install_dict['apk_path'])
     Uninstall(device, apk.GetPackageName(), enable_device_cache=args.cache)
   else:
-    Install(device, apk, split_globs=args.splits, native_libs=args.native_libs,
-            dex_files=args.dex_files, enable_device_cache=args.cache,
-            use_concurrency=args.threading,
-            show_proguard_warning=args.show_proguard_warning,
-            allow_downgrade=args.allow_downgrade)
+    Install(device, args.json_path, enable_device_cache=args.cache,
+            use_concurrency=args.threading)
 
 
 if __name__ == '__main__':

@@ -70,6 +70,17 @@ OAuthConfig = collections.namedtuple('OAuthConfig', [
 ])
 
 
+# Indicates that no OAuth-based authentication performed by this module should
+# be automatically used.
+DISABLED_OAUTH_CONFIG = OAuthConfig(
+    disabled=True,
+    tokens_cache=None,
+    no_local_webserver=None,
+    webserver_port=None,
+    service_account_json=None,
+    use_luci_context_auth=None)
+
+
 # Access token with its expiration time (UTC datetime, or None if not known).
 AccessToken = collections.namedtuple('AccessToken', [
   'token',

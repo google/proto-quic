@@ -5,11 +5,13 @@
 #ifndef BASE_ALLOCATOR_PARTITION_ALLOCATOR_ADDRESS_SPACE_RANDOMIZATION
 #define BASE_ALLOCATOR_PARTITION_ALLOCATOR_ADDRESS_SPACE_RANDOMIZATION
 
+#include "base/base_export.h"
+
 namespace base {
 
 // Calculates a random preferred mapping address. In calculating an address, we
 // balance good ASLR against not fragmenting the address space too badly.
-void* GetRandomPageBase();
+BASE_EXPORT void* GetRandomPageBase();
 
 }  // namespace base
 

@@ -10,10 +10,6 @@
 
 namespace {
 
-bool RegisterJNI(JNIEnv *env) {
-  return testing::android::RegisterNativeTestJNI(env);
-}
-
 bool NativeInit() {
   if (!base::android::OnJNIOnLoadInit())
     return false;
@@ -27,8 +23,7 @@ bool NativeInit() {
 // This is called by the VM when the shared library is first loaded.
 JNI_EXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
   base::android::InitVM(vm);
-  JNIEnv* env = base::android::AttachCurrentThread();
-  if (!RegisterJNI(env) || !NativeInit()) {
+  if (!NativeInit()) {
     return -1;
   }
   return JNI_VERSION_1_4;

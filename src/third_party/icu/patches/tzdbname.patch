@@ -1,0 +1,15 @@
+diff --git a/source/data/zone/tzdbNames.txt b/source/data/zone/tzdbNames.txt
+index 5adf0f4f..ac6bf899 100644
+--- a/source/data/zone/tzdbNames.txt
++++ b/source/data/zone/tzdbNames.txt
+@@ -562,6 +562,10 @@ tzdbNames{
+         "meta:Ponape"{
+             ss{"PONT"}
+         }
++        "meta:Pyongyang"{
++            ss{"KST"}
++            sd{"KDT"}
++        }
+         "meta:Qyzylorda"{
+             sd{"QYZST"}
+             ss{"QYZT"}

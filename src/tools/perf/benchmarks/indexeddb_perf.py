@@ -24,6 +24,7 @@ import json
 from core import perf_benchmark
 
 from telemetry import benchmark
+from telemetry import story
 from telemetry.page import legacy_page_test
 from telemetry.value import scalar
 
@@ -99,7 +100,10 @@ class IndexedDbOriginalSectioned(perf_benchmark.PerfBenchmark):
     return 'storage.indexeddb_endure'
 
   def GetExpectations(self):
-    return page_sets.IndexedDBEndureStoryExpectations()
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
 
 
 @benchmark.Owner(emails=['cmumford@chromium.org'])
@@ -124,4 +128,7 @@ class IndexedDbTracing(perf_benchmark.PerfBenchmark):
     return 'idb' in value.name
 
   def GetExpectations(self):
-    return page_sets.IndexedDBEndureStoryExpectations()
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()

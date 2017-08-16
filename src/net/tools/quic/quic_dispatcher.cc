@@ -72,16 +72,13 @@ class PacketCollector : public QuicPacketCreator::DelegateInterface,
                             const string& error_details,
                             ConnectionCloseSource source) override {}
 
-  // QuicStreamFrameDataProducer methods:
-  void SaveStreamData(QuicStreamId id,
-                      QuicIOVector iov,
-                      size_t iov_offset,
-                      QuicStreamOffset offset,
-                      QuicByteCount data_length) override {
-    DCHECK_EQ(kCryptoStreamId, id);
-    send_buffer_.SaveStreamData(iov, iov_offset, offset, data_length);
+  void SaveStatelessRejectFrameData(QuicIOVector iov,
+                                    size_t iov_offset,
+                                    QuicByteCount data_length) {
+    send_buffer_.SaveStreamData(iov, iov_offset, data_length);
   }
 
+  // QuicStreamFrameDataProducer
   bool WriteStreamData(QuicStreamId id,
                        QuicStreamOffset offset,
                        QuicByteCount data_length,
@@ -112,13 +109,13 @@ class StatelessConnectionTerminator {
                                 QuicTimeWaitListManager* time_wait_list_manager)
       : connection_id_(connection_id),
         framer_(framer),
-        collector_(helper->GetBufferAllocator()),
+        collector_(helper->GetStreamSendBufferAllocator()),
         creator_(connection_id,
                  framer,
-                 helper->GetBufferAllocator(),
+                 helper->GetStreamFrameBufferAllocator(),
                  &collector_),
         time_wait_list_manager_(time_wait_list_manager) {
-    if (FLAGS_quic_reloadable_flag_quic_stream_owns_data) {
+    if (FLAGS_quic_reloadable_flag_quic_save_data_before_consumption2) {
       framer_->set_data_producer(&collector_);
     }
   }
@@ -158,6 +155,11 @@ class StatelessConnectionTerminator {
     iovec.iov_len = reject.length();
     QuicIOVector iov(&iovec, 1, iovec.iov_len);
     QuicStreamOffset offset = 0;
+    if (framer_->HasDataProducer()) {
+      QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_save_data_before_consumption2,
+                        4, 4);
+      collector_.SaveStatelessRejectFrameData(iov, 0, reject.length());
+    }
     while (offset < iovec.iov_len) {
       QuicFrame frame;
       UniqueStreamBuffer data;
@@ -973,6 +975,11 @@ void QuicDispatcher::OnStatelessRejectorProcessDone(
   current_server_address_ = current_server_address;
   current_packet_ = current_packet.get();
   current_connection_id_ = rejector->connection_id();
+  if (FLAGS_quic_reloadable_flag_quic_set_version_on_async_get_proof_returns) {
+    QUIC_FLAG_COUNT(
+        quic_reloadable_flag_quic_set_version_on_async_get_proof_returns);
+    framer_.set_version(first_version);
+  }
 
   ProcessStatelessRejectorState(std::move(rejector), first_version);
 }
@@ -1003,7 +1010,10 @@ void QuicDispatcher::ProcessStatelessRejectorState(
       break;
 
     case StatelessRejector::REJECTED: {
-      DCHECK_EQ(framer_.version(), first_version);
+      QUIC_BUG_IF(first_version != framer_.version())
+          << "SREJ: Client's version: " << QuicVersionToString(first_version)
+          << " is different from current dispatcher framer's version: "
+          << QuicVersionToString(framer_.version());
       StatelessConnectionTerminator terminator(rejector->connection_id(),
                                                &framer_, helper(),
                                                time_wait_list_manager_.get());

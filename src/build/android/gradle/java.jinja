@@ -18,8 +18,13 @@ sourceSets {
     }
 }
 
+{% if canary %}
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+{% else %}
 sourceCompatibility = JavaVersion.VERSION_1_7
 targetCompatibility = JavaVersion.VERSION_1_7
+{% endif %}
 
 {% if template_type == 'java_binary' %}
 mainClassName = "{{ main_class }}"

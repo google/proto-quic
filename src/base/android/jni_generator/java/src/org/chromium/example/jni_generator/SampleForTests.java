@@ -22,6 +22,8 @@ import java.util.List;
 // The C++ counter-part is sample_for_tests.cc.
 // jni_generator/BUILD.gn has a jni_generator_tests target that will:
 //   * Generate a header file for the JNI bindings based on this file.
+//   * Generate a header file containing registration methods required to use C++ methods from this
+//     file.
 //   * Compile sample_for_tests.cc using the generated header file.
 //   * link a native executable to prove the generated header + cc file are self-contained.
 // All comments are informational only, and are ignored by the jni generator.

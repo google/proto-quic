@@ -56,12 +56,14 @@ const yasm_assoc_data_callback elf_ssym_symrec_data = {
 
 extern elf_machine_handler
     elf_machine_handler_x86_x86,
-    elf_machine_handler_x86_amd64;
+    elf_machine_handler_x86_amd64,
+    elf_machine_handler_x86_x32;
 
 static const elf_machine_handler *elf_machine_handlers[] =
 {
     &elf_machine_handler_x86_x86,
     &elf_machine_handler_x86_amd64,
+    &elf_machine_handler_x86_x32,
     NULL
 };
 static const elf_machine_handler elf_null_machine = {0, 0, 0, 0, 0, 0, 0, 0,
@@ -80,10 +82,15 @@ elf_set_arch(yasm_arch *arch, yasm_symtab *symtab, int bits_pref)
          elf_march != NULL;
          elf_march = elf_machine_handlers[++i])
     {
-        if (yasm__strcasecmp(yasm_arch_keyword(arch), elf_march->arch)==0)
-            if (yasm__strcasecmp(machine, elf_march->machine)==0)
+        if (yasm__strcasecmp(yasm_arch_keyword(arch), elf_march->arch)==0) {
+            if (yasm__strcasecmp(machine, elf_march->machine)==0) {
                 if (bits_pref == 0 || bits_pref == elf_march->bits)
                     break;
+            } else if (bits_pref == elf_march->bits
+                       && yasm__strcasecmp(machine, "amd64") == 0
+                       && yasm__strcasecmp(elf_march->machine, "x32") == 0)
+                break;
+        }
     }
 
     if (elf_march && elf_march->num_ssyms > 0)
@@ -462,13 +469,12 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab,
                          yasm_errwarns *errwarns)
 {
     unsigned char buf[SYMTAB_MAXSIZE], *bufp;
-    elf_symtab_entry *entry, *prev;
+    elf_symtab_entry *entry;
     unsigned long size = 0;
 
     if (!symtab)
         yasm_internal_error(N_("symtab is null"));
 
-    prev = NULL;
     STAILQ_FOREACH(entry, symtab, qlink) {
 
         yasm_intnum *size_intn=NULL, *value_intn=NULL;
@@ -531,8 +537,6 @@ elf_symtab_write_to_file(FILE *f, elf_symtab_head *symtab,
 
         yasm_intnum_destroy(size_intn);
         yasm_intnum_destroy(value_intn);
-
-        prev = entry;
     }
     return size;
 }
@@ -782,7 +786,6 @@ elf_secthead_write_relocs_to_file(FILE *f, yasm_section *sect,
 
 
     while (reloc) {
-        yasm_sym_vis vis;
         unsigned int r_type=0, r_sym;
         elf_symtab_entry *esym;
 
@@ -792,7 +795,6 @@ elf_secthead_write_relocs_to_file(FILE *f, yasm_section *sect,
         else
             r_sym = STN_UNDEF;
 
-        vis = yasm_symrec_get_visibility(reloc->reloc.sym);
         if (!elf_march->map_reloc_info_to_type)
             yasm_internal_error(N_("Unsupported arch/machine for elf output"));
         r_type = elf_march->map_reloc_info_to_type(reloc);

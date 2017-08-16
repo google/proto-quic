@@ -66,8 +66,6 @@ HTTP2_EXPORT_PRIVATE inline std::ostream& operator<<(std::ostream& out,
 
 // Flags that appear in supported frame types. These are treated as bit masks.
 // The comments indicate for which frame types the flag is valid.
-// TODO(bnc): Remove FLAG_ prefix once enum SpdyFrameType is removed
-// (both enums have a PRIORITY member).
 enum Http2FrameFlag {
   END_STREAM = 0x01,   // DATA, HEADERS
   ACK = 0x01,          // SETTINGS, PING

@@ -2,21 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/macros.h"
 #include "base/sync_socket.h"
+
+#include "base/macros.h"
+#include "base/synchronization/waitable_event.h"
+#include "base/threading/platform_thread.h"
 #include "base/threading/simple_thread.h"
 #include "base/time/time.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+namespace base {
+
 namespace {
 
-const int kReceiveTimeoutInMilliseconds = 750;
+constexpr TimeDelta kReceiveTimeout = base::TimeDelta::FromMilliseconds(750);
 
-class HangingReceiveThread : public base::DelegateSimpleThread::Delegate {
+class HangingReceiveThread : public DelegateSimpleThread::Delegate {
  public:
-  explicit HangingReceiveThread(base::SyncSocket* socket)
+  explicit HangingReceiveThread(SyncSocket* socket, bool with_timeout)
       : socket_(socket),
-        thread_(this, "HangingReceiveThread") {
+        thread_(this, "HangingReceiveThread"),
+        with_timeout_(with_timeout),
+        started_event_(WaitableEvent::ResetPolicy::MANUAL,
+                       WaitableEvent::InitialState::NOT_SIGNALED),
+        done_event_(WaitableEvent::ResetPolicy::MANUAL,
+                    WaitableEvent::InitialState::NOT_SIGNALED) {
     thread_.Start();
   }
 
@@ -26,27 +36,39 @@ class HangingReceiveThread : public base::DelegateSimpleThread::Delegate {
     int data = 0;
     ASSERT_EQ(socket_->Peek(), 0u);
 
-    // Use receive with timeout so we don't hang the test harness indefinitely.
-    ASSERT_EQ(0u, socket_->ReceiveWithTimeout(
-        &data, sizeof(data), base::TimeDelta::FromMilliseconds(
-            kReceiveTimeoutInMilliseconds)));
+    started_event_.Signal();
+
+    if (with_timeout_) {
+      ASSERT_EQ(0u, socket_->ReceiveWithTimeout(&data, sizeof(data),
+                                                kReceiveTimeout));
+    } else {
+      ASSERT_EQ(0u, socket_->Receive(&data, sizeof(data)));
+    }
+
+    done_event_.Signal();
   }
 
   void Stop() {
     thread_.Join();
   }
 
+  WaitableEvent* started_event() { return &started_event_; }
+  WaitableEvent* done_event() { return &done_event_; }
+
  private:
-  base::SyncSocket* socket_;
-  base::DelegateSimpleThread thread_;
+  SyncSocket* socket_;
+  DelegateSimpleThread thread_;
+  bool with_timeout_;
+  WaitableEvent started_event_;
+  WaitableEvent done_event_;
 
   DISALLOW_COPY_AND_ASSIGN(HangingReceiveThread);
 };
 
-// Tests sending data between two SyncSockets.  Uses ASSERT() and thus will exit
+// Tests sending data between two SyncSockets. Uses ASSERT() and thus will exit
 // early upon failure.  Callers should use ASSERT_NO_FATAL_FAILURE() if testing
 // continues after return.
-void SendReceivePeek(base::SyncSocket* socket_a, base::SyncSocket* socket_b) {
+void SendReceivePeek(SyncSocket* socket_a, SyncSocket* socket_b) {
   int received = 0;
   const int kSending = 123;
   static_assert(sizeof(kSending) == sizeof(received), "invalid data size");
@@ -78,54 +100,91 @@ void SendReceivePeek(base::SyncSocket* socket_a, base::SyncSocket* socket_b) {
   ASSERT_TRUE(socket_b->Close());
 }
 
-template <class SocketType>
-void NormalSendReceivePeek() {
-  SocketType socket_a, socket_b;
-  ASSERT_TRUE(SocketType::CreatePair(&socket_a, &socket_b));
-  SendReceivePeek(&socket_a, &socket_b);
+}  // namespace
+
+class SyncSocketTest : public testing::Test {
+ public:
+  void SetUp() override {
+    ASSERT_TRUE(SyncSocket::CreatePair(&socket_a_, &socket_b_));
+  }
+
+ protected:
+  SyncSocket socket_a_;
+  SyncSocket socket_b_;
+};
+
+TEST_F(SyncSocketTest, NormalSendReceivePeek) {
+  SendReceivePeek(&socket_a_, &socket_b_);
 }
 
-template <class SocketType>
-void ClonedSendReceivePeek() {
-  SocketType socket_a, socket_b;
-  ASSERT_TRUE(SocketType::CreatePair(&socket_a, &socket_b));
+TEST_F(SyncSocketTest, ClonedSendReceivePeek) {
+  SyncSocket socket_c(socket_a_.Release());
+  SyncSocket socket_d(socket_b_.Release());
+  SendReceivePeek(&socket_c, &socket_d);
+};
 
-  // Create new SyncSockets from the paired handles.
-  SocketType socket_c(socket_a.handle()), socket_d(socket_b.handle());
+class CancelableSyncSocketTest : public testing::Test {
+ public:
+  void SetUp() override {
+    ASSERT_TRUE(CancelableSyncSocket::CreatePair(&socket_a_, &socket_b_));
+  }
+
+ protected:
+  CancelableSyncSocket socket_a_;
+  CancelableSyncSocket socket_b_;
+};
+
+TEST_F(CancelableSyncSocketTest, NormalSendReceivePeek) {
+  SendReceivePeek(&socket_a_, &socket_b_);
+}
+
+TEST_F(CancelableSyncSocketTest, ClonedSendReceivePeek) {
+  CancelableSyncSocket socket_c(socket_a_.Release());
+  CancelableSyncSocket socket_d(socket_b_.Release());
   SendReceivePeek(&socket_c, &socket_d);
 }
 
-}  // namespace
+TEST_F(CancelableSyncSocketTest, ShutdownCancelsReceive) {
+  HangingReceiveThread thread(&socket_b_, /* with_timeout = */ false);
 
-TEST(SyncSocket, NormalSendReceivePeek) {
-  NormalSendReceivePeek<base::SyncSocket>();
-}
+  // Wait for the thread to be started. Note that this doesn't guarantee that
+  // Receive() is called before Shutdown().
+  thread.started_event()->Wait();
 
-TEST(SyncSocket, ClonedSendReceivePeek) {
-  ClonedSendReceivePeek<base::SyncSocket>();
-}
+  EXPECT_TRUE(socket_b_.Shutdown());
+  EXPECT_TRUE(thread.done_event()->TimedWait(kReceiveTimeout));
 
-TEST(CancelableSyncSocket, NormalSendReceivePeek) {
-  NormalSendReceivePeek<base::CancelableSyncSocket>();
-}
-
-TEST(CancelableSyncSocket, ClonedSendReceivePeek) {
-  ClonedSendReceivePeek<base::CancelableSyncSocket>();
-}
-
-TEST(CancelableSyncSocket, CancelReceiveShutdown) {
-  base::CancelableSyncSocket socket_a, socket_b;
-  ASSERT_TRUE(base::CancelableSyncSocket::CreatePair(&socket_a, &socket_b));
-
-  base::TimeTicks start = base::TimeTicks::Now();
-  HangingReceiveThread thread(&socket_b);
-  ASSERT_TRUE(socket_b.Shutdown());
   thread.Stop();
+}
+
+TEST_F(CancelableSyncSocketTest, ShutdownCancelsReceiveWithTimeout) {
+  HangingReceiveThread thread(&socket_b_, /* with_timeout = */ true);
+
+  // Wait for the thread to be started. Note that this doesn't guarantee that
+  // Receive() is called before Shutdown().
+  thread.started_event()->Wait();
+
+  EXPECT_TRUE(socket_b_.Shutdown());
+  EXPECT_TRUE(thread.done_event()->TimedWait(kReceiveTimeout));
+
+  thread.Stop();
+}
+
+TEST_F(CancelableSyncSocketTest, ReceiveAfterShutdown) {
+  socket_a_.Shutdown();
+  int data = 0;
+  EXPECT_EQ(0u, socket_a_.Receive(&data, sizeof(data)));
+}
+
+TEST_F(CancelableSyncSocketTest, ReceiveWithTimeoutAfterShutdown) {
+  socket_a_.Shutdown();
+  TimeTicks start = TimeTicks::Now();
+  int data = 0;
+  EXPECT_EQ(0u,
+            socket_a_.ReceiveWithTimeout(&data, sizeof(data), kReceiveTimeout));
 
   // Ensure the receive didn't just timeout.
-  ASSERT_LT((base::TimeTicks::Now() - start).InMilliseconds(),
-            kReceiveTimeoutInMilliseconds);
-
-  ASSERT_TRUE(socket_a.Close());
-  ASSERT_TRUE(socket_b.Close());
+  EXPECT_LT(TimeTicks::Now() - start, kReceiveTimeout);
 }
+
+}  // namespace base

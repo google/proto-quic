@@ -16,7 +16,6 @@
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util_ios.h"
 #include "net/cert/x509_util_ios_and_mac.h"
-#include "net/ssl/openssl_ssl_util.h"
 
 using base::ScopedCFTypeRef;
 

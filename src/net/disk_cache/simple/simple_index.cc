@@ -24,6 +24,7 @@
 #include "base/time/time.h"
 #include "base/trace_event/memory_usage_estimator.h"
 #include "net/base/net_errors.h"
+#include "net/disk_cache/backend_cleanup_tracker.h"
 #include "net/disk_cache/simple/simple_entry_format.h"
 #include "net/disk_cache/simple/simple_experiment.h"
 #include "net/disk_cache/simple/simple_histogram_macros.h"
@@ -126,10 +127,12 @@ bool EntryMetadata::Deserialize(base::PickleIterator* it) {
 
 SimpleIndex::SimpleIndex(
     const scoped_refptr<base::SingleThreadTaskRunner>& io_thread,
+    scoped_refptr<BackendCleanupTracker> cleanup_tracker,
     SimpleIndexDelegate* delegate,
     net::CacheType cache_type,
     std::unique_ptr<SimpleIndexFile> index_file)
-    : delegate_(delegate),
+    : cleanup_tracker_(std::move(cleanup_tracker)),
+      delegate_(delegate),
       cache_type_(cache_type),
       cache_size_(0),
       max_size_(0),
@@ -529,8 +532,16 @@ void SimpleIndex::WriteToDisk(IndexWriteToDiskReason reason) {
   }
   last_write_to_disk_ = start;
 
+  base::Closure after_write;
+  if (cleanup_tracker_) {
+    // Make anyone synchronizing with our cleanup wait for the index to be
+    // written back.
+    after_write = base::Bind([](scoped_refptr<BackendCleanupTracker>) {},
+                             cleanup_tracker_);
+  }
+
   index_file_->WriteToDisk(reason, entries_set_, cache_size_, start,
-                           app_on_background_, base::Closure());
+                           app_on_background_, after_write);
 }
 
 }  // namespace disk_cache

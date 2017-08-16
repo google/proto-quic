@@ -62,7 +62,7 @@ struct SSLClientSocketContext {
   // ssl_session_cache_shard is an opaque string that identifies a shard of the
   // SSL session cache. SSL sockets with the same ssl_session_cache_shard may
   // resume each other's SSL sessions but we'll never sessions between shards.
-  const std::string ssl_session_cache_shard;
+  std::string ssl_session_cache_shard;
 };
 
 // Details on a failed operation. This enum is used to diagnose causes of TLS

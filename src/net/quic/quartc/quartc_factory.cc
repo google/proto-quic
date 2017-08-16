@@ -163,7 +163,11 @@ QuicRandom* QuartcFactory::GetRandomGenerator() {
   return QuicRandom::GetInstance();
 }
 
-QuicBufferAllocator* QuartcFactory::GetBufferAllocator() {
+QuicBufferAllocator* QuartcFactory::GetStreamFrameBufferAllocator() {
+  return &buffer_allocator_;
+}
+
+QuicBufferAllocator* QuartcFactory::GetStreamSendBufferAllocator() {
   return &buffer_allocator_;
 }
 

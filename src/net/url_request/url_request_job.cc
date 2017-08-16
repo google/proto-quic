@@ -382,6 +382,10 @@ void URLRequestJob::GetConnectionAttempts(ConnectionAttempts* out) const {
   out->clear();
 }
 
+void URLRequestJob::SetRequestHeadersCallback(RequestHeadersCallback callback) {
+  request_headers_callback_ = std::move(callback);
+}
+
 // static
 GURL URLRequestJob::ComputeReferrerForPolicy(URLRequest::ReferrerPolicy policy,
                                              const GURL& original_referrer,
@@ -855,10 +859,9 @@ RedirectInfo URLRequestJob::ComputeRedirectInfo(const GURL& location,
   // Update the first-party URL if appropriate.
   if (request_->first_party_url_policy() ==
           URLRequest::UPDATE_FIRST_PARTY_URL_ON_REDIRECT) {
-    redirect_info.new_first_party_for_cookies = redirect_info.new_url;
+    redirect_info.new_site_for_cookies = redirect_info.new_url;
   } else {
-    redirect_info.new_first_party_for_cookies =
-        request_->first_party_for_cookies();
+    redirect_info.new_site_for_cookies = request_->site_for_cookies();
   }
 
   redirect_info.new_referrer_policy =

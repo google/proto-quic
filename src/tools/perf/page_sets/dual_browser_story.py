@@ -179,6 +179,11 @@ class MultiBrowserSharedState(story_module.SharedState):
     self._current_story.Run(self)
 
   def DidRunStory(self, _):
+    if (not self._story_set.long_running and
+        self._story_set[-1] == self._current_story):
+      # In long_running mode we never close the browsers; otherwise we close
+      # them only after the last story in the set runs.
+      self._CloseAllBrowsers()
     self._current_story = None
 
   def TakeMemoryMeasurement(self):
@@ -238,10 +243,11 @@ class SinglePage(story_module.Story):
 class DualBrowserStorySet(story_module.StorySet):
   """A story set that switches back and forth between two browsers."""
 
-  def __init__(self):
+  def __init__(self, long_running=False):
     super(DualBrowserStorySet, self).__init__(
         archive_data_file='data/dual_browser_story.json',
         cloud_storage_bucket=story_module.PARTNER_BUCKET)
+    self.long_running = long_running
 
     for query, url in zip(SEARCH_QUERIES, URL_LIST):
       # Stories that run on the android-webview browser.
@@ -257,8 +263,3 @@ class DualBrowserStorySet(story_module.StorySet):
           url=url,
           browser_type='default',
           phase='on_chrome'))
-
-
-class DualBrowserStoryExpectations(story_module.expectations.StoryExpectations):
-  def SetExpectations(self):
-    pass  # No tests disabled.

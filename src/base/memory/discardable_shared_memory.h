@@ -58,6 +58,7 @@ class BASE_EXPORT DiscardableSharedMemory {
   bool Map(size_t size);
 
   // Unmaps the discardable shared memory from the caller's address space.
+  // Unmapping won't unlock previously locked range.
   // Returns true if successful; returns false on error or if the memory is
   // not mapped.
   bool Unmap();
@@ -67,6 +68,13 @@ class BASE_EXPORT DiscardableSharedMemory {
 
   // Returns a shared memory handle for this DiscardableSharedMemory object.
   SharedMemoryHandle handle() const { return shared_memory_.handle(); }
+
+  // Returns an ID for the shared memory region. This is ID of the mapped region
+  // consistent across all processes and is valid as long as the region is not
+  // unmapped.
+  const UnguessableToken& mapped_id() const {
+    return shared_memory_.mapped_id();
+  }
 
   // Locks a range of memory so that it will not be purged by the system.
   // The range of memory must be unlocked. The result of trying to lock an

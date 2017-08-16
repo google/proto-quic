@@ -7,8 +7,6 @@
 #include <cstring>  // For std::memcmp
 #include <sstream>
 
-#include "base/strings/string_number_conversions.h"
-#include "base/strings/string_util.h"
 #include "net/http2/platform/api/http2_string_utils.h"
 
 namespace net {
@@ -97,9 +95,8 @@ bool operator==(const Http2PingFields& a, const Http2PingFields& b) {
 }
 
 std::ostream& operator<<(std::ostream& out, const Http2PingFields& v) {
-  Http2String s = base::HexEncode(v.opaque_data, sizeof v.opaque_data);
-  base::CollapseWhitespaceASCII(s, /*trim_sequences_with_line_breaks=*/false);
-  return out << "opaque_data=[" << s << "]";
+  return out << "opaque_data=0x"
+             << Http2HexEncode(v.opaque_data, sizeof v.opaque_data);
 }
 
 // Http2GoAwayFields:

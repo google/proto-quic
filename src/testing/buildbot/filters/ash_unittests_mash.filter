@@ -130,6 +130,8 @@
 -ExtendedesktopTest.CaptureventocationHighP
 -ExtendedesktopTest.KeyventsOnockScreen
 -LockActionHandlerLayoutManagerTest.KeyboardBounds
+-LockLayoutManagerTest.AccessibilityPanel
+-LockLayoutManagerTest.AccessibilityPanelWithMultipleMonitors
 -LockLayoutManagerTest.KeyboardBounds
 -LockLayoutManagerTest.MaximizedFullscreenWindowBoundsAreEqualToScreen
 -LockLayoutManagerTest.MultipleMonitors

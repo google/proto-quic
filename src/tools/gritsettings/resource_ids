@@ -90,9 +90,6 @@
   "chrome/browser/resources/invalidations_resources.grd": {
     "includes": [11910],
   },
-  "chrome/browser/resources/md_policy/policy_resources.grd": {
-    "structures": [11920],
-  },
   "chrome/browser/resources/net_internals_resources.grd": {
     "includes": [11960],
   },
@@ -162,16 +159,16 @@
     "messages": [15040],
   },
   "components/chrome_apps/chrome_apps_resources.grd": {
-    "includes": [15900],
+    "includes": [16000],
   },
   "components/policy/resources/policy_templates.grd": {
-    "structures": [15920],
+    "structures": [16020],
   },
   "components/resources/components_resources.grd": {
-    "includes": [16030],
+    "includes": [16130],
   },
   "components/resources/components_scaled_resources.grd": {
-    "structures": [16150],
+    "structures": [16250],
   },
   # END components/ section.
 
@@ -317,6 +314,10 @@
   },
   "third_party/WebKit/public/blink_resources.grd": {
     "includes": [25400],
+  },
+  "third_party/WebKit/Source/modules/media_controls/resources/media_controls_resources.grd": {
+    "includes": [25500],
+    "structures": [25600],
   },
 
   "ui/app_list/resources/app_list_resources.grd": {

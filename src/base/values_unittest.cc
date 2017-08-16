@@ -597,6 +597,64 @@ TEST(ValuesTest, SetKey) {
   EXPECT_EQ(Value(std::move(storage)), dict);
 }
 
+TEST(ValuesTest, FindPath) {
+  // Construct a dictionary path {root}.foo.bar = 123
+  Value foo(Value::Type::DICTIONARY);
+  foo.SetKey("bar", Value(123));
+
+  Value root(Value::Type::DICTIONARY);
+  root.SetKey("foo", std::move(foo));
+
+  // No key (stupid but well-defined and takes work to prevent).
+  Value* found = root.FindPath({});
+  EXPECT_EQ(&root, found);
+
+  // Single not found key.
+  found = root.FindPath({"notfound"});
+  EXPECT_FALSE(found);
+
+  // Single found key.
+  found = root.FindPath({"foo"});
+  ASSERT_TRUE(found);
+  EXPECT_TRUE(found->is_dict());
+
+  // Double key, second not found.
+  found = root.FindPath({"foo", "notfound"});
+  EXPECT_FALSE(found);
+
+  // Double key, found.
+  found = root.FindPath({"foo", "bar"});
+  EXPECT_TRUE(found);
+  EXPECT_TRUE(found->is_int());
+  EXPECT_EQ(123, found->GetInt());
+}
+
+TEST(ValuesTest, SetPath) {
+  Value root(Value::Type::DICTIONARY);
+
+  Value* inserted = root.SetPath({"one"}, Value(123));
+  Value* found = root.FindPathOfType({"one"}, Value::Type::INTEGER);
+  ASSERT_TRUE(found);
+  EXPECT_EQ(inserted, found);
+  EXPECT_EQ(123, found->GetInt());
+
+  inserted = root.SetPath({"foo", "bar"}, Value(123));
+  found = root.FindPathOfType({"foo", "bar"}, Value::Type::INTEGER);
+  ASSERT_TRUE(found);
+  EXPECT_EQ(inserted, found);
+  EXPECT_EQ(123, found->GetInt());
+
+  // Overwrite with a different value.
+  root.SetPath({"foo", "bar"}, Value("hello"));
+  found = root.FindPathOfType({"foo", "bar"}, Value::Type::STRING);
+  ASSERT_TRUE(found);
+  EXPECT_EQ("hello", found->GetString());
+
+  // Can't change existing non-dictionary keys to dictionaries.
+  found = root.SetPath({"foo", "bar", "baz"}, Value(123));
+  EXPECT_FALSE(found);
+}
+
 TEST(ValuesTest, DictEnd) {
   Value dict(Value::Type::DICTIONARY);
   EXPECT_EQ(dict.DictItems().end(), dict.DictEnd());
@@ -826,23 +884,9 @@ TEST(ValuesTest, DictionarySetReturnsPointer) {
 
   {
     DictionaryValue dict;
-    Value* bool_ptr = dict.SetBooleanWithoutPathExpansion("foo.bar", false);
-    EXPECT_EQ(Value::Type::BOOLEAN, bool_ptr->type());
-    EXPECT_FALSE(bool_ptr->GetBool());
-  }
-
-  {
-    DictionaryValue dict;
     Value* int_ptr = dict.SetInteger("foo.bar", 42);
     EXPECT_EQ(Value::Type::INTEGER, int_ptr->type());
     EXPECT_EQ(42, int_ptr->GetInt());
-  }
-
-  {
-    DictionaryValue dict;
-    Value* int_ptr = dict.SetIntegerWithoutPathExpansion("foo.bar", 123);
-    EXPECT_EQ(Value::Type::INTEGER, int_ptr->type());
-    EXPECT_EQ(123, int_ptr->GetInt());
   }
 
   {

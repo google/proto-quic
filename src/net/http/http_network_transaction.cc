@@ -442,6 +442,12 @@ void HttpNetworkTransaction::SetBeforeHeadersSentCallback(
   before_headers_sent_callback_ = callback;
 }
 
+void HttpNetworkTransaction::SetRequestHeadersCallback(
+    RequestHeadersCallback callback) {
+  DCHECK(!stream_);
+  request_headers_callback_ = std::move(callback);
+}
+
 int HttpNetworkTransaction::ResumeNetworkStart() {
   DCHECK_EQ(next_state_, STATE_CREATE_STREAM);
   return DoLoop(OK);
@@ -458,6 +464,7 @@ void HttpNetworkTransaction::OnStreamReady(const SSLConfig& used_ssl_config,
     total_sent_bytes_ += stream_->GetTotalSentBytes();
   }
   stream_ = std::move(stream);
+  stream_->SetRequestHeadersCallback(request_headers_callback_);
   server_ssl_config_ = used_ssl_config;
   proxy_info_ = used_proxy_info;
   response_.was_alpn_negotiated = stream_request_->was_alpn_negotiated();
@@ -575,6 +582,7 @@ void HttpNetworkTransaction::OnHttpsProxyTunnelResponse(
     total_sent_bytes_ += stream_->GetTotalSentBytes();
   }
   stream_ = std::move(stream);
+  stream_->SetRequestHeadersCallback(request_headers_callback_);
   stream_request_.reset();  // we're done with the stream request
   OnIOComplete(ERR_HTTPS_PROXY_TUNNEL_RESPONSE);
 }

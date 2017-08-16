@@ -22,11 +22,7 @@ class Target(object):
     # Subclasses should list the updatable target fields here.
     self._fields = tuple()
 
-  def _populate_target_pb(self, metric):
-    """Populate the 'target' embedded message field of a metric protobuf."""
-    raise NotImplementedError()
-
-  def _populate_target_pb_new(self, collection_pb):
+  def populate_target_pb(self, collection_pb):
     """Populate the 'target' into a MetricsCollection."""
     raise NotImplementedError()
 
@@ -77,22 +73,9 @@ class DeviceTarget(Target):
     self.alertable = True
     self._fields = ('region', 'role', 'network', 'hostname')
 
-  def _populate_target_pb(self, metric):
-    """Populate the 'network_device' embedded message of a metric protobuf.
+  def populate_target_pb(self, collection):
+    """Populate the 'network_device' target into metrics_pb2.MetricsCollection.
 
-    Args:
-      metric (metrics_pb2.MetricsData): the metric proto to be populated.
-    """
-    metric.network_device.metro = self.region
-    metric.network_device.role = self.role
-    metric.network_device.hostgroup = self.network
-    metric.network_device.hostname = self.hostname
-    metric.network_device.realm = self.realm
-    metric.network_device.alertable = self.alertable
-
-  def _populate_target_pb_new(self, collection):
-    """Populate the 'network_device' target into
-       new_metrics_pb2.MetricsCollection.
     Args:
       collection (metrics_pb2.MetricsCollection): the collection proto to be
           populated.
@@ -127,20 +110,8 @@ class TaskTarget(Target):
     self._fields = ('service_name', 'job_name', 'region',
                     'hostname', 'task_num')
 
-  def _populate_target_pb(self, metric):
-    """Populate the 'task' embedded message field of a metric protobuf.
-
-    Args:
-      metric (metrics_pb2.MetricsData): the metric proto to be populated.
-    """
-    metric.task.service_name = self.service_name
-    metric.task.job_name = self.job_name
-    metric.task.data_center = self.region
-    metric.task.host_name = self.hostname
-    metric.task.task_num = self.task_num
-
-  def _populate_target_pb_new(self, collection):
-    """Populate the 'task' target into new_metrics_pb2.MetricsCollection.
+  def populate_target_pb(self, collection):
+    """Populate the 'task' target into metrics_pb2.MetricsCollection.
 
     Args:
       collection (metrics_pb2.MetricsCollection): the collection proto to be

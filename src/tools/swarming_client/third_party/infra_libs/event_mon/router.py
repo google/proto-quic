@@ -202,23 +202,6 @@ class _HttpRouter(_Router):
     self._dry_run = dry_run
     self._sleep_fn = _sleep_fn
 
-    # TODO(pgervais) pass this as parameters instead.
-    if self._cache.get('service_account_creds'):
-      try:
-        logging.debug('Activating OAuth2 authentication.')
-        self._http = infra_libs.get_authenticated_http(
-          self._cache['service_account_creds'],
-          service_accounts_creds_root=
-              self._cache['service_accounts_creds_root'],
-          scope='https://www.googleapis.com/auth/cclog',
-          http_identifier=HTTP_IDENTIFIER,
-          timeout=timeout
-        )
-      except IOError:
-        logging.error('Unable to read credentials, requests will be '
-                      'unauthenticated. File: %s',
-                      self._cache.get('service_account_creds'))
-
   def _send_to_endpoint(self, events):
     """Send protobuf to endpoint
 

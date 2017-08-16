@@ -167,7 +167,7 @@ fuzzer_test("base_json_reader_fuzzer") {
 }
 
 libpng_seed_corpuses = [
-  "//cc/test/data",
+  "//components/viz/test/data",
   "//third_party/WebKit/LayoutTests/images/png-suite/samples",
   "//third_party/WebKit/LayoutTests/images/resources/pngfuzz",
 ]

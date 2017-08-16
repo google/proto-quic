@@ -72,13 +72,16 @@ static int dtls1_supports_cipher(const SSL_CIPHER *cipher) {
   return cipher->algorithm_enc != SSL_eNULL;
 }
 
-static void dtls1_expect_flight(SSL *ssl) { dtls1_start_timer(ssl); }
-
-static void dtls1_received_flight(SSL *ssl) { dtls1_stop_timer(ssl); }
+static void dtls1_on_handshake_complete(SSL *ssl) {
+  /* If we wrote the last flight, we'll have a timer left over without waiting
+   * for a read. Stop the timer but leave the flight around for post-handshake
+   * transmission logic. */
+  dtls1_stop_timer(ssl);
+}
 
 static int dtls1_set_read_state(SSL *ssl, UniquePtr<SSLAEADContext> aead_ctx) {
   /* Cipher changes are illegal when there are buffered incoming messages. */
-  if (dtls_has_incoming_messages(ssl)) {
+  if (dtls_has_incoming_messages(ssl) || ssl->d1->has_change_cipher_spec) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_BUFFERED_MESSAGES_ON_CIPHER_CHANGE);
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNEXPECTED_MESSAGE);
     return 0;
@@ -110,8 +113,8 @@ static const SSL_PROTOCOL_METHOD kDTLSProtocolMethod = {
     dtls1_new,
     dtls1_free,
     dtls1_get_message,
-    dtls1_get_current_message,
-    dtls1_release_current_message,
+    dtls1_read_message,
+    dtls1_next_message,
     dtls1_read_app_data,
     dtls1_read_change_cipher_spec,
     dtls1_read_close_notify,
@@ -124,8 +127,7 @@ static const SSL_PROTOCOL_METHOD kDTLSProtocolMethod = {
     dtls1_add_change_cipher_spec,
     dtls1_add_alert,
     dtls1_flush_flight,
-    dtls1_expect_flight,
-    dtls1_received_flight,
+    dtls1_on_handshake_complete,
     dtls1_set_read_state,
     dtls1_set_write_state,
 };
@@ -135,6 +137,15 @@ const SSL_METHOD *DTLS_method(void) {
       0,
       &kDTLSProtocolMethod,
       &ssl_crypto_x509_method,
+  };
+  return &kMethod;
+}
+
+const SSL_METHOD *DTLS_with_buffers_method(void) {
+  static const SSL_METHOD kMethod = {
+      0,
+      &kDTLSProtocolMethod,
+      &ssl_noop_x509_method,
   };
   return &kMethod;
 }

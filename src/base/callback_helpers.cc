@@ -4,18 +4,16 @@
 
 #include "base/callback_helpers.h"
 
-#include "base/callback.h"
-
 namespace base {
 
 ScopedClosureRunner::ScopedClosureRunner() {}
 
-ScopedClosureRunner::ScopedClosureRunner(const Closure& closure)
-    : closure_(closure) {}
+ScopedClosureRunner::ScopedClosureRunner(OnceClosure closure)
+    : closure_(std::move(closure)) {}
 
 ScopedClosureRunner::~ScopedClosureRunner() {
   if (!closure_.is_null())
-    closure_.Run();
+    std::move(closure_).Run();
 }
 
 ScopedClosureRunner::ScopedClosureRunner(ScopedClosureRunner&& other)
@@ -28,19 +26,15 @@ ScopedClosureRunner& ScopedClosureRunner::operator=(
 }
 
 void ScopedClosureRunner::RunAndReset() {
-  Closure old_closure = Release();
-  if (!old_closure.is_null())
-    old_closure.Run();
+  std::move(closure_).Run();
 }
 
-void ScopedClosureRunner::ReplaceClosure(const Closure& closure) {
-  closure_ = closure;
+void ScopedClosureRunner::ReplaceClosure(OnceClosure closure) {
+  closure_ = std::move(closure);
 }
 
-Closure ScopedClosureRunner::Release() {
-  Closure result = closure_;
-  closure_.Reset();
-  return result;
+OnceClosure ScopedClosureRunner::Release() {
+  return std::move(closure_);
 }
 
 }  // namespace base

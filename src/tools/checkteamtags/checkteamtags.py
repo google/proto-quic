@@ -75,6 +75,10 @@ def validate_mappings(options, args):
   for dir_name, tags in current_mappings.iteritems():
     team = tags.get('team')
     component = tags.get('component')
+    os_tag = tags.get('os')
+    if os_tag:
+      component = '%s(%s)' % (component, os)
+
     if component:
       new_dir_to_component[dir_name] = component
     if team:
@@ -92,7 +96,7 @@ def validate_mappings(options, args):
     team_details = []
     for team in teams:
       offending_dirs = [d for d in team_to_dir[team]
-                        if new_dir_to_component[d] == component]
+                        if new_dir_to_component.get(d) == component]
       team_details.append('%(team)s is used in %(paths)s' % {
           'team': team,
           'paths': ', '.join(offending_dirs),

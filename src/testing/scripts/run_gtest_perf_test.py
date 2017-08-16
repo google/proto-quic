@@ -64,6 +64,9 @@ def main():
   parser.add_argument(
       '--isolated-script-test-chartjson-output', type=str,
       required=True)
+  parser.add_argument(
+      '--isolated-script-test-perf-output', type=str,
+      required=False)
   parser.add_argument('--xvfb', help='Start xvfb.', action='store_true')
 
   args, rest_args = parser.parse_known_args()

@@ -219,16 +219,14 @@ void LayeredNetworkDelegate::OnCanAccessFileInternal(
 
 bool LayeredNetworkDelegate::OnCanEnablePrivacyMode(
     const GURL& url,
-    const GURL& first_party_for_cookies) const {
-  OnCanEnablePrivacyModeInternal(url, first_party_for_cookies);
-  return nested_network_delegate_->CanEnablePrivacyMode(
-      url, first_party_for_cookies);
+    const GURL& site_for_cookies) const {
+  OnCanEnablePrivacyModeInternal(url, site_for_cookies);
+  return nested_network_delegate_->CanEnablePrivacyMode(url, site_for_cookies);
 }
 
 void LayeredNetworkDelegate::OnCanEnablePrivacyModeInternal(
     const GURL& url,
-    const GURL& first_party_for_cookies) const {
-}
+    const GURL& site_for_cookies) const {}
 
 bool LayeredNetworkDelegate::OnAreExperimentalCookieFeaturesEnabled() const {
   OnAreExperimentalCookieFeaturesEnabledInternal();

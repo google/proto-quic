@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import contextlib
+import hashlib
+import json
 import logging
 import os
 import posixpath
@@ -15,8 +17,10 @@ from devil.android import crash_handler
 from devil.android import device_errors
 from devil.android import device_temp_file
 from devil.android import flag_changer
+from devil.android.sdk import shared_prefs
 from devil.android.tools import system_app
 from devil.utils import reraiser_thread
+from incremental_install import installer
 from pylib import valgrind_tools
 from pylib.android import logdog_logcat_monitor
 from pylib.base import base_test_result
@@ -29,6 +33,7 @@ from pylib.utils import instrumentation_tracing
 from pylib.utils import logdog_helper
 from pylib.utils import shared_preference_utils
 from py_trace_event import trace_event
+from py_trace_event import trace_time
 from py_utils import contextlib_ext
 from py_utils import tempfile_ext
 import tombstones
@@ -64,6 +69,14 @@ EXTRA_SCREENSHOT_FILE = (
 EXTRA_UI_CAPTURE_DIR = (
     'org.chromium.base.test.util.Screenshooter.ScreenshotDir')
 
+EXTRA_TRACE_FILE = ('org.chromium.base.test.BaseJUnit4ClassRunner.TraceFile')
+
+_EXTRA_TEST_LIST = (
+    'org.chromium.base.test.BaseChromiumAndroidJUnitRunner.TestList')
+
+_TEST_LIST_JUNIT4_RUNNERS = [
+    'org.chromium.base.test.BaseChromiumAndroidJUnitRunner']
+
 UI_CAPTURE_DIRS = ['chromium_tests_root', 'UiCapture']
 
 FEATURE_ANNOTATION = 'Feature'
@@ -87,8 +100,8 @@ def _LogTestEndpoints(device, test_name):
         ['log', '-p', 'i', '-t', _TAG, 'END %s' % test_name],
         check_return=True)
 
-# TODO(jbudorick): Make this private once the instrumentation test_runner is
-# deprecated.
+# TODO(jbudorick): Make this private once the instrumentation test_runner
+# is deprecated.
 def DidPackageCrashOnDevice(package_name, device):
   # Dismiss any error dialogs. Limit the number in case we have an error
   # loop or we are failing to dismiss.
@@ -151,31 +164,30 @@ class LocalDeviceInstrumentationTestRun(
         return lambda: crash_handler.RetryOnSystemCrash(
             install_helper_internal, dev)
 
-      def incremental_install_helper(apk, script):
+      def incremental_install_helper(apk, json_path):
         @trace_event.traced("apk_path")
         def incremental_install_helper_internal(d, apk_path=apk.path):
           # pylint: disable=unused-argument
-          local_device_test_run.IncrementalInstall(
-              d, apk, script)
+          installer.Install(d, json_path, apk=apk)
         return lambda: crash_handler.RetryOnSystemCrash(
             incremental_install_helper_internal, dev)
 
       if self._test_instance.apk_under_test:
-        if self._test_instance.apk_under_test_incremental_install_script:
+        if self._test_instance.apk_under_test_incremental_install_json:
           steps.append(incremental_install_helper(
                            self._test_instance.apk_under_test,
                            self._test_instance.
-                               apk_under_test_incremental_install_script))
+                               apk_under_test_incremental_install_json))
         else:
           permissions = self._test_instance.apk_under_test.GetPermissions()
           steps.append(install_helper(self._test_instance.apk_under_test,
                                       permissions))
 
-      if self._test_instance.test_apk_incremental_install_script:
+      if self._test_instance.test_apk_incremental_install_json:
         steps.append(incremental_install_helper(
                          self._test_instance.test_apk,
                          self._test_instance.
-                             test_apk_incremental_install_script))
+                             test_apk_incremental_install_json))
       else:
         permissions = self._test_instance.test_apk.GetPermissions()
         steps.append(install_helper(self._test_instance.test_apk,
@@ -200,8 +212,11 @@ class LocalDeviceInstrumentationTestRun(
 
       @trace_event.traced
       def edit_shared_prefs():
-        shared_preference_utils.ApplySharedPreferenceSettings(
-            dev, self._test_instance.edit_shared_prefs)
+        for setting in self._test_instance.edit_shared_prefs:
+          shared_pref = shared_prefs.SharedPrefs(dev, setting['package'],
+                                                 setting['filename'])
+          shared_preference_utils.ApplySharedPreferenceSetting(
+              shared_pref, setting)
 
       @instrumentation_tracing.no_tracing
       def push_test_data():
@@ -305,7 +320,12 @@ class LocalDeviceInstrumentationTestRun(
 
   #override
   def _GetTests(self):
-    tests = self._test_instance.GetTests()
+    tests = None
+    if self._test_instance.junit4_runner_class in _TEST_LIST_JUNIT4_RUNNERS:
+      raw_tests = self._GetTestsFromRunner()
+      tests = self._test_instance.ProcessRawTests(raw_tests)
+    else:
+      tests = self._test_instance.GetTests()
     tests = self._ApplyExternalSharding(
         tests, self._test_instance.external_shard_index,
         self._test_instance.total_external_shards)
@@ -341,6 +361,11 @@ class LocalDeviceInstrumentationTestRun(
 
     extras[EXTRA_UI_CAPTURE_DIR] = self._ui_capture_dir[device]
 
+    if self._env.trace_output:
+      trace_device_file = device_temp_file.DeviceTempFile(
+          device.adb, suffix='.json', dir=device.GetExternalStoragePath())
+      extras[EXTRA_TRACE_FILE] = trace_device_file.name
+
     if isinstance(test, list):
       if not self._test_instance.driver_apk:
         raise Exception('driver_apk does not exist. '
@@ -370,10 +395,11 @@ class LocalDeviceInstrumentationTestRun(
       if test['is_junit4']:
         target = '%s/%s' % (
             self._test_instance.test_package,
-            self._test_instance.test_runner_junit4)
+            self._test_instance.junit4_runner_class)
       else:
         target = '%s/%s' % (
-            self._test_instance.test_package, self._test_instance.test_runner)
+            self._test_instance.test_package,
+            self._test_instance.junit3_runner_class)
       extras['class'] = test_name
       if 'flags' in test and test['flags']:
         flags_to_add.extend(test['flags'])
@@ -422,6 +448,9 @@ class LocalDeviceInstrumentationTestRun(
 
     logcat_url = logmon.GetLogcatURL()
     duration_ms = time_ms() - start_ms
+
+    if self._env.trace_output:
+      self._SaveTraceData(trace_device_file, device, test['class'])
 
     # TODO(jbudorick): Make instrumentation tests output a JSON so this
     # doesn't have to parse the output.
@@ -550,6 +579,113 @@ class LocalDeviceInstrumentationTestRun(
     if self._env.concurrent_adb:
       post_test_step_thread_group.JoinAll()
     return results, None
+
+  def _GetTestsFromRunner(self):
+    test_apk_path = self._test_instance.test_apk.path
+    pickle_path = '%s-runner.pickle' % test_apk_path
+    try:
+      return instrumentation_test_instance.GetTestsFromPickle(
+          pickle_path, test_apk_path)
+    except instrumentation_test_instance.TestListPickleException as e:
+      logging.info('Could not get tests from pickle: %s', e)
+    logging.info('Getting tests by having %s list them.',
+                 self._test_instance.junit4_runner_class)
+    def list_tests(dev):
+      with device_temp_file.DeviceTempFile(
+          dev.adb, suffix='.json',
+          dir=dev.GetExternalStoragePath()) as dev_test_list_json:
+        junit4_runner_class = self._test_instance.junit4_runner_class
+        test_package = self._test_instance.test_package
+        extras = {}
+        extras['log'] = 'true'
+        extras['package'] = '.'.join(test_package.split('.')[:2])
+        extras[_EXTRA_TEST_LIST] = dev_test_list_json.name
+        target = '%s/%s' % (test_package, junit4_runner_class)
+        test_list_run_output = dev.StartInstrumentation(
+            target, extras=extras)
+        if any(test_list_run_output):
+          logging.error('Unexpected output while listing tests:')
+          for line in test_list_run_output:
+            logging.error('  %s', line)
+        with tempfile_ext.NamedTemporaryDirectory() as host_dir:
+          host_file = os.path.join(host_dir, 'list_tests.json')
+          dev.PullFile(dev_test_list_json.name, host_file)
+          with open(host_file, 'r') as host_file:
+              return json.load(host_file)
+
+    raw_test_lists = self._env.parallel_devices.pMap(list_tests).pGet(None)
+
+    # If all devices failed to list tests, raise an exception.
+    # Check that tl is not None and is not empty.
+    if all(not tl for tl in raw_test_lists):
+      raise device_errors.CommandFailedError(
+          'Failed to list tests on any device')
+
+    # Get the first viable list of raw tests
+    raw_tests = [tl for tl in raw_test_lists if tl][0]
+
+    instrumentation_test_instance.SaveTestsToPickle(
+        pickle_path, test_apk_path, raw_tests)
+    return raw_tests
+
+  def _SaveTraceData(self, trace_device_file, device, test_class):
+    trace_host_file = self._env.trace_output
+
+    if device.FileExists(trace_device_file.name):
+      try:
+        java_trace_json = device.ReadFile(trace_device_file.name)
+      except IOError:
+        raise Exception('error pulling trace file from device')
+      finally:
+        trace_device_file.close()
+
+      process_name = '%s (device %s)' % (test_class, device.serial)
+      process_hash = int(hashlib.md5(process_name).hexdigest()[:6], 16)
+
+      java_trace = json.loads(java_trace_json)
+      java_trace.sort(key=lambda event: event['ts'])
+
+      get_date_command = 'echo $EPOCHREALTIME'
+      device_time = device.RunShellCommand(get_date_command, single_line=True)
+      device_time = float(device_time) * 1e6
+      system_time = trace_time.Now()
+      time_difference = system_time - device_time
+
+      threads_to_add = set()
+      for event in java_trace:
+        # Ensure thread ID and thread name will be linked in the metadata.
+        threads_to_add.add((event['tid'], event['name']))
+
+        event['pid'] = process_hash
+
+        # Adjust time stamp to align with Python trace times (from
+        # trace_time.Now()).
+        event['ts'] += time_difference
+
+      for tid, thread_name in threads_to_add:
+        thread_name_metadata = {'pid': process_hash, 'tid': tid,
+                                'ts': 0, 'ph': 'M', 'cat': '__metadata',
+                                'name': 'thread_name',
+                                'args': {'name': thread_name}}
+        java_trace.append(thread_name_metadata)
+
+      process_name_metadata = {'pid': process_hash, 'tid': 0, 'ts': 0,
+                               'ph': 'M', 'cat': '__metadata',
+                               'name': 'process_name',
+                               'args': {'name': process_name}}
+      java_trace.append(process_name_metadata)
+
+      java_trace_json = json.dumps(java_trace)
+      java_trace_json = java_trace_json.rstrip(' ]')
+
+      with open(trace_host_file, 'r') as host_handle:
+        host_contents = host_handle.readline()
+
+      if host_contents:
+        java_trace_json = ',%s' % java_trace_json.lstrip(' [')
+
+      with open(trace_host_file, 'a') as host_handle:
+        host_handle.write(java_trace_json)
 
   def _SaveScreenshot(self, device, screenshot_host_dir, screenshot_device_file,
                       test_name, results):

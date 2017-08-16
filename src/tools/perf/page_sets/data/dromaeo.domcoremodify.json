@@ -1,7 +1,7 @@
 {
     "archives": {
         "http://dromaeo.com?dom-modify": {
-            "DEFAULT": "dromaeo.domcoremodify_000.wpr"
+            "DEFAULT": "dromaeo.domcoremodify_000.wprgo"
         }
     },
     "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",

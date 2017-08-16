@@ -13,16 +13,15 @@ namespace ntlm {
 
 namespace {
 
-// Helper method to hide all the ugly casting.
+// Helper method to get a raw pointer to the buffer.
 const uint8_t* GetBufferPtr(const NtlmBufferWriter& writer) {
-  return reinterpret_cast<const uint8_t*>(writer.GetBuffer().data());
+  return writer.GetBuffer().data();
 }
 
 // Helper method to get a byte at a specific index in the buffer.
 uint8_t GetByteFromBuffer(const NtlmBufferWriter& writer, size_t index) {
-  base::StringPiece piece(writer.GetBuffer());
-  EXPECT_TRUE(index < piece.length());
-  return static_cast<uint8_t>(piece.data()[index]);
+  EXPECT_TRUE(index < writer.GetLength());
+  return writer.GetBuffer()[index];
 }
 
 }  // namespace

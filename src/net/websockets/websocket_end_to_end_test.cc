@@ -277,12 +277,12 @@ class WebSocketEndToEndTest : public ::testing::Test {
       InitialiseContext();
     }
     url::Origin origin(GURL("http://localhost"));
-    GURL first_party_for_cookies("http://localhost/");
+    GURL site_for_cookies("http://localhost/");
     event_interface_ = new ConnectTestingEventInterface;
     channel_.reset(
         new WebSocketChannel(base::WrapUnique(event_interface_), &context_));
     channel_->SendAddChannelRequest(GURL(socket_url), sub_protocols_, origin,
-                                    first_party_for_cookies, "");
+                                    site_for_cookies, "");
     event_interface_->WaitForResponse();
     return !event_interface_->failed();
   }
@@ -307,7 +307,6 @@ class WebSocketEndToEndTest : public ::testing::Test {
 // to work.
 TEST_F(WebSocketEndToEndTest, DISABLED_ON_ANDROID(BasicSmokeTest)) {
   SpawnedTestServer ws_server(SpawnedTestServer::TYPE_WS,
-                              SpawnedTestServer::kLocalhost,
                               GetWebSocketTestDataDirectory());
   ASSERT_TRUE(ws_server.Start());
   EXPECT_TRUE(ConnectAndWait(ws_server.GetURL(kEchoServer)));
@@ -318,10 +317,8 @@ TEST_F(WebSocketEndToEndTest, DISABLED_ON_ANDROID(BasicSmokeTest)) {
 // TODO(ricea): Enable this when the issue is fixed.
 TEST_F(WebSocketEndToEndTest, DISABLED_HttpsProxyUnauthedFails) {
   SpawnedTestServer proxy_server(SpawnedTestServer::TYPE_BASIC_AUTH_PROXY,
-                                 SpawnedTestServer::kLocalhost,
                                  base::FilePath());
   SpawnedTestServer ws_server(SpawnedTestServer::TYPE_WS,
-                              SpawnedTestServer::kLocalhost,
                               GetWebSocketTestDataDirectory());
   ASSERT_TRUE(proxy_server.StartInBackground());
   ASSERT_TRUE(ws_server.StartInBackground());
@@ -339,10 +336,8 @@ TEST_F(WebSocketEndToEndTest, DISABLED_HttpsProxyUnauthedFails) {
 
 TEST_F(WebSocketEndToEndTest, DISABLED_ON_ANDROID(HttpsWssProxyUnauthedFails)) {
   SpawnedTestServer proxy_server(SpawnedTestServer::TYPE_BASIC_AUTH_PROXY,
-                                 SpawnedTestServer::kLocalhost,
                                  base::FilePath());
   SpawnedTestServer wss_server(SpawnedTestServer::TYPE_WSS,
-                               SpawnedTestServer::kLocalhost,
                                GetWebSocketTestDataDirectory());
   ASSERT_TRUE(proxy_server.StartInBackground());
   ASSERT_TRUE(wss_server.StartInBackground());
@@ -362,10 +357,8 @@ TEST_F(WebSocketEndToEndTest, DISABLED_ON_ANDROID(HttpsWssProxyUnauthedFails)) {
 // system HTTPS Proxy".
 TEST_F(WebSocketEndToEndTest, DISABLED_ON_ANDROID(HttpsProxyUsed)) {
   SpawnedTestServer proxy_server(SpawnedTestServer::TYPE_BASIC_AUTH_PROXY,
-                                 SpawnedTestServer::kLocalhost,
                                  base::FilePath());
   SpawnedTestServer ws_server(SpawnedTestServer::TYPE_WS,
-                              SpawnedTestServer::kLocalhost,
                               GetWebSocketTestDataDirectory());
   ASSERT_TRUE(proxy_server.StartInBackground());
   ASSERT_TRUE(ws_server.StartInBackground());
@@ -410,7 +403,6 @@ TEST_F(WebSocketEndToEndTest, DISABLED_ON_ANDROID(HttpsProxyUsed)) {
 // net::WebSocketBasicHandshakeStream::Upgrade.
 TEST_F(WebSocketEndToEndTest, DISABLED_ON_ANDROID(TruncatedResponse)) {
   SpawnedTestServer ws_server(SpawnedTestServer::TYPE_WS,
-                              SpawnedTestServer::kLocalhost,
                               GetWebSocketTestDataDirectory());
   ASSERT_TRUE(ws_server.Start());
   InitialiseContext();
@@ -500,7 +492,6 @@ TEST_F(WebSocketEndToEndTest, DISABLED_ON_ANDROID(HstsWebSocketToWebSocket)) {
 // headers have trailing LWS".
 TEST_F(WebSocketEndToEndTest, DISABLED_ON_ANDROID(TrailingWhitespace)) {
   SpawnedTestServer ws_server(SpawnedTestServer::TYPE_WS,
-                              SpawnedTestServer::kLocalhost,
                               GetWebSocketTestDataDirectory());
   ASSERT_TRUE(ws_server.Start());
 
@@ -517,7 +508,6 @@ TEST_F(WebSocketEndToEndTest, DISABLED_ON_ANDROID(TrailingWhitespace)) {
 // break and should be removed.
 TEST_F(WebSocketEndToEndTest, DISABLED_ON_ANDROID(HeaderContinuations)) {
   SpawnedTestServer ws_server(SpawnedTestServer::TYPE_WS,
-                              SpawnedTestServer::kLocalhost,
                               GetWebSocketTestDataDirectory());
   ASSERT_TRUE(ws_server.Start());
 

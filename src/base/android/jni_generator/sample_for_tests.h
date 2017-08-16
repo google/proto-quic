@@ -19,8 +19,9 @@ namespace android {
 // - ensure sample_for_tests_jni.h compiles and the functions declared in it
 // as expected.
 //
-// Methods are called directly from Java (except RegisterJNI). More
-// documentation in SampleForTests.java
+// Methods are called directly from Java. More documentation in
+// SampleForTests.java. See BUILD.gn for the build rules necessary for JNI
+// to be used in an APK.
 //
 // For C++ to access Java methods:
 // - GN Build must be configured to generate bindings:
@@ -56,38 +57,25 @@ namespace android {
 //      ]
 //    }
 //  }
+// The build rules above are generally that that's needed when adding new
+// JNI methods/files. For a full GN example, see
+// base/android/jni_generator/BUILD.gn
 //
 // For C++ methods to be exposed to Java:
-// - The generated RegisterNativesImpl method must be called, this is typically
-//   done by having a static RegisterJNI method in the C++ class.
-// - The RegisterJNI method is added to a module's collection of register
-//   methods, such as: example_jni_registrar.h/cc files which call
-//   base::android::RegisterNativeMethods.
-//   An example_jni_registstrar.cc:
-//
-//     namespace {
-//     const base::android::RegistrationMethod kRegisteredMethods[] = {
-//         // Initial string is for debugging only.
-//         { "ExampleName", base::ExampleNameAndroid::RegisterJNI },
-//         { "ExampleName2", base::ExampleName2Android::RegisterJNI },
-//     };
-//     }  // namespace
-//
-//     bool RegisterModuleNameJni(JNIEnv* env) {
-//       return RegisterNativeMethods(env, kRegisteredMethods,
-//                                    arraysize(kRegisteredMethods));
-//     }
-//
-//  - Each module's RegisterModuleNameJni must be called by a larger module,
-//    or application during startup.
+// - The Java class must be part of an android_apk target that depends on
+//   a generate_jni_registration target. This generate_jni_registration target
+//   automatically generates all necessary registration functions. The
+//   generated header file exposes two functions that should be called when a
+//   library is first loaded:
+//     1) RegisterMainDexNatives()
+//       - Registers all methods that are used outside the browser process
+//     2) RegisterNonMainDexNatives()
+//       - Registers all methods used in the browser process
 //
 class CPPClass {
  public:
   CPPClass();
   ~CPPClass();
-
-  // Register C++ methods exposed to Java using JNI.
-  static bool RegisterJNI(JNIEnv* env);
 
   // Java @CalledByNative methods implicitly available to C++ via the _jni.h
   // file included in the .cc file.

@@ -48,6 +48,10 @@ class QUIC_EXPORT_PRIVATE QuicDataWriter {
   bool WriteUInt32(uint32_t value);
   bool WriteUInt64(uint64_t value);
 
+  // Writes |value| to the position |offset| from the start of the data.
+  // |offset| must be less than the current length of the writer.
+  bool WriteUInt8AtOffset(uint8_t value, size_t offset);
+
   // Writes least significant |num_bytes| of a 64-bit unsigned integer in the
   // correct byte order.
   bool WriteBytesToUInt64(size_t num_bytes, uint64_t value);

@@ -46,7 +46,9 @@ class ScopedTaskEnvironment::TestTaskTracker
   TestTaskTracker();
 
   void RegisterOnQueueEmptyClosure(OnceClosure queue_empty_closure);
-  void AssertOnQueueEmptyClosureIsNull();
+
+  // Returns true if closure needed reset.
+  bool ResetOnQueueEmptyClosureIfNotNull();
 
   // Allow running tasks.
   void AllowRunRask();
@@ -154,7 +156,12 @@ void ScopedTaskEnvironment::RunUntilIdle() {
     run_loop.Run();
     MessageLoop::current()->RemoveTaskObserver(&task_observer);
 
-    task_tracker_->AssertOnQueueEmptyClosureIsNull();
+    // If |task_tracker_|'s |queue_empty_closure_| is not null, it means that
+    // external code exited the RunLoop (through deprecated static methods) and
+    // that the MessageLoop and TaskScheduler queues might not be empty. Run the
+    // loop again to make sure that no task remains.
+    if (task_tracker_->ResetOnQueueEmptyClosureIfNotNull())
+      continue;
 
     // If tasks other than the QuitWhenIdle closure ran on the main thread, they
     // may have posted TaskScheduler tasks that didn't run yet. Another
@@ -187,9 +194,15 @@ void ScopedTaskEnvironment::TestTaskTracker::RegisterOnQueueEmptyClosure(
   queue_empty_closure_ = std::move(queue_empty_closure);
 }
 
-void ScopedTaskEnvironment::TestTaskTracker::AssertOnQueueEmptyClosureIsNull() {
+bool ScopedTaskEnvironment::TestTaskTracker::
+    ResetOnQueueEmptyClosureIfNotNull() {
   AutoLock auto_lock(lock_);
-  CHECK(!queue_empty_closure_);
+  if (queue_empty_closure_) {
+    queue_empty_closure_ = Closure();
+    return true;
+  }
+
+  return false;
 }
 
 void ScopedTaskEnvironment::TestTaskTracker::AllowRunRask() {

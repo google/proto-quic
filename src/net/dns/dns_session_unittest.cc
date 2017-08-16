@@ -244,6 +244,13 @@ TEST_F(DnsSessionTest, HistogramTimeoutLong) {
   EXPECT_EQ(timeout.InMilliseconds(), config_.timeout.InMilliseconds());
 }
 
+// Ensures that reported negative RTT values don't cause a crash. Regression
+// test for https://crbug.com/753568.
+TEST_F(DnsSessionTest, NegativeRtt) {
+  Initialize(2);
+  session_->RecordRTT(0, base::TimeDelta::FromMilliseconds(-1));
+}
+
 }  // namespace
 
 } // namespace net

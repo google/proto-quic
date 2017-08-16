@@ -20,7 +20,6 @@
 #include "base/task_scheduler/post_task.h"
 #include "base/task_scheduler/task_scheduler.h"
 #include "base/test/scoped_task_environment.h"
-#include "base/test/scoped_task_scheduler.h"
 #include "base/threading/platform_thread.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

@@ -30,29 +30,13 @@ def main():
                               'found')
   dev = attached_devices[0]
 
-  # Reinstall VrCore
-  # TODO(bsheedy): Change this to work if VrCore is still installed as a system
-  # app
-  dev.Install(os.path.join(host_paths.DIR_SOURCE_ROOT, 'third_party',
-                           'gvr-android-sdk', 'test-apks', 'vr_services',
-                           'vr_services_current.apk'))
-
   # Install the NFC simulator APK
   # TODO(bsheedy): Find a better way to get path to generated APK
   dev.Install(os.path.join(host_paths.DIR_SOURCE_ROOT, 'out', 'Release',
                            'apks', 'VrNfcSimulator.apk'))
 
-  # Setup VrCore
-  # TODO(bsheedy): Support different files to allow tests to be run on both
-  # Daydream ready and non-Daydream-ready devices
-  preferences = shared_preference_utils.ExtractSettingsFromJson(os.path.join(
-      host_paths.DIR_SOURCE_ROOT, 'chrome', 'android',
-      'shared_preference_files', 'test', 'vr_ddview_skipdon_setupcomplete.json'
-  ))
-  shared_preference_utils.ApplySharedPreferenceSettings(dev, preferences)
-
   # Start the benchmarks
-  return benchmark_runner.main(vr_config.Config(['benchmarks']))
+  return benchmark_runner.main(vr_config.Config(['vr_benchmarks']))
 
 
 if __name__ == '__main__':

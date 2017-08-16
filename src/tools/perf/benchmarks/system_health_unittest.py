@@ -32,12 +32,6 @@ class TestSystemHealthBenchmarks(unittest.TestCase):
           b.Name().startswith('system_health.'),
           '%r must have name starting with "system_health." prefix' % b)
 
-  def testShouldTearDownStateAfterEachStoryRunIsTrue(self):
-    for b in _GetAllSystemHealthBenchmarks():
-      self.assertTrue(
-          b.ShouldTearDownStateAfterEachStoryRun(),
-          '%r has ShouldTearDownStateAfterEachStoryRun set to False' % b)
-
   def testSystemHealthStorySetIsUsed(self):
     for b in _GetAllSystemHealthBenchmarks():
       if b is system_health_benchmark.WebviewStartupSystemHealthBenchmark:

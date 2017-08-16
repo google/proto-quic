@@ -410,7 +410,7 @@ class Storage(object):
   def __init__(self, storage_api):
     self._storage_api = storage_api
     self._use_zip = isolated_format.is_namespace_with_compression(
-        storage_api.namespace)
+        storage_api.namespace) and not storage_api.internal_compression
     self._hash_algo = isolated_format.get_hash_algo(storage_api.namespace)
     self._cpu_thread_pool = None
     self._net_thread_pool = None
@@ -1949,7 +1949,7 @@ def add_isolate_server_options(parser):
            'variable ISOLATE_SERVER if set. No need to specify https://, this '
            'is assumed.')
   parser.add_option(
-      '--is-grpc', action='store_true', help='Communicate to Isolate via gRPC')
+      '--grpc-proxy', help='gRPC proxy by which to communicate to Isolate')
   parser.add_option(
       '--namespace', default='default-gzip',
       help='The namespace to use on the Isolate Server, default: %default')
@@ -1966,8 +1966,8 @@ def process_isolate_server_options(
       parser.error('--isolate-server is required.')
     return
 
-  if options.is_grpc:
-    isolate_storage.set_storage_api_class(isolate_storage.IsolateServerGrpc)
+  if options.grpc_proxy:
+    isolate_storage.set_grpc_proxy(options.grpc_proxy)
   else:
     try:
       options.isolate_server = net.fix_url(options.isolate_server)

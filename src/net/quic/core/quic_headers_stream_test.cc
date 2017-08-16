@@ -10,6 +10,7 @@
 #include <tuple>
 #include <utility>
 
+#include "net/quic/core/quic_data_writer.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
@@ -23,6 +24,7 @@
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
 #include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
+#include "net/spdy/core/http2_frame_decoder_adapter.h"
 #include "net/spdy/core/spdy_alt_svc_wire_format.h"
 #include "net/spdy/core/spdy_protocol.h"
 #include "net/spdy/core/spdy_test_utils.h"
@@ -58,7 +60,7 @@ const bool kFins[] = {false, true};
 
 class MockVisitor : public SpdyFramerVisitorInterface {
  public:
-  MOCK_METHOD1(OnError, void(SpdyFramer* framer));
+  MOCK_METHOD1(OnError, void(SpdyFramer::SpdyFramerError error));
   MOCK_METHOD3(OnDataFrameHeader,
                void(SpdyStreamId stream_id, size_t length, bool fin));
   MOCK_METHOD3(OnStreamFrameData,
@@ -188,9 +190,20 @@ class QuicHeadersStreamTest : public QuicTestWithParam<TestParamsTuple> {
     const iovec* iov = data.iov;
     int count = data.iov_count;
     int consumed = 0;
-    for (int i = 0; i < count; ++i) {
-      saved_data_.append(static_cast<char*>(iov[i].iov_base), iov[i].iov_len);
-      consumed += iov[i].iov_len;
+    if (iov != nullptr) {
+      for (int i = 0; i < count; ++i) {
+        saved_data_.append(static_cast<char*>(iov[i].iov_base), iov[i].iov_len);
+        consumed += iov[i].iov_len;
+      }
+    } else {
+      consumed = data.total_length;
+      char* buf = new char[consumed];
+      QuicDataWriter writer(consumed, buf, Perspective::IS_CLIENT,
+                            NETWORK_BYTE_ORDER);
+      headers_stream_->WriteStreamData(headers_stream_->stream_bytes_written(),
+                                       consumed, &writer);
+      saved_data_.append(buf, consumed);
+      delete[] buf;
     }
     return QuicConsumedData(consumed, false);
   }
@@ -198,7 +211,17 @@ class QuicHeadersStreamTest : public QuicTestWithParam<TestParamsTuple> {
   QuicConsumedData SaveIovShort(const QuicIOVector& data) {
     const iovec* iov = data.iov;
     int consumed = 1;
-    saved_data_.append(static_cast<char*>(iov[0].iov_base), consumed);
+    if (iov != nullptr) {
+      saved_data_.append(static_cast<char*>(iov[0].iov_base), consumed);
+    } else {
+      char* buf = new char[consumed];
+      QuicDataWriter writer(consumed, buf, Perspective::IS_CLIENT,
+                            NETWORK_BYTE_ORDER);
+      headers_stream_->WriteStreamData(headers_stream_->stream_bytes_written(),
+                                       consumed, &writer);
+      saved_data_.append(buf, consumed);
+      delete[] buf;
+    }
     return QuicConsumedData(consumed, false);
   }
 
@@ -988,8 +1011,7 @@ TEST_P(QuicHeadersStreamTest, AckSentData) {
   }
   EXPECT_CALL(session_,
               WritevData(headers_stream_, kHeadersStreamId, _, _, NO_FIN, _))
-      .WillRepeatedly(
-          Invoke(&session_, &MockQuicSpdySession::ConsumeAndSaveAllData));
+      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
   InSequence s;
   QuicReferenceCountedPointer<MockAckListener> ack_listener1(
       new MockAckListener());
@@ -1037,8 +1059,59 @@ TEST_P(QuicHeadersStreamTest, AckSentData) {
   headers_stream_->OnStreamFrameAcked(frame1, QuicTime::Delta::Zero());
   headers_stream_->OnStreamFrameAcked(frame2, QuicTime::Delta::Zero());
   // Unsent data is acked.
-  EXPECT_CALL(*connection_, CloseConnection(QUIC_INTERNAL_ERROR, _, _));
+  if (!session_.save_data_before_consumption()) {
+    EXPECT_CALL(*connection_, CloseConnection(QUIC_INTERNAL_ERROR, _, _));
+    EXPECT_QUIC_BUG(
+        headers_stream_->OnStreamFrameAcked(frame3, QuicTime::Delta::Zero()),
+        "Unsent stream data is acked.");
+  }
+}
+
+TEST_P(QuicHeadersStreamTest, FrameContainsMultipleHeaders) {
+  // In this test, a stream frame can contain multiple headers.
+  if (!session_.save_data_before_consumption()) {
+    return;
+  }
+  EXPECT_CALL(session_,
+              WritevData(headers_stream_, kHeadersStreamId, _, _, NO_FIN, _))
+      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
+  InSequence s;
+  QuicReferenceCountedPointer<MockAckListener> ack_listener1(
+      new MockAckListener());
+  QuicReferenceCountedPointer<MockAckListener> ack_listener2(
+      new MockAckListener());
+  QuicReferenceCountedPointer<MockAckListener> ack_listener3(
+      new MockAckListener());
+
+  headers_stream_->WriteOrBufferData("Header5", false, ack_listener1);
+  headers_stream_->WriteOrBufferData("Header5", false, ack_listener1);
+  headers_stream_->WriteOrBufferData("Header7", false, ack_listener2);
+  headers_stream_->WriteOrBufferData("Header9", false, ack_listener3);
+  headers_stream_->WriteOrBufferData("Header7", false, ack_listener2);
+  headers_stream_->WriteOrBufferData("Header9", false, ack_listener3);
+
+  QuicStreamFrame frame1(kHeadersStreamId, false, 0, "Header5Header5Hea");
+  QuicStreamFrame frame2(kHeadersStreamId, false, 17, "der7Header9He");
+  QuicStreamFrame frame3(kHeadersStreamId, false, 30, "ader7Header9");
+
+  // Frame 1 is retransmitted.
+  EXPECT_CALL(*ack_listener1, OnPacketRetransmitted(14));
+  EXPECT_CALL(*ack_listener2, OnPacketRetransmitted(3));
+  headers_stream_->OnStreamFrameRetransmitted(frame1);
+
+  // Frames are acked in order: 2, 3, 1.
+  EXPECT_CALL(*ack_listener2, OnPacketAcked(4, _));
+  EXPECT_CALL(*ack_listener3, OnPacketAcked(7, _));
+  EXPECT_CALL(*ack_listener2, OnPacketAcked(2, _));
+  headers_stream_->OnStreamFrameAcked(frame2, QuicTime::Delta::Zero());
+
+  EXPECT_CALL(*ack_listener2, OnPacketAcked(5, _));
+  EXPECT_CALL(*ack_listener3, OnPacketAcked(7, _));
   headers_stream_->OnStreamFrameAcked(frame3, QuicTime::Delta::Zero());
+
+  EXPECT_CALL(*ack_listener1, OnPacketAcked(14, _));
+  EXPECT_CALL(*ack_listener2, OnPacketAcked(3, _));
+  headers_stream_->OnStreamFrameAcked(frame1, QuicTime::Delta::Zero());
 }
 
 }  // namespace

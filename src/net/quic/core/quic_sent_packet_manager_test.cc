@@ -257,7 +257,7 @@ class QuicSentPacketManagerTest : public QuicTest {
   const QuicAckFrame InitAckFrame(QuicPacketNumber largest_observed) {
     QuicAckFrame frame(MakeAckFrame(largest_observed));
     if (largest_observed > 0) {
-      frame.packets.Add(1, largest_observed + 1);
+      frame.packets.AddRange(1, largest_observed + 1);
     }
     return frame;
   }
@@ -269,10 +269,10 @@ class QuicSentPacketManagerTest : public QuicTest {
                                  QuicPacketNumber range2_end) {
     QuicAckFrame ack_frame;
     if (range1_start < range1_end) {
-      ack_frame.packets.Add(range1_start, range1_end);
+      ack_frame.packets.AddRange(range1_start, range1_end);
     }
     if (range2_start <= range2_end) {
-      ack_frame.packets.Add(range2_start, range2_end + 1);
+      ack_frame.packets.AddRange(range2_start, range2_end + 1);
     }
     ack_frame.largest_observed = range2_end;
     return ack_frame;
@@ -766,8 +766,8 @@ TEST_F(QuicSentPacketManagerTest, CryptoHandshakeTimeout) {
   QuicPacketNumber acked[] = {3, 4, 5, 8, 9};
   ExpectAcksAndLosses(true, acked, arraysize(acked), nullptr, 0);
   QuicAckFrame ack_frame;
-  ack_frame.packets.Add(3, 6);
-  ack_frame.packets.Add(8, 10);
+  ack_frame.packets.AddRange(3, 6);
+  ack_frame.packets.AddRange(8, 10);
   ack_frame.largest_observed = 9;
   manager_.OnIncomingAck(ack_frame, clock_.ApproximateNow());
 

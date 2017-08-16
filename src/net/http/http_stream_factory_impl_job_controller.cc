@@ -518,8 +518,8 @@ void HttpStreamFactoryImpl::JobController::OnNewSpdySessionReady(
     }
   }
 
-  // Notify other requests that have the same SpdySessionKey. |request_| and
-  // |bounded_job_| might be deleted already.
+  // Notify other requests that have the same SpdySessionKey.
+  // |request_| and |bound_job_| might be deleted already.
   if (spdy_session && spdy_session->IsAvailable()) {
     spdy_session_pool->OnNewSpdySessionReady(
         spdy_session, direct, used_ssl_config, used_proxy_info,
@@ -845,13 +845,12 @@ int HttpStreamFactoryImpl::JobController::DoCreateJobs() {
   // Alternative Service can only be set for HTTPS requests while Alternative
   // Proxy is set for HTTP requests.
   if (alternative_service_info_.protocol() != kProtoUnknown) {
-    // Never share connection with other jobs for FTP requests.
+    DCHECK(request_info_.url.SchemeIs(url::kHttpsScheme));
     DVLOG(1) << "Selected alternative service (host: "
              << alternative_service_info_.host_port_pair().host()
              << " port: " << alternative_service_info_.host_port_pair().port()
              << " version: " << quic_version << ")";
 
-    DCHECK(!request_info_.url.SchemeIs(url::kFtpScheme));
     HostPortPair alternative_destination(
         alternative_service_info_.host_port_pair());
     ignore_result(
@@ -928,14 +927,17 @@ void HttpStreamFactoryImpl::JobController::OrphanUnboundJob() {
   if (bound_job_->job_type() == MAIN && alternative_job_) {
     DCHECK(!for_websockets());
     alternative_job_->Orphan();
-  } else if (bound_job_->job_type() == ALTERNATIVE && main_job_) {
+    return;
+  }
+
+  if (bound_job_->job_type() == ALTERNATIVE && main_job_) {
     // Orphan main job.
     // If ResumeMainJob() is not executed, reset |main_job_|. Otherwise,
     // OnOrphanedJobComplete() will clean up |this| when the job completes.
     // Use |main_job_is_blocked_| and |!main_job_wait_time_.is_zero()| instead
     // of |main_job_|->is_waiting() because |main_job_| can be in proxy
     // resolution step.
-    if (main_job_ && (main_job_is_blocked_ || !main_job_wait_time_.is_zero())) {
+    if (main_job_is_blocked_ || !main_job_wait_time_.is_zero()) {
       DCHECK(alternative_job_);
       main_job_.reset();
     } else {
@@ -993,10 +995,10 @@ void HttpStreamFactoryImpl::JobController::OnAlternativeServiceJobFailed(
   alternative_job_net_error_ = net_error;
 
   if (IsJobOrphaned(alternative_job_.get())) {
-    // If |request_| is gone then it must have been successfully served by
+    // If |request_| is gone, then it must have been successfully served by
     // |main_job_|.
     // If |request_| is bound to a different job, then it is being
-    // successfully serverd by the main job.
+    // successfully served by the main job.
     ReportBrokenAlternativeService();
   }
 }
@@ -1007,7 +1009,7 @@ void HttpStreamFactoryImpl::JobController::OnAlternativeProxyJobFailed(
   DCHECK_NE(OK, net_error);
   DCHECK(alternative_job_->alternative_proxy_server().is_valid());
 
-  // Need to mark alt proxy as broken regardless whether the job is bound.
+  // Need to mark alt proxy as broken regardless of whether the job is bound.
   ProxyDelegate* proxy_delegate = session_->context().proxy_delegate;
   if (proxy_delegate) {
     proxy_delegate->OnAlternativeProxyBroken(

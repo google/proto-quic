@@ -8,6 +8,9 @@ found in the LICENSE file.
 This file is used to generate a comprehensive list of Chrome UKM metrics
 along with a detailed description for each metric.
 
+See the following doc for details on how to add entries to this file:
+https://chromium.googlesource.com/chromium/src.git/+/master/services/metrics/ukm_api.md
+
 Events may be marked with the attribute singular="True" to indicate that
 the event will only occur once per source, and multiple entries will just
 be describing additional metrics about the same event.
@@ -614,6 +617,11 @@ be describing additional metrics about the same event.
       Size of process' working set.
     </summary>
   </metric>
+  <metric name="Total2.PrivateMemoryFootprint">
+    <summary>
+      Measure of total memory consumed by all processes.
+    </summary>
+  </metric>
   <metric name="V8">
     <summary>
       Measure of memory consumed by V8.
@@ -1046,8 +1054,36 @@ be describing additional metrics about the same event.
   <metric name="IgnoreCount"/>
   <metric name="RankerResponse"/>
   <metric name="RankerVersion"/>
-  <metric name="SourceLanguage"/>
-  <metric name="TargetLanguage"/>
+  <metric name="SourceLanguage" semantic_type="ST_DEMOGRAPHIC_INFO"/>
+  <metric name="TargetLanguage" semantic_type="ST_DEMOGRAPHIC_INFO"/>
+</event>
+
+<event name="CPUUsageMeasurement">
+  <owner>matthalp@google.com</owner>
+  <owner>oysteine@chromium.org</owner>
+  <summary>
+    A CPU usage measurement that corresponds to a tick in a CPU usage
+    time-series The tick interval is set as a FieldTrial parameter, which can be
+    obtained by cross referencing the UKM entry with the FieldTrial it was
+    launched with. There is also some metadata stored to determine how faitful
+    the CPU usage measurement is (e.g. NumberOfCoresidentTabs).
+  </summary>
+  <metric name="CPUUsage">
+    <summary>
+      CPU usage measurement.
+    </summary>
+  </metric>
+  <metric name="NumberOfCoresidentTabs">
+    <summary>
+      Number of co-resident tabs in all of the render processes a tab is
+      associated with when the CPU usage measurement is taken.
+    </summary>
+  </metric>
+  <metric name="Tick">
+    <summary>
+      Tick CPU Usage measurement was taken at.
+    </summary>
+  </metric>
 </event>
 
 </ukm-configuration>

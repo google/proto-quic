@@ -225,8 +225,7 @@ TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdate) {
       reinterpret_cast<char*>(scfg), arraysize(scfg));
 
   QuicStreamSequencer* sequencer = QuicStreamPeer::sequencer(stream());
-  EXPECT_NE(FLAGS_quic_reloadable_flag_quic_release_crypto_stream_buffer,
-            QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
+  EXPECT_FALSE(QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
 }
 
 TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdateWithCert) {

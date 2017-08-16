@@ -47,8 +47,7 @@ std::string GetHostname(BaseTestServer::Type type,
     }
   }
 
-  // Use the 127.0.0.1 as default.
-  return BaseTestServer::kLocalhost;
+  return "127.0.0.1";
 }
 
 std::string GetClientCertType(SSLClientCertType type) {
@@ -166,45 +165,9 @@ std::string OCSPDateToString(
 
 }  // namespace
 
-BaseTestServer::SSLOptions::SSLOptions()
-    : server_certificate(CERT_OK),
-      ocsp_status(OCSP_OK),
-      ocsp_date(OCSP_DATE_VALID),
-      ocsp_produced(OCSP_PRODUCED_VALID),
-      cert_serial(0),
-      request_client_certificate(false),
-      key_exchanges(SSLOptions::KEY_EXCHANGE_ANY),
-      bulk_ciphers(SSLOptions::BULK_CIPHER_ANY),
-      record_resume(false),
-      tls_intolerant(TLS_INTOLERANT_NONE),
-      tls_intolerance_type(TLS_INTOLERANCE_ALERT),
-      fallback_scsv_enabled(false),
-      staple_ocsp_response(false),
-      ocsp_server_unavailable(false),
-      alert_after_handshake(false),
-      disable_channel_id(false),
-      disable_extended_master_secret(false) {}
-
-BaseTestServer::SSLOptions::SSLOptions(
-    BaseTestServer::SSLOptions::ServerCertificate cert)
-    : server_certificate(cert),
-      ocsp_status(OCSP_OK),
-      ocsp_date(OCSP_DATE_VALID),
-      ocsp_produced(OCSP_PRODUCED_VALID),
-      cert_serial(0),
-      request_client_certificate(false),
-      key_exchanges(SSLOptions::KEY_EXCHANGE_ANY),
-      bulk_ciphers(SSLOptions::BULK_CIPHER_ANY),
-      record_resume(false),
-      tls_intolerant(TLS_INTOLERANT_NONE),
-      tls_intolerance_type(TLS_INTOLERANCE_ALERT),
-      fallback_scsv_enabled(false),
-      staple_ocsp_response(false),
-      ocsp_server_unavailable(false),
-      alert_after_handshake(false),
-      disable_channel_id(false),
-      disable_extended_master_secret(false) {}
-
+BaseTestServer::SSLOptions::SSLOptions() {}
+BaseTestServer::SSLOptions::SSLOptions(ServerCertificate cert)
+    : server_certificate(cert) {}
 BaseTestServer::SSLOptions::SSLOptions(const SSLOptions& other) = default;
 
 BaseTestServer::SSLOptions::~SSLOptions() {}
@@ -285,24 +248,12 @@ std::string BaseTestServer::SSLOptions::GetOCSPProducedArgument() const {
   }
 }
 
-const char BaseTestServer::kLocalhost[] = "127.0.0.1";
-
-BaseTestServer::BaseTestServer(Type type, const std::string& host)
-    : type_(type),
-      started_(false),
-      log_to_console_(false),
-      ws_basic_auth_(false),
-      no_anonymous_ftp_user_(false) {
-  Init(host);
+BaseTestServer::BaseTestServer(Type type) : type_(type) {
+  Init(GetHostname(type, ssl_options_));
 }
 
 BaseTestServer::BaseTestServer(Type type, const SSLOptions& ssl_options)
-    : ssl_options_(ssl_options),
-      type_(type),
-      started_(false),
-      log_to_console_(false),
-      ws_basic_auth_(false),
-      no_anonymous_ftp_user_(false) {
+    : ssl_options_(ssl_options), type_(type) {
   DCHECK(UsingSSL(type));
   Init(GetHostname(type, ssl_options));
 }

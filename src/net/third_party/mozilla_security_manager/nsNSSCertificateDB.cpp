@@ -86,15 +86,12 @@ bool ImportCACerts(PK11SlotInfo* slot,
     // Mozilla uses CERT_AddTempCertToPerm, however it is privately exported,
     // and it doesn't take the slot as an argument either.  Instead, we use
     // PK11_ImportCert and CERT_ChangeCertTrust.
-    SECStatus srv = PK11_ImportCert(
-        slot,
-        root->os_cert_handle(),
-        CK_INVALID_HANDLE,
-        net::x509_util::GetUniqueNicknameForSlot(
-            root->GetDefaultNickname(net::CA_CERT),
-            &root->os_cert_handle()->derSubject,
-            slot).c_str(),
-        PR_FALSE /* includeTrust (unused) */);
+    SECStatus srv =
+        PK11_ImportCert(slot, root->os_cert_handle(), CK_INVALID_HANDLE,
+                        net::x509_util::GetDefaultUniqueNickname(
+                            root->os_cert_handle(), net::CA_CERT, slot)
+                            .c_str(),
+                        PR_FALSE /* includeTrust (unused) */);
     if (srv != SECSuccess) {
       LOG(ERROR) << "PK11_ImportCert failed with error " << PORT_GetError();
       return false;
@@ -146,15 +143,12 @@ bool ImportCACerts(PK11SlotInfo* slot,
 
     // Mozilla uses CERT_ImportCerts, which doesn't take a slot arg.  We use
     // PK11_ImportCert instead.
-    SECStatus srv = PK11_ImportCert(
-        slot,
-        cert->os_cert_handle(),
-        CK_INVALID_HANDLE,
-        net::x509_util::GetUniqueNicknameForSlot(
-            cert->GetDefaultNickname(net::CA_CERT),
-            &cert->os_cert_handle()->derSubject,
-            slot).c_str(),
-        PR_FALSE /* includeTrust (unused) */);
+    SECStatus srv =
+        PK11_ImportCert(slot, cert->os_cert_handle(), CK_INVALID_HANDLE,
+                        net::x509_util::GetDefaultUniqueNickname(
+                            cert->os_cert_handle(), net::CA_CERT, slot)
+                            .c_str(),
+                        PR_FALSE /* includeTrust (unused) */);
     if (srv != SECSuccess) {
       LOG(ERROR) << "PK11_ImportCert failed with error " << PORT_GetError();
       // TODO(mattm): Should we bail or continue on error here?  Mozilla doesn't
@@ -182,15 +176,12 @@ bool ImportServerCert(
 
     // Mozilla uses CERT_ImportCerts, which doesn't take a slot arg.  We use
     // PK11_ImportCert instead.
-    SECStatus srv = PK11_ImportCert(
-        slot,
-        cert->os_cert_handle(),
-        CK_INVALID_HANDLE,
-        net::x509_util::GetUniqueNicknameForSlot(
-            cert->GetDefaultNickname(net::SERVER_CERT),
-            &cert->os_cert_handle()->derSubject,
-            slot).c_str(),
-        PR_FALSE /* includeTrust (unused) */);
+    SECStatus srv =
+        PK11_ImportCert(slot, cert->os_cert_handle(), CK_INVALID_HANDLE,
+                        net::x509_util::GetDefaultUniqueNickname(
+                            cert->os_cert_handle(), net::SERVER_CERT, slot)
+                            .c_str(),
+                        PR_FALSE /* includeTrust (unused) */);
     if (srv != SECSuccess) {
       LOG(ERROR) << "PK11_ImportCert failed with error " << PORT_GetError();
       not_imported->push_back(net::NSSCertDatabase::ImportCertFailure(
@@ -224,9 +215,8 @@ int ImportUserCert(const net::CertificateList& certificates) {
   // PK11_ImportCert instead.
   SECStatus srv =
       PK11_ImportCert(slot.get(), cert->os_cert_handle(), key,
-                      net::x509_util::GetUniqueNicknameForSlot(
-                          cert->GetDefaultNickname(net::USER_CERT),
-                          &cert->os_cert_handle()->derSubject, slot.get())
+                      net::x509_util::GetDefaultUniqueNickname(
+                          cert->os_cert_handle(), net::USER_CERT, slot.get())
                           .c_str(),
                       PR_FALSE /* includeTrust (unused) */);
 

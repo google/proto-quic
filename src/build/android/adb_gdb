@@ -824,14 +824,6 @@ if [ -z "$NO_PULL_LIBS" -a -z "$PULL_LIBS" ]; then
   fi
 fi
 
-# Extract the system libraries from the device if necessary.
-if [ "$PULL_LIBS" -a -z "$NO_PULL_LIBS" ]; then
-  echo "Extracting system libraries into: $PULL_LIBS_DIR"
-fi
-
-mkdir -p "$PULL_LIBS_DIR"
-fail_panic "Can't create --libs-dir directory: $PULL_LIBS_DIR"
-
 # If requested, work for M-x gdb.  The gdb indirections make it
 # difficult to pass --annotate=3 to the gdb binary itself.
 GDB_ARGS=
@@ -905,6 +897,9 @@ else
 fi
 log "Command prefix: '$COMMAND_PREFIX'"
 log "Command suffix: '$COMMAND_SUFFIX'"
+
+mkdir -p "$PULL_LIBS_DIR"
+fail_panic "Can't create --libs-dir directory: $PULL_LIBS_DIR"
 
 # Pull device's system libraries that are mapped by our process.
 # Pulling all system libraries is too long, so determine which ones

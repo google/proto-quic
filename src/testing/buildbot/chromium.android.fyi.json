@@ -24,16 +24,18 @@
   "Android Tests with Tracing": {
     "instrumentation_tests": [
       {
+        "args": [
+          "-f",
+          "ContextualSearchTapEventTest#*"
+        ],
         "test": "chrome_public_test_apk",
         "trace_output": true
       },
       {
-        "test": "chrome_sync_shell_test_apk",
-        "trace_output": true
+        "test": "chrome_sync_shell_test_apk"
       },
       {
-        "test": "content_shell_test_apk",
-        "trace_output": true
+        "test": "content_shell_test_apk"
       }
     ]
   },

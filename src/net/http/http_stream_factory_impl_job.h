@@ -495,8 +495,6 @@ class HttpStreamFactoryImpl::Job {
 
   const SpdySessionKey spdy_session_key_;
 
-  base::TimeTicks job_stream_ready_start_time_;
-
   // Type of stream that is requested.
   HttpStreamRequest::StreamType stream_type_;
 

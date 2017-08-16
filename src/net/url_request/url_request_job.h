@@ -21,6 +21,7 @@
 #include "net/base/request_priority.h"
 #include "net/cookies/canonical_cookie.h"
 #include "net/filter/source_stream.h"
+#include "net/http/http_raw_request_headers.h"
 #include "net/socket/connection_attempts.h"
 #include "net/url_request/redirect_info.h"
 #include "net/url_request/url_request.h"
@@ -228,6 +229,12 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
   // the course of executing the URLRequestJob. Should be called after the job
   // has failed or the response headers have been received.
   virtual void GetConnectionAttempts(ConnectionAttempts* out) const;
+
+  // Sets a callback that will be invoked each time the request is about to
+  // be actually sent and will receive actual request headers that are about
+  // to hit the wire, including SPDY/QUIC internal headers and any additional
+  // request headers set via BeforeSendHeaders hooks.
+  virtual void SetRequestHeadersCallback(RequestHeadersCallback callback);
 
   // Given |policy|, |referrer|, and |destination|, returns the
   // referrer URL mandated by |request|'s referrer policy.
@@ -442,6 +449,9 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
   // Non-null if ReadRawData() returned ERR_IO_PENDING, and the read has not
   // completed.
   CompletionCallback read_raw_callback_;
+
+  // See SetRequestHeadersCallback() above for details.
+  RequestHeadersCallback request_headers_callback_;
 
   base::WeakPtrFactory<URLRequestJob> weak_factory_;
 

@@ -485,4 +485,38 @@ TEST_F(URLRequestQuicTest, TestTwoRequests) {
   EXPECT_EQ(kHelloBodyValue, delegate2.data_received());
 }
 
+TEST_F(URLRequestQuicTest, RequestHeadersCallback) {
+  Init();
+  HttpRawRequestHeaders raw_headers;
+  TestDelegate delegate;
+  TestURLRequestContext context;
+  HttpRequestHeaders extra_headers;
+  extra_headers.SetHeader("X-Foo", "bar");
+
+  std::string url =
+      base::StringPrintf("https://%s%s", kTestServerHost, kHelloPath);
+  std::unique_ptr<URLRequest> request =
+      CreateRequest(GURL(url), DEFAULT_PRIORITY, &delegate);
+
+  request->SetExtraRequestHeaders(extra_headers);
+  request->SetRequestHeadersCallback(base::Bind(
+      &HttpRawRequestHeaders::Assign, base::Unretained(&raw_headers)));
+  request->Start();
+  ASSERT_TRUE(request->is_pending());
+  do {
+    base::RunLoop().RunUntilIdle();
+  } while (!delegate.response_started_count());
+  EXPECT_FALSE(raw_headers.headers().empty());
+  std::string value;
+  EXPECT_TRUE(raw_headers.FindHeaderForTest("x-foo", &value));
+  EXPECT_EQ("bar", value);
+  EXPECT_TRUE(raw_headers.FindHeaderForTest("accept-encoding", &value));
+  EXPECT_EQ("gzip, deflate", value);
+  EXPECT_TRUE(raw_headers.FindHeaderForTest(":path", &value));
+  EXPECT_EQ("/hello.txt", value);
+  EXPECT_TRUE(raw_headers.FindHeaderForTest(":authority", &value));
+  EXPECT_EQ("test.example.com", value);
+  EXPECT_TRUE(raw_headers.request_line().empty());
+}
+
 }  // namespace net

@@ -80,6 +80,7 @@
 #include "base/strings/string_piece.h"
 #include "base/synchronization/lock.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 
 namespace base {
 
@@ -564,12 +565,14 @@ class BASE_EXPORT FieldTrialList {
       const char* disable_features_switch,
       FeatureList* feature_list);
 
-#if defined(OS_WIN) || defined(OS_FUCHSIA)
+#if defined(OS_WIN)
   // On Windows, we need to explicitly pass down any handles to be inherited.
   // This function adds the shared memory handle to field trial state to the
   // list of handles to be inherited.
   static void AppendFieldTrialHandleIfNeeded(
       base::HandlesToInheritVector* handles);
+#elif defined(OS_FUCHSIA)
+  // TODO(fuchsia): Implement shared-memory configuration (crbug.com/752368).
 #elif defined(OS_POSIX) && !defined(OS_NACL)
   // On POSIX, we also need to explicitly pass down this file descriptor that
   // should be shared with the child process. Returns an invalid handle if it

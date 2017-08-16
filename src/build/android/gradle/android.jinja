@@ -50,12 +50,19 @@ android {
     compileSdkVersion "{{ compile_sdk_version }}"
     buildToolsVersion "{{ build_tools_version }}"
     publishNonDefault true
+{% if not canary %}
     // Multiple targets use the package name "org.dummy"
     enforceUniquePackageName false
+{% endif %}
 
     compileOptions {
+{% if canary %}
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+{% else %}
         sourceCompatibility JavaVersion.VERSION_1_7
         targetCompatibility JavaVersion.VERSION_1_7
+{% endif %}
     }
 
     sourceSets {

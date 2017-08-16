@@ -9,201 +9,70 @@ dependencies of a test binary, and then uses either QEMU from the Fuchsia SDK
 to run, or starts the bootserver to allow running on a hardware device."""
 
 import argparse
-import multiprocessing
 import os
-import re
-import signal
-import subprocess
+import socket
 import sys
 import tempfile
+import time
 
+from runner_common import RunFuchsia, BuildBootfs, ReadRuntimeDeps
 
 DIR_SOURCE_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
-SDK_ROOT = os.path.join(DIR_SOURCE_ROOT, 'third_party', 'fuchsia-sdk')
-SYMBOLIZATION_TIMEOUT_SECS = 10
+sys.path.append(os.path.join(DIR_SOURCE_ROOT, 'build', 'util', 'lib', 'common'))
+import chrome_test_server_spawner
 
+TEST_SERVER_PORT = 5000
 
-def RunAndCheck(dry_run, args):
-  if dry_run:
-    print 'Run:', args
-  else:
-    subprocess.check_call(args)
-
-
-def DumpFile(dry_run, name, description):
-  """Prints out the contents of |name| if |dry_run|."""
-  if not dry_run:
-    return
-  print
-  print 'Contents of %s (for %s)' % (name, description)
-  print '-' * 80
-  with open(name) as f:
-    sys.stdout.write(f.read())
-  print '-' * 80
-
-
-def MakeTargetImageName(common_prefix, output_directory, location):
-  """Generates the relative path name to be used in the file system image.
-  common_prefix: a prefix of both output_directory and location that
-                 be removed.
-  output_directory: an optional prefix on location that will also be removed.
-  location: the file path to relativize.
-
-  .so files will be stored into the lib subdirectory to be able to be found by
-  default by the loader.
-
-  Examples:
-
-  >>> MakeTargetImageName(common_prefix='/work/cr/src/',
-  ...                     output_directory='/work/cr/src/out/fuch',
-  ...                     location='/work/cr/src/base/test/data/xyz.json')
-  'base/test/data/xyz.json'
-
-  >>> MakeTargetImageName(common_prefix='/work/cr/src/',
-  ...                     output_directory='/work/cr/src/out/fuch',
-  ...                     location='/work/cr/src/out/fuch/icudtl.dat')
-  'icudtl.dat'
-
-  >>> MakeTargetImageName(common_prefix='/work/cr/src/',
-  ...                     output_directory='/work/cr/src/out/fuch',
-  ...                     location='/work/cr/src/out/fuch/libbase.so')
-  'lib/libbase.so'
-  """
-  assert output_directory.startswith(common_prefix)
-  output_dir_no_common_prefix = output_directory[len(common_prefix):]
-  assert location.startswith(common_prefix)
-  loc = location[len(common_prefix):]
-  if loc.startswith(output_dir_no_common_prefix):
-    loc = loc[len(output_dir_no_common_prefix)+1:]
-  # TODO(fuchsia): The requirements for finding/loading .so are in flux, so this
-  # ought to be reconsidered at some point. See https://crbug.com/732897.
-  if location.endswith('.so'):
-    loc = 'lib/' + loc
-  return loc
-
-
-def AddToManifest(manifest_file, target_name, source, mapper):
-  """Appends |source| to the given |manifest_file| (a file object) in a format
-  suitable for consumption by mkbootfs.
-
-  If |source| is a file it's directly added. If |source| is a directory, its
-  contents are recursively added.
-
-  |source| must exist on disk at the time this function is called.
-  """
-  if os.path.isdir(source):
-    files = [os.path.join(dp, f) for dp, dn, fn in os.walk(source) for f in fn]
-    for f in files:
-      # We pass None as the mapper because this should never recurse a 2nd time.
-      AddToManifest(manifest_file, mapper(f), f, None)
-  elif os.path.exists(source):
-    manifest_file.write('%s=%s\n' % (target_name, source))
-  else:
-    raise Exception('%s does not exist' % source)
-
-
-def BuildBootfs(output_directory, runtime_deps_path, test_name, child_args,
-                test_launcher_filter_file, device, dry_run):
-  with open(runtime_deps_path) as f:
-    lines = f.readlines()
-
-  locations_to_add = [os.path.abspath(os.path.join(output_directory, x.strip()))
-                      for x in lines]
-  locations_to_add.append(
-      os.path.abspath(os.path.join(output_directory, test_name)))
-
-  common_prefix = os.path.commonprefix(locations_to_add)
-  target_source_pairs = zip(
-      [MakeTargetImageName(common_prefix, output_directory, loc)
-       for loc in locations_to_add],
-      locations_to_add)
-
-  if test_launcher_filter_file:
-    test_launcher_filter_file = os.path.normpath(
-            os.path.join(output_directory, test_launcher_filter_file))
-    filter_file_on_device = MakeTargetImageName(
-          common_prefix, output_directory, test_launcher_filter_file)
-    child_args.append('--test-launcher-filter-file=/system/' +
-                       filter_file_on_device)
-    target_source_pairs.append(
-        [filter_file_on_device, test_launcher_filter_file])
-
-  # Generate a little script that runs the test binaries and then shuts down
-  # QEMU.
-  autorun_file = tempfile.NamedTemporaryFile()
-  autorun_file.write('#!/bin/sh\n')
-  autorun_file.write('/system/' + os.path.basename(test_name))
-
-  for arg in child_args:
-    autorun_file.write(' "%s"' % arg);
-
-  autorun_file.write('\n')
-  if not device:
-    # If shutdown of QEMU happens too soon after the test completion, log
-    # statements from the end of the run will be lost, so sleep for a bit before
-    # shutting down. When running on device don't power off so the output and
-    # system can be inspected.
-    autorun_file.write('msleep 3000\n')
-    autorun_file.write('dm poweroff\n')
-  autorun_file.flush()
-  os.chmod(autorun_file.name, 0750)
-  DumpFile(dry_run, autorun_file.name, 'autorun')
-  target_source_pairs.append(('autorun', autorun_file.name))
-
-  manifest_file = tempfile.NamedTemporaryFile()
-  bootfs_name = runtime_deps_path + '.bootfs'
-
-  for target, source in target_source_pairs:
-    AddToManifest(manifest_file.file, target, source,
-                  lambda x: MakeTargetImageName(
-                                common_prefix, output_directory, x))
-
-  mkbootfs_path = os.path.join(SDK_ROOT, 'tools', 'mkbootfs')
-
-  manifest_file.flush()
-  DumpFile(dry_run, manifest_file.name, 'manifest')
-  RunAndCheck(dry_run,
-              [mkbootfs_path, '-o', bootfs_name,
-               '--target=boot', os.path.join(SDK_ROOT, 'bootdata.bin'),
-               '--target=system', manifest_file.name,
-              ])
-  return bootfs_name
-
-
-def SymbolizeEntry(entry):
-  addr2line_output = subprocess.check_output(
-      ['addr2line', '-Cipf', '--exe=' + entry[1], entry[2]])
-  prefix = '#%s: ' % entry[0]
-  # addr2line outputs a second line for inlining information, offset
-  # that to align it properly after the frame index.
-  addr2line_filtered = addr2line_output.strip().replace(
-      '(inlined', ' ' * len(prefix) + '(inlined')
-  return '#%s: %s' % (prefix, addr2line_filtered)
-
-
-def ParallelSymbolizeBacktrace(backtrace):
-  # Disable handling of SIGINT during sub-process creation, to prevent
-  # sub-processes from consuming Ctrl-C signals, rather than the parent
-  # process doing so.
-  saved_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-  p = multiprocessing.Pool(multiprocessing.cpu_count())
-
-  # Restore the signal handler for the parent process.
-  signal.signal(signal.SIGINT, saved_sigint_handler)
-
-  symbolized = []
+def IsLocalPortAvailable(port):
+  s = socket.socket()
   try:
-    result = p.map_async(SymbolizeEntry, backtrace)
-    symbolized = result.get(SYMBOLIZATION_TIMEOUT_SECS)
-    if not symbolized:
-      return []
-  except multiprocessing.TimeoutError:
-    return ['(timeout error occurred during symbolization)']
-  except KeyboardInterrupt:  # SIGINT
-    p.terminate()
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(('127.0.0.1', port))
+    return True
+  except socket.error:
+    return False
+  finally:
+    s.close()
 
-  return symbolized
+
+def WaitUntil(predicate, max_attempts=5):
+  """Blocks until the provided predicate (function) is true.
+
+  Returns:
+    Whether the provided predicate was satisfied once (before the timeout).
+  """
+  sleep_time_sec = 0.025
+  for _ in xrange(1, max_attempts):
+    if predicate():
+      return True
+    time.sleep(sleep_time_sec)
+    sleep_time_sec = min(1, sleep_time_sec * 2)  # Don't wait more than 1 sec.
+  return False
+
+
+# Implementation of chrome_test_server_spawner.PortForwarder that doesn't
+# forward ports. Instead the tests are expected to connect to the host IP
+# address inside the virtual network provided by qemu. qemu will forward
+# these connections to the corresponding localhost ports.
+class PortForwarderNoop(chrome_test_server_spawner.PortForwarder):
+  def Map(self, port_pairs):
+    pass
+
+  def GetDevicePortForHostPort(self, host_port):
+    return host_port
+
+  def WaitHostPortAvailable(self, port):
+    return WaitUntil(lambda: IsLocalPortAvailable(port))
+
+  def WaitPortNotAvailable(self, port):
+    return WaitUntil(lambda: not IsLocalPortAvailable(port))
+
+  def WaitDevicePortReady(self, port):
+    return self.WaitPortNotAvailable(port)
+
+  def Unmap(self, device_port):
+    pass
 
 
 def main():
@@ -217,9 +86,12 @@ def main():
   parser.add_argument('--runtime-deps-path',
                       type=os.path.realpath,
                       help='Runtime data dependency file from GN.')
-  parser.add_argument('--test-name',
+  parser.add_argument('--exe-name',
                       type=os.path.realpath,
                       help='Name of the the test')
+  parser.add_argument('--enable-test-server', action='store_true',
+                      default=False,
+                      help='Enable testserver spawner.')
   parser.add_argument('--gtest_filter',
                       help='GTest filter to use in place of any default.')
   parser.add_argument('--gtest_repeat',
@@ -271,90 +143,34 @@ def main():
   if args.child_args:
     child_args.extend(args.child_args)
 
-  bootfs = BuildBootfs(args.output_directory, args.runtime_deps_path,
-                       args.test_name, child_args,
-                       args.test_launcher_filter_file, args.device,
-                       args.dry_run)
+  runtime_deps = ReadRuntimeDeps(args.runtime_deps_path, args.output_directory)
 
-  kernel_path = os.path.join(SDK_ROOT, 'kernel', 'magenta.bin')
+  # Start test server spawner for tests that need it.
+  if args.enable_test_server:
+    spawning_server = chrome_test_server_spawner.SpawningServer(
+          TEST_SERVER_PORT, PortForwarderNoop())
+    spawning_server.Start()
 
-  if args.device:
-    # TODO(fuchsia): This doesn't capture stdout as there's no way to do so
-    # currently. See https://crbug.com/749242.
-    bootserver_path = os.path.join(SDK_ROOT, 'tools', 'bootserver')
-    bootserver_command = [bootserver_path, '-1', kernel_path, bootfs]
-    RunAndCheck(args.dry_run, bootserver_command)
-  else:
-    qemu_path = os.path.join(SDK_ROOT, 'qemu', 'bin', 'qemu-system-x86_64')
+    # Generate test server config.
+    config_file = tempfile.NamedTemporaryFile()
+    config_file.write(str(TEST_SERVER_PORT) + ':' + str(TEST_SERVER_PORT + 1))
+    config_file.flush()
+    runtime_deps.append(('net-test-server-ports', config_file.name))
 
-    qemu_command = [qemu_path,
-        '-m', '2048',
-        '-nographic',
-        '-net', 'none',
-        '-smp', '4',
-        '-machine', 'q35',
-        '-kernel', kernel_path,
-        '-initrd', bootfs,
+  if args.test_launcher_filter_file:
+    # Bundle the filter file in the runtime deps and compose the command-line
+    # flag which references it.
+    test_launcher_filter_file = os.path.normpath(
+        os.path.join(args.output_directory, args.test_launcher_filter_file))
+    runtime_deps.append(('test_filter_file', test_launcher_filter_file))
+    child_args.append('--test-launcher-filter-file=/system/test_filter_file')
 
-        # Use stdio for the guest OS only; don't attach the QEMU interactive
-        # monitor.
-        '-serial', 'stdio',
-        '-monitor', 'none',
+  bootfs = BuildBootfs(args.output_directory, runtime_deps, args.exe_name,
+                       child_args, args.dry_run, power_off=not args.device)
+  if not bootfs:
+    return 2
 
-        # TERM=dumb tells the guest OS to not emit ANSI commands that trigger
-        # noisy ANSI spew from the user's terminal emulator.
-        '-append', 'TERM=dumb kernel.halt_on_panic=true']
-    if int(os.environ.get('CHROME_HEADLESS', 0)) == 0:
-      qemu_command += ['-enable-kvm', '-cpu', 'host,migratable=no']
-    else:
-      qemu_command += ['-cpu', 'Haswell,+smap,-check']
-
-    if args.dry_run:
-      print 'Run:', qemu_command
-    else:
-      prefix = r'^.*> '
-      bt_with_offset_re = re.compile(prefix +
-          'bt#(\d+): pc 0x[0-9a-f]+ sp (0x[0-9a-f]+) \((\S+),(0x[0-9a-f]+)\)$')
-      bt_end_re = re.compile(prefix + 'bt#(\d+): end')
-
-      # We pass a separate stdin stream to qemu. Sharing stdin across processes
-      # leads to flakiness due to the OS prematurely killing the stream and the
-      # Python script panicking and aborting.
-      # The precise root cause is still nebulous, but this fix works.
-      # See crbug.com/741194 .
-      qemu_popen = subprocess.Popen(
-          qemu_command, stdout=subprocess.PIPE, stdin=open(os.devnull))
-
-      # A buffer of backtrace entries awaiting symbolization, stored as tuples.
-      # Element #0: backtrace frame number (starting at 0).
-      # Element #1: path to executable code corresponding to the current frame.
-      # Element #2: memory offset within the executable.
-      bt_entries = []
-
-      success = False
-      while True:
-        line = qemu_popen.stdout.readline()
-        if not line:
-          break
-        print line,
-        if 'SUCCESS: all tests passed.' in line:
-          success = True
-        if bt_end_re.match(line.strip()):
-          if bt_entries:
-            print '----- start symbolized stack'
-            for processed in ParallelSymbolizeBacktrace(bt_entries):
-              print processed
-            print '----- end symbolized stack'
-          bt_entries = []
-        else:
-          m = bt_with_offset_re.match(line.strip())
-          if m:
-            bt_entries.append((m.group(1), args.test_name, m.group(4)))
-      qemu_popen.wait()
-
-      return 0 if success else 1
-
-  return 0
+  return RunFuchsia(bootfs, args.device, args.dry_run, interactive=False)
 
 
 if __name__ == '__main__':

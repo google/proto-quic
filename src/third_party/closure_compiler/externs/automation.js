@@ -85,7 +85,6 @@ chrome.automation.RoleType = {
   AUDIO: 'audio',
   BANNER: 'banner',
   BLOCKQUOTE: 'blockquote',
-  BUSY_INDICATOR: 'busyIndicator',
   BUTTON: 'button',
   BUTTON_DROP_DOWN: 'buttonDropDown',
   CANVAS: 'canvas',
@@ -125,7 +124,6 @@ chrome.automation.RoleType = {
   IFRAME: 'iframe',
   IFRAME_PRESENTATIONAL: 'iframePresentational',
   IGNORED: 'ignored',
-  IMAGE_MAP_LINK: 'imageMapLink',
   IMAGE_MAP: 'imageMap',
   IMAGE: 'image',
   INLINE_TEXT_BOX: 'inlineTextBox',
@@ -156,7 +154,6 @@ chrome.automation.RoleType = {
   METER: 'meter',
   NAVIGATION: 'navigation',
   NOTE: 'note',
-  OUTLINE: 'outline',
   PANE: 'pane',
   PARAGRAPH: 'paragraph',
   POP_UP_BUTTON: 'popUpButton',
@@ -170,11 +167,8 @@ chrome.automation.RoleType = {
   ROW_HEADER: 'rowHeader',
   ROW: 'row',
   RUBY: 'ruby',
-  RULER: 'ruler',
   SVG_ROOT: 'svgRoot',
-  SCROLL_AREA: 'scrollArea',
   SCROLL_BAR: 'scrollBar',
-  SEAMLESS_WEB_AREA: 'seamlessWebArea',
   SEARCH: 'search',
   SEARCH_BOX: 'searchBox',
   SLIDER: 'slider',
@@ -185,7 +179,6 @@ chrome.automation.RoleType = {
   STATIC_TEXT: 'staticText',
   STATUS: 'status',
   SWITCH: 'switch',
-  TAB_GROUP: 'tabGroup',
   TAB_LIST: 'tabList',
   TAB_PANEL: 'tabPanel',
   TAB: 'tab',
@@ -214,13 +207,11 @@ chrome.automation.RoleType = {
  * @see https://developer.chrome.com/extensions/automation#type-StateType
  */
 chrome.automation.StateType = {
-  BUSY: 'busy',
   COLLAPSED: 'collapsed',
   DEFAULT: 'default',
   EDITABLE: 'editable',
   EXPANDED: 'expanded',
   FOCUSABLE: 'focusable',
-  FOCUSED: 'focused',
   HASPOPUP: 'haspopup',
   HORIZONTAL: 'horizontal',
   HOVERED: 'hovered',
@@ -942,7 +933,7 @@ chrome.automation.AutomationNode.prototype.imageDataUrl;
 chrome.automation.AutomationNode.prototype.language;
 
 /**
- * State describing input restriction associated with an object: undefined - enabled control or other object that is not disabled  'disabled' - a control or group of controls that does not take input 'readOnly' - an edit field that allows focus and selection but not input
+ * Input restriction, if any, such as readonly or disabled: undefined - enabled control or other object that is not disabled  Restriction.DISABLED - disallows input in itself + any descendants Restriction.READONLY - allow focus/selection but not input
  * @type {(string|undefined)}
  * @see https://developer.chrome.com/extensions/automation#type-restriction
  */

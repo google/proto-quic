@@ -27,6 +27,8 @@ class QuicPacketWriterWrapper;
 
 namespace test {
 
+class MockableQuicClientEpollNetworkHelper;
+
 // A quic client which allows mocking out reads and writes.
 class MockableQuicClient : public QuicClient {
  public:
@@ -50,30 +52,23 @@ class MockableQuicClient : public QuicClient {
 
   ~MockableQuicClient() override;
 
-  void ProcessPacket(const QuicSocketAddress& self_address,
-                     const QuicSocketAddress& peer_address,
-                     const QuicReceivedPacket& packet) override;
-
-  QuicPacketWriter* CreateQuicPacketWriter() override;
   QuicConnectionId GenerateNewConnectionId() override;
-  void UseWriter(QuicPacketWriterWrapper* writer);
   void UseConnectionId(QuicConnectionId connection_id);
-  const QuicReceivedPacket* last_incoming_packet() {
-    return last_incoming_packet_.get();
-  }
-  void set_track_last_incoming_packet(bool track) {
-    track_last_incoming_packet_ = track;
-  }
+
+  void UseWriter(QuicPacketWriterWrapper* writer);
   void set_peer_address(const QuicSocketAddress& address);
+  // The last incoming packet, iff |track_last_incoming_packet| is true.
+  const QuicReceivedPacket* last_incoming_packet();
+  // If true, copy each packet from ProcessPacket into |last_incoming_packet|
+  void set_track_last_incoming_packet(bool track);
+
+  // Casts the network helper to a MockableQuicClientEpollNetworkHelper.
+  MockableQuicClientEpollNetworkHelper* mockable_network_helper();
+  const MockableQuicClientEpollNetworkHelper* mockable_network_helper() const;
 
  private:
   QuicConnectionId override_connection_id_;  // ConnectionId to use, if nonzero
-  QuicPacketWriterWrapper* test_writer_;
   CachedNetworkParameters cached_network_paramaters_;
-  // The last incoming packet, iff |track_last_incoming_packet_| is true.
-  std::unique_ptr<QuicReceivedPacket> last_incoming_packet_;
-  // If true, copy each packet from ProcessPacket into |last_incoming_packet_|
-  bool track_last_incoming_packet_;
 
   DISALLOW_COPY_AND_ASSIGN(MockableQuicClient);
 };

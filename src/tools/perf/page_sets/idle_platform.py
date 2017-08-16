@@ -48,8 +48,3 @@ class IdleStorySet(story.StorySet):
     self.AddStory(_IdleStory('IdleStory_10s', 10))
     self.AddStory(_IdleStory('IdleStory_60s', 60))
     self.AddStory(_IdleStory('IdleStory_120s', 120))
-
-
-class IdleStoryExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    pass  # No tests disabled.

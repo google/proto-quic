@@ -11,14 +11,14 @@
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/spdy/core/spdy_protocol.h"
-#include "net/tools/quic/quic_client_session.h"
+#include "net/tools/quic/quic_spdy_client_session.h"
 
 using std::string;
 
 namespace net {
 
 QuicSpdyClientStream::QuicSpdyClientStream(QuicStreamId id,
-                                           QuicClientSession* session)
+                                           QuicSpdyClientSession* session)
     : QuicSpdyStream(id, session),
       content_length_(-1),
       response_code_(0),

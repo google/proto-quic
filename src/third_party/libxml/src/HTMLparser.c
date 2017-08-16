@@ -6278,7 +6278,8 @@ htmlCreatePushParserCtxt(htmlSAXHandlerPtr sax, void *user_data,
  */
 
 htmlDocPtr
-htmlSAXParseDoc(xmlChar *cur, const char *encoding, htmlSAXHandlerPtr sax, void *userData) {
+htmlSAXParseDoc(const xmlChar *cur, const char *encoding,
+                htmlSAXHandlerPtr sax, void *userData) {
     htmlDocPtr ret;
     htmlParserCtxtPtr ctxt;
 
@@ -6317,7 +6318,7 @@ htmlSAXParseDoc(xmlChar *cur, const char *encoding, htmlSAXHandlerPtr sax, void 
  */
 
 htmlDocPtr
-htmlParseDoc(xmlChar *cur, const char *encoding) {
+htmlParseDoc(const xmlChar *cur, const char *encoding) {
     return(htmlSAXParseDoc(cur, encoding, NULL, NULL));
 }
 

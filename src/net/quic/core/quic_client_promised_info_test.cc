@@ -15,7 +15,7 @@
 #include "net/quic/test_tools/quic_client_promised_info_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
 #include "net/test/gtest_util.h"
-#include "net/tools/quic/quic_client_session.h"
+#include "net/tools/quic/quic_spdy_client_session.h"
 
 using std::string;
 using testing::StrictMock;
@@ -24,11 +24,12 @@ namespace net {
 namespace test {
 namespace {
 
-class MockQuicClientSession : public QuicClientSession {
+class MockQuicSpdyClientSession : public QuicSpdyClientSession {
  public:
-  explicit MockQuicClientSession(QuicConnection* connection,
-                                 QuicClientPushPromiseIndex* push_promise_index)
-      : QuicClientSession(
+  explicit MockQuicSpdyClientSession(
+      QuicConnection* connection,
+      QuicClientPushPromiseIndex* push_promise_index)
+      : QuicSpdyClientSession(
             DefaultQuicConfig(),
             connection,
             QuicServerId("example.com", 443, PRIVACY_MODE_DISABLED),
@@ -36,7 +37,7 @@ class MockQuicClientSession : public QuicClientSession {
             push_promise_index),
         crypto_config_(crypto_test_utils::ProofVerifierForTesting()),
         authorized_(true) {}
-  ~MockQuicClientSession() override {}
+  ~MockQuicSpdyClientSession() override {}
 
   bool IsAuthorized(const string& authority) override { return authorized_; }
 
@@ -49,7 +50,7 @@ class MockQuicClientSession : public QuicClientSession {
 
   bool authorized_;
 
-  DISALLOW_COPY_AND_ASSIGN(MockQuicClientSession);
+  DISALLOW_COPY_AND_ASSIGN(MockQuicSpdyClientSession);
 };
 
 class QuicClientPromisedInfoTest : public QuicTest {
@@ -104,7 +105,7 @@ class QuicClientPromisedInfoTest : public QuicTest {
   StrictMock<MockQuicConnection>* connection_;
   QuicClientPushPromiseIndex push_promise_index_;
 
-  MockQuicClientSession session_;
+  MockQuicSpdyClientSession session_;
   std::unique_ptr<QuicSpdyClientStream> stream_;
   std::unique_ptr<StreamVisitor> stream_visitor_;
   std::unique_ptr<QuicSpdyClientStream> promised_stream_;

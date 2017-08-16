@@ -9,8 +9,8 @@
 #include <sstream>
 
 #include "base/logging.h"
+#include "net/http2/platform/api/http2_string_utils.h"
 #include "net/http2/tools/failure.h"
-#include "net/spdy/core/spdy_test_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -152,7 +152,7 @@ TEST_F(HpackDecoderStringBufferTest, PlainSplit) {
 }
 
 TEST_F(HpackDecoderStringBufferTest, HuffmanWhole) {
-  Http2String encoded = a2b_hex("f1e3c2e5f23a6ba0ab90f4ff");
+  Http2String encoded = Http2HexDecode("f1e3c2e5f23a6ba0ab90f4ff");
   Http2StringPiece decoded("www.example.com");
 
   EXPECT_EQ(state(), State::RESET);
@@ -177,7 +177,7 @@ TEST_F(HpackDecoderStringBufferTest, HuffmanWhole) {
 }
 
 TEST_F(HpackDecoderStringBufferTest, HuffmanSplit) {
-  Http2String encoded = a2b_hex("f1e3c2e5f23a6ba0ab90f4ff");
+  Http2String encoded = Http2HexDecode("f1e3c2e5f23a6ba0ab90f4ff");
   Http2String part1 = encoded.substr(0, 5);
   Http2String part2 = encoded.substr(5);
   Http2StringPiece decoded("www.example.com");
@@ -216,7 +216,7 @@ TEST_F(HpackDecoderStringBufferTest, HuffmanSplit) {
 
 TEST_F(HpackDecoderStringBufferTest, InvalidHuffmanOnData) {
   // Explicitly encode the End-of-String symbol, a no-no.
-  Http2String encoded = a2b_hex("ffffffff");
+  Http2String encoded = Http2HexDecode("ffffffff");
 
   buf_.OnStart(/*huffman_encoded*/ true, encoded.size());
   EXPECT_EQ(state(), State::COLLECTING);
@@ -230,7 +230,7 @@ TEST_F(HpackDecoderStringBufferTest, InvalidHuffmanOnData) {
 
 TEST_F(HpackDecoderStringBufferTest, InvalidHuffmanOnEnd) {
   // Last byte of string doesn't end with prefix of End-of-String symbol.
-  Http2String encoded = a2b_hex("00");
+  Http2String encoded = Http2HexDecode("00");
 
   buf_.OnStart(/*huffman_encoded*/ true, encoded.size());
   EXPECT_EQ(state(), State::COLLECTING);

@@ -100,6 +100,8 @@ struct GetKeyFromValuePairFirst {
 //   Mapped&              operator[](key_type&&);
 //   pair<iterator, bool> insert(const value_type&);
 //   pair<iterator, bool> insert(value_type&&);
+//   iterator             insert(const_iterator hint, const value_type&);
+//   iterator             insert(const_iterator hint, value_type&&);
 //   void                 insert(InputIterator first, InputIterator last,
 //                               FlatContainerDupes);
 //   pair<iterator, bool> emplace(Args&&...);

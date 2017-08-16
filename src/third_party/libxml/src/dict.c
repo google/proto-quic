@@ -533,7 +533,7 @@ xmlDictComputeFastQKey(const xmlChar *prefix, int plen,
  *
  * Create a new dictionary
  *
- * Returns the newly created dictionary, or NULL if an error occured.
+ * Returns the newly created dictionary, or NULL if an error occurred.
  */
 xmlDictPtr
 xmlDictCreate(void) {
@@ -580,7 +580,7 @@ xmlDictCreate(void) {
  * new dictionary, then in @sub, and if not found are created in the
  * new dictionary.
  *
- * Returns the newly created dictionary, or NULL if an error occured.
+ * Returns the newly created dictionary, or NULL if an error occurred.
  */
 xmlDictPtr
 xmlDictCreateSub(xmlDictPtr sub) {
@@ -699,7 +699,7 @@ xmlDictGrow(xmlDictPtr dict, size_t size) {
 	    } else {
 	        /*
 		 * we don't have much ways to alert from herei
-		 * result is loosing an entry and unicity garantee
+		 * result is losing an entry and unicity guarantee
 		 */
 	        ret = -1;
 	    }

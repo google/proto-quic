@@ -326,6 +326,7 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
 
   // The minimum packet number length required to represent |packet_number|.
   static QuicPacketNumberLength GetMinPacketNumberLength(
+      QuicVersion version,
       QuicPacketNumber packet_number);
 
   void SetSupportedVersions(const QuicVersionVector& versions) {
@@ -335,6 +336,9 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
 
   // Returns true if data_producer_ is not null.
   bool HasDataProducer() const { return data_producer_ != nullptr; }
+
+  // Returns true if data with |offset| of stream |id| starts with 'CHLO'.
+  bool StartsWithChlo(QuicStreamId id, QuicStreamOffset offset) const;
 
   // Returns byte order to read/write integers and floating numbers.
   Endianness endianness() const;
@@ -402,7 +406,9 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   bool ProcessAckFrame(QuicDataReader* reader,
                        uint8_t frame_type,
                        QuicAckFrame* frame);
-  bool ProcessTimestampsInAckFrame(QuicDataReader* reader, QuicAckFrame* frame);
+  bool ProcessTimestampsInAckFrame(uint8_t num_received_packets,
+                                   QuicDataReader* reader,
+                                   QuicAckFrame* ack_frame);
   bool ProcessStopWaitingFrame(QuicDataReader* reader,
                                const QuicPacketHeader& public_header,
                                QuicStopWaitingFrame* stop_waiting);
@@ -479,8 +485,9 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
 
   bool AppendAckFrameAndTypeByte(const QuicAckFrame& frame,
                                  QuicDataWriter* builder);
-  bool AppendTimestampToAckFrame(const QuicAckFrame& frame,
-                                 QuicDataWriter* builder);
+  bool AppendTimestampsToAckFrame(const QuicAckFrame& frame,
+                                  size_t num_timestamps_offset,
+                                  QuicDataWriter* writer);
   bool AppendStopWaitingFrame(const QuicPacketHeader& header,
                               const QuicStopWaitingFrame& frame,
                               QuicDataWriter* builder);
@@ -548,8 +555,8 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   // The diversification nonce from the last received packet.
   DiversificationNonce last_nonce_;
 
-  // If not null, framer asks data_producer_ to save and write stream frame
-  // data. Not owned.
+  // If not null, framer asks data_producer_ to write stream frame data. Not
+  // owned.
   QuicStreamFrameDataProducer* data_producer_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicFramer);

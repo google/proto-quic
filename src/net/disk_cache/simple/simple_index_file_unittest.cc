@@ -21,6 +21,7 @@
 #include "base/time/time.h"
 #include "net/base/cache_type.h"
 #include "net/base/test_completion_callback.h"
+#include "net/disk_cache/backend_cleanup_tracker.h"
 #include "net/disk_cache/disk_cache_test_util.h"
 #include "net/disk_cache/simple/simple_backend_impl.h"
 #include "net/disk_cache/simple/simple_backend_version.h"
@@ -336,8 +337,9 @@ TEST_F(SimpleIndexFileTest, SimpleCacheUpgrade) {
   ASSERT_TRUE(cache_thread.StartWithOptions(
       base::Thread::Options(base::MessageLoop::TYPE_IO, 0)));
   disk_cache::SimpleBackendImpl* simple_cache =
-      new disk_cache::SimpleBackendImpl(cache_path, 0, net::DISK_CACHE,
-                                        cache_thread.task_runner().get(), NULL);
+      new disk_cache::SimpleBackendImpl(
+          cache_path, /* cleanup_tracker = */ nullptr, 0, net::DISK_CACHE,
+          cache_thread.task_runner(), /* net_log = */ nullptr);
   net::TestCompletionCallback cb;
   int rv = simple_cache->Init(cb.callback());
   EXPECT_THAT(cb.GetResult(rv), IsOk());

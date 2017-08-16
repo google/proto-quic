@@ -1,0 +1,36 @@
+# Copyright 2017 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Signature
+"NTLMSSP\x00"
+
+# Message Types
+"\x01\x00\x00\x00"
+"\x02\x00\x00\x00"
+"\x03\x00\x00\x00"
+
+# Common Target Name offset
+"\x20\x00\x00\x00"
+
+# Useful security buffer lengths to match "Server"
+"\x06\x00"
+"\x0c\x00"
+
+# Common\interesting flag values
+"\x07\x82\x08\x00"
+"\x06\x82\x08\x00"
+"\x07\x82\x00\x00"
+"\x06\x82\x00\x00"
+"\x01\x00\x08\x00"
+"\x02\x00\x08\x00"
+"\x03\x00\x08\x00"
+"\x01\x00\x00\x00"
+"\x02\x00\x00\x00"
+"\x03\x00\x00\x00"
+"\x08\x00"
+"\x00\x00"
+
+# Target Names
+"Server"
+"S\x00e\x00r\x00v\x00e\x00r\x00"

@@ -95,10 +95,8 @@ std::string GetServerTypeString(BaseTestServer::Type type) {
 }  // namespace
 
 RemoteTestServer::RemoteTestServer(Type type,
-                                   const std::string& host,
                                    const base::FilePath& document_root)
-    : BaseTestServer(type, host),
-      spawner_server_port_(0) {
+    : BaseTestServer(type), spawner_server_port_(0) {
   if (!Init(document_root))
     NOTREACHED();
 }

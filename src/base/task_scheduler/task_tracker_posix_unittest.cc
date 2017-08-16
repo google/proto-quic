@@ -10,7 +10,9 @@
 
 #include "base/bind.h"
 #include "base/files/file_descriptor_watcher_posix.h"
+#include "base/macros.h"
 #include "base/memory/ptr_util.h"
+#include "base/memory/ref_counted.h"
 #include "base/message_loop/message_loop.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/run_loop.h"
@@ -18,50 +20,70 @@
 #include "base/task_scheduler/task.h"
 #include "base/task_scheduler/task_traits.h"
 #include "base/task_scheduler/test_utils.h"
+#include "base/test/null_task_runner.h"
+#include "base/threading/thread.h"
 #include "base/time/time.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
 namespace internal {
 
+namespace {
+
+class TaskSchedulerTaskTrackerPosixTest : public testing::Test {
+ public:
+  TaskSchedulerTaskTrackerPosixTest() : service_thread_("ServiceThread") {
+    Thread::Options service_thread_options;
+    service_thread_options.message_loop_type = MessageLoop::TYPE_IO;
+    service_thread_.StartWithOptions(service_thread_options);
+    tracker_.set_watch_file_descriptor_message_loop(
+        static_cast<MessageLoopForIO*>(service_thread_.message_loop()));
+  }
+
+ protected:
+  Thread service_thread_;
+  TaskTrackerPosix tracker_;
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(TaskSchedulerTaskTrackerPosixTest);
+};
+
+}  // namespace
+
 // Verify that TaskTrackerPosix runs a Task it receives.
-TEST(TaskSchedulerTaskTrackerPosixTest, RunTask) {
-  MessageLoopForIO message_loop;
+TEST_F(TaskSchedulerTaskTrackerPosixTest, RunTask) {
   bool did_run = false;
   auto task = MakeUnique<Task>(
       FROM_HERE,
       Bind([](bool* did_run) { *did_run = true; }, Unretained(&did_run)),
       TaskTraits(), TimeDelta());
-  TaskTrackerPosix tracker;
-  tracker.set_watch_file_descriptor_message_loop(&message_loop);
 
-  EXPECT_TRUE(tracker.WillPostTask(task.get()));
+  EXPECT_TRUE(tracker_.WillPostTask(task.get()));
 
-  tracker.RunNextTask(test::CreateSequenceWithTask(std::move(task)).get());
+  tracker_.RunNextTask(test::CreateSequenceWithTask(std::move(task)).get());
 
   EXPECT_TRUE(did_run);
 }
 
 // Verify that FileDescriptorWatcher::WatchReadable() can be called from a task
 // running in TaskTrackerPosix without a crash.
-TEST(TaskSchedulerTaskTrackerPosixTest, FileDescriptorWatcher) {
-  MessageLoopForIO message_loop;
+TEST_F(TaskSchedulerTaskTrackerPosixTest, FileDescriptorWatcher) {
   int fds[2];
   ASSERT_EQ(0, pipe(fds));
   auto task = MakeUnique<Task>(
       FROM_HERE, Bind(IgnoreResult(&FileDescriptorWatcher::WatchReadable),
                       fds[0], Bind(&DoNothing)),
       TaskTraits(), TimeDelta());
-  TaskTrackerPosix tracker;
-  tracker.set_watch_file_descriptor_message_loop(&message_loop);
+  // FileDescriptorWatcher::WatchReadable needs a SequencedTaskRunnerHandle.
+  task->sequenced_task_runner_ref = MakeRefCounted<NullTaskRunner>();
 
-  EXPECT_TRUE(tracker.WillPostTask(task.get()));
+  EXPECT_TRUE(tracker_.WillPostTask(task.get()));
 
-  tracker.RunNextTask(test::CreateSequenceWithTask(std::move(task)).get());
+  tracker_.RunNextTask(test::CreateSequenceWithTask(std::move(task)).get());
 
-  // Run the MessageLoop to allow the read watch to be registered and
-  // unregistered. This prevents a memory leak.
-  RunLoop().RunUntilIdle();
+  // Join the service thread to make sure that the read watch is registered and
+  // unregistered before file descriptors are closed.
+  service_thread_.Stop();
 
   EXPECT_EQ(0, IGNORE_EINTR(close(fds[0])));
   EXPECT_EQ(0, IGNORE_EINTR(close(fds[1])));

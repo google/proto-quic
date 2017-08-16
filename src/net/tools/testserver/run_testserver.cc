@@ -101,10 +101,7 @@ int main(int argc, const char* argv[]) {
     test_server.reset(
         new net::SpawnedTestServer(server_type, ssl_options, doc_root));
   } else {
-    test_server.reset(new net::SpawnedTestServer(
-                          server_type,
-                          net::SpawnedTestServer::kLocalhost,
-                          doc_root));
+    test_server.reset(new net::SpawnedTestServer(server_type, doc_root));
   }
 
   if (!test_server->Start()) {

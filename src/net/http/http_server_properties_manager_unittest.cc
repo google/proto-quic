@@ -980,15 +980,26 @@ TEST_P(HttpServerPropertiesManagerTest, Clear) {
   const IPAddress actual_address(127, 0, 0, 1);
   const QuicServerId mail_quic_server_id("mail.google.com", 80);
   const std::string quic_server_info1("quic_server_info1");
-
+  const AlternativeService alternative_service(kProtoHTTP2, "mail.google.com",
+                                               1234);
+  const AlternativeService broken_alternative_service(
+      kProtoHTTP2, "broken.google.com", 1234);
   {
     TestMockTimeTaskRunner::ScopedContext scoped_context(net_test_task_runner_);
 
+    AlternativeServiceInfoVector alt_svc_info_vector;
+    alt_svc_info_vector.push_back(
+        AlternativeServiceInfo::CreateHttp2AlternativeServiceInfo(
+            alternative_service, one_day_from_now_));
+    alt_svc_info_vector.push_back(
+        AlternativeServiceInfo::CreateHttp2AlternativeServiceInfo(
+            broken_alternative_service, one_day_from_now_));
+    http_server_props_manager_->SetAlternativeServices(spdy_server,
+                                                       alt_svc_info_vector);
+
+    http_server_props_manager_->MarkAlternativeServiceBroken(
+        broken_alternative_service);
     http_server_props_manager_->SetSupportsSpdy(spdy_server, true);
-    AlternativeService alternative_service(kProtoHTTP2, "mail.google.com",
-                                           1234);
-    http_server_props_manager_->SetHttp2AlternativeService(
-        spdy_server, alternative_service, one_day_from_now_);
     http_server_props_manager_->SetSupportsQuic(true, actual_address);
     ServerNetworkStats stats;
     stats.srtt = base::TimeDelta::FromMicroseconds(10);
@@ -998,12 +1009,16 @@ TEST_P(HttpServerPropertiesManagerTest, Clear) {
                                                   quic_server_info1);
   }
 
-  // Run the task.
+  // Advance time by just enough so that the prefs update task is executed but
+  // not the task to expire the brokenness of |broken_alternative_service|.
   EXPECT_FALSE(pref_test_task_runner_->HasPendingTask());
   EXPECT_TRUE(net_test_task_runner_->HasPendingTask());
-  net_test_task_runner_->FastForwardUntilNoTasksRemain();
-  EXPECT_FALSE(net_test_task_runner_->HasPendingTask());
+  net_test_task_runner_->FastForwardBy(
+      HttpServerPropertiesManager::GetUpdatePrefsDelayForTesting());
+  EXPECT_TRUE(net_test_task_runner_->HasPendingTask());
 
+  EXPECT_TRUE(http_server_props_manager_->IsAlternativeServiceBroken(
+      broken_alternative_service));
   EXPECT_TRUE(http_server_props_manager_->SupportsRequestPriority(spdy_server));
   EXPECT_TRUE(HasAlternativeService(spdy_server));
   IPAddress address;
@@ -1027,8 +1042,9 @@ TEST_P(HttpServerPropertiesManagerTest, Clear) {
   EXPECT_TRUE(pref_test_task_runner_->HasPendingTask());
   pref_test_task_runner_->RunUntilIdle();
   EXPECT_FALSE(pref_test_task_runner_->HasPendingTask());
-  EXPECT_FALSE(net_test_task_runner_->HasPendingTask());
 
+  EXPECT_FALSE(http_server_props_manager_->IsAlternativeServiceBroken(
+      broken_alternative_service));
   EXPECT_FALSE(
       http_server_props_manager_->SupportsRequestPriority(spdy_server));
   EXPECT_FALSE(HasAlternativeService(spdy_server));

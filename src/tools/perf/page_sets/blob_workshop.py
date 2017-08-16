@@ -97,9 +97,3 @@ class BlobWorkshopPageSet(story.StorySet):
         BlobCreateThenRead('10MBx30', [10 * 1024 * 1024] * 30, self))
     self.AddStory(
         BlobCreateThenRead('80MBx5', [80 * 1024 * 1024] * 5, self))
-
-
-class BlobWorkshopStoryExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    self.DisableStory(
-        'blob-mass-create-80MBx5', [story.expectations.ALL], 'crbug.com/510815')

@@ -427,25 +427,9 @@ CleanupJailSymlinks() {
     # skip links with non-absolute paths
     echo "${target}" | grep -qs ^/ || continue
     echo "${link}: ${target}"
-    case "${link}" in
-      usr/lib/gcc/*-linux-gnu/4.*/* | usr/lib/gcc/arm-linux-gnueabihf/4.*/* | \
-      usr/lib/gcc/aarch64-linux-gnu/4.*/*)
-        # Relativize the symlink.
-        ln -snfv "../../../../..${target}" "${link}"
-        ;;
-      usr/lib/*-linux-gnu/* | usr/lib/arm-linux-gnueabihf/*)
-        # Relativize the symlink.
-        ln -snfv "../../..${target}" "${link}"
-        ;;
-      usr/lib/*)
-        # Relativize the symlink.
-        ln -snfv "../..${target}" "${link}"
-        ;;
-      lib64/* | lib/*)
-        # Relativize the symlink.
-        ln -snfv "..${target}" "${link}"
-        ;;
-    esac
+    # Relativize the symlink.
+    prefix=$(echo "${link}" | sed -e 's/[^/]//g' | sed -e 's|/|../|g')
+    ln -snfv "${prefix}${target}" "${link}"
   done
 
   find $libdirs -type l -printf '%p %l\n' | while read link target; do
@@ -687,8 +671,8 @@ VerifyPackageListing() {
   set +x
 
   echo "Verifying: ${output_file}"
-  local checksums=$(grep ${file_path} ${release_file} | cut -d " " -f 2)
-  local sha256sum=$(echo ${checksums} | cut -d " " -f 3)
+  local sha256sum=$(grep -E "${file_path}\$|:\$" "${release_file}" | \
+    grep "SHA256:" -A 1 | xargs echo | awk '{print $2;}')
 
   if [ "${#sha256sum}" -ne "64" ]; then
     echo "Bad sha256sum from ${release_list}"

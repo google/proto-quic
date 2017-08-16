@@ -1265,16 +1265,16 @@ TEST(NetworkQualityEstimatorTest, TestGetMetricsSince) {
   // First sample has very old timestamp.
   for (size_t i = 0; i < 2; ++i) {
     estimator.downstream_throughput_kbps_observations_.AddObservation(
-        NetworkQualityEstimator::ThroughputObservation(
+        NetworkQualityEstimator::Observation(
             old_downlink_kbps, old, INT32_MIN,
             NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
-    estimator.rtt_observations_.AddObservation(
-        NetworkQualityEstimator::RttObservation(
-            old_url_rtt, old, INT32_MIN,
+    estimator.rtt_ms_observations_.AddObservation(
+        NetworkQualityEstimator::Observation(
+            old_url_rtt.InMilliseconds(), old, INT32_MIN,
             NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
-    estimator.rtt_observations_.AddObservation(
-        NetworkQualityEstimator::RttObservation(
-            old_tcp_rtt, old, INT32_MIN,
+    estimator.rtt_ms_observations_.AddObservation(
+        NetworkQualityEstimator::Observation(
+            old_tcp_rtt.InMilliseconds(), old, INT32_MIN,
             NETWORK_QUALITY_OBSERVATION_SOURCE_TCP));
   }
 
@@ -1291,16 +1291,17 @@ TEST(NetworkQualityEstimatorTest, TestGetMetricsSince) {
   DCHECK_GT(new_tcp_rtt, rtt_threshold_4g);
 
   estimator.downstream_throughput_kbps_observations_.AddObservation(
-      NetworkQualityEstimator::ThroughputObservation(
+      NetworkQualityEstimator::Observation(
           new_downlink_kbps, now, INT32_MIN,
           NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
-  estimator.rtt_observations_.AddObservation(
-      NetworkQualityEstimator::RttObservation(
-          new_url_rtt, now, INT32_MIN,
+  estimator.rtt_ms_observations_.AddObservation(
+      NetworkQualityEstimator::Observation(
+          new_url_rtt.InMilliseconds(), now, INT32_MIN,
           NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
-  estimator.rtt_observations_.AddObservation(
-      NetworkQualityEstimator::RttObservation(
-          new_tcp_rtt, now, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_TCP));
+  estimator.rtt_ms_observations_.AddObservation(
+      NetworkQualityEstimator::Observation(
+          new_tcp_rtt.InMilliseconds(), now, INT32_MIN,
+          NETWORK_QUALITY_OBSERVATION_SOURCE_TCP));
 
   const struct {
     base::TimeTicks start_timestamp;
@@ -1777,6 +1778,124 @@ TEST(NetworkQualityEstimatorTest, MAYBE_TestEffectiveConnectionTypeObserver) {
   EXPECT_EQ(0U, observer_3.effective_connection_types().size());
 }
 
+// Tests that the transport RTT is used for computing the HTTP RTT.
+TEST(NetworkQualityEstimatorTest, TestTransportRttUsedForHttpRttComputation) {
+  const struct {
+    base::TimeDelta http_rtt;
+    base::TimeDelta transport_rtt;
+    std::string lower_bound_http_rtt_transport_rtt_multiplier;
+    std::string upper_bound_http_rtt_transport_rtt_multiplier;
+    base::TimeDelta expected_http_rtt;
+    EffectiveConnectionType expected_type;
+  } tests[] = {
+      {
+          base::TimeDelta::FromMilliseconds(100),
+          base::TimeDelta::FromMilliseconds(200), "", "",
+          base::TimeDelta::FromMilliseconds(100), EFFECTIVE_CONNECTION_TYPE_4G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(100),
+          base::TimeDelta::FromMilliseconds(200), "0.01", "",
+          base::TimeDelta::FromMilliseconds(100), EFFECTIVE_CONNECTION_TYPE_4G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(100),
+          base::TimeDelta::FromMilliseconds(200), "1.0", "",
+          base::TimeDelta::FromMilliseconds(200), EFFECTIVE_CONNECTION_TYPE_4G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(100),
+          base::TimeDelta::FromMilliseconds(200), "1.5", "",
+          base::TimeDelta::FromMilliseconds(300), EFFECTIVE_CONNECTION_TYPE_3G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(100),
+          base::TimeDelta::FromMilliseconds(200), "2.0", "",
+          base::TimeDelta::FromMilliseconds(400), EFFECTIVE_CONNECTION_TYPE_3G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(100),
+          base::TimeDelta::FromMilliseconds(200), "2.0", "5.0",
+          base::TimeDelta::FromMilliseconds(400), EFFECTIVE_CONNECTION_TYPE_3G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(100),
+          base::TimeDelta::FromMilliseconds(200), "10.0", "",
+          base::TimeDelta::FromMilliseconds(2000), EFFECTIVE_CONNECTION_TYPE_2G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(200),
+          base::TimeDelta::FromMilliseconds(100), "10.0", "",
+          base::TimeDelta::FromMilliseconds(1000), EFFECTIVE_CONNECTION_TYPE_3G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(200),
+          base::TimeDelta::FromMilliseconds(5), "10.0", "",
+          base::TimeDelta::FromMilliseconds(200), EFFECTIVE_CONNECTION_TYPE_4G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(200),
+          base::TimeDelta::FromMilliseconds(5), "10.0", "20.0",
+          base::TimeDelta::FromMilliseconds(100), EFFECTIVE_CONNECTION_TYPE_4G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(100),
+          base::TimeDelta::FromMilliseconds(200), "foobar", "",
+          base::TimeDelta::FromMilliseconds(100), EFFECTIVE_CONNECTION_TYPE_4G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(100),
+          base::TimeDelta::FromMilliseconds(4000), "", "",
+          base::TimeDelta::FromMilliseconds(100), EFFECTIVE_CONNECTION_TYPE_4G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(100),
+          base::TimeDelta::FromMilliseconds(4000), "1.0", "10.0",
+          base::TimeDelta::FromMilliseconds(4000),
+          EFFECTIVE_CONNECTION_TYPE_SLOW_2G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(4000),
+          base::TimeDelta::FromMilliseconds(100), "", "",
+          base::TimeDelta::FromMilliseconds(4000),
+          EFFECTIVE_CONNECTION_TYPE_SLOW_2G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(4000),
+          base::TimeDelta::FromMilliseconds(100), "1.0", "10.0",
+          base::TimeDelta::FromMilliseconds(1000), EFFECTIVE_CONNECTION_TYPE_3G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(1),
+          base::TimeDelta::FromMilliseconds(100), "1.0", "10.0",
+          base::TimeDelta::FromMilliseconds(100), EFFECTIVE_CONNECTION_TYPE_4G,
+      },
+      {
+          base::TimeDelta::FromMilliseconds(500),
+          base::TimeDelta::FromMilliseconds(100), "1.0", "10.0",
+          base::TimeDelta::FromMilliseconds(500), EFFECTIVE_CONNECTION_TYPE_3G,
+      },
+  };
+
+  for (const auto& test : tests) {
+    std::map<std::string, std::string> variation_params;
+    variation_params["lower_bound_http_rtt_transport_rtt_multiplier"] =
+        test.lower_bound_http_rtt_transport_rtt_multiplier;
+    variation_params["upper_bound_http_rtt_transport_rtt_multiplier"] =
+        test.upper_bound_http_rtt_transport_rtt_multiplier;
+    TestNetworkQualityEstimator estimator(variation_params);
+
+    estimator.set_start_time_null_http_rtt(test.http_rtt);
+    estimator.set_start_time_null_transport_rtt(test.transport_rtt);
+
+    estimator.RunOneRequest();
+    EXPECT_EQ(test.expected_http_rtt, estimator.GetHttpRTT());
+    EXPECT_EQ(test.transport_rtt, estimator.GetTransportRTT());
+    EXPECT_EQ(test.expected_type, estimator.GetEffectiveConnectionType())
+        << test.lower_bound_http_rtt_transport_rtt_multiplier;
+  }
+}
+
 // Tests that the network quality is computed at the specified interval, and
 // that the network quality observers are notified of any change.
 TEST(NetworkQualityEstimatorTest, TestRTTAndThroughputEstimatesObserver) {
@@ -1900,8 +2019,8 @@ TEST(NetworkQualityEstimatorTest, UnknownEffectiveConnectionType) {
   estimator.SimulateNetworkChange(NetworkChangeNotifier::CONNECTION_WIFI,
                                   "test");
 
-  NetworkQualityEstimator::RttObservation rtt_observation(
-      base::TimeDelta::FromSeconds(5), tick_clock_ptr->NowTicks(), INT32_MIN,
+  NetworkQualityEstimator::Observation rtt_observation(
+      5000, tick_clock_ptr->NowTicks(), INT32_MIN,
       NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP);
 
   for (size_t i = 0; i < 10; ++i) {
@@ -1914,8 +2033,8 @@ TEST(NetworkQualityEstimatorTest, UnknownEffectiveConnectionType) {
   // Even though there are 10 RTT samples already available, the addition of one
   // more RTT sample should trigger recomputation of the effective connection
   // type since the last computed effective connection type was unknown.
-  estimator.NotifyObserversOfRTT(NetworkQualityEstimator::RttObservation(
-      base::TimeDelta::FromSeconds(5), tick_clock_ptr->NowTicks(), INT32_MIN,
+  estimator.NotifyObserversOfRTT(NetworkQualityEstimator::Observation(
+      5000, tick_clock_ptr->NowTicks(), INT32_MIN,
       NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
   ++expected_effective_connection_type_notifications;
   EXPECT_EQ(expected_effective_connection_type_notifications,
@@ -1979,7 +2098,7 @@ TEST(NetworkQualityEstimatorTest,
             observer.effective_connection_types().size());
 
   EXPECT_EQ(expected_effective_connection_type_notifications,
-            estimator.rtt_observations_.Size());
+            estimator.rtt_ms_observations_.Size());
 
   // Increase the number of RTT observations. Every time the number of RTT
   // observations is more than doubled, effective connection type must be
@@ -1994,19 +2113,19 @@ TEST(NetworkQualityEstimatorTest,
       estimator.set_recent_effective_connection_type(
           EFFECTIVE_CONNECTION_TYPE_3G);
     }
-    size_t rtt_observations_count = estimator.rtt_observations_.Size() * 0.5;
+    size_t rtt_observations_count = estimator.rtt_ms_observations_.Size() * 0.5;
     // Increase the number of RTT observations to more than twice the number
     // of current observations. This should trigger recomputation of
     // effective connection type.
     for (size_t i = 0; i < rtt_observations_count + 1; ++i) {
-      estimator.rtt_observations_.AddObservation(
-          NetworkQualityEstimator::RttObservation(
-              base::TimeDelta::FromSeconds(5), tick_clock_ptr->NowTicks(),
-              INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+      estimator.rtt_ms_observations_.AddObservation(
+          NetworkQualityEstimator::Observation(
+              5000, tick_clock_ptr->NowTicks(), INT32_MIN,
+              NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
 
-      estimator.NotifyObserversOfRTT(NetworkQualityEstimator::RttObservation(
-          base::TimeDelta::FromSeconds(5), tick_clock_ptr->NowTicks(),
-          INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+      estimator.NotifyObserversOfRTT(NetworkQualityEstimator::Observation(
+          5000, tick_clock_ptr->NowTicks(), INT32_MIN,
+          NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
 
       if (i == rtt_observations_count) {
         // Effective connection type must be recomputed since the number of RTT
@@ -3100,14 +3219,13 @@ TEST(NetworkQualityEstimatorTest, TestBDPComputation) {
   base::HistogramTester histogram_tester;
   base::TimeTicks now = base::TimeTicks::Now();
   for (int i = 1; i <= std::pow(2, 10); i *= 2) {
-    estimator.rtt_observations_.AddObservation(
-        NetworkQualityEstimator::RttObservation(
-            base::TimeDelta::FromMilliseconds(i), now, INT32_MIN,
-            NETWORK_QUALITY_OBSERVATION_SOURCE_TCP));
+    estimator.rtt_ms_observations_.AddObservation(
+        NetworkQualityEstimator::Observation(
+            i, now, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_TCP));
   }
   for (int i = 1; i <= std::pow(3, 10); i *= 3) {
     estimator.downstream_throughput_kbps_observations_.AddObservation(
-        NetworkQualityEstimator::ThroughputObservation(
+        NetworkQualityEstimator::Observation(
             i, now, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
   }
   estimator.RunOneRequest();

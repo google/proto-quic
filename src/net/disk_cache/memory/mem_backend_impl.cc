@@ -11,6 +11,8 @@
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "base/sys_info.h"
+#include "base/task_scheduler/post_task.h"
+#include "base/threading/sequenced_task_runner_handle.h"
 #include "base/trace_event/memory_usage_estimator.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "net/base/net_errors.h"
@@ -49,15 +51,21 @@ MemBackendImpl::~MemBackendImpl() {
   while (!entries_.empty())
     entries_.begin()->second->Doom();
   DCHECK_EQ(0, current_size_);
+
+  if (!post_cleanup_callback_.is_null())
+    base::SequencedTaskRunnerHandle::Get()->PostTask(
+        FROM_HERE, std::move(post_cleanup_callback_));
 }
 
 // static
-std::unique_ptr<Backend> MemBackendImpl::CreateBackend(int max_bytes,
-                                                       net::NetLog* net_log) {
-  std::unique_ptr<MemBackendImpl> cache(new MemBackendImpl(net_log));
+std::unique_ptr<MemBackendImpl> MemBackendImpl::CreateBackend(
+    int max_bytes,
+    net::NetLog* net_log) {
+  std::unique_ptr<MemBackendImpl> cache(
+      base::MakeUnique<MemBackendImpl>(net_log));
   cache->SetMaxSize(max_bytes);
   if (cache->Init())
-    return std::move(cache);
+    return cache;
 
   LOG(ERROR) << "Unable to create cache";
   return nullptr;
@@ -130,6 +138,11 @@ void MemBackendImpl::ModifyStorageSize(int32_t delta) {
 
 bool MemBackendImpl::HasExceededStorageSize() const {
   return current_size_ > max_size_;
+}
+
+void MemBackendImpl::SetPostCleanupCallback(base::OnceClosure cb) {
+  DCHECK(post_cleanup_callback_.is_null());
+  post_cleanup_callback_ = std::move(cb);
 }
 
 net::CacheType MemBackendImpl::GetCacheType() const {

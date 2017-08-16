@@ -20,6 +20,8 @@ const char* MemoryDumpTypeToString(const MemoryDumpType& dump_type) {
       return "peak_memory_usage";
     case MemoryDumpType::SUMMARY_ONLY:
       return "summary_only";
+    case MemoryDumpType::VM_REGIONS_ONLY:
+      return "vm_regions_only";
   }
   NOTREACHED();
   return "unknown";
@@ -34,6 +36,8 @@ MemoryDumpType StringToMemoryDumpType(const std::string& str) {
     return MemoryDumpType::PEAK_MEMORY_USAGE;
   if (str == "summary_only")
     return MemoryDumpType::SUMMARY_ONLY;
+  if (str == "vm_regions_only")
+    return MemoryDumpType::VM_REGIONS_ONLY;
   NOTREACHED();
   return MemoryDumpType::LAST;
 }

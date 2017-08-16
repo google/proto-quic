@@ -159,8 +159,11 @@ class ZipReader {
   // success. On failure, current_entry_info() becomes NULL.
   bool LocateAndOpenEntry(const base::FilePath& path_in_zip);
 
-  // Extracts the current entry in chunks to |delegate|.
-  bool ExtractCurrentEntry(WriterDelegate* delegate) const;
+  // Extracts |num_bytes_to_extract| bytes of the current entry to |delegate|,
+  // starting from the beginning of the entry. Return value specifies whether
+  // the entire file was extracted.
+  bool ExtractCurrentEntry(WriterDelegate* delegate,
+                           uint64_t num_bytes_to_extract) const;
 
   // Extracts the current entry to the given output file path. If the
   // current file is a directory, just creates a directory
@@ -202,20 +205,20 @@ class ZipReader {
   // Does not close the file. Returns true on success.
   bool ExtractCurrentEntryToFile(base::File* file) const;
 
-  // Extracts the current entry into memory. If the current entry is a directory
-  // the |output| parameter is set to the empty string. If the current entry is
-  // a file, the |output| parameter is filled with its contents. Returns true on
-  // success. OpenCurrentEntryInZip() must be called beforehand.
-  // Note: the |output| parameter can be filled with a big amount of data, avoid
-  // passing it around by value, but by reference or pointer.
-  // Note: the value returned by EntryInfo::original_size() cannot be
-  // trusted, so the real size of the uncompressed contents can be different.
-  // Use max_read_bytes to limit the ammount of memory used to carry the entry.
-  // If the real size of the uncompressed data is bigger than max_read_bytes
-  // then false is returned. |max_read_bytes| must be non-zero.
-  bool ExtractCurrentEntryToString(
-      size_t max_read_bytes,
-      std::string* output) const;
+  // Extracts the current entry into memory. If the current entry is a
+  // directory, the |output| parameter is set to the empty string. If the
+  // current entry is a file, the |output| parameter is filled with its
+  // contents. OpenCurrentEntryInZip() must be called beforehand. Note: the
+  // |output| parameter can be filled with a big amount of data, avoid passing
+  // it around by value, but by reference or pointer. Note: the value returned
+  // by EntryInfo::original_size() cannot be trusted, so the real size of the
+  // uncompressed contents can be different. |max_read_bytes| limits the ammount
+  // of memory used to carry the entry. Returns true if the entire content is
+  // read. If the entry is bigger than |max_read_bytes|, returns false and
+  // |output| is filled with |max_read_bytes| of data. If an error occurs,
+  // returns false, and |output| is set to the empty string.
+  bool ExtractCurrentEntryToString(uint64_t max_read_bytes,
+                                   std::string* output) const;
 
   // Returns the current entry info. Returns NULL if the current entry is
   // not yet opened. OpenCurrentEntryInZip() must be called beforehand.

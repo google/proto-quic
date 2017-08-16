@@ -40,10 +40,3 @@ class ServiceWorkerPageSet(story.StorySet):
     self.AddStory(page.Page(
         'https://jakearchibald.github.io/svgomg/', self,
         name='svgomg_second_load', make_javascript_deterministic=False))
-
-
-class ServiceWorkerStoryExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    self.DisableStory('first_load',
-                      [story.expectations.ANDROID_ONE],
-                      'crbug.com/736518')

@@ -35,10 +35,6 @@ CPPClass::~CPPClass() {
 }
 
 // static
-bool CPPClass::RegisterJNI(JNIEnv* env) {
-  return RegisterNativesImpl(env);  // Generated in SampleForTests_jni.h
-}
-
 void CPPClass::Destroy(JNIEnv* env, const JavaParamRef<jobject>& caller) {
   delete this;
 }

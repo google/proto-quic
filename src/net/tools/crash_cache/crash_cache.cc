@@ -24,6 +24,7 @@
 #include "net/base/net_errors.h"
 #include "net/base/net_export.h"
 #include "net/base/test_completion_callback.h"
+#include "net/disk_cache/backend_cleanup_tracker.h"
 #include "net/disk_cache/blockfile/backend_impl.h"
 #include "net/disk_cache/blockfile/rankings.h"
 #include "net/disk_cache/disk_cache.h"
@@ -139,8 +140,9 @@ bool CreateCache(const base::FilePath& path,
                  disk_cache::Backend** cache,
                  net::TestCompletionCallback* cb) {
   int size = 1024 * 1024;
-  disk_cache::BackendImpl* backend =
-      new disk_cache::BackendImpl(path, thread->task_runner().get(), NULL);
+  disk_cache::BackendImpl* backend = new disk_cache::BackendImpl(
+      path, /* cleanup_tracker = */ nullptr, thread->task_runner().get(),
+      /* net_log = */ nullptr);
   backend->SetMaxSize(size);
   backend->SetType(net::DISK_CACHE);
   backend->SetFlags(disk_cache::kNoRandom);

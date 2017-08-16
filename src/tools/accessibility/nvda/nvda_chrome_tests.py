@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2014 The Chromium Authors. All rights reserved.
+# Copyright 2017 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -52,21 +52,28 @@ WAIT_FOR_SPEECH_TIMEOUT_SECS = 3.0
 class NvdaChromeTest(unittest.TestCase):
   @classmethod
   def setUpClass(cls):
-    print 'user data: %s' % CHROME_PROFILES_PATH
-    print 'chrome: %s' % CHROME_PATH
-    print 'nvda: %s' % NVDA_PATH
-    print 'nvda_proctest: %s' % NVDA_PROCTEST_PATH
+    print('user data: %s' % CHROME_PROFILES_PATH)
+    print('chrome: %s' % CHROME_PATH)
+    print('nvda: %s' % NVDA_PATH)
+    print('nvda_proctest: %s' % NVDA_PROCTEST_PATH)
 
-    print
-    print 'Clearing user data directory and log file from previous runs'
+    tasklist = subprocess.Popen("tasklist", shell=True, stdout=subprocess.PIPE)
+    tasklist_output = tasklist.communicate()[0].decode('utf8').split('\r\n')
+    for task in tasklist_output:
+      if (task.split(' ', 1)[0] == "nvda.exe"):
+        print("nvda.exe is running!  Please kill it before running these tests")
+        sys.exit()
+
+    print()
+    print('Clearing user data directory and log file from previous runs')
     if os.access(NVDA_LOGPATH, os.F_OK):
       os.remove(NVDA_LOGPATH)
     if os.access(CHROME_PROFILES_PATH, os.F_OK):
       shutil.rmtree(CHROME_PROFILES_PATH)
-    os.mkdir(CHROME_PROFILES_PATH, 0777)
+    os.mkdir(CHROME_PROFILES_PATH, 0o777)
 
     def handler(signum, frame):
-      print 'Test interrupted, attempting to kill subprocesses.'
+      print('Test interrupted, attempting to kill subprocesses.')
       self.tearDown()
       sys.exit()
     signal.signal(signal.SIGINT, handler)
@@ -77,16 +84,16 @@ class NvdaChromeTest(unittest.TestCase):
             '--user-data-dir=%s' % user_data_dir,
             '--no-first-run',
             'about:blank']
-    print
-    print ' '.join(args)
+    print()
+    print(' '.join(args))
     self._chrome_proc = subprocess.Popen(args)
     self._chrome_proc.poll()
     if self._chrome_proc.returncode is None:
-      print 'Chrome is running'
+      print('Chrome is running')
     else:
-      print 'Chrome exited with code', self._chrome_proc.returncode
+      print('Chrome exited with code', self._chrome_proc.returncode)
       sys.exit()
-    print 'Chrome pid: %d' % self._chrome_proc.pid
+    print('Chrome pid: %d' % self._chrome_proc.pid)
 
     os.environ['NVDA_SPECIFIC_PROCESS'] = str(self._chrome_proc.pid)
 
@@ -99,38 +106,34 @@ class NvdaChromeTest(unittest.TestCase):
     self._nvda_proc = subprocess.Popen(args)
     self._nvda_proc.poll()
     if self._nvda_proc.returncode is None:
-      print 'NVDA is running'
+      print('NVDA is running')
     else:
-      print 'NVDA exited with code', self._nvda_proc.returncode
+      print('NVDA exited with code', self._nvda_proc.returncode)
       sys.exit()
-    print 'NVDA pid: %d' % self._nvda_proc.pid
+    print('NVDA pid: %d' % self._nvda_proc.pid)
 
     app = pywinauto.application.Application()
-    app.connect_(process = self._chrome_proc.pid)
-    self._pywinauto_window = app.top_window_()
-
-    try:
-      self._WaitForSpeech(['Address and search bar edit', 'about:blank'])
-    except:
-      self.tearDown()
+    app.connect(process = self._chrome_proc.pid)
+    self._pywinauto_window = app.top_window()
+    self.last_nvda_log_line = 0;
 
   def tearDown(self):
-    print
-    print 'Shutting down'
+    print()
+    print('Shutting down')
 
     self._chrome_proc.poll()
     if self._chrome_proc.returncode is None:
-      print 'Killing Chrome subprocess'
+      print('Killing Chrome subprocess')
       self._chrome_proc.kill()
     else:
-      print 'Chrome already died.'
+      print('Chrome already died.')
 
     self._nvda_proc.poll()
     if self._nvda_proc.returncode is None:
-      print 'Killing NVDA subprocess'
+      print('Killing NVDA subprocess')
       self._nvda_proc.kill()
     else:
-      print 'NVDA already died.'
+      print('NVDA already died.')
 
   def _GetSpeechFromNvdaLogFile(self):
     """Return everything NVDA would have spoken as a list of strings.
@@ -144,7 +147,7 @@ class NvdaChromeTest(unittest.TestCase):
     """
     if not os.access(NVDA_LOGPATH, os.F_OK):
       return []
-    lines = open(NVDA_LOGPATH).readlines()
+    lines = open(NVDA_LOGPATH).readlines()[self.last_nvda_log_line:]
     regex = re.compile(r"u'((?:[^\'\\]|\\.)*)\'")
     result = []
     for line in lines:
@@ -152,9 +155,19 @@ class NvdaChromeTest(unittest.TestCase):
         speech_with_whitespace = m.group(1)
         speech_stripped = re.sub(r'\s+', ' ', speech_with_whitespace).strip()
         result.append(speech_stripped)
+    self.last_nvda_log_line = len(lines) - 1
     return result
 
-  def _WaitForSpeech(self, expected):
+  def _ArrayInArray(self, lines, expected):
+    positions = len(lines) - len(expected) + 1;
+    if (positions >= 0):
+      # loop through the number of positions that the subset can hold
+      for index in range(positions):
+        if (lines[index : index + len(expected)] == expected):
+          return True
+    return False
+
+  def _TestForSpeech(self, expected):
     """Block until the last speech in NVDA's log file is the given string(s).
 
     Repeatedly parses the log file until the last speech line(s) in the
@@ -163,26 +176,21 @@ class NvdaChromeTest(unittest.TestCase):
     Args:
       expected: string or a list of string - only succeeds if these are the last
         strings spoken, in order.
-
-    Returns when those strings are spoken, or throws an error if it times out
-      waiting for those strings.
     """
     if type(expected) is type(''):
       expected = [expected]
     start_time = time.time()
     while True:
       lines = self._GetSpeechFromNvdaLogFile()
-      if (lines[-len(expected):] == expected):
-        break
+
+      if self._ArrayInArray(lines, expected):
+        return True
 
       if time.time() - start_time >= WAIT_FOR_SPEECH_TIMEOUT_SECS:
-        print '** Speech from NVDA so far:'
-        for line in lines:
-          print '"%s"' % line
-        print '** Was waiting for:'
-        for line in expected:
-          print '"%s"' % line
-        raise Exception('Timed out')
+        self.fail("Test for expected speech failed.\n\nExpected:\n" +
+          str(expected) +
+          ".\n\nActual:\n" + str(lines));
+        return False
       time.sleep(0.1)
 
   #
@@ -191,37 +199,32 @@ class NvdaChromeTest(unittest.TestCase):
 
   def testTypingInOmnibox(self):
     # Ctrl+A: Select all.
-    self._pywinauto_window.TypeKeys('^A')
-    self._WaitForSpeech('selecting about:blank')
+    self._pywinauto_window.TypeKeys('^l')
+    self._TestForSpeech(["main tool bar"]);
 
-    # Type three characters.
     self._pywinauto_window.TypeKeys('xyz')
-    self._WaitForSpeech(['x', 'y', 'z'])
-
-    # Arrow back over two characters.
-    self._pywinauto_window.TypeKeys('{LEFT}')
-    self._WaitForSpeech(['z', 'z', 'unselecting'])
-
-    self._pywinauto_window.TypeKeys('{LEFT}')
-    self._WaitForSpeech('y')
+    self._pywinauto_window.TypeKeys('^a')
+    self._TestForSpeech(["selected about:blank"]);
 
   def testFocusToolbarButton(self):
     # Alt+Shift+T.
     self._pywinauto_window.TypeKeys('%+T')
-    self._WaitForSpeech('Reload button Reload this page')
+    self._TestForSpeech('Reload button Reload this page')
+    # this is flakey because sometimes this will be a stop button too.
 
   def testReadAllOnPageLoad(self):
-    # Ctrl+A: Select all
-    self._pywinauto_window.TypeKeys('^A')
-    self._WaitForSpeech('selecting about:blank')
-
     # Load data url.
+
+    # Focus the url bar with control-L
+    self._pywinauto_window.TypeKeys('^l')
+
+    self._pywinauto_window.TypeKeys('^a')
+
     self._pywinauto_window.TypeKeys('data:text/html,Hello<p>World.')
-    self._WaitForSpeech('dot')
     self._pywinauto_window.TypeKeys('{ENTER}')
-    self._WaitForSpeech(
-        ['document',
-         'Hello',
+
+    self._TestForSpeech(
+        ['Hello',
          'World.'])
 
 if __name__ == '__main__':

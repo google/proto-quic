@@ -22,8 +22,3 @@ class DummyStorySet(story.StorySet):
   def __init__(self):
     super(DummyStorySet, self).__init__()
     self.AddStory(DummyPage(self))
-
-
-class DummyStoryExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    pass  # No stories disabled.

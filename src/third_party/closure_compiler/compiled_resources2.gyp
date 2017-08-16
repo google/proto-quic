@@ -40,6 +40,7 @@
         '<(DEPTH)/chrome/browser/resources/uber/compiled_resources2.gyp:*',
         '<(DEPTH)/chrome/browser/resources/webapks/compiled_resources2.gyp:*',
         '<(DEPTH)/ui/file_manager/compiled_resources2.gyp:*',
+        '<(DEPTH)/ui/webui/resources/cr_components/compiled_resources2.gyp:*',
         '<(DEPTH)/ui/webui/resources/cr_elements/compiled_resources2.gyp:*',
         '<(DEPTH)/ui/webui/resources/js/chromeos/compiled_resources2.gyp:*',
         '<(DEPTH)/ui/webui/resources/js/compiled_resources2.gyp:*',

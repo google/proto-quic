@@ -23,6 +23,7 @@
 #include "net/spdy/core/hpack/hpack_output_stream.h"
 #include "net/spdy/core/spdy_test_utils.h"
 #include "net/spdy/platform/api/spdy_string.h"
+#include "net/spdy/platform/api/spdy_string_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -123,8 +124,7 @@ class HpackDecoderAdapterTest
   }
 
   bool HandleControlFrameHeadersData(SpdyStringPiece str) {
-    VLOG(3) << "HandleControlFrameHeadersData:\n"
-            << base::HexEncode(str.data(), str.size());
+    VLOG(3) << "HandleControlFrameHeadersData:\n" << SpdyHexDump(str);
     bytes_passed_in_ += str.size();
     return decoder_.HandleControlFrameHeadersData(str.data(), str.size());
   }
@@ -641,9 +641,9 @@ TEST_P(HpackDecoderAdapterTest, TruncatedHuffmanLiteral) {
   //                                         | www.example.com
   //                                         | -> :authority: www.example.com
 
-  SpdyString first = a2b_hex("418cf1e3c2e5f23a6ba0ab90f4ff");
+  SpdyString first = SpdyHexDecode("418cf1e3c2e5f23a6ba0ab90f4ff");
   EXPECT_TRUE(DecodeHeaderBlock(first));
-  first = a2b_hex("418cf1e3c2e5f23a6ba0ab90f4");
+  first.pop_back();
   EXPECT_FALSE(DecodeHeaderBlock(first));
 }
 
@@ -661,9 +661,9 @@ TEST_P(HpackDecoderAdapterTest, HuffmanEOSError) {
   //                                         | www.example.com
   //                                         | -> :authority: www.example.com
 
-  SpdyString first = a2b_hex("418cf1e3c2e5f23a6ba0ab90f4ff");
+  SpdyString first = SpdyHexDecode("418cf1e3c2e5f23a6ba0ab90f4ff");
   EXPECT_TRUE(DecodeHeaderBlock(first));
-  first = a2b_hex("418df1e3c2e5f23a6ba0ab90f4ffff");
+  first = SpdyHexDecode("418df1e3c2e5f23a6ba0ab90f4ffff");
   EXPECT_FALSE(DecodeHeaderBlock(first));
 }
 
@@ -709,7 +709,7 @@ TEST_P(HpackDecoderAdapterTest, SectionC4RequestHuffmanExamples) {
   //                                         |     Decoded:
   //                                         | www.example.com
   //                                         | -> :authority: www.example.com
-  SpdyString first = a2b_hex("828684418cf1e3c2e5f23a6ba0ab90f4ff");
+  SpdyString first = SpdyHexDecode("828684418cf1e3c2e5f23a6ba0ab90f4ff");
   const SpdyHeaderBlock& first_header_set = DecodeBlockExpectingSuccess(first);
 
   EXPECT_THAT(first_header_set,
@@ -746,7 +746,7 @@ TEST_P(HpackDecoderAdapterTest, SectionC4RequestHuffmanExamples) {
   //                                         | no-cache
   //                                         | -> cache-control: no-cache
 
-  SpdyString second = a2b_hex("828684be5886a8eb10649cbf");
+  SpdyString second = SpdyHexDecode("828684be5886a8eb10649cbf");
   const SpdyHeaderBlock& second_header_set =
       DecodeBlockExpectingSuccess(second);
 
@@ -789,7 +789,7 @@ TEST_P(HpackDecoderAdapterTest, SectionC4RequestHuffmanExamples) {
   //                                         | custom-value
   //                                         | -> custom-key: custom-value
   SpdyString third =
-      a2b_hex("828785bf408825a849e95ba97d7f8925a849e95bb8e8b4bf");
+      SpdyHexDecode("828785bf408825a849e95ba97d7f8925a849e95bb8e8b4bf");
   const SpdyHeaderBlock& third_header_set = DecodeBlockExpectingSuccess(third);
 
   EXPECT_THAT(
@@ -858,7 +858,7 @@ TEST_P(HpackDecoderAdapterTest, SectionC6ResponseHuffmanExamples) {
   //                                         | -> location: https://www.e
   //                                         |    xample.com
 
-  SpdyString first = a2b_hex(
+  SpdyString first = SpdyHexDecode(
       "488264025885aec3771a4b6196d07abe"
       "941054d444a8200595040b8166e082a6"
       "2d1bff6e919d29ad171863c78f0b97c8"
@@ -901,7 +901,7 @@ TEST_P(HpackDecoderAdapterTest, SectionC6ResponseHuffmanExamples) {
   //                                         |   idx = 63
   //                                         | -> location:
   //                                         |   https://www.example.com
-  SpdyString second = a2b_hex("4883640effc1c0bf");
+  SpdyString second = SpdyHexDecode("4883640effc1c0bf");
   const SpdyHeaderBlock& second_header_set =
       DecodeBlockExpectingSuccess(second);
 
@@ -973,7 +973,7 @@ TEST_P(HpackDecoderAdapterTest, SectionC6ResponseHuffmanExamples) {
   //                                         | -> set-cookie: foo=ASDJKHQ
   //                                         |   KBZXOQWEOPIUAXQWEOIU;
   //                                         |   max-age=3600; version=1
-  SpdyString third = a2b_hex(
+  SpdyString third = SpdyHexDecode(
       "88c16196d07abe941054d444a8200595"
       "040b8166e084a62d1bffc05a839bd9ab"
       "77ad94e7821dd7f2e6c7b335dfdfcd5b"
@@ -1076,7 +1076,7 @@ TEST_P(HpackDecoderAdapterTest, Cookies) {
   SpdyHeaderBlock expected_header_set;
   expected_header_set["cookie"] = "foo; bar";
 
-  EXPECT_TRUE(DecodeHeaderBlock(a2b_hex("608294e76003626172")));
+  EXPECT_TRUE(DecodeHeaderBlock(SpdyHexDecode("608294e76003626172")));
   EXPECT_EQ(expected_header_set, decoded_block());
 }
 

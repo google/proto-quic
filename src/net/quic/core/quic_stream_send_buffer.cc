@@ -9,6 +9,8 @@
 #include "net/quic/core/quic_stream_send_buffer.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flags.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
 
@@ -18,23 +20,28 @@ QuicStreamDataSlice::QuicStreamDataSlice(UniqueStreamBuffer data,
     : data(std::move(data)),
       offset(offset),
       data_length(data_length),
-      data_length_waiting_for_acks(data_length) {}
+      outstanding_data_length(data_length) {}
 
 QuicStreamDataSlice::~QuicStreamDataSlice() {}
 
 QuicStreamSendBuffer::QuicStreamSendBuffer(QuicBufferAllocator* allocator)
-    : allocator_(allocator) {}
+    : stream_offset_(0), allocator_(allocator) {}
 
 QuicStreamSendBuffer::~QuicStreamSendBuffer() {}
 
 void QuicStreamSendBuffer::SaveStreamData(QuicIOVector iov,
                                           size_t iov_offset,
-                                          QuicStreamOffset offset,
                                           QuicByteCount data_length) {
-  DCHECK_LE(iov_offset + data_length, iov.total_length);
-  UniqueStreamBuffer buffer = NewStreamBuffer(allocator_, data_length);
-  QuicUtils::CopyToBuffer(iov, iov_offset, data_length, buffer.get());
-  send_buffer_.emplace_back(std::move(buffer), offset, data_length);
+  DCHECK_LT(0u, data_length);
+  // Latch the maximum data slice size.
+  const QuicByteCount max_data_slice_size =
+      GetQuicFlag(FLAGS_quic_send_buffer_max_data_slice_size);
+  while (data_length > 0) {
+    size_t slice_len = std::min(data_length, max_data_slice_size);
+    SaveStreamDataOneSlice(iov, iov_offset, slice_len);
+    data_length -= slice_len;
+    iov_offset += slice_len;
+  }
 }
 
 bool QuicStreamSendBuffer::WriteStreamData(QuicStreamOffset offset,
@@ -62,7 +69,6 @@ bool QuicStreamSendBuffer::WriteStreamData(QuicStreamOffset offset,
 
 void QuicStreamSendBuffer::RemoveStreamFrame(QuicStreamOffset offset,
                                              QuicByteCount data_length) {
-  DCHECK_LT(0u, data_length);
   for (QuicStreamDataSlice& slice : send_buffer_) {
     if (offset < slice.offset) {
       break;
@@ -73,7 +79,7 @@ void QuicStreamSendBuffer::RemoveStreamFrame(QuicStreamOffset offset,
     QuicByteCount slice_offset = offset - slice.offset;
     QuicByteCount removing_length =
         std::min(data_length, slice.data_length - slice_offset);
-    slice.data_length_waiting_for_acks -= removing_length;
+    slice.outstanding_data_length -= removing_length;
     offset += removing_length;
     data_length -= removing_length;
   }
@@ -82,9 +88,19 @@ void QuicStreamSendBuffer::RemoveStreamFrame(QuicStreamOffset offset,
   // Remove data which stops waiting for acks. Please note, data can be
   // acked out of order, but send buffer is cleaned up in order.
   while (!send_buffer_.empty() &&
-         send_buffer_.front().data_length_waiting_for_acks == 0) {
+         send_buffer_.front().outstanding_data_length == 0) {
     send_buffer_.pop_front();
   }
+}
+
+void QuicStreamSendBuffer::SaveStreamDataOneSlice(QuicIOVector iov,
+                                                  size_t iov_offset,
+                                                  QuicByteCount data_length) {
+  DCHECK_LE(iov_offset + data_length, iov.total_length);
+  UniqueStreamBuffer buffer = NewStreamBuffer(allocator_, data_length);
+  QuicUtils::CopyToBuffer(iov, iov_offset, data_length, buffer.get());
+  send_buffer_.emplace_back(std::move(buffer), stream_offset_, data_length);
+  stream_offset_ += data_length;
 }
 
 size_t QuicStreamSendBuffer::size() const {

@@ -150,6 +150,7 @@ void MD4Sum(const Uint8 *input, Uint32 inputLen, Uint8 *result)
 {
   Uint8 final[128];
   Uint32 i, n, m, state[4];
+  Uint32 inputLenArr[2];
 
   /* magic initial states */
   state[0] = 0x67452301;
@@ -170,8 +171,15 @@ void MD4Sum(const Uint8 *input, Uint32 inputLen, Uint8 *result)
   final[n] = 0x80;
   memset(final + n + 1, 0, 120 - (n + 1));
 
-  inputLen = inputLen << 3;
-  w2b(final + (n >= 56 ? 120 : 56), &inputLen, 4);
+  // Store the length of the input in bits in two 32 bit values with the
+  // least significant word first in inputLenArr. w2b will then convert the
+  // 2x 32 bit values each to 4x bytes in little endian order. This results
+  // in writing 64 bits in little endian order.
+  //
+  // See the MD4Update function in RFC1320 Section A.1 (page 10).
+  inputLenArr[0] = static_cast<Uint32>(inputLen << 3);
+  inputLenArr[1] = static_cast<Uint32>(inputLen >> 29);
+  w2b(final + (n >= 56 ? 120 : 56), inputLenArr, 8);
 
   md4step(state, final);
   if (n >= 56)

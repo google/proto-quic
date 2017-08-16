@@ -77,9 +77,3 @@ class ToughCompositorCasesPageSet(story.StorySet):
 
     for url in wait_urls_list:
       self.AddStory(ToughCompositorWaitPage(url, self))
-
-
-class ToughCompositorCaseStoryExpectations(
-    story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    pass

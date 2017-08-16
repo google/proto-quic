@@ -83,6 +83,13 @@
 #define CPU_BMI2    49      /* Intel BMI2 instructions */
 #define CPU_INVPCID 50      /* Intel INVPCID instruction */
 #define CPU_LZCNT   51      /* Intel LZCNT instruction */
+#define CPU_TBM     52      /* AMD TBM instruction */
+#define CPU_TSX     53      /* Intel TSX instructions */
+#define CPU_SHA     54      /* Intel SHA instructions */
+#define CPU_SMAP    55      /* Intel SMAP instructions */
+#define CPU_RDSEED  56      /* Intel RDSEED instruction */
+#define CPU_ADX     57      /* Intel ADCX and ADOX instructions */
+#define CPU_PRFCHW  58      /* Intel/AMD PREFETCHW instruction */
 
 enum x86_parser_type {
     X86_PARSER_NASM = 0,
@@ -103,6 +110,7 @@ typedef struct yasm_arch_x86 {
     unsigned int amd64_machine;
     enum x86_parser_type parser;
     unsigned int mode_bits;
+    unsigned int address_size;
     unsigned int force_strict;
     unsigned int default_rel;
     unsigned int gas_intel_mode;
@@ -139,7 +147,8 @@ typedef enum {
     X86_ADDRSIZE = 2<<8,
     X86_OPERSIZE = 3<<8,
     X86_SEGREG = 4<<8,
-    X86_REX = 5<<8
+    X86_REX = 5<<8,
+    X86_ACQREL = 6<<8     /*TSX hint prefixes*/
 } x86_parse_insn_prefix;
 
 typedef enum {
@@ -219,6 +228,8 @@ typedef struct x86_common {
     unsigned char addrsize;         /* 0 or =mode_bits => no override */
     unsigned char opersize;         /* 0 or =mode_bits => no override */
     unsigned char lockrep_pre;      /* 0 indicates no prefix */
+    unsigned char acqrel_pre;      /* 0 indicates no prefix. We need this because
+                                   xqcuire/xrelease might require F0 prefix */
 
     unsigned char mode_bits;
 } x86_common;

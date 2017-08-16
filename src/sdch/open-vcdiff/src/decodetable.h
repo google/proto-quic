@@ -18,9 +18,9 @@
 #include <config.h>
 #include <stddef.h>     // NULL
 #include <stdint.h>     // int32_t
-#include <memory>       // auto_ptr
 #include "codetable.h"  // VCDiffInstructi...
 #include "logging.h"
+#include "unique_ptr.h" // auto_ptr, unique_ptr
 
 namespace open_vcdiff {
 
@@ -133,7 +133,7 @@ class VCDiffCodeTableReader {
   // management for the non-standard code table, whose contents have
   // been read as part of the encoded data file/stream.
   //
-  std::auto_ptr<VCDiffCodeTableData> non_default_code_table_data_;
+  UNIQUE_PTR<VCDiffCodeTableData> non_default_code_table_data_;
 
   const char** instructions_and_sizes_;
   const char* instructions_and_sizes_end_;

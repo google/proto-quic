@@ -590,13 +590,13 @@ struct FuzzTraits<base::DictionaryValue> {
         case base::Value::Type::BOOLEAN: {
           bool tmp;
           fuzzer->FuzzBool(&tmp);
-          p->SetBooleanWithoutPathExpansion(property, tmp);
+          p->SetKey(property, base::Value(tmp));
           break;
         }
         case base::Value::Type::INTEGER: {
           int tmp;
           fuzzer->FuzzInt(&tmp);
-          p->SetIntegerWithoutPathExpansion(property, tmp);
+          p->SetKey(property, base::Value(tmp));
           break;
         }
         case base::Value::Type::DOUBLE: {

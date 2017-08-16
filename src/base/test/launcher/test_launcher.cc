@@ -62,6 +62,12 @@
 #include "base/win/windows_version.h"
 #endif
 
+#if defined(OS_FUCHSIA)
+// TODO(scottmg): For temporary code in OnOutputTimeout().
+#include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
+#endif
+
 namespace base {
 
 // See https://groups.google.com/a/chromium.org/d/msg/chromium-dev/nkdTP7sstSc/uT3FaE_sgkAJ .
@@ -251,6 +257,9 @@ int LaunchChildTestProcessWithOptions(
     const TestLauncher::GTestProcessLaunchedCallback& launched_callback,
     bool* was_timeout) {
   TimeTicks start_time(TimeTicks::Now());
+#if defined(OS_FUCHSIA)  // TODO(scottmg): https://crbug.com/755282
+  const bool kOnBot = getenv("CHROME_HEADLESS") != nullptr;
+#endif  // OS_FUCHSIA
 
 #if defined(OS_POSIX)
   // Make sure an option we rely on is present - see LaunchChildGTestProcess.
@@ -327,6 +336,12 @@ int LaunchChildTestProcessWithOptions(
       return -1;
 
     // TODO(rvargas) crbug.com/417532: Don't store process handles.
+#if defined(OS_FUCHSIA)  // TODO(scottmg): https://crbug.com/755282
+    if (kOnBot) {
+      LOG(ERROR) << base::StringPrintf("adding %x to live process list",
+                                       process.Handle());
+    }
+#endif  // OS_FUCHSIA
     GetLiveProcesses()->insert(std::make_pair(process.Handle(), command_line));
   }
 
@@ -338,6 +353,12 @@ int LaunchChildTestProcessWithOptions(
     *was_timeout = true;
     exit_code = -1;  // Set a non-zero exit code to signal a failure.
 
+#if defined(OS_FUCHSIA)  // TODO(scottmg): https://crbug.com/755282
+    if (kOnBot) {
+      LOG(ERROR) << base::StringPrintf("about to process.Terminate() %x",
+                                       process.Handle());
+    }
+#endif  // OS_FUCHSIA
     // Ensure that the process terminates.
     process.Terminate(-1, true);
   }
@@ -354,10 +375,22 @@ int LaunchChildTestProcessWithOptions(
       // or due to it timing out, we need to clean up any child processes that
       // it might have created. On Windows, child processes are automatically
       // cleaned up using JobObjects.
+#if defined(OS_FUCHSIA)  // TODO(scottmg): https://crbug.com/755282
+      if (kOnBot) {
+        LOG(ERROR) << base::StringPrintf("going to KillProcessGroup() for %x",
+                                         process.Handle());
+      }
+#endif  // OS_FUCHSIA
       KillProcessGroup(process.Handle());
     }
 #endif
 
+#if defined(OS_FUCHSIA)  // TODO(scottmg): https://crbug.com/755282
+    if (kOnBot) {
+      LOG(ERROR) << base::StringPrintf("removing %x from live process list",
+                                       process.Handle());
+    }
+#endif  // OS_FUCHSIA
     GetLiveProcesses()->erase(process.Handle());
   }
 
@@ -421,7 +454,11 @@ void DoLaunchChildTestProcess(
 
   options.fds_to_remap = test_launch_options.fds_to_remap;
   if (redirect_stdio) {
-    output_file_fd.reset(open(output_file.value().c_str(), O_RDWR));
+    // Don't use O_CREATE here - CreateTemporaryFile should have created it.
+    // O_APPEND is necessary on Fuchsia, otherwise stdio/stderr will have
+    // independent seek positions, and trample one another (crbug.com/751253).
+    output_file_fd.reset(
+        open(output_file.value().c_str(), O_WRONLY | O_APPEND | O_TRUNC));
     CHECK(output_file_fd.is_valid());
 
     options.fds_to_remap.push_back(
@@ -1165,6 +1202,26 @@ void TestLauncher::OnOutputTimeout() {
 #else
     fprintf(stdout, "\t%s\n", pair.second.GetCommandLineString().c_str());
 #endif
+
+#if defined(OS_FUCHSIA)
+    // TODO(scottmg): Temporary code to try to identify why child processes
+    // appear to not be terminated after a timeout correctly.
+    // https://crbug.com/750370 and https://crbug.com/738275.
+
+    mx_info_process_t proc_info = {};
+    mx_status_t status =
+        mx_object_get_info(pair.first, MX_INFO_PROCESS, &proc_info,
+                           sizeof(proc_info), nullptr, nullptr);
+    if (status != MX_OK) {
+      fprintf(stdout, "mx_object_get_info failed for '%s', status=%d\n",
+              pair.second.GetCommandLineString().c_str(), status);
+    } else {
+      fprintf(stdout, "  return_code=%d\n", proc_info.return_code);
+      fprintf(stdout, "  started=%d\n", proc_info.started);
+      fprintf(stdout, "  exited=%d\n", proc_info.exited);
+      fprintf(stdout, "  debugger_attached=%d\n", proc_info.debugger_attached);
+    }
+#endif  // OS_FUCHSIA
   }
 
   fflush(stdout);

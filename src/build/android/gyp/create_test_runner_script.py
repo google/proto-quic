@@ -70,14 +70,14 @@ def main(args):
   group.add_argument('--additional-apk-incremental', action='append',
                      dest='additional_apks_incremental', default=[])
   group.add_argument('--apk-under-test')
-  group.add_argument('--apk-under-test-incremental-install-script')
+  group.add_argument('--apk-under-test-incremental-install-json')
   group.add_argument('--executable-dist-dir')
   group.add_argument('--isolate-file-path')
   group.add_argument('--output-directory')
   group.add_argument('--runtime-deps-path')
   group.add_argument('--test-apk')
   group.add_argument('--test-jar')
-  group.add_argument('--test-apk-incremental-install-script')
+  group.add_argument('--test-apk-incremental-install-json')
   group.add_argument('--coverage-dir')
   group.add_argument('--android-manifest-path')
   group.add_argument('--resource-zips')
@@ -112,11 +112,11 @@ def main(args):
   if args.apk_under_test:
     test_runner_path_args.append(
         ('--apk-under-test', RelativizePathToScript(args.apk_under_test)))
-  if args.apk_under_test_incremental_install_script:
+  if args.apk_under_test_incremental_install_json:
     test_runner_path_args.append(
-        ('--apk-under-test-incremental-install-script',
+        ('--apk-under-test-incremental-install-json',
          RelativizePathToScript(
-             args.apk_under_test_incremental_install_script)))
+             args.apk_under_test_incremental_install_json)))
   if args.executable_dist_dir:
     test_runner_path_args.append(
         ('--executable-dist-dir',
@@ -136,10 +136,10 @@ def main(args):
   if args.test_jar:
     test_runner_path_args.append(
         ('--test-jar', RelativizePathToScript(args.test_jar)))
-  if args.test_apk_incremental_install_script:
+  if args.test_apk_incremental_install_json:
     test_runner_path_args.append(
-        ('--test-apk-incremental-install-script',
-         RelativizePathToScript(args.test_apk_incremental_install_script)))
+        ('--test-apk-incremental-install-json',
+         RelativizePathToScript(args.test_apk_incremental_install_json)))
   if args.coverage_dir:
     test_runner_path_args.append(
         ('--coverage-dir', RelativizePathToScript(args.coverage_dir)))

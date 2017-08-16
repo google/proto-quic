@@ -190,6 +190,7 @@ void SetInitialRttEstimate(base::TimeDelta estimate,
 }
 
 QuicConfig InitializeQuicConfig(const QuicTagVector& connection_options,
+                                const QuicTagVector& client_connection_options,
                                 int idle_connection_timeout_seconds) {
   DCHECK_GT(idle_connection_timeout_seconds, 0);
   QuicConfig config;
@@ -197,6 +198,7 @@ QuicConfig InitializeQuicConfig(const QuicTagVector& connection_options,
       QuicTime::Delta::FromSeconds(idle_connection_timeout_seconds),
       QuicTime::Delta::FromSeconds(idle_connection_timeout_seconds));
   config.SetConnectionOptionsToSend(connection_options);
+  config.SetClientConnectionOptions(client_connection_options);
   return config;
 }
 
@@ -506,8 +508,7 @@ int QuicStreamFactory::Job::DoResolveHostComplete(int rv) {
 int QuicStreamFactory::Job::DoConnect() {
   io_state_ = STATE_CONNECT_COMPLETE;
 
-  bool require_confirmation = factory_->require_confirmation() ||
-                              was_alternative_service_recently_broken_;
+  bool require_confirmation = was_alternative_service_recently_broken_;
   net_log_.BeginEvent(
       NetLogEventType::QUIC_STREAM_FACTORY_JOB_CONNECT,
       NetLog::BoolCallback("require_confirmation", require_confirmation));
@@ -671,6 +672,7 @@ QuicStreamFactory::QuicStreamFactory(
     bool race_cert_verification,
     bool estimate_initial_rtt,
     const QuicTagVector& connection_options,
+    const QuicTagVector& client_connection_options,
     bool enable_token_binding)
     : require_confirmation_(true),
       net_log_(net_log),
@@ -687,6 +689,7 @@ QuicStreamFactory::QuicStreamFactory(
       clock_skew_detector_(base::TimeTicks::Now(), base::Time::Now()),
       socket_performance_watcher_factory_(socket_performance_watcher_factory),
       config_(InitializeQuicConfig(connection_options,
+                                   client_connection_options,
                                    idle_connection_timeout_seconds)),
       crypto_config_(base::WrapUnique(
           new ProofVerifierChromium(cert_verifier,
@@ -1528,6 +1531,11 @@ int QuicStreamFactory::CreateSession(const QuicSessionKey& key,
         socket_performance_watcher_factory_->CreateSocketPerformanceWatcher(
             SocketPerformanceWatcherFactory::PROTOCOL_QUIC, address_list);
   }
+
+  // Wait for handshake confirmation before allowing streams to be created if
+  // either this session or the factory require confirmation.
+  if (require_confirmation_)
+    require_confirmation = true;
 
   *session = new QuicChromiumClientSession(
       connection, std::move(socket), this, quic_crypto_client_stream_factory_,

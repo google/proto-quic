@@ -20,7 +20,6 @@
 #include "net/quic/core/quic_iovector.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_pending_retransmission.h"
-#include "net/quic/core/quic_stream_frame_data_producer.h"
 #include "net/quic/platform/api/quic_export.h"
 
 namespace net {

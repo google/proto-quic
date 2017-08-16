@@ -10,10 +10,10 @@ AM_CPPFLAGS = -I$(top_builddir)/include -I$(srcdir)/include
 
 AM_CFLAGS = $(THREAD_CFLAGS) $(Z_CFLAGS) $(LZMA_CFLAGS)
 
-noinst_PROGRAMS=testSchemas testRelax testSAX testHTML testXPath testURI \
-                testThreads testC14N testAutomata testRegexp \
-                testReader testapi testModule runtest runsuite testchar \
-		testdict runxmlconf testrecurse testlimits
+check_PROGRAMS=testSchemas testRelax testSAX testHTML testXPath testURI \
+               testThreads testC14N testAutomata testRegexp \
+               testReader testapi testModule runtest runsuite testchar \
+	       testdict runxmlconf testrecurse testlimits
 
 bin_PROGRAMS = xmllint xmlcatalog
 
@@ -202,7 +202,8 @@ runxmlconf_LDADD= $(LDADDS)
 #testOOM_DEPENDENCIES = $(DEPS)
 #testOOM_LDADD= $(LDADDS)
 
-runtests:
+runtests: runtest$(EXEEXT) testrecurse$(EXEEXT) testapi$(EXEEXT) \
+          testchar$(EXEEXT) testdict$(EXEEXT) runxmlconf$(EXEEXT)
 	[ -d test   ] || $(LN_S) $(srcdir)/test   .
 	[ -d result ] || $(LN_S) $(srcdir)/result .
 	$(CHECKER) ./runtest$(EXEEXT) && \
@@ -840,6 +841,21 @@ SAXtests : testSAX$(EXEEXT)
 	      log=`$(CHECKER) $(top_builddir)/testSAX --sax2 $$i > result.$$name 2> /dev/null ; \
 	      grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
 	      diff $(srcdir)/result/$$name.sax2 result.$$name` ; \
+	      if [ -n "$$log" ] ; then echo $$name result ; echo "$$log" ; fi ; \
+	      rm result.$$name ; \
+	  fi ; fi ; done)
+	@echo "## SAX2 callbacks regression tests with entity substitution"
+	-@(for i in $(srcdir)/test/* ; do \
+	  name=`basename $$i`; \
+	  if [ ! -d $$i ] ; then \
+	  if [ ! -f $(srcdir)/result/noent/$$name.sax2 ] ; then \
+	      echo New test file $$name ; \
+	      $(CHECKER) $(top_builddir)/testSAX --sax2 --noent $$i > $(srcdir)/result/noent/$$name.sax2 2> /dev/null ; \
+	      grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
+	  else \
+	      log=`$(CHECKER) $(top_builddir)/testSAX --sax2 --noent $$i > result.$$name 2> /dev/null ; \
+	      grep "MORY ALLO" .memdump  | grep -v "MEMORY ALLOCATED : 0";\
+	      diff $(srcdir)/result/noent/$$name.sax2 result.$$name` ; \
 	      if [ -n "$$log" ] ; then echo $$name result ; echo "$$log" ; fi ; \
 	      rm result.$$name ; \
 	  fi ; fi ; done)

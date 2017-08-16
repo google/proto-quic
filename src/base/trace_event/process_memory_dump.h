@@ -18,8 +18,6 @@
 #include "base/trace_event/memory_allocator_dump.h"
 #include "base/trace_event/memory_allocator_dump_guid.h"
 #include "base/trace_event/memory_dump_request_args.h"
-#include "base/trace_event/process_memory_maps.h"
-#include "base/trace_event/process_memory_totals.h"
 #include "build/build_config.h"
 
 // Define COUNT_RESIDENT_BYTES_SUPPORTED if platform supports counting of the
@@ -216,15 +214,6 @@ class BASE_EXPORT ProcessMemoryDump {
   // Called at trace generation time to populate the TracedValue.
   void AsValueInto(TracedValue* value) const;
 
-  ProcessMemoryTotals* process_totals() { return &process_totals_; }
-  const ProcessMemoryTotals* process_totals() const { return &process_totals_; }
-  bool has_process_totals() const { return has_process_totals_; }
-  void set_has_process_totals() { has_process_totals_ = true; }
-
-  ProcessMemoryMaps* process_mmaps() { return &process_mmaps_; }
-  bool has_process_mmaps() const { return has_process_mmaps_; }
-  void set_has_process_mmaps() { has_process_mmaps_ = true; }
-
   const HeapDumpsMap& heap_dumps() const { return heap_dumps_; }
 
   const MemoryDumpArgs& dump_args() const { return dump_args_; }
@@ -243,12 +232,6 @@ class BASE_EXPORT ProcessMemoryDump {
       bool is_weak);
 
   MemoryAllocatorDump* GetBlackHoleMad();
-
-  ProcessMemoryTotals process_totals_;
-  bool has_process_totals_;
-
-  ProcessMemoryMaps process_mmaps_;
-  bool has_process_mmaps_;
 
   AllocatorDumpsMap allocator_dumps_;
   HeapDumpsMap heap_dumps_;

@@ -30,6 +30,9 @@ group("perf") {
 
     # For indexeddb_perf
     "//chrome/test/data/indexeddb/",
+
+    # For Pylib used by VR tests
+    "//build/android/pylib/",
   ]
 }
 

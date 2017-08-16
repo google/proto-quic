@@ -11,7 +11,6 @@ namespace testing {
 namespace android {
 
 void InstallHandlers();
-bool RegisterNativeTestJNI(JNIEnv* env);
 
 }  // namespace android
 }  // namespace testing

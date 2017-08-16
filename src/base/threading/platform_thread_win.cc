@@ -225,9 +225,6 @@ bool PlatformThread::CreateNonJoinableWithPriority(size_t stack_size,
 
 // static
 void PlatformThread::Join(PlatformThreadHandle thread_handle) {
-  // Record the event that this thread is blocking upon (for hang diagnosis).
-  base::debug::ScopedThreadJoinActivity thread_activity(&thread_handle);
-
   DCHECK(thread_handle.platform_handle());
   // TODO(willchan): Enable this check once I can get it to work for Windows
   // shutdown.
@@ -247,6 +244,9 @@ void PlatformThread::Join(PlatformThreadHandle thread_handle) {
   // Record information about the exiting thread in case joining hangs.
   base::debug::Alias(&thread_id);
   base::debug::Alias(&last_error);
+
+  // Record the event that this thread is blocking upon (for hang diagnosis).
+  base::debug::ScopedThreadJoinActivity thread_activity(&thread_handle);
 
   // Wait for the thread to exit.  It should already have terminated but make
   // sure this assumption is valid.

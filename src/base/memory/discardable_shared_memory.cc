@@ -193,6 +193,10 @@ bool DiscardableSharedMemory::Unmap() {
   if (!shared_memory_.Unmap())
     return false;
 
+  locked_page_count_ = 0;
+#if DCHECK_IS_ON()
+  locked_pages_.clear();
+#endif
   mapped_size_ = 0;
   return true;
 }

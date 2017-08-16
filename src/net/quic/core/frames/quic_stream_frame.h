@@ -65,9 +65,9 @@ struct QUIC_EXPORT_PRIVATE QuicStreamFrame {
   const char* data_buffer;
   QuicStreamOffset offset;  // Location of this data in the stream.
   // TODO(fayang): When deprecating
-  // FLAGS_quic_reloadable_flag_quic_stream_owns_data: (1) Remove buffer from
-  // QuicStreamFrame; (2) remove the constructor uses UniqueStreamBuffer and (3)
-  // Move definition of UniqueStreamBuffer to QuicStreamSendBuffer.
+  // quic_reloadable_flag_quic_save_data_before_consumption2: (1) Remove buffer
+  // from QuicStreamFrame; (2) remove the constructor uses UniqueStreamBuffer
+  // and (3) Move definition of UniqueStreamBuffer to QuicStreamSendBuffer.
   // nullptr when the QuicStreamFrame is received, and non-null when sent.
   UniqueStreamBuffer buffer;
 

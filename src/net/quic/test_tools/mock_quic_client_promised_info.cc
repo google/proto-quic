@@ -10,7 +10,7 @@ namespace net {
 namespace test {
 
 MockQuicClientPromisedInfo::MockQuicClientPromisedInfo(
-    QuicClientSessionBase* session,
+    QuicSpdyClientSessionBase* session,
     QuicStreamId id,
     string url)
     : QuicClientPromisedInfo(session, id, url) {}

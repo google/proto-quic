@@ -102,7 +102,6 @@
     *   [defines: [string list] C preprocessor defines.](#defines)
     *   [depfile: [string] File name for input dependencies for actions.](#depfile)
     *   [deps: [label list] Private linked dependencies.](#deps)
-    *   [xcode_extra_attributes: [scope] Extra attributes for Xcode projects.](#depfile)
     *   [include_dirs: [directory list] Additional include directories.](#include_dirs)
     *   [inputs: [file list] Additional compile-time dependencies.](#inputs)
     *   [ldflags: [string list] Flags passed to the linker.](#ldflags)
@@ -124,10 +123,11 @@
     *   [response_file_contents: [string list] Contents of .rsp file for actions.](#response_file_contents)
     *   [script: [file name] Script file for actions.](#script)
     *   [sources: [file list] Source files for a target.](#sources)
-    *   [xcode_test_application_name: [string] Xcode test application name for unit or ui test.](#xcode_test_application_name)
     *   [testonly: [boolean] Declares a target must only be used for testing.](#testonly)
     *   [visibility: [label list] A list of labels that can depend on a target.](#visibility)
     *   [write_runtime_deps: Writes the target's runtime_deps to the given path.](#write_runtime_deps)
+    *   [xcode_extra_attributes: [scope] Extra attributes for Xcode projects.](#xcode_extra_attributes)
+    *   [test_application_name: [string] Test application name for unit or ui test target.](#test_application_name)
 *   [Other help topics](#other)
     *   [all: Print all the help at once](#all)
     *   [buildargs: How build arguments work.](#buildargs)
@@ -598,11 +598,9 @@
   gn format /abspath/some/BUILD.gn
   gn format --stdin
 ```
-### <a name="gen:"></a>**gn gen**: Generate ninja files.
+### <a name="gen"></a>**gn gen [\--check] [<ide options>] <out_dir>**
 
 ```
-  gn gen [--check] [<ide options>] <out_dir>
-
   Generates ninja files from the current tree and puts them in the given output
   directory.
 
@@ -1289,7 +1287,8 @@
   bundle_root_dir*, bundle_resources_dir*, bundle_executable_dir*,
   bundle_plugins_dir*, bundle_deps_filter, deps, data_deps, public_deps,
   visibility, product_type, code_signing_args, code_signing_script,
-  code_signing_sources, code_signing_outputs
+  code_signing_sources, code_signing_outputs, xcode_extra_attributes,
+  xcode_test_application_name
   * = required
 ```
 
@@ -1344,13 +1343,14 @@
 
       create_bundle("${app_name}.app") {
         product_type = "com.apple.product-type.application"
+
         if (is_ios) {
           bundle_root_dir = "${root_build_dir}/$target_name"
           bundle_resources_dir = bundle_root_dir
           bundle_executable_dir = bundle_root_dir
           bundle_plugins_dir = bundle_root_dir + "/Plugins"
 
-          xcode_extra_attributes = {
+          extra_attributes = {
             ONLY_ACTIVE_ARCH = "YES"
             DEBUG_INFORMATION_FORMAT = "dwarf"
           }
@@ -1402,8 +1402,7 @@
   Deps: data_deps, deps, public_deps
   Dependent configs: all_dependent_configs, public_configs
   General: check_includes, configs, data, inputs, output_name,
-           output_extension, public, sources, testonly, visibility,
-           xcode_extra_attributes
+           output_extension, public, sources, testonly, visibility
 ```
 ### <a name="group"></a>**group**: Declare a named group of targets.
 
@@ -4495,26 +4494,6 @@
 
   See also "public_deps".
 ```
-### <a name="xcode_extra_attributes"></a>**xcode_extra_attributes**: Extra attributes for Xcode projects.
-
-```
-  The value defined in this scope will be copied to the EXTRA_ATTRIBUTES
-  property of the generated Xcode project. They are only meaningful when
-  generating with --ide=xcode.
-
-  See "gn help create_bundle" for more information.
-```
-
-#### **Example**
-
-```
-  create_bundle("chrome") {
-    xcode_extra_attributes = {
-      ONLY_ACTIVE_ARCH = "YES"
-    }
-    ...
-  }
-```
 ### <a name="include_dirs"></a>**include_dirs**: Additional include directories.
 
 ```
@@ -5207,24 +5186,6 @@
   copy
     The source are the source files to copy.
 ```
-### <a name="xcode_test_application_name"></a>**xcode_test_application_name**: Xcode test application name for unit or ui test target.
-
-```
-  Each Xcode unit and ui test target must have a test application target, and
-  this value is used to specify the relationship. Only meaningful to Xcode
-  (used as part of the Xcode project generation).
-
-  See "gn help create_bundle" for more information.
-```
-
-#### **Example**
-
-```
-  create_bundle("chrome_xctest") {
-    xcode_test_application_name = "chrome"
-    ...
-  }
-```
 ### <a name="testonly"></a>**testonly**: Declares a target must only be used for testing.
 
 ```
@@ -5320,6 +5281,33 @@
   be the main output file of the target itself. The file contents will be the
   same as requesting the runtime deps be written on the command line (see "gn
   help --runtime-deps-list-file").
+```
+### <a name="xcode_extra_attributes"></a>**xcode_extra_attributes**: [scope] Extra attributes for Xcode projects.
+
+```
+  The value defined in this scope will be copied to the EXTRA_ATTRIBUTES
+  property of the generated Xcode project. They are only meaningful when
+  generating with --ide=xcode.
+
+  See "gn help create_bundle" for more information.
+```
+### <a name="test_application_name"></a>**test_application_name**: Test application name for unit or ui test target.
+
+```
+  Each unit and ui test target must have a test application target, and this
+  value is used to specify the relationship. Only meaningful to Xcode (used as
+  part of the Xcode project generation).
+
+  See "gn help create_bundle" for more information.
+```
+
+#### **Exmaple**
+
+```
+  create_bundle("chrome_xctest") {
+    test_application_name = "chrome"
+    ...
+  }
 ```
 ## <a name="other"></a>Other help topics
 
@@ -6102,6 +6090,13 @@
   itself).
 ```
 
+#### **Shared libraries**
+
+```
+  The results of shared_library targets are runtime dependencies, unless the
+  targets are depended upon only through action/action_foreach.
+```
+
 #### **Multiple outputs**
 
 ```
@@ -6247,4 +6242,3 @@
     *   [-v: Verbose logging.](#-v)
     *   [--version: Prints the GN version number and exits.](#--version)
 ```
-

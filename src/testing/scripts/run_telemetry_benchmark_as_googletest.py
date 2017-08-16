@@ -46,6 +46,8 @@ def main():
       required=True)
   parser.add_argument(
       '--isolated-script-test-chartjson-output', required=False)
+  parser.add_argument(
+      '--isolated-script-test-perf-output', required=False)
   parser.add_argument('--xvfb', help='Start xvfb.', action='store_true')
   args, rest_args = parser.parse_known_args()
   env = os.environ.copy()
@@ -84,12 +86,8 @@ def main():
     tempfile_name = os.path.join(tempfile_dir, 'test-results.json')
     with open(tempfile_name) as f:
       json_test_results = json.load(f)
-
-    # Determine if this was a disabled benchmark that was run
-    if (not chartjson_results_present or
-       (chartjson_results_present and chartresults.get('enabled', True))):
-      num_failures = json_test_results['num_failures_by_type'].get('FAIL', 0)
-      valid = bool(rc == 0 or num_failures != 0)
+    num_failures = json_test_results['num_failures_by_type'].get('FAIL', 0)
+    valid = bool(rc == 0 or num_failures != 0)
 
   except Exception:
     traceback.print_exc()

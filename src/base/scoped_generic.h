@@ -124,6 +124,13 @@ class ScopedGeneric {
     return old_generic;
   }
 
+  // Returns a raw pointer to the object storage, to allow the scoper to be used
+  // to receive and manage out-parameter values. Implies reset().
+  element_type* receive() WARN_UNUSED_RESULT {
+    reset();
+    return &data_.generic;
+  }
+
   const element_type& get() const { return data_.generic; }
 
   // Returns true if this object doesn't hold the special null value for the

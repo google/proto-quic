@@ -40,12 +40,6 @@ class LongRunningIdleGmailPageSet(story.StorySet):
         _CreateIdlePageClass(google_pages.GmailPage)(self))
 
 
-class LongRunningIdleGmailStoryExpectations(
-    story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    pass  # No disaled tests.
-
-
 class LongRunningIdleGmailBackgroundPageSet(story.StorySet):
   def __init__(self):
     # Reuse the wpr of foreground gmail.
@@ -54,9 +48,3 @@ class LongRunningIdleGmailBackgroundPageSet(story.StorySet):
         cloud_storage_bucket=story.PARTNER_BUCKET)
     self.AddStory(
         _CreateIdleBackgroundPageClass(google_pages.GmailPage)(self))
-
-
-class LongRunningIdleGmailBackgroundStoryExpectations(
-    story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    pass  # No disaled tests.

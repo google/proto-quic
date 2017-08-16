@@ -563,7 +563,8 @@ void QuicConnectionLogger::OnConnectionCloseFrame(
 }
 
 void QuicConnectionLogger::OnWindowUpdateFrame(
-    const QuicWindowUpdateFrame& frame) {
+    const QuicWindowUpdateFrame& frame,
+    const QuicTime& receive_time) {
   net_log_.AddEvent(NetLogEventType::QUIC_SESSION_WINDOW_UPDATE_FRAME_RECEIVED,
                     base::Bind(&NetLogQuicWindowUpdateFrameCallback, &frame));
 }

@@ -60,6 +60,14 @@ bool RunLoop::Delegate::Client::IsNested() const {
   return outer_->active_run_loops_.size() > 1;
 }
 
+bool RunLoop::Delegate::Client::ProcessingTasksAllowed() const {
+  DCHECK_CALLED_ON_VALID_THREAD(outer_->bound_thread_checker_);
+  DCHECK(outer_->bound_);
+  DCHECK(!outer_->active_run_loops_.empty());
+  return outer_->active_run_loops_.size() == 1U ||
+         outer_->active_run_loops_.top()->type_ == Type::kNestableTasksAllowed;
+}
+
 RunLoop::Delegate::Client::Client(Delegate* outer) : outer_(outer) {}
 
 // static
@@ -77,13 +85,17 @@ RunLoop::Delegate::Client* RunLoop::RegisterDelegateForCurrentThread(
   return &delegate->client_interface_;
 }
 
-RunLoop::RunLoop()
+RunLoop::RunLoop(Type type)
     : delegate_(tls_delegate.Get().Get()),
+      type_(type),
       origin_task_runner_(ThreadTaskRunnerHandle::Get()),
       weak_factory_(this) {
   DCHECK(delegate_) << "A RunLoop::Delegate must be bound to this thread prior "
                        "to using RunLoop.";
   DCHECK(origin_task_runner_);
+
+  DCHECK(IsNestingAllowedOnCurrentThread() ||
+         type_ != Type::kNestableTasksAllowed);
 }
 
 RunLoop::~RunLoop() {
@@ -253,6 +265,8 @@ bool RunLoop::BeforeRun() {
     CHECK(delegate_->allow_nesting_);
     for (auto& observer : delegate_->nesting_observers_)
       observer.OnBeginNestedRunLoop();
+    if (type_ == Type::kNestableTasksAllowed)
+      delegate_->EnsureWorkScheduled();
   }
 
   running_ = true;

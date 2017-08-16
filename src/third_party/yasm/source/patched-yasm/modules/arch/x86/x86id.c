@@ -388,6 +388,7 @@ x86_finalize_common(x86_common *common, const x86_insn_info *info,
     common->addrsize = 0;
     common->opersize = info->opersize;
     common->lockrep_pre = 0;
+    common->acqrel_pre = 0;
     common->mode_bits = (unsigned char)mode_bits;
 }
 
@@ -1603,8 +1604,9 @@ x86_id_insn_finalize(yasm_bytecode *bc, yasm_bytecode *prev_bc)
              * Leave R=X=B=1 for now.
              */
             if (insn->opcode.opcode[0] != 0x08 &&
-                insn->opcode.opcode[0] != 0x09)
-                yasm_internal_error(N_("first opcode byte of XOP must be 0x08 or 0x09"));
+                insn->opcode.opcode[0] != 0x09 &&
+                insn->opcode.opcode[0] != 0x0A)
+                yasm_internal_error(N_("first opcode byte of XOP must be 0x08, 0x09, or 0x0A"));
             vex1 |= insn->opcode.opcode[0];
             /* Move opcode byte back one byte to make room for XOP prefix. */
             insn->opcode.opcode[2] = insn->opcode.opcode[1];

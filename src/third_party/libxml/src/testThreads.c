@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#if defined(LIBXML_THREAD_ENABLED) && defined(LIBXML_CATALOG_ENABLED) && defined(LIBXML_SAX1_ENABLED)
+#if defined(LIBXML_THREAD_ENABLED) && defined(LIBXML_CATALOG_ENABLED)
 #include <libxml/globals.h>
 #include <libxml/threads.h>
 #include <libxml/parser.h>
@@ -61,7 +61,11 @@ thread_specific_data(void *private_data)
         xmlDoValidityCheckingDefaultValue = 1;
         xmlGenericErrorContext = stderr;
     }
+#ifdef LIBXML_SAX1_ENABLED
     myDoc = xmlParseFile(filename);
+#else
+    myDoc = xmlReadFile(filename, NULL, XML_WITH_CATALOG);
+#endif
     if (myDoc) {
         xmlFreeDoc(myDoc);
     } else {

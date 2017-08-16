@@ -106,10 +106,9 @@ def _ParseArgs(args):
                     help='path to the Android SDK jar.')
   parser.add_option('--aapt-path',
                     help='path to the Android aapt tool')
-
-  parser.add_option('--configuration-name',
-                    help='Gyp\'s configuration name (Debug or Release).')
-
+  parser.add_option('--debuggable',
+                    action='store_true',
+                    help='Whether to add android:debuggable="true"')
   parser.add_option('--android-manifest', help='AndroidManifest.xml path')
   parser.add_option('--version-code', help='Version code for apk.')
   parser.add_option('--version-name', help='Version name for apk.')
@@ -160,9 +159,8 @@ def _ParseArgs(args):
     parser.error('No positional arguments should be given.')
 
   # Check that required options have been provided.
-  required_options = ('android_sdk_jar', 'aapt_path', 'configuration_name',
-                      'android_manifest', 'version_code', 'version_name',
-                      'apk_path')
+  required_options = ('android_sdk_jar', 'aapt_path', 'android_manifest',
+                      'version_code', 'version_name', 'apk_path')
 
   build_utils.CheckOptions(options, parser, required=required_options)
 
@@ -308,7 +306,7 @@ def _ConstructMostAaptArgs(options):
     for lang in options.language_splits:
       package_command.extend(('--split', lang))
 
-  if 'Debug' in options.configuration_name:
+  if options.debuggable:
     package_command += ['--debug-mode']
 
   if options.locale_whitelist:

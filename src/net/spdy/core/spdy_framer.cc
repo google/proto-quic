@@ -25,7 +25,6 @@
 #include "net/spdy/core/spdy_bug_tracker.h"
 #include "net/spdy/core/spdy_frame_builder.h"
 #include "net/spdy/core/spdy_frame_reader.h"
-#include "net/spdy/core/spdy_framer_decoder_adapter.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 #include "net/spdy/platform/api/spdy_ptr_util.h"
 #include "net/spdy/platform/api/spdy_string_utils.h"
@@ -86,11 +85,6 @@ const size_t SpdyFramer::kOneSettingParameterSize = 6;
   } while (false)
 #endif
 
-bool SpdyFramerVisitorInterface::OnGoAwayFrameData(const char* goaway_data,
-                                                   size_t len) {
-  return true;
-}
-
 SpdyFramer::SpdyFramer(CompressionOption option)
     : visitor_(nullptr),
       extension_(nullptr),
@@ -100,7 +94,7 @@ SpdyFramer::SpdyFramer(CompressionOption option)
   static_assert(
       kMaxControlFrameSize <= kSpdyInitialFrameSizeLimit + kFrameHeaderSize,
       "Our send limit should be at most our receive limit");
-  decoder_adapter_ = CreateHttp2FrameDecoderAdapter(this);
+  decoder_adapter_ = CreateHttp2FrameDecoderAdapter();
 }
 
 SpdyFramer::~SpdyFramer() {}
@@ -1407,8 +1401,7 @@ size_t SpdyFramer::GetNumberRequiredContinuationFrames(size_t size) {
   return (overflow - 1) / payload_size + 1;
 }
 
-size_t SpdyFramer::GetHeaderFrameSizeSansBlock(
-    const SpdyHeadersIR& header_ir) const {
+size_t SpdyFramer::GetHeaderFrameSizeSansBlock(const SpdyHeadersIR& header_ir) {
   size_t min_size = kFrameHeaderSize;
 
   if (header_ir.padded()) {
@@ -1424,7 +1417,7 @@ size_t SpdyFramer::GetHeaderFrameSizeSansBlock(
 }
 
 size_t SpdyFramer::GetPushPromiseFrameSizeSansBlock(
-    const SpdyPushPromiseIR& push_promise_ir) const {
+    const SpdyPushPromiseIR& push_promise_ir) {
   size_t size = kPushPromiseFrameMinimumSize;
 
   if (push_promise_ir.padded()) {

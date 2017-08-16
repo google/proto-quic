@@ -7,7 +7,7 @@
 #include <ctype.h>
 
 #include "base/logging.h"
-#include "net/spdy/core/spdy_test_utils.h"
+#include "net/http2/platform/api/http2_string_utils.h"
 
 namespace net {
 namespace test {
@@ -20,7 +20,7 @@ void HpackExampleToStringOrDie(Http2StringPiece example, Http2String* output) {
       CHECK_GT(example.size(), 1u) << "Truncated hex byte?";
       const char c1 = example[1];
       CHECK(isxdigit(c1)) << "Found half a byte?";
-      *output += a2b_hex(example.substr(0, 2).as_string().c_str());
+      *output += Http2HexDecode(example.substr(0, 2));
       example.remove_prefix(2);
       continue;
     }

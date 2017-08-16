@@ -45,7 +45,10 @@ class Backend;
 // Returns an instance of a Backend of the given |type|. |path| points to a
 // folder where the cached data will be stored (if appropriate). This cache
 // instance must be the only object that will be reading or writing files to
-// that folder. The returned object should be deleted when not needed anymore.
+// that folder (if another one exists, this operation will not complete until
+// the previous duplicate gets destroyed and finishes all I/O).
+//
+// The returned object should be deleted when not needed anymore.
 // If |force| is true, and there is a problem with the cache initialization, the
 // files will be deleted and a new set will be created. |max_bytes| is the
 // maximum size the cache can grow to. If zero is passed in as |max_bytes|, the
@@ -80,6 +83,23 @@ NET_EXPORT int CreateCacheBackend(net::CacheType type,
                                   bool force,
                                   net::NetLog* net_log,
                                   std::unique_ptr<Backend>* backend,
+                                  const net::CompletionCallback& callback);
+
+// Variant of the above that calls |post_cleanup_callback| once all the I/O
+// that was in flight has completed post-destruction. |post_cleanup_callback|
+// will get invoked even if the creation fails. The invocation will always be
+// via the event loop, and never direct.
+//
+// Note that this will not wait for |post_cleanup_callback| of a previous
+// instance for |path| to run.
+NET_EXPORT int CreateCacheBackend(net::CacheType type,
+                                  net::BackendType backend_type,
+                                  const base::FilePath& path,
+                                  int max_bytes,
+                                  bool force,
+                                  net::NetLog* net_log,
+                                  std::unique_ptr<Backend>* backend,
+                                  base::OnceClosure post_cleanup_callback,
                                   const net::CompletionCallback& callback);
 
 // This will flush any internal threads used by backends created w/o an

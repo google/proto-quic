@@ -984,6 +984,11 @@ struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_VALUE_PRESERVING> {
       TEST_EXPECTED_RANGE(RANGE_UNDERFLOW, SrcLimits::infinity() * -1);
       TEST_EXPECTED_RANGE(RANGE_INVALID, SrcLimits::quiet_NaN());
     } else if (numeric_limits<Src>::is_signed) {
+      // This block reverses the Src to Dst relationship so we don't have to
+      // complicate the test macros.
+      if (!std::is_same<Src, Dst>::value) {
+        TEST_EXPECTED_SUCCESS(CheckDiv(SrcLimits::lowest(), Dst(-1)));
+      }
       TEST_EXPECTED_RANGE(RANGE_VALID, static_cast<Src>(-1));
       TEST_EXPECTED_RANGE(RANGE_VALID, SrcLimits::lowest());
     }
@@ -1035,6 +1040,8 @@ struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_NARROW> {
     } else if (SrcLimits::is_signed) {
       TEST_EXPECTED_VALUE(-1, checked_dst - static_cast<Src>(1));
       TEST_EXPECTED_VALUE(-1, clamped_dst - static_cast<Src>(1));
+      TEST_EXPECTED_VALUE(Src(Src(0) - DstLimits::lowest()),
+                          ClampDiv(DstLimits::lowest(), Src(-1)));
       TEST_EXPECTED_RANGE(RANGE_UNDERFLOW, SrcLimits::lowest());
       TEST_EXPECTED_RANGE(RANGE_VALID, static_cast<Src>(-1));
     } else {
@@ -1062,6 +1069,7 @@ struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL> {
     TEST_EXPECTED_FAILURE(checked_dst + static_cast<Src>(-1));
     TEST_EXPECTED_SUCCESS(checked_dst * static_cast<Src>(-1));
     TEST_EXPECTED_FAILURE(checked_dst + SrcLimits::lowest());
+    TEST_EXPECTED_VALUE(Dst(0), CheckDiv(Dst(0), Src(-1)));
 
     const ClampedNumeric<Dst> clamped_dst;
     TEST_EXPECTED_VALUE(SrcLimits::max(), clamped_dst + SrcLimits::max());
@@ -1453,6 +1461,11 @@ TEST(SafeNumerics, CastTests) {
   EXPECT_EQ(1, checked_cast<int>(StrictNumeric<int>(1)));
   EXPECT_EQ(1, saturated_cast<int>(StrictNumeric<int>(1)));
   EXPECT_EQ(1, strict_cast<int>(StrictNumeric<int>(1)));
+
+  enum class EnumTest { kOne = 1 };
+  EXPECT_EQ(1, checked_cast<int>(EnumTest::kOne));
+  EXPECT_EQ(1, saturated_cast<int>(EnumTest::kOne));
+  EXPECT_EQ(1, strict_cast<int>(EnumTest::kOne));
 }
 
 TEST(SafeNumerics, IsValueInRangeForNumericType) {

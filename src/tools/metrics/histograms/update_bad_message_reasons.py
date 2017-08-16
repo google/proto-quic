@@ -21,6 +21,7 @@ if __name__ == '__main__':
   histograms = {
     'chrome/browser/bad_message.h': 'BadMessageReasonChrome',
     'content/browser/bad_message.h': 'BadMessageReasonContent',
+    'components/guest_view/browser/bad_message.h': 'BadMessageReasonGuestView',
     'components/nacl/browser/bad_message.h': 'BadMessageReasonNaCl',
     'components/password_manager/content/browser/bad_message.h':
       'BadMessageReasonPasswordManager',

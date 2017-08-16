@@ -43,6 +43,13 @@ BrokenAlternativeServices::BrokenAlternativeServices(Delegate* delegate,
 
 BrokenAlternativeServices::~BrokenAlternativeServices() {}
 
+void BrokenAlternativeServices::Clear() {
+  expiration_timer_.Stop();
+  broken_alternative_service_list_.clear();
+  broken_alternative_service_map_.clear();
+  recently_broken_alternative_services_.Clear();
+}
+
 void BrokenAlternativeServices::MarkAlternativeServiceBroken(
     const AlternativeService& alternative_service) {
   // Empty host means use host of origin, callers are supposed to substitute.

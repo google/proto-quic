@@ -85,8 +85,3 @@ class KeyIdlePowerCasesPageSet(story.StorySet):
     # Why: Ensure that activity strictly diminishes the longer the idle time.
     self.AddStory(KeyLongIdlePowerPage(
         'file://key_idle_power_cases/set-timeout.html', self, True))
-
-
-class KeyIdlePowerCasesStoryExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    pass

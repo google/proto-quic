@@ -223,15 +223,13 @@
       "static_spki_hashes": [
         "LetsEncryptAuthorityPrimary_X1_X3",
         "LetsEncryptAuthorityBackup_X2_X4",
-        "VeriSignClass3_G4",
-        "VeriSignClass3_G5",
-        "VeriSignUniversal",
         "DigiCertGlobalRoot",
         "DigiCertEVRoot",
         "DigiCertAssuredIDRoot",
-        "COMODOCertificationAuthority",
         "AddTrustExternalCARoot",
-        "BaltimoreCyberTrustRoot"
+        "BaltimoreCyberTrustRoot",
+        "COMODORSACertificationAuthority",
+        "COMODOECCCertificationAuthority"
       ],
       "report_uri": "https://log.ncsccs.com/report/hpkp"
     }
@@ -33314,7 +33312,6 @@
     { "name": "crypto.is", "include_subdomains": true, "mode": "force-https", "expect_ct": true, "expect_ct_report_uri": "https://clients3.google.com/ct_upload" },
     { "name": "ritter.vg", "expect_ct": true, "expect_ct_report_uri": "https://clients3.google.com/ct_upload", "expect_staple": true, "expect_staple_report_uri": "https://asac.casa/expectstaple.jsp" },
     { "name": "tails.boum.org", "include_subdomains": true, "mode": "force-https" },
-    { "name": "0.me.uk", "include_subdomains": true, "mode": "force-https", "pins": "ncsccs" },
     { "name": "ncsccs.com", "include_subdomains": true, "mode": "force-https", "pins": "ncsccs" },
     { "name": "themathematician.uk", "include_subdomains": true, "mode": "force-https", "pins": "ncsccs" },
     { "name": "baas-becking.biology.utah.edu", "include_subdomains": true, "mode": "force-https" },
@@ -33363,15 +33360,6 @@
       "expect_ct_report_uri": "https://tobiassachs.report-uri.io/r/default/ct/reportOnly"
     },
     {
-      "name": "secretintelligence.0.me.uk",
-      "mode": "force-https", "include_subdomains": true,
-      "pins": "ncsccs",
-      "expect_staple": true, "include_subdomains_for_expect_staple": true,
-      "expect_staple_report_uri": "https://log.ncsccs.com/report/expectocsp",
-      "expect_ct": true,
-      "expect_ct_report_uri": "https://log.ncsccs.com/report/expectct"
-    },
-    {
       "name": "cloudflare.com",
       "mode": "force-https", "include_subdomains": false,
       "expect_staple": true,
@@ -33394,6 +33382,14 @@
       "mode": "force-https", "include_subdomains": true,
       "expect_staple": true, "include_subdomains_for_expect_staple": true,
       "expect_staple_report_uri": "https://weeblr.report-uri.io/r/default/staple/reportOnly"
+    },
+    {
+      "name": "0.me.uk",
+      "mode": "force-https", "include_subdomains": true, "pins": "ncsccs",
+      "expect_staple": true, "include_subdomains_for_expect_staple": true,
+      "expect_staple_report_uri": "https://log.ncsccs.com/report/expectstaple",
+      "expect_ct": true,
+      "expect_ct_report_uri": "https://log.ncsccs.com/report/expectct"
     },
     // END OF MANUAL ENTRIES
 

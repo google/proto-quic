@@ -573,6 +573,10 @@ type ProtocolBugs struct {
 	// end_of_early_data alert.
 	SkipEndOfEarlyData bool
 
+	// SkipCertificateVerify, if true causes peer to skip sending a
+	// CertificateVerify message after the Certificate message.
+	SkipCertificateVerify bool
+
 	// EarlyChangeCipherSpec causes the client to send an early
 	// ChangeCipherSpec message before the ClientKeyExchange. A value of
 	// zero disables this behavior. One and two configure variants for 0.9.8
@@ -583,6 +587,11 @@ type ProtocolBugs struct {
 	// message in DTLS to be prefaced by stray ChangeCipherSpec record. This
 	// may be used to test DTLS's handling of reordered ChangeCipherSpec.
 	StrayChangeCipherSpec bool
+
+	// ReorderChangeCipherSpec causes the ChangeCipherSpec message to be
+	// sent at start of each flight in DTLS. Unlike EarlyChangeCipherSpec,
+	// the cipher change happens at the usual time.
+	ReorderChangeCipherSpec bool
 
 	// FragmentAcrossChangeCipherSpec causes the implementation to fragment
 	// the Finished (or NextProto) message around the ChangeCipherSpec

@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BASE_CONTAINERS_CONTAINER_TEST_UTILS_H_
-#define BASE_CONTAINERS_CONTAINER_TEST_UTILS_H_
-
-// This file contains some helper classes for testing conainer behavior.
+#ifndef BASE_TEST_MOVE_ONLY_INT_H_
+#define BASE_TEST_MOVE_ONLY_INT_H_
 
 #include "base/macros.h"
 
 namespace base {
 
-// A move-only class that holds an integer.
+// A move-only class that holds an integer. This is designed for testing
+// containers. See also CopyOnlyInt.
 class MoveOnlyInt {
  public:
   explicit MoveOnlyInt(int data = 1) : data_(data) {}
   MoveOnlyInt(MoveOnlyInt&& other) : data_(other.data_) { other.data_ = 0; }
+  ~MoveOnlyInt() { data_ = 0; }
+
   MoveOnlyInt& operator=(MoveOnlyInt&& other) {
     data_ = other.data_;
     other.data_ = 0;
@@ -64,4 +65,4 @@ class MoveOnlyInt {
 
 }  // namespace base
 
-#endif  // BASE_CONTAINERS_CONTAINER_TEST_UTILS_H_
+#endif  // BASE_TEST_MOVE_ONLY_INT_H_

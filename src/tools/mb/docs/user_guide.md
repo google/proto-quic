@@ -167,6 +167,18 @@ The `-f/--config-file` and `-q/--quiet` flags work as documented for
 This is mostly useful as a presubmit check and for verifying changes to
 the config file.
 
+### `mb gerrit-buildbucket-config`
+
+Generates a gerrit buildbucket configuration file and prints it to
+stdout. This file contains the list of trybots shown in gerrit's UI.
+
+The master copy of the buildbucket.config file lives
+in a separate branch of the chromium repository. Run `mb
+gerrit-buildbucket-config > buildbucket.config.new && git fetch origin
+refs/meta/config:refs/remotes/origin/meta/config && git checkout
+-t -b meta_config origin/meta/config && mv buildbucket.config.new
+buildbucket.config` to update the file.
+
 ## Isolates and Swarming
 
 `mb gen` is also responsible for generating the `.isolate` and

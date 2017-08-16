@@ -38,7 +38,36 @@ class SingleThreadTaskRunner;
 // a nested RunLoop but please do not use nested loops in production code!
 class BASE_EXPORT RunLoop {
  public:
-  RunLoop();
+  // The type of RunLoop: a kDefault RunLoop at the top-level (non-nested) will
+  // process system and application tasks assigned to its Delegate. When nested
+  // however a kDefault RunLoop will only process system tasks while a
+  // kNestableTasksAllowed RunLoop will continue to process application tasks
+  // even if nested.
+  //
+  // This is relevant in the case of recursive RunLoops. Some unwanted run loops
+  // may occur when using common controls or printer functions. By default,
+  // recursive task processing is disabled.
+  //
+  // In general, nestable RunLoops are to be avoided. They are dangerous and
+  // difficult to get right, so please use with extreme caution. To further
+  // protect this: kNestableTasksAllowed RunLoops are only allowed on threads
+  // where IsNestingAllowedOnCurrentThread().
+  //
+  // A specific example where this makes a difference is:
+  // - The thread is running a RunLoop.
+  // - It receives a task #1 and executes it.
+  // - The task #1 implicitly starts a RunLoop, like a MessageBox in the unit
+  //   test. This can also be StartDoc or GetSaveFileName.
+  // - The thread receives a task #2 before or while in this second RunLoop.
+  // - With a kNestableTasksAllowed RunLoop, the task #2 will run right away.
+  //   Otherwise, it will get executed right after task #1 completes in the main
+  //   RunLoop.
+  enum class Type {
+    kDefault,
+    kNestableTasksAllowed,
+  };
+
+  RunLoop(Type type = Type::kDefault);
   ~RunLoop();
 
   // Run the current RunLoop::Delegate. This blocks until Quit is called. Before
@@ -71,7 +100,7 @@ class BASE_EXPORT RunLoop {
   // RunLoop has already finished running has no effect.
   //
   // WARNING: You must NEVER assume that a call to Quit() or QuitWhenIdle() will
-  // terminate the targetted message loop. If a nested run loop continues
+  // terminate the targetted message loop. If a nested RunLoop continues
   // running, the target may NEVER terminate. It is very easy to livelock (run
   // forever) in such a case.
   void Quit();
@@ -100,7 +129,7 @@ class BASE_EXPORT RunLoop {
   // Safe to call before RegisterDelegateForCurrentThread().
   static bool IsNestedOnCurrentThread();
 
-  // A NestingObserver is notified when a nested run loop begins. The observers
+  // A NestingObserver is notified when a nested RunLoop begins. The observers
   // are notified before the current thread's RunLoop::Delegate::Run() is
   // invoked and nested work begins.
   class BASE_EXPORT NestingObserver {
@@ -144,9 +173,13 @@ class BASE_EXPORT RunLoop {
       // Returns true if this |outer_| is currently in nested runs. This is a
       // shortcut for RunLoop::IsNestedOnCurrentThread() for the owner of this
       // interface.
-      // TODO(gab): consider getting rid of this and the Client class altogether
-      // when it's the only method left on Client. http://crbug.com/703346.
       bool IsNested() const;
+
+      // Returns true if the Delegate is allowed to process application tasks.
+      // This typically returns true except in nested RunLoops outside the scope
+      // of a ScopedNestableTaskAllowed as, by default, nested RunLoops are only
+      // meant to process system events.
+      bool ProcessingTasksAllowed() const;
 
      private:
       // Only a Delegate can instantiate a Delegate::Client.
@@ -166,11 +199,23 @@ class BASE_EXPORT RunLoop {
     // eventual matching Quit() call. Upon receiving a Quit() call it should
     // return from the Run() call as soon as possible without executing
     // remaining tasks/messages. Run() calls can nest in which case each Quit()
-    // call should result in the topmost active Run() call returning. The
-    // only other trigger for Run() to return is Client::ShouldQuitWhenIdle()
-    // which the Delegate should probe before sleeping when it becomes idle.
+    // call should result in the topmost active Run() call returning. The only
+    // other trigger for Run() to return is Client::ShouldQuitWhenIdle() which
+    // the Delegate should probe before sleeping when it becomes idle. Run()
+    // implementations should also check Client::ProcessingTasksAllowed() before
+    // processing assigned application tasks (they should only process system
+    // tasks otherwise).
     virtual void Run() = 0;
     virtual void Quit() = 0;
+
+    // Invoked right before a RunLoop enters a nested Run() call on this
+    // Delegate iff this RunLoop is of type kNestableTasksAllowed. The Delegate
+    // should ensure that the upcoming Run() call will result in processing
+    // application tasks queued ahead of it without further probing. e.g.
+    // message pumps on some platforms, like Mac, need an explicit request to
+    // process application tasks when nested, otherwise they'll only wait for
+    // system messages.
+    virtual void EnsureWorkScheduled() = 0;
 
     // A vector-based stack is more memory efficient than the default
     // deque-based stack as the active RunLoop stack isn't expected to ever
@@ -229,6 +274,8 @@ class BASE_EXPORT RunLoop {
   // access without using TLS (also allows access to state from another sequence
   // during Run(), ref. |sequence_checker_| below).
   Delegate* delegate_;
+
+  const Type type_;
 
 #if DCHECK_IS_ON()
   bool run_called_ = false;

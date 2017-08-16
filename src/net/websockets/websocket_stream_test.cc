@@ -104,7 +104,7 @@ class WebSocketStreamCreateTest : public ::testing::Test,
       const std::string& socket_path,
       const std::vector<std::string>& sub_protocols,
       const url::Origin& origin,
-      const GURL& first_party_for_cookies,
+      const GURL& site_for_cookies,
       const std::string& send_additional_request_headers,
       const std::string& extra_request_headers,
       const std::string& response_body,
@@ -115,8 +115,8 @@ class WebSocketStreamCreateTest : public ::testing::Test,
                                  extra_request_headers),
         response_body);
     CreateAndConnectStream(GURL(socket_url), sub_protocols, origin,
-                           first_party_for_cookies,
-                           send_additional_request_headers, std::move(timer));
+                           site_for_cookies, send_additional_request_headers,
+                           std::move(timer));
   }
 
   // |extra_request_headers| and |extra_response_headers| must end in "\r\n" or
@@ -127,14 +127,14 @@ class WebSocketStreamCreateTest : public ::testing::Test,
       const std::string& socket_path,
       const std::vector<std::string>& sub_protocols,
       const url::Origin& origin,
-      const GURL& first_party_for_cookies,
+      const GURL& site_for_cookies,
       const std::string& send_additional_request_headers,
       const std::string& extra_request_headers,
       const std::string& extra_response_headers,
       std::unique_ptr<base::Timer> timer = std::unique_ptr<base::Timer>()) {
     CreateAndConnectCustomResponse(
         socket_url, socket_host, socket_path, sub_protocols, origin,
-        first_party_for_cookies, send_additional_request_headers,
+        site_for_cookies, send_additional_request_headers,
         extra_request_headers,
         WebSocketStandardResponse(extra_response_headers), std::move(timer));
   }
@@ -143,14 +143,14 @@ class WebSocketStreamCreateTest : public ::testing::Test,
       const std::string& socket_url,
       const std::vector<std::string>& sub_protocols,
       const url::Origin& origin,
-      const GURL& first_party_for_cookies,
+      const GURL& site_for_cookies,
       const std::string& send_additional_request_headers,
       std::unique_ptr<SequencedSocketData> socket_data,
       std::unique_ptr<base::Timer> timer = std::unique_ptr<base::Timer>()) {
     AddRawExpectations(std::move(socket_data));
     CreateAndConnectStream(GURL(socket_url), sub_protocols, origin,
-                           first_party_for_cookies,
-                           send_additional_request_headers, std::move(timer));
+                           site_for_cookies, send_additional_request_headers,
+                           std::move(timer));
   }
 
   // Add additional raw expectations for sockets created before the final one.

@@ -4,7 +4,7 @@
 
 #include "net/http2/hpack/tools/hpack_block_builder.h"
 
-#include "net/spdy/core/spdy_test_utils.h"
+#include "net/http2/platform/api/http2_string_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
@@ -97,7 +97,7 @@ TEST(HpackBlockBuilderTest, ExamplesFromSpecC3) {
     // 0x0010:  2e63 6f6d                                .com
 
     const Http2String expected =
-        a2b_hex("828684410f7777772e6578616d706c652e636f6d");
+        Http2HexDecode("828684410f7777772e6578616d706c652e636f6d");
     EXPECT_EQ(expected, b.buffer());
   }
 }
@@ -127,7 +127,8 @@ TEST(HpackBlockBuilderTest, ExamplesFromSpecC4) {
     // 0x0000:  8286 8441 8cf1 e3c2 e5f2 3a6b a0ab 90f4  ...A......:k....
     // 0x0010:  ff                                       .
 
-    const Http2String expected = a2b_hex("828684418cf1e3c2e5f23a6ba0ab90f4ff");
+    const Http2String expected =
+        Http2HexDecode("828684418cf1e3c2e5f23a6ba0ab90f4ff");
     EXPECT_EQ(expected, b.buffer());
   }
 }

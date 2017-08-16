@@ -872,9 +872,9 @@ BASE_EXPORT std::string SystemErrorCodeToString(SystemErrorCode error_code) {
   if (len) {
     // Messages returned by system end with line breaks.
     return base::CollapseWhitespaceASCII(msgbuf, true) +
-        base::StringPrintf(" (0x%X)", error_code);
+           base::StringPrintf(" (0x%lX)", error_code);
   }
-  return base::StringPrintf("Error (0x%X) while retrieving error. (0x%X)",
+  return base::StringPrintf("Error (0x%lX) while retrieving error. (0x%lX)",
                             GetLastError(), error_code);
 }
 #elif defined(OS_POSIX)

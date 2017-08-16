@@ -277,9 +277,7 @@ bool RunIdeWriter(const std::string& ide,
 const char kGen[] = "gen";
 const char kGen_HelpShort[] = "gen: Generate ninja files.";
 const char kGen_Help[] =
-    R"(gn gen: Generate ninja files.
-
-  gn gen [--check] [<ide options>] <out_dir>
+    R"(gn gen [--check] [<ide options>] <out_dir>
 
   Generates ninja files from the current tree and puts them in the given output
   directory.

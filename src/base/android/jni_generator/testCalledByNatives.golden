@@ -17,40 +17,47 @@
 #include "base/android/jni_int_wrapper.h"
 
 // Step 1: forward declarations.
-namespace {
+JNI_REGISTRATION_EXPORT extern const char kClassPath_org_chromium_TestJni[];
 const char kClassPath_org_chromium_TestJni[] = "org/chromium/TestJni";
+
+JNI_REGISTRATION_EXPORT extern const char
+    kClassPath_org_chromium_TestJni_00024InfoBar[];
 const char kClassPath_org_chromium_TestJni_00024InfoBar[] =
     "org/chromium/TestJni$InfoBar";
-// Leaking this jclass as we cannot use LazyInstance from some threads.
-base::subtle::AtomicWord g_org_chromium_TestJni_clazz __attribute__((unused)) =
-    0;
 
+// Leaking this jclass as we cannot use LazyInstance from some threads.
+JNI_REGISTRATION_EXPORT base::subtle::AtomicWord g_org_chromium_TestJni_clazz =
+    0;
+#ifndef org_chromium_TestJni_clazz_defined
+#define org_chromium_TestJni_clazz_defined
 inline jclass org_chromium_TestJni_clazz(JNIEnv* env) {
   return base::android::LazyGetClass(env, kClassPath_org_chromium_TestJni,
       &g_org_chromium_TestJni_clazz);
 }
-// Leaking this jclass as we cannot use LazyInstance from some threads.
-base::subtle::AtomicWord g_org_chromium_TestJni_00024InfoBar_clazz
-    __attribute__((unused)) = 0;
+#endif
 
+// Leaking this jclass as we cannot use LazyInstance from some threads.
+JNI_REGISTRATION_EXPORT base::subtle::AtomicWord
+    g_org_chromium_TestJni_00024InfoBar_clazz = 0;
+#ifndef org_chromium_TestJni_00024InfoBar_clazz_defined
+#define org_chromium_TestJni_00024InfoBar_clazz_defined
 inline jclass org_chromium_TestJni_00024InfoBar_clazz(JNIEnv* env) {
   return base::android::LazyGetClass(env,
       kClassPath_org_chromium_TestJni_00024InfoBar,
       &g_org_chromium_TestJni_00024InfoBar_clazz);
 }
-
-}  // namespace
+#endif
 
 // Step 2: method stubs.
 
 static base::subtle::AtomicWord g_org_chromium_TestJni_showConfirmInfoBar = 0;
 static base::android::ScopedJavaLocalRef<jobject>
     Java_TestJni_showConfirmInfoBar(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj, JniIntWrapper nativeInfoBar,
-    const base::android::JavaRefOrBare<jstring>& buttonOk,
-    const base::android::JavaRefOrBare<jstring>& buttonCancel,
-    const base::android::JavaRefOrBare<jstring>& title,
-    const base::android::JavaRefOrBare<jobject>& icon) {
+    base::android::JavaRef<jobject>& obj, JniIntWrapper nativeInfoBar,
+    const base::android::JavaRef<jstring>& buttonOk,
+    const base::android::JavaRef<jstring>& buttonCancel,
+    const base::android::JavaRef<jstring>& title,
+    const base::android::JavaRef<jobject>& icon) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
@@ -79,10 +86,10 @@ static base::android::ScopedJavaLocalRef<jobject>
 static base::subtle::AtomicWord g_org_chromium_TestJni_showAutoLoginInfoBar = 0;
 static base::android::ScopedJavaLocalRef<jobject>
     Java_TestJni_showAutoLoginInfoBar(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj, JniIntWrapper nativeInfoBar,
-    const base::android::JavaRefOrBare<jstring>& realm,
-    const base::android::JavaRefOrBare<jstring>& account,
-    const base::android::JavaRefOrBare<jstring>& args) {
+    base::android::JavaRef<jobject>& obj, JniIntWrapper nativeInfoBar,
+    const base::android::JavaRef<jstring>& realm,
+    const base::android::JavaRef<jstring>& account,
+    const base::android::JavaRef<jstring>& args) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
@@ -109,7 +116,7 @@ static base::android::ScopedJavaLocalRef<jobject>
 
 static base::subtle::AtomicWord g_org_chromium_TestJni_00024InfoBar_dismiss = 0;
 static void Java_InfoBar_dismiss(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_TestJni_00024InfoBar_clazz(env));
   jmethodID method_id =
@@ -129,10 +136,10 @@ static void Java_InfoBar_dismiss(JNIEnv* env, const
 
 static base::subtle::AtomicWord g_org_chromium_TestJni_shouldShowAutoLogin = 0;
 static jboolean Java_TestJni_shouldShowAutoLogin(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& view,
-    const base::android::JavaRefOrBare<jstring>& realm,
-    const base::android::JavaRefOrBare<jstring>& account,
-    const base::android::JavaRefOrBare<jstring>& args) {
+    base::android::JavaRef<jobject>& view,
+    const base::android::JavaRef<jstring>& realm,
+    const base::android::JavaRef<jstring>& account,
+    const base::android::JavaRef<jstring>& args) {
   CHECK_CLAZZ(env, org_chromium_TestJni_clazz(env),
       org_chromium_TestJni_clazz(env), false);
   jmethodID method_id =
@@ -158,7 +165,7 @@ static jboolean Java_TestJni_shouldShowAutoLogin(JNIEnv* env, const
 
 static base::subtle::AtomicWord g_org_chromium_TestJni_openUrl = 0;
 static base::android::ScopedJavaLocalRef<jobject> Java_TestJni_openUrl(JNIEnv*
-    env, const base::android::JavaRefOrBare<jstring>& url) {
+    env, const base::android::JavaRef<jstring>& url) {
   CHECK_CLAZZ(env, org_chromium_TestJni_clazz(env),
       org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
@@ -182,7 +189,7 @@ static base::android::ScopedJavaLocalRef<jobject> Java_TestJni_openUrl(JNIEnv*
 static base::subtle::AtomicWord
     g_org_chromium_TestJni_activateHardwareAcceleration = 0;
 static void Java_TestJni_activateHardwareAcceleration(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj, jboolean activated,
+    base::android::JavaRef<jobject>& obj, jboolean activated,
     JniIntWrapper iPid,
     JniIntWrapper iType,
     JniIntWrapper iPrimaryID,
@@ -234,7 +241,7 @@ static jint Java_TestJni_updateStatus(JNIEnv* env, JniIntWrapper status) {
 
 static base::subtle::AtomicWord g_org_chromium_TestJni_uncheckedCall = 0;
 static void Java_TestJni_uncheckedCall(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj, JniIntWrapper iParam) {
+    base::android::JavaRef<jobject>& obj, JniIntWrapper iParam) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_TestJni_clazz(env));
   jmethodID method_id =
@@ -255,7 +262,7 @@ static void Java_TestJni_uncheckedCall(JNIEnv* env, const
 static base::subtle::AtomicWord g_org_chromium_TestJni_returnByteArray = 0;
 static base::android::ScopedJavaLocalRef<jbyteArray>
     Java_TestJni_returnByteArray(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
@@ -278,7 +285,7 @@ static base::android::ScopedJavaLocalRef<jbyteArray>
 static base::subtle::AtomicWord g_org_chromium_TestJni_returnBooleanArray = 0;
 static base::android::ScopedJavaLocalRef<jbooleanArray>
     Java_TestJni_returnBooleanArray(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
@@ -301,7 +308,7 @@ static base::android::ScopedJavaLocalRef<jbooleanArray>
 static base::subtle::AtomicWord g_org_chromium_TestJni_returnCharArray = 0;
 static base::android::ScopedJavaLocalRef<jcharArray>
     Java_TestJni_returnCharArray(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
@@ -324,7 +331,7 @@ static base::android::ScopedJavaLocalRef<jcharArray>
 static base::subtle::AtomicWord g_org_chromium_TestJni_returnShortArray = 0;
 static base::android::ScopedJavaLocalRef<jshortArray>
     Java_TestJni_returnShortArray(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
@@ -347,7 +354,7 @@ static base::android::ScopedJavaLocalRef<jshortArray>
 static base::subtle::AtomicWord g_org_chromium_TestJni_returnIntArray = 0;
 static base::android::ScopedJavaLocalRef<jintArray>
     Java_TestJni_returnIntArray(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
@@ -370,7 +377,7 @@ static base::android::ScopedJavaLocalRef<jintArray>
 static base::subtle::AtomicWord g_org_chromium_TestJni_returnLongArray = 0;
 static base::android::ScopedJavaLocalRef<jlongArray>
     Java_TestJni_returnLongArray(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
@@ -393,7 +400,7 @@ static base::android::ScopedJavaLocalRef<jlongArray>
 static base::subtle::AtomicWord g_org_chromium_TestJni_returnDoubleArray = 0;
 static base::android::ScopedJavaLocalRef<jdoubleArray>
     Java_TestJni_returnDoubleArray(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
@@ -416,7 +423,7 @@ static base::android::ScopedJavaLocalRef<jdoubleArray>
 static base::subtle::AtomicWord g_org_chromium_TestJni_returnObjectArray = 0;
 static base::android::ScopedJavaLocalRef<jobjectArray>
     Java_TestJni_returnObjectArray(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
@@ -440,7 +447,7 @@ static base::subtle::AtomicWord g_org_chromium_TestJni_returnArrayOfByteArray =
     0;
 static base::android::ScopedJavaLocalRef<jobjectArray>
     Java_TestJni_returnArrayOfByteArray(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
@@ -463,7 +470,7 @@ static base::android::ScopedJavaLocalRef<jobjectArray>
 static base::subtle::AtomicWord g_org_chromium_TestJni_getCompressFormat = 0;
 static base::android::ScopedJavaLocalRef<jobject>
     Java_TestJni_getCompressFormat(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =
@@ -487,7 +494,7 @@ static base::subtle::AtomicWord g_org_chromium_TestJni_getCompressFormatList =
     0;
 static base::android::ScopedJavaLocalRef<jobject>
     Java_TestJni_getCompressFormatList(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_TestJni_clazz(env), NULL);
   jmethodID method_id =

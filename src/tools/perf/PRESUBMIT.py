@@ -36,12 +36,15 @@ def _GetPathsToPrepend(input_api):
       chromium_src_dir, 'third_party', 'catapult', 'tracing')
   py_utils_dir = input_api.os_path.join(
       chromium_src_dir, 'third_party', 'catapult', 'common', 'py_utils')
+  android_pylib_dir = input_api.os_path.join(
+      chromium_src_dir, 'build', 'android')
   return [
       telemetry_dir,
       input_api.os_path.join(telemetry_dir, 'third_party', 'mock'),
       experimental_dir,
       tracing_dir,
-      py_utils_dir
+      py_utils_dir,
+      android_pylib_dir,
   ]
 
 

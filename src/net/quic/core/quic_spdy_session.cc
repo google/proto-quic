@@ -16,6 +16,7 @@
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/platform/api/quic_text_utils.h"
+#include "net/spdy/core/http2_frame_decoder_adapter.h"
 
 using std::string;
 
@@ -137,9 +138,8 @@ class QuicSpdySession::SpdyFramerVisitor
                     QUIC_INVALID_HEADERS_STREAM_DATA);
   }
 
-  void OnError(SpdyFramer* framer) override {
+  void OnError(SpdyFramer::SpdyFramerError error) override {
     QuicErrorCode code = QUIC_INVALID_HEADERS_STREAM_DATA;
-    SpdyFramer::SpdyFramerError error = framer->spdy_framer_error();
     switch (error) {
       case SpdyFramer::SpdyFramerError::SPDY_DECOMPRESS_FAILURE:
         code = QUIC_HEADERS_STREAM_DATA_DECOMPRESS_FAILURE;

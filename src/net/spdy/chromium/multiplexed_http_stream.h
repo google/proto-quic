@@ -12,6 +12,7 @@
 #include "net/spdy/chromium/multiplexed_session.h"
 
 namespace net {
+class SpdyHeaderBlock;
 
 // Base class for SPDY and QUIC HttpStream subclasses.
 class NET_EXPORT_PRIVATE MultiplexedHttpStream : public HttpStream {
@@ -33,13 +34,17 @@ class NET_EXPORT_PRIVATE MultiplexedHttpStream : public HttpStream {
 
   // Caches SSL info from the underlying session.
   void SaveSSLInfo();
+  void SetRequestHeadersCallback(RequestHeadersCallback callback) override;
 
  protected:
+  void DispatchRequestHeadersCallback(const SpdyHeaderBlock& spdy_headers);
+
   MultiplexedSessionHandle* session() { return session_.get(); }
   const MultiplexedSessionHandle* session() const { return session_.get(); }
 
  private:
   const std::unique_ptr<MultiplexedSessionHandle> session_;
+  RequestHeadersCallback request_headers_callback_;
 };
 
 }  // namespace net

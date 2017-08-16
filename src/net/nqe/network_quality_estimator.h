@@ -348,14 +348,8 @@ class NET_EXPORT NetworkQualityEstimator
                            ForceEffectiveConnectionTypeThroughFieldTrial);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, TestBDPComputation);
 
-  // Value of round trip time observations is in base::TimeDelta.
-  typedef nqe::internal::Observation<base::TimeDelta> RttObservation;
-  typedef nqe::internal::ObservationBuffer<base::TimeDelta>
-      RttObservationBuffer;
-
-  // Value of throughput observations is in kilobits per second.
-  typedef nqe::internal::Observation<int32_t> ThroughputObservation;
-  typedef nqe::internal::ObservationBuffer<int32_t> ThroughputObservationBuffer;
+  typedef nqe::internal::Observation Observation;
+  typedef nqe::internal::ObservationBuffer ObservationBuffer;
 
   // Defines how a metric (e.g, transport RTT) should be used when computing
   // the effective connection type.
@@ -405,11 +399,11 @@ class NET_EXPORT NetworkQualityEstimator
 
   // Notifies RTT observers of |observation|. May also trigger recomputation
   // of effective connection type.
-  void NotifyObserversOfRTT(const RttObservation& observation);
+  void NotifyObserversOfRTT(const Observation& observation);
 
   // Notifies throughput observers of |observation|. May also trigger
   // recomputation of effective connection type.
-  void NotifyObserversOfThroughput(const ThroughputObservation& observation);
+  void NotifyObserversOfThroughput(const Observation& observation);
 
   // Returns true only if the |request| can be used for RTT estimation.
   bool RequestProvidesRTTObservation(const URLRequest& request) const;
@@ -547,10 +541,10 @@ class NET_EXPORT NetworkQualityEstimator
 
   // Buffer that holds throughput observations (in kilobits per second) sorted
   // by timestamp.
-  ThroughputObservationBuffer downstream_throughput_kbps_observations_;
+  ObservationBuffer downstream_throughput_kbps_observations_;
 
-  // Buffer that holds RTT observations sorted by timestamp.
-  RttObservationBuffer rtt_observations_;
+  // Buffer that holds RTT observations (in milliseconds) sorted by timestamp.
+  ObservationBuffer rtt_ms_observations_;
 
   // Time when the transaction for the last main frame request was started.
   base::TimeTicks last_main_frame_request_;

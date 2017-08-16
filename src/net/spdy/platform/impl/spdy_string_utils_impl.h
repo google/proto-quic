@@ -8,9 +8,13 @@
 #include <sstream>
 #include <utility>
 
+#include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
+#include "net/base/hex_utils.h"
+#include "net/spdy/platform/api/spdy_export.h"
 #include "net/spdy/platform/api/spdy_string.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 
 namespace net {
 
@@ -39,6 +43,14 @@ inline void SpdyStringAppendFImpl(const Args&... args) {
 
 inline char SpdyHexDigitToIntImpl(char c) {
   return base::HexDigitToInt(c);
+}
+
+inline SpdyString SpdyHexDecodeImpl(SpdyStringPiece data) {
+  return HexDecode(data);
+}
+
+inline SpdyString SpdyHexDumpImpl(SpdyStringPiece data) {
+  return HexDump(data);
 }
 
 }  // namespace net

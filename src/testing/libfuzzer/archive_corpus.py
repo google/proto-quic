@@ -28,6 +28,9 @@ def main():
   corpus_files = []
 
   for directory in args.corpus_directories:
+    if not os.path.exists(directory):
+      raise Exception('The given seed_corpus directory (%s) does not exist.' %
+                      directory)
     for (dirpath, _, filenames) in os.walk(directory):
       for filename in filenames:
         full_filename = os.path.join(dirpath, filename)

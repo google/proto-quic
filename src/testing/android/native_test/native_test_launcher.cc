@@ -130,12 +130,6 @@ static void RunTests(JNIEnv* env,
   main(argc, &argv[0]);
 }
 
-bool RegisterNativeTestJNI(JNIEnv* env) {
-  if (!RegisterMainRunnerJni(env))
-    return false;
-  return RegisterNativesImpl(env);
-}
-
 // TODO(nileshagrawal): now that we're using FIFO, test scripts can detect EOF.
 // Remove the signal handlers.
 void InstallHandlers() {

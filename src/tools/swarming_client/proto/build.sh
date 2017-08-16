@@ -11,5 +11,5 @@
 python -m grpc.tools.protoc \
   --python_out=. \
   --grpc_python_out=. \
-  isolate_bot.proto \
+  bytestream.proto \
   -I.

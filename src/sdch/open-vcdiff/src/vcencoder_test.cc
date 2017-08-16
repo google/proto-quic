@@ -121,7 +121,7 @@ class VCDiffEncoderTest : public VerifyEncodedBytesTest {
   static const char kDictionary[];
   static const char kTarget[];
   static const char kJSONDiff[];
-  static const char kNonAscii[];
+  static const uint8_t kNonAscii[];
 
   VCDiffEncoderTest();
   virtual ~VCDiffEncoderTest() { }
@@ -162,7 +162,7 @@ const char VCDiffEncoderTest::kJSONDiff[] =
     "\"hrice:\\nWhat I tell you three times is true.\\\"\\n\"]";
 
 // NonASCII string "foo\x128".
-const char VCDiffEncoderTest::kNonAscii[] = {102, 111, 111, 128, 0};
+const uint8_t VCDiffEncoderTest::kNonAscii[] = {102, 111, 111, 128, 0};
 
 VCDiffEncoderTest::VCDiffEncoderTest()
     : hashed_dictionary_(kDictionary, sizeof(kDictionary)),
@@ -170,14 +170,13 @@ VCDiffEncoderTest::VCDiffEncoderTest()
                VCD_FORMAT_INTERLEAVED | VCD_FORMAT_CHECKSUM,
                /* look_for_target_matches = */ true),
       simple_encoder_(kDictionary, sizeof(kDictionary)),
-      json_encoder_(&hashed_dictionary_,
-                    VCD_FORMAT_JSON,
+      json_encoder_(&hashed_dictionary_, VCD_FORMAT_JSON,
                     /* look_for_target_matches = */ true),
-      external_encoder_(&hashed_dictionary_,
-                    0,
-                    /* look_for_target_matches = */ true,
-                    new JSONCodeTableWriter()),
-      nonascii_simple_encoder_(kNonAscii, sizeof(kNonAscii)) {
+      external_encoder_(&hashed_dictionary_, 0,
+                        /* look_for_target_matches = */ true,
+                        new JSONCodeTableWriter()),
+      nonascii_simple_encoder_(reinterpret_cast<const char *>(kNonAscii),
+                               sizeof(kNonAscii)) {
   EXPECT_TRUE(hashed_dictionary_.Init());
 }
 
@@ -336,12 +335,14 @@ TEST_F(VCDiffEncoderTest, NonasciiDictionaryWithJSON) {
 }
 
 TEST_F(VCDiffEncoderTest, NonasciiTarget) {
-  EXPECT_TRUE(simple_encoder_.Encode(kNonAscii, strlen(kNonAscii), delta()));
+  EXPECT_TRUE(simple_encoder_.Encode(reinterpret_cast<const char *>(kNonAscii),
+                                     sizeof(kNonAscii), delta()));
 }
 
 TEST_F(VCDiffEncoderTest, NonasciiTargetWithJSON) {
   simple_encoder_.SetFormatFlags(VCD_FORMAT_JSON);
-  EXPECT_FALSE(simple_encoder_.Encode(kNonAscii, strlen(kNonAscii), delta()));
+  EXPECT_FALSE(simple_encoder_.Encode(reinterpret_cast<const char *>(kNonAscii),
+                                      sizeof(kNonAscii), delta()));
 }
 
 #ifdef HAVE_EXT_ROPE
@@ -552,31 +553,33 @@ TEST_F(VCDiffEncoderTest, DictionaryBufferOverwritten) {
 // be treated as NULL-terminated.  An embedded NULL should be handled like
 // any other byte of data.
 TEST_F(VCDiffEncoderTest, DictionaryHasEmbeddedNULLs) {
-  const char embedded_null_dictionary_text[] =
+  const uint8_t embedded_null_dictionary_text[] =
       { 0x00, 0xFF, 0xFE, 0xFD, 0x00, 0xFD, 0xFE, 0xFF, 0x00, 0x03 };
-  const char embedded_null_target[] =
+  const uint8_t embedded_null_target[] =
       { 0xFD, 0x00, 0xFD, 0xFE, 0x03, 0x00, 0x01, 0x00 };
   CHECK_EQ(10, sizeof(embedded_null_dictionary_text));
   CHECK_EQ(8, sizeof(embedded_null_target));
-  HashedDictionary embedded_null_dictionary(embedded_null_dictionary_text,
+  HashedDictionary embedded_null_dictionary(
+      reinterpret_cast<const char *>(embedded_null_dictionary_text),
       sizeof(embedded_null_dictionary_text));
   EXPECT_TRUE(embedded_null_dictionary.Init());
   VCDiffStreamingEncoder embedded_null_encoder(&embedded_null_dictionary,
       VCD_FORMAT_INTERLEAVED | VCD_FORMAT_CHECKSUM,
       /* look_for_target_matches = */ true);
   EXPECT_TRUE(embedded_null_encoder.StartEncoding(delta()));
-  EXPECT_TRUE(embedded_null_encoder.EncodeChunk(embedded_null_target,
-                                                sizeof(embedded_null_target),
-                                                delta()));
+  EXPECT_TRUE(embedded_null_encoder.EncodeChunk(
+      reinterpret_cast<const char *>(embedded_null_target),
+      sizeof(embedded_null_target), delta()));
   EXPECT_TRUE(embedded_null_encoder.FinishEncoding(delta()));
-  decoder_.StartDecoding(embedded_null_dictionary_text,
-                         sizeof(embedded_null_dictionary_text));
+  decoder_.StartDecoding(
+      reinterpret_cast<const char *>(embedded_null_dictionary_text),
+      sizeof(embedded_null_dictionary_text));
   EXPECT_TRUE(decoder_.DecodeChunk(delta_data(),
                                    delta_size(),
                                    &result_target_));
   EXPECT_TRUE(decoder_.FinishDecoding());
   EXPECT_EQ(sizeof(embedded_null_target), result_target_.size());
-  EXPECT_EQ(string(embedded_null_target,
+  EXPECT_EQ(string(reinterpret_cast<const char*>(embedded_null_target),
                    sizeof(embedded_null_target)),
             result_target_);
 }
@@ -584,31 +587,32 @@ TEST_F(VCDiffEncoderTest, DictionaryHasEmbeddedNULLs) {
 // Binary data test part 2: An embedded CR or LF should be handled like
 // any other byte of data.  No text-processing of the data should occur.
 TEST_F(VCDiffEncoderTest, DictionaryHasEmbeddedNewlines) {
-  const char embedded_null_dictionary_text[] =
+  const uint8_t embedded_null_dictionary_text[] =
       { 0x0C, 0xFF, 0xFE, 0x0C, 0x00, 0x0A, 0xFE, 0xFF, 0x00, 0x0A };
-  const char embedded_null_target[] =
+  const uint8_t embedded_null_target[] =
       { 0x0C, 0x00, 0x0A, 0xFE, 0x03, 0x00, 0x0A, 0x00 };
   CHECK_EQ(10, sizeof(embedded_null_dictionary_text));
   CHECK_EQ(8, sizeof(embedded_null_target));
-  HashedDictionary embedded_null_dictionary(embedded_null_dictionary_text,
+  HashedDictionary embedded_null_dictionary(
+      reinterpret_cast<const char *>(embedded_null_dictionary_text),
       sizeof(embedded_null_dictionary_text));
   EXPECT_TRUE(embedded_null_dictionary.Init());
   VCDiffStreamingEncoder embedded_null_encoder(&embedded_null_dictionary,
       VCD_FORMAT_INTERLEAVED | VCD_FORMAT_CHECKSUM,
       /* look_for_target_matches = */ true);
   EXPECT_TRUE(embedded_null_encoder.StartEncoding(delta()));
-  EXPECT_TRUE(embedded_null_encoder.EncodeChunk(embedded_null_target,
-                                                sizeof(embedded_null_target),
-                                                delta()));
+  EXPECT_TRUE(embedded_null_encoder.EncodeChunk(
+      reinterpret_cast<const char *>(embedded_null_target),
+      sizeof(embedded_null_target), delta()));
   EXPECT_TRUE(embedded_null_encoder.FinishEncoding(delta()));
-  decoder_.StartDecoding(embedded_null_dictionary_text,
-                         sizeof(embedded_null_dictionary_text));
-  EXPECT_TRUE(decoder_.DecodeChunk(delta_data(),
-                                   delta_size(),
-                                   &result_target_));
+  decoder_.StartDecoding(
+      reinterpret_cast<const char *>(embedded_null_dictionary_text),
+      sizeof(embedded_null_dictionary_text));
+  EXPECT_TRUE(
+      decoder_.DecodeChunk(delta_data(), delta_size(), &result_target_));
   EXPECT_TRUE(decoder_.FinishDecoding());
   EXPECT_EQ(sizeof(embedded_null_target), result_target_.size());
-  EXPECT_EQ(string(embedded_null_target,
+  EXPECT_EQ(string(reinterpret_cast<const char *>(embedded_null_target),
                    sizeof(embedded_null_target)),
             result_target_);
 }

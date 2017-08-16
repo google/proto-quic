@@ -153,8 +153,8 @@ class HpackVarintDecoderTest : public RandomDecoderTest {
       std::stringstream ss;
       ss << "value=" << value << " (0x" << std::hex << value
          << "), prefix_length=" << std::dec << prefix_length
-         << ", expected_bytes=" << expected_bytes << std::endl
-         << HexEncode(buffer_);
+         << ", expected_bytes=" << expected_bytes << "\n"
+         << Http2HexDump(buffer_);
       Http2String msg(ss.str());
 
       if (value == minimum) {
@@ -204,7 +204,7 @@ class HpackVarintDecoderTest : public RandomDecoderTest {
 
     // Confirm the claim that beyond requires more bytes.
     Encode(beyond, prefix_length);
-    EXPECT_EQ(expected_bytes + 1, buffer_.size()) << HexEncode(buffer_);
+    EXPECT_EQ(expected_bytes + 1, buffer_.size()) << Http2HexDump(buffer_);
 
     std::set<uint32_t> values;
     if (range < 200) {
@@ -266,9 +266,9 @@ TEST_F(HpackVarintDecoderTest, Encode) {
 
     for (uint32_t value : values) {
       EncodeNoRandom(value, prefix_length);
-      Http2String dump = HexEncode(buffer_);
+      Http2String dump = Http2HexDump(buffer_);
       LOG(INFO) << Http2StringPrintf("%10u %0#10x ", value, value)
-                << HexEncode(buffer_);
+                << Http2HexDump(buffer_).substr(7);
     }
   }
 }

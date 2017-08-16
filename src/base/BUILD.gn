@@ -230,6 +230,7 @@ component("base") {
     "command_line.h",
     "compiler_specific.h",
     "containers/adapters.h",
+    "containers/circular_deque.h",
     "containers/flat_map.h",
     "containers/flat_set.h",
     "containers/flat_tree.h",
@@ -238,6 +239,7 @@ component("base") {
     "containers/mru_cache.h",
     "containers/small_map.h",
     "containers/stack_container.h",
+    "containers/vector_buffer.h",
     "cpu.cc",
     "cpu.h",
     "critical_closure.h",
@@ -761,8 +763,10 @@ component("base") {
     "synchronization/read_write_lock_win.cc",
     "synchronization/spin_wait.h",
     "synchronization/waitable_event.h",
+    "synchronization/waitable_event_mac.cc",
     "synchronization/waitable_event_posix.cc",
     "synchronization/waitable_event_watcher.h",
+    "synchronization/waitable_event_watcher_mac.cc",
     "synchronization/waitable_event_watcher_posix.cc",
     "synchronization/waitable_event_watcher_win.cc",
     "synchronization/waitable_event_win.cc",
@@ -858,6 +862,8 @@ component("base") {
     "threading/platform_thread_win.cc",
     "threading/post_task_and_reply_impl.cc",
     "threading/post_task_and_reply_impl.h",
+    "threading/scoped_may_block.cc",
+    "threading/scoped_may_block.h",
     "threading/sequence_local_storage_map.cc",
     "threading/sequence_local_storage_map.h",
     "threading/sequence_local_storage_slot.cc",
@@ -966,10 +972,6 @@ component("base") {
     "trace_event/memory_usage_estimator.h",
     "trace_event/process_memory_dump.cc",
     "trace_event/process_memory_dump.h",
-    "trace_event/process_memory_maps.cc",
-    "trace_event/process_memory_maps.h",
-    "trace_event/process_memory_totals.cc",
-    "trace_event/process_memory_totals.h",
     "trace_event/sharded_allocation_register.cc",
     "trace_event/sharded_allocation_register.h",
     "trace_event/trace_buffer.cc",
@@ -1232,6 +1234,7 @@ component("base") {
       "base_paths_fuchsia.cc",
       "debug/stack_trace_fuchsia.cc",
       "files/file_path_watcher_fuchsia.cc",
+      "fuchsia/scoped_mx_handle.h",
       "memory/shared_memory_fuchsia.cc",
       "memory/shared_memory_handle_fuchsia.cc",
       "message_loop/message_pump_fuchsia.cc",
@@ -1499,6 +1502,8 @@ component("base") {
       "memory/shared_memory_posix.cc",
       "native_library_posix.cc",
       "strings/sys_string_conversions_posix.cc",
+      "synchronization/waitable_event_posix.cc",
+      "synchronization/waitable_event_watcher_posix.cc",
       "threading/platform_thread_internal_posix.cc",
     ]
 
@@ -1620,6 +1625,8 @@ component("base") {
       "power_monitor/power_monitor_device_source_ios.mm",
       "process/memory_stubs.cc",
       "strings/sys_string_conversions_mac.mm",
+      "synchronization/waitable_event_mac.cc",
+      "synchronization/waitable_event_watcher_mac.cc",
       "threading/platform_thread_mac.mm",
       "time/time_conversion_posix.cc",
       "time/time_mac.cc",
@@ -1832,19 +1839,6 @@ if (!is_ios) {
   }
 }
 
-source_set("message_loop_tests") {
-  testonly = true
-  sources = [
-    "message_loop/message_loop_test.cc",
-    "message_loop/message_loop_test.h",
-  ]
-
-  deps = [
-    ":base",
-    "//testing/gtest",
-  ]
-}
-
 if (is_win) {
   # Target to manually rebuild pe_image_test.dll which is checked into
   # base/test/data/pe_image.
@@ -1971,6 +1965,7 @@ test("base_unittests") {
     "cancelable_callback_unittest.cc",
     "command_line_unittest.cc",
     "containers/adapters_unittest.cc",
+    "containers/circular_deque_unittest.cc",
     "containers/flat_map_unittest.cc",
     "containers/flat_set_unittest.cc",
     "containers/flat_tree_unittest.cc",
@@ -1978,7 +1973,9 @@ test("base_unittests") {
     "containers/linked_list_unittest.cc",
     "containers/mru_cache_unittest.cc",
     "containers/small_map_unittest.cc",
+    "containers/span_unittest.cc",
     "containers/stack_container_unittest.cc",
+    "containers/vector_buffer_unittest.cc",
     "cpu_unittest.cc",
     "debug/activity_analyzer_unittest.cc",
     "debug/activity_tracker_unittest.cc",
@@ -2173,7 +2170,6 @@ test("base_unittests") {
     "test/scoped_feature_list_unittest.cc",
     "test/scoped_mock_time_message_loop_task_runner_unittest.cc",
     "test/scoped_task_environment_unittest.cc",
-    "test/scoped_task_scheduler_unittest.cc",
     "test/test_pending_task_unittest.cc",
     "test/test_reg_util_win_unittest.cc",
     "test/trace_event_analyzer_unittest.cc",
@@ -2260,7 +2256,6 @@ test("base_unittests") {
   deps = [
     ":base",
     ":i18n",
-    ":message_loop_tests",
     "//base/allocator:features",
     "//base/test:native_library_test_utils",
     "//base/test:run_all_base_unittests",
@@ -2301,7 +2296,6 @@ test("base_unittests") {
     deps += [
       ":base_java",
       ":base_java_unittest_support",
-      "//base/android/jni_generator:jni_generator_tests",
       "//base/test:test_support_java",
     ]
   }
@@ -2419,6 +2413,10 @@ test("base_unittests") {
     # TODO(krasin): remove CFI_CAST_CHECK, see https://crbug.com/626794.
     defines += [ "CFI_CAST_CHECK" ]
   }
+
+  if (use_cfi_diag && !use_cfi_recover) {
+    defines += [ "CFI_ENFORCEMENT_DIAGNOSTIC" ]
+  }
 }
 
 action("build_date") {
@@ -2455,6 +2453,7 @@ if (enable_nocompile_tests) {
       "memory/ref_counted_unittest.nc",
       "memory/weak_ptr_unittest.nc",
       "metrics/histogram_unittest.nc",
+      "strings/string16_unittest.nc",
       "task_scheduler/task_traits_unittest.nc",
     ]
 
@@ -2673,6 +2672,17 @@ if (is_android) {
       "test/android/javatests/src/org/chromium/base/test/ScreenshotOnFailureStatement.java",
       "test/android/javatests/src/org/chromium/base/test/SetUpTestRule.java",
       "test/android/javatests/src/org/chromium/base/test/SetUpStatement.java",
+      "test/android/javatests/src/org/chromium/base/test/TestListInstrumentationRunListener.java",
+      "test/android/javatests/src/org/chromium/base/test/TestTraceEvent.java",
+      "test/android/javatests/src/org/chromium/base/test/params/ParameterizedRunner.java",
+      "test/android/javatests/src/org/chromium/base/test/params/BlockJUnit4RunnerDelegate.java",
+      "test/android/javatests/src/org/chromium/base/test/params/BaseJUnit4RunnerDelegate.java",
+      "test/android/javatests/src/org/chromium/base/test/params/ParameterizedRunnerDelegateFactory.java",
+      "test/android/javatests/src/org/chromium/base/test/params/ParameterizedFrameworkMethod.java",
+      "test/android/javatests/src/org/chromium/base/test/params/ParameterSet.java",
+      "test/android/javatests/src/org/chromium/base/test/params/ParameterizedRunnerDelegate.java",
+      "test/android/javatests/src/org/chromium/base/test/params/ParameterizedRunnerDelegateCommon.java",
+      "test/android/javatests/src/org/chromium/base/test/params/ParameterAnnotations.java",
       "test/android/javatests/src/org/chromium/base/test/util/AdvancedMockContext.java",
       "test/android/javatests/src/org/chromium/base/test/util/AnnotationProcessor.java",
       "test/android/javatests/src/org/chromium/base/test/util/CallbackHelper.java",
@@ -2700,6 +2710,7 @@ if (is_android) {
       "test/android/javatests/src/org/chromium/base/test/util/TestFileUtil.java",
       "test/android/javatests/src/org/chromium/base/test/util/TestThread.java",
       "test/android/javatests/src/org/chromium/base/test/util/TimeoutScale.java",
+      "test/android/javatests/src/org/chromium/base/test/util/UserActionTester.java",
       "test/android/javatests/src/org/chromium/base/test/util/UrlUtils.java",
       "test/android/javatests/src/org/chromium/base/test/util/parameter/CommandLineParameter.java",
       "test/android/javatests/src/org/chromium/base/test/util/parameter/SkipCommandLineParameterization.java",
@@ -2725,15 +2736,21 @@ if (is_android) {
       "android/junit/src/org/chromium/base/process_launcher/ChildConnectionAllocatorTest.java",
       "android/junit/src/org/chromium/base/process_launcher/ChildProcessConnectionTest.java",
       "test/android/junit/src/org/chromium/base/test/SetUpStatementTest.java",
+      "test/android/junit/src/org/chromium/base/test/TestListInstrumentationRunListenerTest.java",
       "test/android/junit/src/org/chromium/base/test/util/DisableIfTest.java",
       "test/android/junit/src/org/chromium/base/test/util/MinAndroidSdkLevelSkipCheckTest.java",
       "test/android/junit/src/org/chromium/base/test/util/RestrictionSkipCheckTest.java",
       "test/android/junit/src/org/chromium/base/test/util/SkipCheckTest.java",
+      "test/android/junit/src/org/chromium/base/test/params/ExampleParameterizedTest.java",
+      "test/android/junit/src/org/chromium/base/test/params/ParameterizedRunnerTest.java",
+      "test/android/junit/src/org/chromium/base/test/params/ParameterizedRunnerDelegateFactoryTest.java",
+      "test/android/junit/src/org/chromium/base/test/params/ParameterizedTestNameTest.java",
     ]
     deps = [
       ":base_java",
       ":base_java_process_launcher_test_support",
       ":base_java_test_support",
+      "//third_party/android_support_test_runner:runner_java",
     ]
     srcjar_deps = [ ":base_build_config_gen" ]
   }

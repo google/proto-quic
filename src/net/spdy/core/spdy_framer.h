@@ -26,18 +26,18 @@
 
 namespace net {
 
-class HttpProxyClientSocketPoolTest;
+class Http2DecoderAdapter;
 class HttpNetworkLayer;
 class HttpNetworkTransactionTest;
+class HttpProxyClientSocketPoolTest;
+class SpdyFrameBuilder;
+class SpdyFramer;
+class SpdyFramerVisitorInterface;
 class SpdyHttpStreamTest;
 class SpdyNetworkTransactionTest;
 class SpdyProxyClientSocketTest;
 class SpdySessionTest;
 class SpdyStreamTest;
-
-class SpdyFramer;
-class SpdyFrameBuilder;
-class SpdyFramerDecoderAdapter;
 
 namespace test {
 
@@ -47,165 +47,6 @@ class SpdyFramerTest_MultipleContinuationFramesWithIterator_Test;
 class SpdyFramerTest_PushPromiseFramesWithIterator_Test;
 
 }  // namespace test
-
-// SpdyFramerVisitorInterface is a set of callbacks for the SpdyFramer.
-// Implement this interface to receive event callbacks as frames are
-// decoded from the framer.
-//
-// Control frames that contain HTTP2 header blocks (HEADER, and PUSH_PROMISE)
-// are processed in fashion that allows the decompressed header block to be
-// delivered in chunks to the visitor.
-// The following steps are followed:
-//   1. OnHeaders, or OnPushPromise is called.
-//   2. OnHeaderFrameStart is called; visitor is expected to return an instance
-//      of SpdyHeadersHandlerInterface that will receive the header key-value
-//      pairs.
-//   3. OnHeaderFrameEnd is called, indicating that the full header block has
-//      been delivered for the control frame.
-// During step 2, if the visitor is not interested in accepting the header data,
-// it should return a no-op implementation of SpdyHeadersHandlerInterface.
-class SPDY_EXPORT_PRIVATE SpdyFramerVisitorInterface {
- public:
-  virtual ~SpdyFramerVisitorInterface() {}
-
-  // Called if an error is detected in the SpdyFrame protocol.
-  virtual void OnError(SpdyFramer* framer) = 0;
-
-  // Called when the common header for a frame is received. Validating the
-  // common header occurs in later processing.
-  virtual void OnCommonHeader(SpdyStreamId stream_id,
-                              size_t length,
-                              uint8_t type,
-                              uint8_t flags) {}
-
-  // Called when a data frame header is received. The frame's data
-  // payload will be provided via subsequent calls to
-  // OnStreamFrameData().
-  virtual void OnDataFrameHeader(SpdyStreamId stream_id,
-                                 size_t length,
-                                 bool fin) = 0;
-
-  // Called when data is received.
-  // |stream_id| The stream receiving data.
-  // |data| A buffer containing the data received.
-  // |len| The length of the data buffer.
-  virtual void OnStreamFrameData(SpdyStreamId stream_id,
-                                 const char* data,
-                                 size_t len) = 0;
-
-  // Called when the other side has finished sending data on this stream.
-  // |stream_id| The stream that was receiving data.
-  virtual void OnStreamEnd(SpdyStreamId stream_id) = 0;
-
-  // Called when padding is received (padding length field or padding octets).
-  // |stream_id| The stream receiving data.
-  // |len| The number of padding octets.
-  virtual void OnStreamPadding(SpdyStreamId stream_id, size_t len) = 0;
-
-  // Called just before processing the payload of a frame containing header
-  // data. Should return an implementation of SpdyHeadersHandlerInterface that
-  // will receive headers for stream |stream_id|. The caller will not take
-  // ownership of the headers handler. The same instance should remain live
-  // and be returned for all header frames comprising a logical header block
-  // (i.e. until OnHeaderFrameEnd() is called).
-  virtual SpdyHeadersHandlerInterface* OnHeaderFrameStart(
-      SpdyStreamId stream_id) = 0;
-
-  // Called after processing the payload of a frame containing header data.
-  virtual void OnHeaderFrameEnd(SpdyStreamId stream_id) = 0;
-
-  // Called when a RST_STREAM frame has been parsed.
-  virtual void OnRstStream(SpdyStreamId stream_id,
-                           SpdyErrorCode error_code) = 0;
-
-  // Called when a SETTINGS frame is received.
-  virtual void OnSettings() {}
-
-  // Called when a complete setting within a SETTINGS frame has been parsed and
-  // validated.
-  virtual void OnSetting(SpdySettingsIds id, uint32_t value) = 0;
-
-  // Called when a SETTINGS frame is received with the ACK flag set.
-  virtual void OnSettingsAck() {}
-
-  // Called before and after parsing SETTINGS id and value tuples.
-  virtual void OnSettingsEnd() = 0;
-
-  // Called when a PING frame has been parsed.
-  virtual void OnPing(SpdyPingId unique_id, bool is_ack) = 0;
-
-  // Called when a GOAWAY frame has been parsed.
-  virtual void OnGoAway(SpdyStreamId last_accepted_stream_id,
-                        SpdyErrorCode error_code) = 0;
-
-  // Called when a HEADERS frame is received.
-  // Note that header block data is not included. See OnHeaderFrameStart().
-  // |stream_id| The stream receiving the header.
-  // |has_priority| Whether or not the headers frame included a priority value,
-  //     and stream dependency info.
-  // |weight| If |has_priority| is true, then weight (in the range [1, 256])
-  //     for the receiving stream, otherwise 0.
-  // |parent_stream_id| If |has_priority| is true the parent stream of the
-  //     receiving stream, else 0.
-  // |exclusive| If |has_priority| is true the exclusivity of dependence on the
-  //     parent stream, else false.
-  // |fin| Whether FIN flag is set in frame headers.
-  // |end| False if HEADERs frame is to be followed by a CONTINUATION frame,
-  //     or true if not.
-  virtual void OnHeaders(SpdyStreamId stream_id,
-                         bool has_priority,
-                         int weight,
-                         SpdyStreamId parent_stream_id,
-                         bool exclusive,
-                         bool fin,
-                         bool end) = 0;
-
-  // Called when a WINDOW_UPDATE frame has been parsed.
-  virtual void OnWindowUpdate(SpdyStreamId stream_id,
-                              int delta_window_size) = 0;
-
-  // Called when a goaway frame opaque data is available.
-  // |goaway_data| A buffer containing the opaque GOAWAY data chunk received.
-  // |len| The length of the header data buffer. A length of zero indicates
-  //       that the header data block has been completely sent.
-  // When this function returns true the visitor indicates that it accepted
-  // all of the data. Returning false indicates that that an error has
-  // occurred while processing the data. Default implementation returns true.
-  virtual bool OnGoAwayFrameData(const char* goaway_data, size_t len);
-
-  // Called when a PUSH_PROMISE frame is received.
-  // Note that header block data is not included. See OnHeaderFrameStart().
-  virtual void OnPushPromise(SpdyStreamId stream_id,
-                             SpdyStreamId promised_stream_id,
-                             bool end) = 0;
-
-  // Called when a CONTINUATION frame is received.
-  // Note that header block data is not included. See OnHeaderFrameStart().
-  virtual void OnContinuation(SpdyStreamId stream_id, bool end) = 0;
-
-  // Called when an ALTSVC frame has been parsed.
-  virtual void OnAltSvc(
-      SpdyStreamId stream_id,
-      SpdyStringPiece origin,
-      const SpdyAltSvcWireFormat::AlternativeServiceVector& altsvc_vector) {}
-
-  // Called when a PRIORITY frame is received.
-  // |stream_id| The stream to update the priority of.
-  // |parent_stream_id| The parent stream of |stream_id|.
-  // |weight| Stream weight, in the range [1, 256].
-  // |exclusive| Whether |stream_id| should be an only child of
-  //     |parent_stream_id|.
-  virtual void OnPriority(SpdyStreamId stream_id,
-                          SpdyStreamId parent_stream_id,
-                          int weight,
-                          bool exclusive) {}
-
-  // Called when a frame type we don't recognize is received.
-  // Return true if this appears to be a valid extension frame, false otherwise.
-  // We distinguish between extension frames and nonsense by checking
-  // whether the stream id is valid.
-  virtual bool OnUnknownFrame(SpdyStreamId stream_id, uint8_t frame_type) = 0;
-};
 
 class SPDY_EXPORT_PRIVATE SpdyFrameSequence {
  public:
@@ -334,6 +175,15 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
 
   // Gets the serialized flags for the given |frame|.
   static uint8_t GetSerializedFlags(const SpdyFrameIR& frame);
+
+  // Calculates the number of bytes required to serialize a SpdyHeadersIR, not
+  // including the bytes to be used for the encoded header set.
+  static size_t GetHeaderFrameSizeSansBlock(const SpdyHeadersIR& header_ir);
+
+  // Calculates the number of bytes required to serialize a SpdyPushPromiseIR,
+  // not including the bytes to be used for the encoded header set.
+  static size_t GetPushPromiseFrameSizeSansBlock(
+      const SpdyPushPromiseIR& push_promise_ir);
 
   explicit SpdyFramer(CompressionOption option);
 
@@ -550,16 +400,14 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
     send_frame_size_limit_ = send_frame_size_limit;
   }
 
-  size_t recv_frame_size_limit() const { return recv_frame_size_limit_; }
-  void set_recv_frame_size_limit(size_t recv_frame_size_limit) {
-    recv_frame_size_limit_ = recv_frame_size_limit;
-  }
-
   void SetDecoderHeaderTableDebugVisitor(
       std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor);
 
   void SetEncoderHeaderTableDebugVisitor(
       std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor);
+
+  // Get (and lazily initialize) the HPACK encoder state.
+  HpackEncoder* GetHpackEncoder();
 
   void SetOverwriteLastFrame(bool value) { overwrite_last_frame_ = value; }
   void SetIsLastFrame(bool value) { is_last_frame_ = value; }
@@ -693,9 +541,6 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   };
 
  private:
-  // Get (and lazily initialize) the HPACK encoder state.
-  HpackEncoder* GetHpackEncoder();
-
   size_t GetNumberRequiredContinuationFrames(size_t size);
 
   bool WritePayloadWithContinuation(SpdyFrameBuilder* builder,
@@ -726,15 +571,6 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   bool SerializePushPromiseGivenEncoding(const SpdyPushPromiseIR& push_promise,
                                          const SpdyString& encoding,
                                          ZeroCopyOutputBuffer* output) const;
-
-  // Calculates the number of bytes required to serialize a SpdyHeadersIR, not
-  // including the bytes to be used for the encoded header set.
-  size_t GetHeaderFrameSizeSansBlock(const SpdyHeadersIR& header_ir) const;
-
-  // Calculates the number of bytes required to serialize a SpdyPushPromiseIR,
-  // not including the bytes to be used for the encoded header set.
-  size_t GetPushPromiseFrameSizeSansBlock(
-      const SpdyPushPromiseIR& push_promise_ir) const;
 
   // Serializes the flags octet for a given SpdyHeadersIR.
   uint8_t SerializeHeaderFrameFlags(const SpdyHeadersIR& header_ir) const;
@@ -792,10 +628,6 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   // SETTINGS_MAX_FRAME_SIZE received from peer.
   size_t send_frame_size_limit_ = kSpdyInitialFrameSizeLimit;
 
-  // The limit on the size of received HTTP/2 payloads as specified in the
-  // SETTINGS_MAX_FRAME_SIZE advertised to peer.
-  size_t recv_frame_size_limit_ = kSpdyInitialFrameSizeLimit;
-
   std::unique_ptr<HpackEncoder> hpack_encoder_;
 
   SpdyFramerVisitorInterface* visitor_;
@@ -805,7 +637,7 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   SpdyHeadersHandlerInterface* header_handler_;
 
   // Decoder to use instead of this instance.
-  std::unique_ptr<SpdyFramerDecoderAdapter> decoder_adapter_;
+  std::unique_ptr<Http2DecoderAdapter> decoder_adapter_;
 
   // Determines whether HPACK compression is used.
   const CompressionOption compression_option_;

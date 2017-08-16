@@ -1,6 +1,6 @@
-# These tests write a temp pak file in /tmp and then open it. They fail
-# because Fuchsia doesn't support mmap on tmpfs yet.
-# TODO(fuchsia): Remove the filter once mmap() is implemented.
-# crbug.com/740608 .
--*DataPackTest.*
--ResourceBundleImageTest.*
+# Failing after turning on Ozone/Aura. We probably don't have any need for this.
+-OSExchangeDataTest.*
+
+# Flaking, see https://crbug.com/752220.
+-ClipboardTest/0.ClearTest
+-L10nUtilTest.TimeDurationFormatAllLocales

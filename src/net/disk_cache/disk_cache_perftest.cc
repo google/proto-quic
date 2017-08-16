@@ -22,6 +22,7 @@
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
 #include "net/base/test_completion_callback.h"
+#include "net/disk_cache/backend_cleanup_tracker.h"
 #include "net/disk_cache/blockfile/backend_impl.h"
 #include "net/disk_cache/blockfile/block_files.h"
 #include "net/disk_cache/disk_cache.h"
@@ -325,7 +326,10 @@ TEST(SimpleIndexPerfTest, EvictionPerformance) {
   int iterations = 0;
   while (iterations < 61000) {
     ++iterations;
-    disk_cache::SimpleIndex index(nullptr, &delegate, net::DISK_CACHE, nullptr);
+    disk_cache::SimpleIndex index(/* io_thread = */ nullptr,
+                                  /* cleanup_tracker = */ nullptr, &delegate,
+                                  net::DISK_CACHE,
+                                  /* simple_index_file = */ nullptr);
 
     // Make sure large enough to not evict on insertion.
     index.SetMaxSize(kEntries * 2);

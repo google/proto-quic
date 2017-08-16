@@ -99,7 +99,7 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndRstPacket(
     ack.received_packet_times.push_back(std::make_pair(i, clock_->Now()));
   }
   if (largest_received > 0) {
-    ack.packets.Add(1, largest_received + 1);
+    ack.packets.AddRange(1, largest_received + 1);
   }
   QuicFrames frames;
   frames.push_back(QuicFrame(&ack));
@@ -148,7 +148,7 @@ QuicTestPacketMaker::MakeAckAndConnectionClosePacket(
     ack.received_packet_times.push_back(std::make_pair(i, clock_->Now()));
   }
   if (largest_received > 0) {
-    ack.packets.Add(1, largest_received + 1);
+    ack.packets.AddRange(1, largest_received + 1);
   }
   QuicFrames frames;
   frames.push_back(QuicFrame(&ack));
@@ -242,7 +242,7 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
     ack.received_packet_times.push_back(std::make_pair(i, clock_->Now()));
   }
   if (largest_received > 0) {
-    ack.packets.Add(1, largest_received + 1);
+    ack.packets.AddRange(1, largest_received + 1);
   }
 
   QuicFramer framer(SupportedVersions(version_), clock_->Now(), perspective_);
@@ -324,7 +324,7 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndDataPacket(
     ack.received_packet_times.push_back(std::make_pair(i, clock_->Now()));
   }
   if (largest_received > 0) {
-    ack.packets.Add(1, largest_received + 1);
+    ack.packets.AddRange(1, largest_received + 1);
   }
   QuicFrames frames;
   frames.push_back(QuicFrame(&ack));

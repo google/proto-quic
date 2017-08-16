@@ -56,6 +56,7 @@ class MetaBuildWrapper(object):
     self.sep = os.sep
     self.args = argparse.Namespace()
     self.configs = {}
+    self.luci_tryservers = {}
     self.masters = {}
     self.mixins = {}
 
@@ -235,6 +236,14 @@ class MetaBuildWrapper(object):
                            ' do compiles')
     subp.set_defaults(func=self.CmdAudit)
 
+    subp = subps.add_parser('gerrit-buildbucket-config',
+                            help='Print buildbucket.config for gerrit '
+                            '(see MB user guide)')
+    subp.add_argument('-f', '--config-file', metavar='PATH',
+                      default=self.default_config,
+                      help='path to config file (default is %(default)s)')
+    subp.set_defaults(func=self.CmdBuildbucket)
+
     subp = subps.add_parser('help',
                             help='Get help on a subcommand.')
     subp.add_argument(nargs='?', action='store', dest='subcommand',
@@ -367,6 +376,25 @@ class MetaBuildWrapper(object):
     ret, _, _ = self.Run(cmd, force_verbose=False, buffer_output=False)
 
     return ret
+
+  def CmdBuildbucket(self):
+    self.ReadConfigFile()
+
+    self.Print('# This file was generated using '
+               '"tools/mb/mb.py gerrit-buildbucket-config".')
+
+    for luci_tryserver in sorted(self.luci_tryservers):
+      self.Print('[bucket "luci.%s"]' % luci_tryserver)
+      for bot in sorted(self.luci_tryservers[luci_tryserver]):
+        self.Print('\tbuilder = %s' % bot)
+
+    for master in sorted(self.masters):
+      if master.startswith('tryserver.'):
+        self.Print('[bucket "master.%s"]' % master)
+        for bot in sorted(self.masters[master]):
+          self.Print('\tbuilder = %s' % bot)
+
+    return 0
 
   def CmdValidate(self, print_ok=True):
     errs = []
@@ -674,6 +702,7 @@ class MetaBuildWrapper(object):
                  (self.args.config_file, e))
 
     self.configs = contents['configs']
+    self.luci_tryservers = contents.get('luci_tryservers', {})
     self.masters = contents['masters']
     self.mixins = contents['mixins']
 
@@ -888,17 +917,6 @@ class MetaBuildWrapper(object):
       command, extra_files = self.GetIsolateCommand(target, vals)
 
       runtime_deps = self.ReadFile(runtime_deps_path).splitlines()
-      if android:
-        # TODO(hzl): Rewrite the following lib.unstripped logic.
-        # crbug.com/749283
-        unstripped_libs = []
-        for f in runtime_deps:
-          if f.endswith('.so'):
-            if os.path.isfile(self.PathJoin(self.ToAbsPath(build_dir),
-                                            'lib.unstripped',
-                                            os.path.basename(f))):
-              unstripped_libs.append('lib.unstripped/%s' % os.path.basename(f))
-        runtime_deps.extend(unstripped_libs)
 
       self.WriteIsolateFiles(build_dir, command, target, runtime_deps,
                              extra_files)

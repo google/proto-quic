@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "net/spdy/platform/api/spdy_string.h"
+#include "net/spdy/platform/api/spdy_string_piece.h"
 #include "net/spdy/platform/impl/spdy_string_utils_impl.h"
 
 namespace net {
@@ -34,6 +35,14 @@ inline void SpdyStringAppendF(const Args&... args) {
 
 inline char SpdyHexDigitToInt(char c) {
   return SpdyHexDigitToIntImpl(c);
+}
+
+inline SpdyString SpdyHexDecode(SpdyStringPiece data) {
+  return SpdyHexDecodeImpl(data);
+}
+
+inline SpdyString SpdyHexDump(SpdyStringPiece data) {
+  return SpdyHexDumpImpl(data);
 }
 
 }  // namespace net

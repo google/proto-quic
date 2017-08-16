@@ -77,7 +77,7 @@ base::FilePath::StringType GetCorrectedExtensionUnsafe(
 
 void SanitizeGeneratedFileName(base::FilePath::StringType* filename,
                                bool replace_trailing) {
-  const base::FilePath::CharType kReplace[] = FILE_PATH_LITERAL("-");
+  const base::FilePath::CharType kReplace[] = FILE_PATH_LITERAL("_");
   if (filename->empty())
     return;
   if (replace_trailing) {
@@ -277,7 +277,7 @@ base::string16 GetSuggestedFilenameImpl(
                      : base::FilePath::StringType(kFinalFallbackName);
     overwrite_extension = false;
   }
-  replace_illegal_characters_function(&result_str, '-');
+  replace_illegal_characters_function(&result_str, '_');
   base::FilePath result(result_str);
   // extension should not appended to filename derived from
   // content-disposition, if it does not have one.

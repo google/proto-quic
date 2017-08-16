@@ -35,9 +35,3 @@ class PartialInvalidationCasesPageSet(story.StorySet):
 
     for url in other_urls:
       self.AddStory(PartialInvalidationCasesPage(url, self))
-
-
-class PartialInvalidationCasesStoryExpectations(
-    story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    pass # No tests disabled.

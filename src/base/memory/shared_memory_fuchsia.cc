@@ -4,11 +4,14 @@
 
 #include "base/memory/shared_memory.h"
 
+#include <limits>
+
 #include <magenta/process.h>
 #include <magenta/rights.h>
 #include <magenta/syscalls.h>
 
 #include "base/bits.h"
+#include "base/fuchsia/scoped_mx_handle.h"
 #include "base/logging.h"
 #include "base/memory/shared_memory_tracker.h"
 #include "base/process/process_metrics.h"
@@ -36,15 +39,21 @@ void SharedMemory::CloseHandle(const SharedMemoryHandle& handle) {
   handle.Close();
 }
 
+// static
+size_t SharedMemory::GetHandleLimit() {
+  // No documented limit, currently.
+  return std::numeric_limits<size_t>::max();
+}
+
 bool SharedMemory::CreateAndMapAnonymous(size_t size) {
   return CreateAnonymous(size) && Map(size);
 }
 
 bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
-  mx_handle_t vmo;
   requested_size_ = options.size;
   mapped_size_ = bits::Align(requested_size_, GetPageSize());
-  mx_status_t status = mx_vmo_create(mapped_size_, 0, &vmo);
+  ScopedMxHandle vmo;
+  mx_status_t status = mx_vmo_create(mapped_size_, 0, vmo.receive());
   if (status != MX_OK) {
     DLOG(ERROR) << "mx_vmo_create failed, status=" << status;
     return false;
@@ -53,15 +62,18 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
   if (!options.executable) {
     // If options.executable isn't set, drop that permission by replacement.
     const int kNoExecFlags = MX_DEFAULT_VMO_RIGHTS & ~MX_RIGHT_EXECUTE;
-    status = mx_handle_replace(vmo, kNoExecFlags, &vmo);
+    ScopedMxHandle old_vmo(std::move(vmo));
+    status = mx_handle_replace(old_vmo.get(), kNoExecFlags, vmo.receive());
     if (status != MX_OK) {
-      DLOG(ERROR) << "mx_handle_replace failed, status=" << status;
-      mx_handle_close(vmo);
+      DLOG(ERROR) << "mx_handle_replace() failed: "
+                  << mx_status_get_string(status);
       return false;
     }
+    ignore_result(old_vmo.release());
   }
 
-  shm_ = SharedMemoryHandle(vmo, mapped_size_, UnguessableToken::Create());
+  shm_ = SharedMemoryHandle(vmo.release(), mapped_size_,
+                            UnguessableToken::Create());
   return true;
 }
 

@@ -25,7 +25,9 @@ base::LazyInstance<base::ThreadLocalPointer<ThreadTaskRunnerHandle>>::Leaky
 // static
 scoped_refptr<SingleThreadTaskRunner> ThreadTaskRunnerHandle::Get() {
   ThreadTaskRunnerHandle* current = lazy_tls_ptr.Pointer()->Get();
-  DCHECK(current);
+  CHECK(current) << "Error: This caller requires a single-threaded context "
+                    "(i.e. the current task needs to run from a "
+                    "SingleThreadTaskRunner).";
   return current->task_runner_;
 }
 

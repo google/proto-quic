@@ -47,6 +47,11 @@ class TestCryptoVisitor : public CryptoFramerVisitorInterface {
   std::vector<CryptoHandshakeMessage> messages_;
 };
 
+INSTANTIATE_TEST_CASE_P(Tests,
+                        CryptoFramerTest,
+                        ::testing::ValuesIn({Perspective::IS_CLIENT,
+                                             Perspective::IS_SERVER}));
+
 TEST_P(CryptoFramerTest, ConstructHandshakeMessage) {
   CryptoHandshakeMessage message;
   message.set_tag(0xFFAA7733);

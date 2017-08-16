@@ -13,9 +13,9 @@ using std::string;
 namespace net {
 namespace test {
 
-class QuicTextUtilsText : public QuicTest {};
+class QuicTextUtilsTest : public QuicTest {};
 
-TEST_F(QuicTextUtilsText, StartsWith) {
+TEST_F(QuicTextUtilsTest, StartsWith) {
   EXPECT_TRUE(QuicTextUtils::StartsWith("hello world", "hello"));
   EXPECT_TRUE(QuicTextUtils::StartsWith("hello world", "hello world"));
   EXPECT_TRUE(QuicTextUtils::StartsWith("hello world", ""));
@@ -24,7 +24,7 @@ TEST_F(QuicTextUtilsText, StartsWith) {
   EXPECT_FALSE(QuicTextUtils::StartsWith("hello world", "bar"));
 }
 
-TEST_F(QuicTextUtilsText, EndsWithIgnoreCase) {
+TEST_F(QuicTextUtilsTest, EndsWithIgnoreCase) {
   EXPECT_TRUE(QuicTextUtils::EndsWithIgnoreCase("hello world", "world"));
   EXPECT_TRUE(QuicTextUtils::EndsWithIgnoreCase("hello world", "hello world"));
   EXPECT_TRUE(QuicTextUtils::EndsWithIgnoreCase("hello world", ""));
@@ -32,7 +32,7 @@ TEST_F(QuicTextUtilsText, EndsWithIgnoreCase) {
   EXPECT_FALSE(QuicTextUtils::EndsWithIgnoreCase("hello world", "hello"));
 }
 
-TEST_F(QuicTextUtilsText, ToLower) {
+TEST_F(QuicTextUtilsTest, ToLower) {
   EXPECT_EQ("lower", QuicTextUtils::ToLower("LOWER"));
   EXPECT_EQ("lower", QuicTextUtils::ToLower("lower"));
   EXPECT_EQ("lower", QuicTextUtils::ToLower("lOwEr"));
@@ -40,7 +40,7 @@ TEST_F(QuicTextUtilsText, ToLower) {
   EXPECT_EQ("", QuicTextUtils::ToLower(""));
 }
 
-TEST_F(QuicTextUtilsText, RemoveLeadingAndTrailingWhitespace) {
+TEST_F(QuicTextUtilsTest, RemoveLeadingAndTrailingWhitespace) {
   string input;
 
   for (auto* input : {"text", " text", "  text", "text ", "text  ", " text ",
@@ -51,7 +51,7 @@ TEST_F(QuicTextUtilsText, RemoveLeadingAndTrailingWhitespace) {
   }
 }
 
-TEST_F(QuicTextUtilsText, StringToNumbers) {
+TEST_F(QuicTextUtilsTest, StringToNumbers) {
   const string kMaxInt32Plus1 = "2147483648";
   const string kMinInt32Minus1 = "-2147483649";
   const string kMaxUint32Plus1 = "4294967296";
@@ -124,25 +124,25 @@ TEST_F(QuicTextUtilsText, StringToNumbers) {
   }
 }
 
-TEST_F(QuicTextUtilsText, Uint64ToString) {
+TEST_F(QuicTextUtilsTest, Uint64ToString) {
   EXPECT_EQ("123", QuicTextUtils::Uint64ToString(123));
   EXPECT_EQ("1234", QuicTextUtils::Uint64ToString(1234));
 }
 
-TEST_F(QuicTextUtilsText, HexEncode) {
+TEST_F(QuicTextUtilsTest, HexEncode) {
   EXPECT_EQ("48656c6c6f", QuicTextUtils::HexEncode("Hello", 5));
   EXPECT_EQ("48656c6c6f", QuicTextUtils::HexEncode("Hello World", 5));
   EXPECT_EQ("48656c6c6f", QuicTextUtils::HexEncode("Hello"));
   EXPECT_EQ("0102779cfa", QuicTextUtils::HexEncode("\x01\x02\x77\x9c\xfa"));
 }
 
-TEST_F(QuicTextUtilsText, HexDecode) {
+TEST_F(QuicTextUtilsTest, HexDecode) {
   EXPECT_EQ("Hello", QuicTextUtils::HexDecode("48656c6c6f"));
   EXPECT_EQ("", QuicTextUtils::HexDecode(""));
   EXPECT_EQ("\x01\x02\x77\x9c\xfa", QuicTextUtils::HexDecode("0102779cfa"));
 }
 
-TEST_F(QuicTextUtilsText, HexDump) {
+TEST_F(QuicTextUtilsTest, HexDump) {
   // Verify output of the HexDump method is as expected.
   char packet[] = {
       0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2c, 0x20, 0x51, 0x55, 0x49, 0x43, 0x21,
@@ -161,9 +161,16 @@ TEST_F(QuicTextUtilsText, HexDump) {
       "0x0030:  6f20 7370 616e 206d 756c 7469 706c 6520  o.span.multiple.\n"
       "0x0040:  6c69 6e65 7320 6f66 206f 7574 7075 742e  lines.of.output.\n"
       "0x0050:  0102 03                                  ...\n");
+  // Verify that 0x21 and 0x7e are printable, 0x20 and 0x7f are not.
+  EXPECT_EQ("0x0000:  2021 7e7f                                .!~.\n",
+            QuicTextUtils::HexDump(QuicTextUtils::HexDecode("20217e7f")));
+  // Verify that values above numeric_limits<unsigned char>::max() are formatted
+  // properly on platforms where char is unsigned.
+  EXPECT_EQ("0x0000:  90aa ff                                  ...\n",
+            QuicTextUtils::HexDump(QuicTextUtils::HexDecode("90aaff")));
 }
 
-TEST_F(QuicTextUtilsText, Base64Encode) {
+TEST_F(QuicTextUtilsTest, Base64Encode) {
   string output;
   string input = "Hello";
   QuicTextUtils::Base64Encode(reinterpret_cast<const uint8_t*>(input.data()),
@@ -181,7 +188,7 @@ TEST_F(QuicTextUtilsText, Base64Encode) {
       output);
 }
 
-TEST_F(QuicTextUtilsText, ContainsUpperCase) {
+TEST_F(QuicTextUtilsTest, ContainsUpperCase) {
   EXPECT_FALSE(QuicTextUtils::ContainsUpperCase("abc"));
   EXPECT_FALSE(QuicTextUtils::ContainsUpperCase(""));
   EXPECT_FALSE(QuicTextUtils::ContainsUpperCase("123"));
@@ -189,7 +196,7 @@ TEST_F(QuicTextUtilsText, ContainsUpperCase) {
   EXPECT_TRUE(QuicTextUtils::ContainsUpperCase("aBc"));
 }
 
-TEST_F(QuicTextUtilsText, Split) {
+TEST_F(QuicTextUtilsTest, Split) {
   EXPECT_EQ(std::vector<QuicStringPiece>({"a", "b", "c"}),
             QuicTextUtils::Split("a,b,c", ','));
   EXPECT_EQ(std::vector<QuicStringPiece>({"a", "b", "c"}),

@@ -1,0 +1,15 @@
+diff --git a/source/data/lang/ru.txt b/source/data/lang/ru.txt
+index 51f10cdd..b48be9fb 100644
+--- a/source/data/lang/ru.txt
++++ b/source/data/lang/ru.txt
+@@ -604,8 +604,8 @@ ru{
+         Hang{"хангыль"}
+         Hani{"китайская"}
+         Hano{"хануну"}
+-        Hans{"упрощенная китайская"}
+-        Hant{"традиционная китайская"}
++        Hans{"упрощенный"}
++        Hant{"традиционный"}
+         Hebr{"еврейская"}
+         Hira{"хирагана"}
+         Hluw{"лувийские иероглифы"}

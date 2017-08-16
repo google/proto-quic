@@ -21,7 +21,7 @@ void SimpleDataProducer::SaveStreamData(QuicStreamId id,
   if (!QuicContainsKey(send_buffer_map_, id)) {
     send_buffer_map_[id].reset(new QuicStreamSendBuffer(&allocator_));
   }
-  send_buffer_map_[id]->SaveStreamData(iov, iov_offset, offset, data_length);
+  send_buffer_map_[id]->SaveStreamData(iov, iov_offset, data_length);
 }
 
 bool SimpleDataProducer::WriteStreamData(QuicStreamId id,

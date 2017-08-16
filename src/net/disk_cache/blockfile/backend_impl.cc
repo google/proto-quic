@@ -30,6 +30,7 @@
 #include "base/timer/timer.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "net/base/net_errors.h"
+#include "net/disk_cache/backend_cleanup_tracker.h"
 #include "net/disk_cache/blockfile/disk_format.h"
 #include "net/disk_cache/blockfile/entry_impl.h"
 #include "net/disk_cache/blockfile/errors.h"
@@ -145,9 +146,11 @@ namespace disk_cache {
 
 BackendImpl::BackendImpl(
     const base::FilePath& path,
+    scoped_refptr<BackendCleanupTracker> cleanup_tracker,
     const scoped_refptr<base::SingleThreadTaskRunner>& cache_thread,
     net::NetLog* net_log)
-    : background_queue_(this, FallbackToInternalIfNull(cache_thread)),
+    : cleanup_tracker_(std::move(cleanup_tracker)),
+      background_queue_(this, FallbackToInternalIfNull(cache_thread)),
       path_(path),
       block_files_(path),
       mask_(0),

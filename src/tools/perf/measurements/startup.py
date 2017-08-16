@@ -18,7 +18,7 @@ class Startup(legacy_page_test.LegacyPageTest):
   """
 
   def __init__(self, cold=False):
-    super(Startup, self).__init__(needs_browser_restart_after_each_page=True)
+    super(Startup, self).__init__()
     self._cold = cold
 
   def CustomizeBrowserOptions(self, options):

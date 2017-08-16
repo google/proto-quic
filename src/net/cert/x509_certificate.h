@@ -17,7 +17,6 @@
 #include "base/strings/string_piece.h"
 #include "base/time/time.h"
 #include "net/base/net_export.h"
-#include "net/cert/cert_type.h"
 #include "net/cert/x509_cert_types.h"
 #include "net/net_features.h"
 
@@ -154,12 +153,6 @@ class NET_EXPORT X509Certificate
   static scoped_refptr<X509Certificate> CreateFromBytes(const char* data,
                                                         size_t length);
 
-#if defined(USE_NSS_CERTS)
-  // The default nickname of the certificate, based on the certificate type
-  // passed in.
-  std::string GetDefaultNickname(CertType type) const;
-#endif
-
   // Create an X509Certificate from the representation stored in the given
   // pickle.  The data for this object is found relative to the given
   // pickle_iter, which should be passed to the pickle's various Read* methods.
@@ -289,16 +282,6 @@ class NET_EXPORT X509Certificate
   // Returns NULL on failure.
   static OSCertHandle CreateOSCertHandleFromBytes(const char* data,
                                                   size_t length);
-
-#if defined(USE_NSS_CERTS)
-  // Creates an OS certificate handle from the DER-encoded representation.
-  // Returns NULL on failure.  Sets the default nickname if |nickname| is
-  // non-NULL.
-  static OSCertHandle CreateOSCertHandleFromBytesWithNickname(
-      const char* data,
-      size_t length,
-      const char* nickname);
-#endif
 
   // Creates all possible OS certificate handles from |data| encoded in a
   // specific |format|. Returns an empty collection on failure.

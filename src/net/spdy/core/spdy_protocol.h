@@ -439,7 +439,7 @@ class SPDY_EXPORT_PRIVATE SpdyFrameWithFinIR : public SpdyFrameIR {
 // Abstract class intended to be inherited by IRs that contain a header
 // block. Implies SpdyFrameWithFinIR.
 class SPDY_EXPORT_PRIVATE SpdyFrameWithHeaderBlockIR
-    : public NON_EXPORTED_BASE(SpdyFrameWithFinIR) {
+    : public SpdyFrameWithFinIR {
  public:
   ~SpdyFrameWithHeaderBlockIR() override;
 
@@ -465,8 +465,7 @@ class SPDY_EXPORT_PRIVATE SpdyFrameWithHeaderBlockIR
   DISALLOW_COPY_AND_ASSIGN(SpdyFrameWithHeaderBlockIR);
 };
 
-class SPDY_EXPORT_PRIVATE SpdyDataIR
-    : public NON_EXPORTED_BASE(SpdyFrameWithFinIR) {
+class SPDY_EXPORT_PRIVATE SpdyDataIR : public SpdyFrameWithFinIR {
  public:
   // Performs a deep copy on data.
   SpdyDataIR(SpdyStreamId stream_id, SpdyStringPiece data);

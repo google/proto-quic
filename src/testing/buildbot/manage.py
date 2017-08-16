@@ -54,8 +54,6 @@ SKIP = {
   # is not there yet -- so don't let manage.py add swarming automatically there.
   'Android User Builder Tests',
   'Android GN',
-  'Android Tests',
-  'Android Tests (dbg)',
 
   # http://crbug.com/441429
   'Linux Trusty (32)', 'Linux Trusty (dbg)(32)',
@@ -91,7 +89,6 @@ SKIP_GN_ISOLATE_MAP_TARGETS = {
   'chrome_official_builder_no_unittests',
   'chromium_builder_asan',
   'chromium_builder_perf',
-  'chromium_swarm_tests',
   'chromiumos_preflight',
   'mini_installer',
   'next_version_mini_installer',

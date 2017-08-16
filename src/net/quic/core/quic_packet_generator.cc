@@ -9,6 +9,8 @@
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flag_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
@@ -55,7 +57,8 @@ QuicConsumedData QuicPacketGenerator::ConsumeData(
     QuicIOVector iov,
     QuicStreamOffset offset,
     StreamSendingState state,
-    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
+    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener,
+    bool flag_run_fast_path) {
   bool has_handshake = (id == kCryptoStreamId);
   bool fin = state != NO_FIN;
   QUIC_BUG_IF(has_handshake && fin)
@@ -77,9 +80,16 @@ QuicConsumedData QuicPacketGenerator::ConsumeData(
     QUIC_BUG << "Attempt to consume empty data without FIN.";
     return QuicConsumedData(0, false);
   }
+  // We determine if we can enter the fast path before executing
+  // the slow path loop.
+  bool run_fast_path =
+      flag_run_fast_path &&
+      (!has_handshake && state != FIN_AND_PADDING && !HasQueuedFrames() &&
+       iov.total_length - total_bytes_consumed > kMaxPacketSize);
 
-  while (delegate_->ShouldGeneratePacket(
-      HAS_RETRANSMITTABLE_DATA, has_handshake ? IS_HANDSHAKE : NOT_HANDSHAKE)) {
+  while (!run_fast_path && delegate_->ShouldGeneratePacket(
+                               HAS_RETRANSMITTABLE_DATA,
+                               has_handshake ? IS_HANDSHAKE : NOT_HANDSHAKE)) {
     QuicFrame frame;
     if (!packet_creator_.ConsumeData(id, iov, total_bytes_consumed,
                                      offset + total_bytes_consumed, fin,
@@ -115,6 +125,17 @@ QuicConsumedData QuicPacketGenerator::ConsumeData(
     }
     // TODO(ianswett): Move to having the creator flush itself when it's full.
     packet_creator_.Flush();
+
+    run_fast_path =
+        flag_run_fast_path &&
+        (!has_handshake && state != FIN_AND_PADDING && !HasQueuedFrames() &&
+         iov.total_length - total_bytes_consumed > kMaxPacketSize);
+  }
+
+  if (run_fast_path) {
+    QUIC_FLAG_COUNT(quic_reloadable_flag_quic_consuming_data_faster);
+    return ConsumeDataFastPath(id, iov, offset, state != NO_FIN,
+                               total_bytes_consumed, std::move(ack_listener));
   }
 
   // Don't allow the handshake to be bundled with other retransmittable frames.
@@ -131,9 +152,10 @@ QuicConsumedData QuicPacketGenerator::ConsumeDataFastPath(
     const QuicIOVector& iov,
     QuicStreamOffset offset,
     bool fin,
-    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
+    size_t total_bytes_consumed,
+    const QuicReferenceCountedPointer<QuicAckListenerInterface>& ack_listener) {
   DCHECK_NE(id, kCryptoStreamId);
-  size_t total_bytes_consumed = 0;
+
   while (total_bytes_consumed < iov.total_length &&
          delegate_->ShouldGeneratePacket(HAS_RETRANSMITTABLE_DATA,
                                          NOT_HANDSHAKE)) {

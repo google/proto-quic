@@ -2050,6 +2050,24 @@
       },
       {
         "args": [
+          "--use-gpu-in-tests",
+          "--use-passthrough-cmd-decoder"
+        ],
+        "name": "gl_tests_passthrough",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "10de:104a",
+              "os": "Windows-2008ServerR2-SP1"
+            }
+          ]
+        },
+        "test": "gl_tests",
+        "use_xvfb": false
+      },
+      {
+        "args": [
           "--use-gpu-in-tests"
         ],
         "swarming": {
@@ -2394,6 +2412,24 @@
         "args": [
           "--use-gpu-in-tests"
         ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "10de:104a",
+              "os": "Windows-2008ServerR2-SP1"
+            }
+          ]
+        },
+        "test": "gl_tests",
+        "use_xvfb": false
+      },
+      {
+        "args": [
+          "--use-gpu-in-tests",
+          "--use-passthrough-cmd-decoder"
+        ],
+        "name": "gl_tests_passthrough",
         "swarming": {
           "can_use_on_swarming_builders": true,
           "dimension_sets": [

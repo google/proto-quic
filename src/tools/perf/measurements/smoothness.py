@@ -30,8 +30,8 @@ class _CustomResultsWrapper(timeline_based_measurement.ResultsWrapperInterface):
 
 class Smoothness(legacy_page_test.LegacyPageTest):
 
-  def __init__(self, needs_browser_restart_after_each_page=False):
-    super(Smoothness, self).__init__(needs_browser_restart_after_each_page)
+  def __init__(self):
+    super(Smoothness, self).__init__()
     self._results_wrapper = _CustomResultsWrapper()
     self._tbm = None
     self._results = None

@@ -18,7 +18,6 @@
 namespace net {
 
 struct DnsConfig;
-class HistogramWatcher;
 class NetworkChangeNotifierFactory;
 struct NetworkInterface;
 typedef std::vector<NetworkInterface> NetworkInterfaceList;
@@ -103,6 +102,7 @@ class NET_EXPORT NetworkChangeNotifier {
     SUBTYPE_LAST = SUBTYPE_WIFI_AD
   };
 
+  // DEPRECATED. Please use NetworkChangeObserver instead. crbug.com/754695.
   class NET_EXPORT IPAddressObserver {
    public:
     // Will be called when the IP address of the primary interface changes.
@@ -117,6 +117,7 @@ class NET_EXPORT NetworkChangeNotifier {
     DISALLOW_COPY_AND_ASSIGN(IPAddressObserver);
   };
 
+  // DEPRECATED. Please use NetworkChangeObserver instead. crbug.com/754695.
   class NET_EXPORT ConnectionTypeObserver {
    public:
     // Will be called when the connection type of the system has changed.
@@ -374,7 +375,12 @@ class NET_EXPORT NetworkChangeNotifier {
   // called back with notifications.  This is safe to call if Create() has not
   // been called (as long as it doesn't race the Create() call on another
   // thread), in which case it will simply do nothing.
+
+  // DEPRECATED. IPAddressObserver is deprecated. Please use
+  // NetworkChangeObserver instead. crbug.com/754695.
   static void AddIPAddressObserver(IPAddressObserver* observer);
+  // DEPRECATED. ConnectionTypeObserver is deprecated. Please use
+  // NetworkChangeObserver instead. crbug.com/754695.
   static void AddConnectionTypeObserver(ConnectionTypeObserver* observer);
   static void AddDNSObserver(DNSObserver* observer);
   static void AddNetworkChangeObserver(NetworkChangeObserver* observer);
@@ -388,7 +394,12 @@ class NET_EXPORT NetworkChangeNotifier {
   // nothing.  Technically, it's also safe to call after the notifier object has
   // been destroyed, if the call doesn't race the notifier's destruction, but
   // there's no reason to use the API in this risky way, so don't do it.
+
+  // DEPRECATED. IPAddressObserver is deprecated. Please use
+  // NetworkChangeObserver instead. crbug.com/754695.
   static void RemoveIPAddressObserver(IPAddressObserver* observer);
+  // DEPRECATED. ConnectionTypeObserver is deprecated. Please use
+  // NetworkChangeObserver instead. crbug.com/754695.
   static void RemoveConnectionTypeObserver(ConnectionTypeObserver* observer);
   static void RemoveDNSObserver(DNSObserver* observer);
   static void RemoveNetworkChangeObserver(NetworkChangeObserver* observer);
@@ -548,6 +559,7 @@ class NET_EXPORT NetworkChangeNotifier {
   friend class NetworkChangeNotifierLinuxTest;
   friend class NetworkChangeNotifierWinTest;
 
+  class HistogramWatcher;
   class NetworkState;
   class NetworkChangeCalculator;
 

@@ -10,6 +10,7 @@
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_flow_controller.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flag_utils.h"
 #include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_map_util.h"
@@ -48,15 +49,16 @@ QuicSession::QuicSession(QuicConnection* connection,
       respect_goaway_(true),
       use_stream_notifier_(
           FLAGS_quic_reloadable_flag_quic_use_stream_notifier2),
-      streams_own_data_(use_stream_notifier_ &&
-                        FLAGS_quic_reloadable_flag_quic_stream_owns_data) {}
+      save_data_before_consumption_(
+          use_stream_notifier_ &&
+          FLAGS_quic_reloadable_flag_quic_save_data_before_consumption2) {}
 
 void QuicSession::Initialize() {
   connection_->set_visitor(this);
   if (use_stream_notifier_) {
     connection_->SetStreamNotifier(this);
   }
-  if (streams_own_data_) {
+  if (save_data_before_consumption_) {
     connection_->SetDataProducer(this);
   }
   connection_->SetFromConfig(config_);
@@ -1024,23 +1026,8 @@ void QuicSession::OnStreamFrameDiscarded(const QuicStreamFrame& frame) {
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
     return;
   }
+  QUIC_FLAG_COUNT_N(quic_reloadable_flag_quic_use_stream_notifier2, 3, 3);
   stream->OnStreamFrameDiscarded(frame);
-}
-
-void QuicSession::SaveStreamData(QuicStreamId id,
-                                 QuicIOVector iov,
-                                 size_t iov_offset,
-                                 QuicStreamOffset offset,
-                                 QuicByteCount data_length) {
-  QuicStream* stream = GetStream(id);
-  if (stream == nullptr) {
-    QUIC_BUG << "Stream " << id << " does not exist when trying to save data.";
-    connection()->CloseConnection(
-        QUIC_INTERNAL_ERROR, "Attempt to save data of a closed stream",
-        ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
-    return;
-  }
-  stream->SaveStreamData(iov, iov_offset, offset, data_length);
 }
 
 bool QuicSession::WriteStreamData(QuicStreamId id,

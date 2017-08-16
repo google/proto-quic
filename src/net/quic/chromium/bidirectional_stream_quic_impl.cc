@@ -247,6 +247,11 @@ void BidirectionalStreamQuicImpl::OnStreamReady(int rv) {
 
   stream_ = session_->ReleaseStream();
 
+  if (!stream_) {
+    NotifyError(ERR_CONNECTION_CLOSED);
+    return;
+  }
+
   base::ThreadTaskRunnerHandle::Get()->PostTask(
       FROM_HERE, base::Bind(&BidirectionalStreamQuicImpl::ReadInitialHeaders,
                             weak_factory_.GetWeakPtr()));

@@ -118,10 +118,11 @@ TEST_F(VCDiffInterleavedDecoderTest, ChecksumDoesNotMatch) {
 }
 
 TEST_F(VCDiffInterleavedDecoderTest, ChecksumIsInvalid64BitVarint) {
-  static const char kInvalidVarint[] = { 0x81, 0x80, 0x80, 0x80, 0x80, 0x80,
-                                         0x80, 0x80, 0x80, 0x00 };
+  static const uint8_t kInvalidVarint[] = { 0x81, 0x80, 0x80, 0x80, 0x80, 0x80,
+                                            0x80, 0x80, 0x80, 0x00 };
   delta_window_header_[0] |= VCD_CHECKSUM;
-  delta_window_header_.append(kInvalidVarint, sizeof(kInvalidVarint));
+  delta_window_header_.append(reinterpret_cast<const char *>(kInvalidVarint),
+                              sizeof(kInvalidVarint));
   // Adjust delta window size to include size of invalid Varint.
   string size_of_invalid_varint;
   VarintBE<int32_t>::AppendToString(
@@ -659,10 +660,11 @@ TEST_F(VCDiffInterleavedDecoderTestByteByByte, ChecksumDoesNotMatch) {
 }
 
 TEST_F(VCDiffInterleavedDecoderTestByteByByte, ChecksumIsInvalid64BitVarint) {
-  static const char kInvalidVarint[] = { 0x81, 0x80, 0x80, 0x80, 0x80, 0x80,
-                                         0x80, 0x80, 0x80, 0x00 };
+  static const uint8_t kInvalidVarint[] = { 0x81, 0x80, 0x80, 0x80, 0x80, 0x80,
+                                            0x80, 0x80, 0x80, 0x00 };
   delta_window_header_[0] |= VCD_CHECKSUM;
-  delta_window_header_.append(kInvalidVarint, sizeof(kInvalidVarint));
+  delta_window_header_.append(reinterpret_cast<const char *>(kInvalidVarint),
+                              sizeof(kInvalidVarint));
   // Adjust delta window size to include size of invalid Varint.
   string size_of_invalid_varint;
   VarintBE<int32_t>::AppendToString(

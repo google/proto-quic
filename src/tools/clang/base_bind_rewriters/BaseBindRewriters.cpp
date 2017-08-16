@@ -1,9 +1,6 @@
 // Copyright 2016 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-//
-// This file containts a clang tool to update base::Bind() callers:
-//  * Remove unneeded scoped_refptr<>::get() on method binding.
 
 #include <assert.h>
 #include <algorithm>
@@ -45,14 +42,16 @@ class BindOnceRewriter : public MatchFinder::MatchCallback {
       : replacements_(replacements) {}
 
   StatementMatcher GetMatcher() {
-    auto is_once_callback = hasType(classTemplateSpecializationDecl(
-        hasName("::base::Callback"),
-        hasTemplateArgument(1, equalsIntegralValue("0")),
-        hasTemplateArgument(2, equalsIntegralValue("0"))));
-    auto is_repeating_callback = hasType(classTemplateSpecializationDecl(
-        hasName("::base::Callback"),
-        hasTemplateArgument(1, equalsIntegralValue("1")),
-        hasTemplateArgument(2, equalsIntegralValue("1"))));
+    auto is_once_callback =
+        hasType(hasCanonicalType(hasDeclaration(classTemplateSpecializationDecl(
+            hasName("::base::Callback"),
+            hasTemplateArgument(1, equalsIntegralValue("0")),
+            hasTemplateArgument(2, equalsIntegralValue("0"))))));
+    auto is_repeating_callback =
+        hasType(hasCanonicalType(hasDeclaration(classTemplateSpecializationDecl(
+            hasName("::base::Callback"),
+            hasTemplateArgument(1, equalsIntegralValue("1")),
+            hasTemplateArgument(2, equalsIntegralValue("1"))))));
 
     auto bind_call =
         callExpr(callee(namedDecl(hasName("::base::Bind")))).bind("target");

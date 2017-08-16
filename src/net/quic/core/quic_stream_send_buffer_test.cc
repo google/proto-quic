@@ -7,6 +7,7 @@
 #include "net/quic/core/quic_data_writer.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_test.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
@@ -35,14 +36,9 @@ class QuicStreamSendBufferTest : public QuicTest {
     iov[2] = MakeIovec(QuicStringPiece(data3));
     QuicIOVector quic_iov(iov, 3, 3840);
 
-    // Add all data.
-    send_buffer_.SaveStreamData(quic_iov, /*iov_offset=*/0, /*offset=*/0, 1024);
-    send_buffer_.SaveStreamData(quic_iov, /*iov_offset=*/1024,
-                                /*offset=*/1024, 1024);
-    send_buffer_.SaveStreamData(quic_iov, /*iov_offset=*/2048,
-                                /*offset=*/2048, 1024);
-    send_buffer_.SaveStreamData(quic_iov, /*iov_offset=*/3072,
-                                /*offset=*/3072, 768);
+    // Save all data.
+    SetQuicFlag(&FLAGS_quic_send_buffer_max_data_slice_size, 1024);
+    send_buffer_.SaveStreamData(quic_iov, 0, 3840);
     EXPECT_EQ(4u, send_buffer_.size());
   }
 

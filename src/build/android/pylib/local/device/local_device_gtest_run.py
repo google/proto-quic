@@ -14,6 +14,7 @@ from devil.android import device_errors
 from devil.android import device_temp_file
 from devil.android import ports
 from devil.utils import reraiser_thread
+from incremental_install import installer
 from pylib import constants
 from pylib.base import base_test_result
 from pylib.gtest import gtest_test_instance
@@ -106,8 +107,8 @@ class _ApkDelegate(object):
   def __init__(self, test_instance):
     self._activity = test_instance.activity
     self._apk_helper = test_instance.apk_helper
-    self._test_apk_incremental_install_script = (
-        test_instance.test_apk_incremental_install_script)
+    self._test_apk_incremental_install_json = (
+        test_instance.test_apk_incremental_install_json)
     self._package = test_instance.package
     self._runner = test_instance.runner
     self._permissions = test_instance.permissions
@@ -121,9 +122,9 @@ class _ApkDelegate(object):
                           'chromium_tests_root')
 
   def Install(self, device):
-    if self._test_apk_incremental_install_script:
-      local_device_test_run.IncrementalInstall(device, self._apk_helper,
-          self._test_apk_incremental_install_script)
+    if self._test_apk_incremental_install_json:
+      installer.Install(device, self._test_apk_incremental_install_json,
+                        apk=self._apk_helper)
     else:
       device.Install(self._apk_helper, reinstall=True,
                      permissions=self._permissions)

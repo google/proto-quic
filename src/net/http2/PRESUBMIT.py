@@ -34,6 +34,9 @@ def CheckChange(input_api, message_type):
       r"\bbase::StringPrintf\b",
       r"\bbase::StringAppendF\b",
       r"\bbase::HexDigitToInt\b",
+      r"\bbase::HexEncode\b",
+      r"\bHexDecode\b",
+      r"\bHexDump\b",
   ]
   messages = [
       "Include \"http2/platform/api/http2_export.h\" "
@@ -46,6 +49,9 @@ def CheckChange(input_api, message_type):
           "instead of \"base/strings/string_piece.h\"",
       "Use Http2StringPiece instead of base::StringPiece",
       "Use Http2StringPrintf instead of base::StringPrintf",
+      "Use Http2HexEncode instead of base::HexEncode",
+      "Use Http2HexDecode instead of HexDecode",
+      "Use Http2HexDump instead of HexDump",
   ]
   for forbidden_regex, message in zip(forbidden_regex_list, messages):
     result.extend(CheckForbiddenRegex(

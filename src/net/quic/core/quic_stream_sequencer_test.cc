@@ -27,8 +27,6 @@ using testing::_;
 using testing::AnyNumber;
 using testing::CreateFunctor;
 using testing::InSequence;
-using testing::Return;
-using testing::StrEq;
 
 namespace net {
 namespace test {
@@ -43,7 +41,6 @@ class MockStream : public QuicStream {
                void(QuicErrorCode error, const string& details));
   MOCK_METHOD1(Reset, void(QuicRstStreamErrorCode error));
   MOCK_METHOD0(OnCanWrite, void());
-  virtual bool IsFlowControlEnabled() const { return true; }
 
   const QuicSocketAddress& PeerAddressOfLatestPacket() const override {
     return peer_address_;

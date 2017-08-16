@@ -35,22 +35,11 @@ class NetLog;
 
 namespace disk_cache {
 
+class BackendCleanupTracker;
 class SimpleBackendImpl;
 class SimpleSynchronousEntry;
 class SimpleEntryStat;
 struct SimpleEntryCreationResults;
-
-// Used in histograms, please only add entries at the end.
-enum SimpleReadResult {
-  READ_RESULT_SUCCESS = 0,
-  READ_RESULT_INVALID_ARGUMENT = 1,
-  READ_RESULT_NONBLOCK_EMPTY_RETURN = 2,
-  READ_RESULT_BAD_STATE = 3,
-  READ_RESULT_FAST_EMPTY_RETURN = 4,
-  READ_RESULT_SYNC_READ_FAILURE = 5,
-  READ_RESULT_SYNC_CHECKSUM_FAILURE = 6,
-  READ_RESULT_MAX = 7,
-};
 
 // SimpleEntryImpl is the IO thread interface to an entry in the very simple
 // disk cache. It proxies for the SimpleSynchronousEntry, which performs IO
@@ -74,6 +63,7 @@ class NET_EXPORT_PRIVATE SimpleEntryImpl : public Entry,
 
   SimpleEntryImpl(net::CacheType cache_type,
                   const base::FilePath& path,
+                  scoped_refptr<BackendCleanupTracker> cleanup_tracker,
                   uint64_t entry_hash,
                   OperationsMode operations_mode,
                   SimpleBackendImpl* backend,
@@ -328,6 +318,9 @@ class NET_EXPORT_PRIVATE SimpleEntryImpl : public Entry,
                   int offset,
                   int length,
                   int stream_index);
+
+  // We want all async I/O on entries to complete before recycling the dir.
+  scoped_refptr<BackendCleanupTracker> cleanup_tracker_;
 
   std::unique_ptr<ActiveEntryProxy> active_entry_proxy_;
 

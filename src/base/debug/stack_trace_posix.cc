@@ -311,7 +311,7 @@ void StackDumpSignalHandler(int signal, siginfo_t* info, void* void_context) {
   }
   PrintToStderr("\n");
 
-#if defined(CFI_ENFORCEMENT)
+#if defined(CFI_ENFORCEMENT_TRAP)
   if (signal == SIGILL && info->si_code == ILL_ILLOPN) {
     PrintToStderr(
         "CFI: Most likely a control flow integrity violation; for more "

@@ -15,6 +15,10 @@
 #include "base/win/scoped_handle.h"
 #endif
 
+#if defined(OS_FUCHSIA)
+#include "base/fuchsia/scoped_mx_handle.h"
+#endif
+
 #if defined(OS_MACOSX)
 #include "base/feature_list.h"
 #include "base/process/port_provider_mac.h"
@@ -36,7 +40,7 @@ extern const Feature kMacAllowBackgroundingProcesses;
 // and can be used to gather some information about that process, but most
 // methods will obviously fail.
 //
-// POSIX: The underlying PorcessHandle is not guaranteed to remain valid after
+// POSIX: The underlying ProcessHandle is not guaranteed to remain valid after
 // the process dies, and it may be reused by the system, which means that it may
 // end up pointing to the wrong process.
 class BASE_EXPORT Process {
@@ -167,6 +171,8 @@ class BASE_EXPORT Process {
  private:
 #if defined(OS_WIN)
   win::ScopedHandle process_;
+#elif defined(OS_FUCHSIA)
+  ScopedMxHandle process_;
 #else
   ProcessHandle process_;
 #endif

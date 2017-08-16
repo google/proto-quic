@@ -135,12 +135,16 @@ class BlinkPerfTest(page_test_test_case.PageTestTestCase):
 # This is needed for testing _ComputeTraceEventsThreadTimeForBlinkPerf method.
 class ComputeTraceEventsMetricsForBlinkPerfTest(unittest.TestCase):
 
-  def _AddBlinkTestSlice(self, renderer_thread, start, end):
+  def _AddAsyncSlice(self, renderer_thread, category, name, start, end):
     s = async_slice.AsyncSlice(
-        'blink', 'blink_perf.runTest',
+        category, name,
         timestamp=start, duration=end - start, start_thread=renderer_thread,
         end_thread=renderer_thread)
     renderer_thread.AddAsyncSlice(s)
+
+  def _AddBlinkTestSlice(self, renderer_thread, start, end):
+    self._AddAsyncSlice(
+        renderer_thread, 'blink', 'blink_perf.runTest', start, end)
 
   def testTraceEventMetricsSingleBlinkTest(self):
     model = model_module.TimelineModel()
@@ -341,3 +345,53 @@ class ComputeTraceEventsMetricsForBlinkPerfTest(unittest.TestCase):
         blink_perf._ComputeTraceEventsThreadTimeForBlinkPerf(
             model, renderer_main, ['foo', 'bar']),
             {'foo': [300], 'bar': [320]})
+
+  def testAsyncTraceEventMetricsOverlapping(self):
+    model = model_module.TimelineModel()
+    renderer_main = model.GetOrCreateProcess(1).GetOrCreateThread(2)
+    renderer_main.name = 'CrRendererMain'
+
+    # Set up a main thread model that looks like:
+    #   [           blink_perf.run_test                ]
+    #   |       [  foo  ]        [ bar ]               |
+    #   |   [  foo  ]   |        |     |               |
+    #   |   |   |   |   |        |     |               |
+    #   100 110 120 130 140      400   420             550
+    # CPU dur: None for all.
+    #
+    self._AddBlinkTestSlice(renderer_main, 100, 550)
+
+    self._AddAsyncSlice(renderer_main, 'blink', 'foo', 110, 130)
+    self._AddAsyncSlice(renderer_main, 'blink', 'foo', 120, 140)
+    self._AddAsyncSlice(renderer_main, 'blink', 'bar', 400, 420)
+
+    self.assertEquals(
+        blink_perf._ComputeTraceEventsThreadTimeForBlinkPerf(
+            model, renderer_main, ['foo', 'bar']),
+        {'foo': [30], 'bar': [20]})
+
+  def testAsyncTraceEventMetricsMultipleTests(self):
+    model = model_module.TimelineModel()
+    renderer_main = model.GetOrCreateProcess(1).GetOrCreateThread(2)
+    renderer_main.name = 'CrRendererMain'
+
+    # Set up a main model that looks like:
+    #        [ blink_perf.run_test ]   [ blink_perf.run_test ]
+    #        |                     |   |                     |
+    #  [                        foo                              ]
+    #  |  [                        foo                               ]
+    #  |  |  |                     |   |                     |   |   |
+    #  80 90 100                   200 300                   400 500 510
+    # CPU dur: None for all
+    #
+    self._AddBlinkTestSlice(renderer_main, 100, 200)
+    self._AddBlinkTestSlice(renderer_main, 300, 400)
+
+    # Both events totally intersect both tests.
+    self._AddAsyncSlice(renderer_main, 'blink', 'foo', 80, 500)
+    self._AddAsyncSlice(renderer_main, 'blink', 'bar', 90, 510)
+
+    self.assertEquals(
+        blink_perf._ComputeTraceEventsThreadTimeForBlinkPerf(
+            model, renderer_main, ['foo', 'bar']),
+        {'foo': [100, 100], 'bar': [100, 100]})

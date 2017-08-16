@@ -91,10 +91,13 @@ class NET_EXPORT_PRIVATE HttpBasicStream : public HttpStream {
 
   void SetPriority(RequestPriority priority) override;
 
+  void SetRequestHeadersCallback(RequestHeadersCallback callback) override;
+
  private:
   HttpStreamParser* parser() const { return state_.parser(); }
 
   HttpBasicState state_;
+  RequestHeadersCallback request_headers_callback_;
 
   DISALLOW_COPY_AND_ASSIGN(HttpBasicStream);
 };

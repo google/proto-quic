@@ -27,14 +27,14 @@ import zipfile
 # Do NOT CHANGE this if you don't know what you're doing -- see
 # https://chromium.googlesource.com/chromium/src/+/master/docs/updating_clang.md
 # Reverting problematic clang rolls is safe, though.
-CLANG_REVISION = '308728'
+CLANG_REVISION = '310694'
 
 use_head_revision = 'LLVM_FORCE_HEAD_REVISION' in os.environ
 if use_head_revision:
   CLANG_REVISION = 'HEAD'
 
 # This is incremented when pushing a new build of Clang at the same revision.
-CLANG_SUB_REVISION=3
+CLANG_SUB_REVISION=1
 
 PACKAGE_VERSION = "%s-%s" % (CLANG_REVISION, CLANG_SUB_REVISION)
 
@@ -329,7 +329,7 @@ def AddGnuWinToPath():
     return
 
   gnuwin_dir = os.path.join(LLVM_BUILD_TOOLS_DIR, 'gnuwin')
-  GNUWIN_VERSION = '6'
+  GNUWIN_VERSION = '7'
   GNUWIN_STAMP = os.path.join(gnuwin_dir, 'stamp')
   if ReadStampFile(GNUWIN_STAMP) == GNUWIN_VERSION:
     print 'GNU Win tools already up to date.'

@@ -5,6 +5,7 @@
 from core import perf_benchmark
 
 from telemetry import benchmark
+from telemetry import story
 from telemetry.timeline import chrome_trace_category_filter
 from telemetry.web_perf import timeline_based_measurement
 
@@ -45,5 +46,10 @@ class BlobStorage(perf_benchmark.PerfBenchmark):
       return False
     return value.values != None
 
+
   def GetExpectations(self):
-    return page_sets.BlobWorkshopStoryExpectations()
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        self.DisableStory('blob-mass-create-80MBx5', [story.expectations.ALL],
+                          'crbug.com/510815')
+    return StoryExpectations()

@@ -12,8 +12,10 @@
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/values.h"
+#include "build/build_config.h"
 #include "crypto/openssl_util.h"
 #include "net/base/net_errors.h"
+#include "net/cert/x509_util.h"
 #include "net/ssl/ssl_connection_status_flags.h"
 #include "third_party/boringssl/src/include/openssl/err.h"
 #include "third_party/boringssl/src/include/openssl/ssl.h"
@@ -138,6 +140,16 @@ std::unique_ptr<base::Value> NetLogOpenSSLErrorCallback(
   return std::move(dict);
 }
 
+#if !BUILDFLAG(USE_BYTE_CERTS)
+bssl::UniquePtr<CRYPTO_BUFFER> OSCertHandleToBuffer(
+    X509Certificate::OSCertHandle os_handle) {
+  std::string der_encoded;
+  if (!X509Certificate::GetDEREncoded(os_handle, &der_encoded))
+    return nullptr;
+  return x509_util::CreateCryptoBuffer(der_encoded);
+}
+#endif
+
 }  // namespace
 
 void OpenSSLPutNetError(const tracked_objects::Location& location, int err) {
@@ -222,6 +234,50 @@ int GetNetSSLVersion(SSL* ssl) {
       NOTREACHED();
       return SSL_CONNECTION_VERSION_UNKNOWN;
   }
+}
+
+bool SetSSLChainAndKey(SSL* ssl,
+                       X509Certificate* cert,
+                       EVP_PKEY* pkey,
+                       const SSL_PRIVATE_KEY_METHOD* custom_key) {
+#if BUILDFLAG(USE_BYTE_CERTS)
+  std::vector<CRYPTO_BUFFER*> chain_raw;
+  chain_raw.push_back(cert->os_cert_handle());
+  for (X509Certificate::OSCertHandle handle :
+       cert->GetIntermediateCertificates()) {
+    chain_raw.push_back(handle);
+  }
+#else
+  std::vector<bssl::UniquePtr<CRYPTO_BUFFER>> chain;
+  std::vector<CRYPTO_BUFFER*> chain_raw;
+  bssl::UniquePtr<CRYPTO_BUFFER> buf =
+      OSCertHandleToBuffer(cert->os_cert_handle());
+  if (!buf) {
+    LOG(WARNING) << "Failed to import certificate";
+    return false;
+  }
+  chain_raw.push_back(buf.get());
+  chain.push_back(std::move(buf));
+
+  for (X509Certificate::OSCertHandle handle :
+       cert->GetIntermediateCertificates()) {
+    bssl::UniquePtr<CRYPTO_BUFFER> buf = OSCertHandleToBuffer(handle);
+    if (!buf) {
+      LOG(WARNING) << "Failed to import intermediate";
+      return false;
+    }
+    chain_raw.push_back(buf.get());
+    chain.push_back(std::move(buf));
+  }
+#endif
+
+  if (!SSL_set_chain_and_key(ssl, chain_raw.data(), chain_raw.size(), pkey,
+                             custom_key)) {
+    LOG(WARNING) << "Failed to set client certificate";
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace net

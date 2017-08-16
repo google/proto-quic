@@ -328,13 +328,18 @@ def _CopyDebugger(target_dir, target_cpu):
   if not win_sdk_dir:
     return
 
-  debug_files = ['dbghelp.dll', 'dbgcore.dll']
-  for debug_file in debug_files:
+  # List of debug files that should be copied, the first element of the tuple is
+  # the name of the file and the second indicates if it's optional.
+  debug_files = [('dbghelp.dll', False), ('dbgcore.dll', True)]
+  for debug_file, is_optional in debug_files:
     full_path = os.path.join(win_sdk_dir, 'Debuggers', target_cpu, debug_file)
     if not os.path.exists(full_path):
-      raise Exception('%s not found in "%s"\r\nYou must install the '
-                      '"Debugging Tools for Windows" feature from the Windows '
-                      '10 SDK.' % (debug_file, full_path))
+      if is_optional:
+        continue
+      else:
+        raise Exception('%s not found in "%s"\r\nYou must install the '
+                        '"Debugging Tools for Windows" feature from the Windows'
+                        ' 10 SDK.' % (debug_file, full_path))
     target_path = os.path.join(target_dir, debug_file)
     _CopyRuntimeImpl(target_path, full_path)
 

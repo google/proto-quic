@@ -11,26 +11,25 @@
 #include "base/memory/ptr_util.h"
 #include "crypto/nss_util.h"
 #include "net/cert/x509_certificate.h"
+#include "net/cert/x509_util_nss.h"
 
 namespace net {
 
-
-TestRootCerts::TrustEntry::TrustEntry(CERTCertificate* certificate,
+TestRootCerts::TrustEntry::TrustEntry(ScopedCERTCertificate certificate,
                                       const CERTCertTrust& trust)
-    : certificate_(CERT_DupCertificate(certificate)),
-      trust_(trust) {
-}
+    : certificate_(std::move(certificate)), trust_(trust) {}
 
-TestRootCerts::TrustEntry::~TrustEntry() {
-  CERT_DestroyCertificate(certificate_);
-}
+TestRootCerts::TrustEntry::~TrustEntry() = default;
 
 bool TestRootCerts::Add(X509Certificate* certificate) {
-  CERTCertificate* cert_handle = certificate->os_cert_handle();
+  ScopedCERTCertificate cert_handle =
+      x509_util::CreateCERTCertificateFromX509Certificate(certificate);
+  if (!cert_handle)
+    return false;
   // Preserve the original trust bits so that they can be restored when
   // the certificate is removed.
   CERTCertTrust original_trust;
-  SECStatus rv = CERT_GetCertTrust(cert_handle, &original_trust);
+  SECStatus rv = CERT_GetCertTrust(cert_handle.get(), &original_trust);
   if (rv != SECSuccess) {
     // CERT_GetCertTrust will fail if the certificate does not have any
     // particular trust settings associated with it, and attempts to use
@@ -49,14 +48,15 @@ bool TestRootCerts::Add(X509Certificate* certificate) {
     return false;
   }
 
-  rv = CERT_ChangeCertTrust(CERT_GetDefaultCertDB(), cert_handle, &new_trust);
+  rv = CERT_ChangeCertTrust(CERT_GetDefaultCertDB(), cert_handle.get(),
+                            &new_trust);
   if (rv != SECSuccess) {
     LOG(ERROR) << "Cannot change certificate trust.";
     return false;
   }
 
   trust_cache_.push_back(
-      base::MakeUnique<TrustEntry>(cert_handle, original_trust));
+      base::MakeUnique<TrustEntry>(std::move(cert_handle), original_trust));
   return true;
 }
 
@@ -85,7 +85,7 @@ bool TestRootCerts::IsEmpty() const {
 
 bool TestRootCerts::Contains(CERTCertificate* cert) const {
   for (const auto& item : trust_cache_)
-    if (X509Certificate::IsSameOSCert(cert, item->certificate()))
+    if (x509_util::IsSameCertificate(cert, item->certificate()))
       return true;
 
   return false;

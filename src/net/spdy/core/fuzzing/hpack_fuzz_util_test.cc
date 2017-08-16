@@ -10,7 +10,7 @@
 #include "base/files/file.h"
 #include "base/files/file_util.h"
 #include "base/path_service.h"
-#include "net/spdy/core/spdy_test_utils.h"
+#include "net/spdy/platform/api/spdy_string_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -18,7 +18,6 @@ namespace net {
 namespace test {
 
 using std::map;
-using test::a2b_hex;
 
 TEST(HpackFuzzUtilTest, GeneratorContextInitialization) {
   HpackFuzzUtil::GeneratorContext context;
@@ -93,7 +92,7 @@ TEST(HpackFuzzUtilTest, SerializedHeaderBlockPrefixes) {
 
 TEST(HpackFuzzUtilTest, PassValidInputThroughAllStages) {
   // Example lifted from HpackDecoderTest.SectionD4RequestHuffmanExamples.
-  SpdyString input = a2b_hex("828684418cf1e3c2e5f23a6ba0ab90f4ff");
+  SpdyString input = SpdyHexDecode("828684418cf1e3c2e5f23a6ba0ab90f4ff");
 
   HpackFuzzUtil::FuzzerContext context;
   HpackFuzzUtil::InitializeFuzzerContext(&context);

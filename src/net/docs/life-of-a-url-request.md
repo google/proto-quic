@@ -428,8 +428,8 @@ here.
 From the perspective of the lower layer pool, all of its sockets that a higher
 layer pools owns are actively in use, even when the higher layer pool considers
 them idle. As a result, when a lower layer pool is at its connection limit and
-needs to make a new connection, it will ask any higher layer pools pools to
-close an idle connection if they have one, so it can make a new connection.
+needs to make a new connection, it will ask any higher layer pools to close an
+idle connection if they have one, so it can make a new connection.
 
 Since sockets in the higher layer pool are also in a group in the lower layer
 pool, they must have their own distinct group name. This is needed so that, for

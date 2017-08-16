@@ -31,7 +31,7 @@ class VarintBETestCommon : public testing::Test {
       : varint_buf_(VarintBE<int64_t>::kMaxBytes),
         verify_encoded_byte_index_(0),
         verify_expected_length_(0),
-        parse_data_ptr_(parse_data_all_FFs) {
+        parse_data_ptr_(reinterpret_cast<const char*>(parse_data_all_FFs)) {
   }
 
   virtual ~VarintBETestCommon() { }
@@ -42,8 +42,8 @@ class VarintBETestCommon : public testing::Test {
     ++verify_encoded_byte_index_;
   }
 
-  static const char parse_data_all_FFs[];
-  static const char parse_data_CADA1[];
+  static const uint8_t parse_data_all_FFs[];
+  static const uint8_t parse_data_CADA1[];
 
   std::vector<char> varint_buf_;
   string s_;
@@ -105,10 +105,10 @@ typedef VarintBEInt32Test VarintBEInt32DeathTest;
 typedef VarintBEInt64Test VarintBEInt64DeathTest;
 #endif  // GTEST_HAS_DEATH_TEST
 
-const char VarintBETestCommon::parse_data_all_FFs[] =
+const uint8_t VarintBETestCommon::parse_data_all_FFs[] =
     { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
-const char VarintBETestCommon::parse_data_CADA1[] =
+const uint8_t VarintBETestCommon::parse_data_CADA1[] =
     { 0xCA, 0xDA, 0x01 };
 
 // A macro to allow defining tests once and having them run against
@@ -241,29 +241,29 @@ TEST_F(VarintBEInt64Test, ParseEightFFs) {
 }
 
 TEMPLATE_TEST_F(Test, ParseZero) {
-  const char zero_data[] = { 0x00 };
-  parse_data_ptr_ = zero_data;
+  const uint8_t zero_data[] = { 0x00 };
+  parse_data_ptr_ = reinterpret_cast<const char*>(zero_data);
   EXPECT_EQ(0x00, VarintType::Parse(parse_data_ptr_ + 1, &parse_data_ptr_));
-  EXPECT_EQ(zero_data + 1, parse_data_ptr_);
+  EXPECT_EQ(reinterpret_cast<const char*>(zero_data + 1), parse_data_ptr_);
 }
 
 TEMPLATE_TEST_F(Test, ParseCADA1) {
-  parse_data_ptr_ = parse_data_CADA1;
+  parse_data_ptr_ = reinterpret_cast<const char*>(parse_data_CADA1);
   EXPECT_EQ(0x12AD01,
-            VarintType::Parse(parse_data_CADA1 + sizeof(parse_data_CADA1),
+            VarintType::Parse(parse_data_ptr_ + sizeof(parse_data_CADA1),
                               &parse_data_ptr_));
-  EXPECT_EQ(parse_data_CADA1 + 3, parse_data_ptr_);
+  EXPECT_EQ(reinterpret_cast<const char*>(parse_data_CADA1 + 3), parse_data_ptr_);
 }
 
 TEMPLATE_TEST_F(Test, ParseNullPointer) {
-  parse_data_ptr_ = parse_data_CADA1;
+  parse_data_ptr_ = reinterpret_cast<const char*>(parse_data_CADA1);
   EXPECT_EQ(RESULT_ERROR,
             VarintType::Parse((const char*) NULL, &parse_data_ptr_));
 }
 
 TEMPLATE_TEST_F(Test, EndPointerPrecedesBeginning) {
   // This is not an error.
-  parse_data_ptr_ = parse_data_CADA1;
+  parse_data_ptr_ = reinterpret_cast<const char*>(parse_data_CADA1);
   EXPECT_EQ(RESULT_END_OF_DATA,
             VarintType::Parse(parse_data_ptr_ - 1, &parse_data_ptr_));
 }
@@ -275,34 +275,34 @@ TEMPLATE_TEST_F(Test, ParseEmpty) {
 
 // This example is taken from the Varint description in RFC 3284, section 2.
 TEMPLATE_TEST_F(Test, Parse123456789) {
-  const char parse_data_123456789[] = { 0x80 + 58, 0x80 + 111, 0x80 + 26, 21 };
-  parse_data_ptr_ = parse_data_123456789;
-  EXPECT_EQ(123456789, VarintType::Parse(parse_data_123456789
+  const uint8_t parse_data_123456789[] = { 0x80 + 58, 0x80 + 111, 0x80 + 26, 21 };
+  parse_data_ptr_ = reinterpret_cast<const char*>(parse_data_123456789);
+  EXPECT_EQ(123456789, VarintType::Parse(parse_data_ptr_
                                              + sizeof(parse_data_123456789),
                                          &parse_data_ptr_));
 }
 
 TEMPLATE_TEST_F(Test, Decode31Bits) {
-  const char parse_data_31_bits[] = { 0x87, 0xFF, 0xFF, 0xFF, 0x7F };
-  parse_data_ptr_ = parse_data_31_bits;
+  const uint8_t parse_data_31_bits[] = { 0x87, 0xFF, 0xFF, 0xFF, 0x7F };
+  parse_data_ptr_ = reinterpret_cast<const char*>(parse_data_31_bits);
   EXPECT_EQ(0x7FFFFFFF,
-            VarintType::Parse(parse_data_31_bits + sizeof(parse_data_31_bits),
+            VarintType::Parse(parse_data_ptr_ + sizeof(parse_data_31_bits),
                               &parse_data_ptr_));
 }
 
 TEST_F(VarintBEInt32Test, Decode32Bits) {
-  const char parse_data_32_bits[] = { 0x88, 0x80, 0x80, 0x80, 0x00 };
-  parse_data_ptr_ = parse_data_32_bits;
+  const uint8_t parse_data_32_bits[] = { 0x88, 0x80, 0x80, 0x80, 0x00 };
+  parse_data_ptr_ = reinterpret_cast<const char*>(parse_data_32_bits);
   EXPECT_EQ(RESULT_ERROR,
-            VarintType::Parse(parse_data_32_bits + sizeof(parse_data_32_bits),
+            VarintType::Parse(parse_data_ptr_ + sizeof(parse_data_32_bits),
                               &parse_data_ptr_));
 }
 
 TEST_F(VarintBEInt64Test, Decode32Bits) {
-  const char parse_data_32_bits[] = { 0x88, 0x80, 0x80, 0x80, 0x00 };
-  parse_data_ptr_ = parse_data_32_bits;
+  const uint8_t parse_data_32_bits[] = { 0x88, 0x80, 0x80, 0x80, 0x00 };
+  parse_data_ptr_ = reinterpret_cast<const char*>(parse_data_32_bits);
   EXPECT_EQ(0x80000000,
-            VarintType::Parse(parse_data_32_bits + sizeof(parse_data_32_bits),
+            VarintType::Parse(parse_data_ptr_ + sizeof(parse_data_32_bits),
                               &parse_data_ptr_));
 }
 
@@ -337,13 +337,13 @@ TEMPLATE_TEST_F(Test, EncodeDecodeRandom) {
 // legal (according to the RFC3284 spec) to use any number of continuation
 // bytes, but they should not cause us to read past the end of available input.
 TEMPLATE_TEST_F(Test, ContinuationBytesPastEndOfInput) {
-  const char parse_data_20_continuations[] =
+  const uint8_t parse_data_20_continuations[] =
     { 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
       0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
       0x00 };
-  parse_data_ptr_ = parse_data_20_continuations;
+  parse_data_ptr_ = reinterpret_cast<const char*>(parse_data_20_continuations);
   EXPECT_EQ(RESULT_END_OF_DATA,
-            VarintType::Parse(parse_data_20_continuations + 10,
+            VarintType::Parse(parse_data_ptr_ + 10,
                               &parse_data_ptr_));
 }
 

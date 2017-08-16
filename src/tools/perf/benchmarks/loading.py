@@ -7,6 +7,7 @@ import page_sets
 
 from benchmarks import loading_metrics_category
 from telemetry import benchmark
+from telemetry import story
 from telemetry.page import cache_temperature
 from telemetry.page import traffic_setting
 from telemetry.web_perf import timeline_based_measurement
@@ -38,7 +39,13 @@ class LoadingDesktop(_LoadingBase):
                             cache_temperature.PCV1_WARM,])
 
   def GetExpectations(self):
-    return page_sets.LoadingDesktopExpectations()
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        self.DisableStory(
+            'uol.com.br', [story.expectations.ALL_LINUX], 'crbug.com/752611')
+        self.DisableStory(
+            'Orange', [story.expectations.ALL_WIN], 'crbug.com/723783')
+    return StoryExpectations()
 
   @classmethod
   def Name(cls):
@@ -70,7 +77,41 @@ class LoadingMobile(_LoadingBase):
         traffic_settings=[traffic_setting.NONE, traffic_setting.REGULAR_3G])
 
   def GetExpectations(self):
-    return page_sets.LoadingMobileExpectations()
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        self.DisableStory('GFK', [story.expectations.ALL],
+                          'N5X Timeout issue: crbug.com/702175')
+        self.DisableStory('MLSMatrix', [story.expectations.ALL],
+                          'N5XTimeout issue: crbug.com/702175')
+        self.DisableStory('EBS', [story.expectations.ALL],
+                          'N5XTimeout issue: crbug.com/702175')
+        self.DisableStory('IBI', [story.expectations.ALL],
+                          'N5XTimeout issue: crbug.com/702175')
+        self.DisableStory('SBS', [story.expectations.ALL],
+                          'N5XTimeout issue: crbug.com/702175')
+        self.DisableStory('FuturaSciences', [story.expectations.ALL],
+                          'N5XTimeout issue: crbug.com/702175')
+        self.DisableStory('HashOcean', [story.expectations.ALL],
+                          'N5XTimeout issue: crbug.com/702175')
+        self.DisableStory('163', [story.expectations.ALL],
+                          'N5XTimeout issue: crbug.com/702175')
+        self.DisableStory('G1', [story.expectations.ALL], 'crbug.com/656861')
+        self.DisableStory('Dramaq', [story.expectations.ANDROID_NEXUS5X],
+                          'Test Failure: crbug.com/750747')
+        self.DisableStory('Hongkiat', [story.expectations.ANDROID_NEXUS5X],
+                          'Test Failure: crbug.com/750747')
+        # TODO(rnephew): Uncomment Disablings. crbug.com/728882
+        # self.DisableStory(
+        #     'AirHorner', [story.expectations.ALL], 'crbug.com/653775')
+        # self.DisableStory(
+        #     'BusRouter', [story.expectations.ALL], 'crbug.com/653775')
+        # self.DisableStory('WikiOffline', [story.expectations.ALL],
+        #                   'crbug.com/653775')
+        # self.DisableStory(
+        #     'Detik', [story.expectations.ALL], 'crbug.com/653775')
+        # self.DisableStory(
+        #     'Blogspot', [story.expectations.ALL], 'crbug.com/653775')
+    return StoryExpectations()
 
   @classmethod
   def Name(cls):

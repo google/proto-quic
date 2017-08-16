@@ -8,6 +8,10 @@
 
 namespace base {
 
+void EnableTerminationOnOutOfMemory() {
+  // Nothing to be done here.
+}
+
 void EnableTerminationOnHeapCorruption() {
   // Nothing to be done here.
 }

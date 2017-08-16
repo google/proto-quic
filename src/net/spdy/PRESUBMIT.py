@@ -34,6 +34,8 @@ def CheckChange(input_api, message_type):
       r"\bbase::StringPrintf\b",
       r"\bbase::StringAppendF\b",
       r"\bbase::HexDigitToInt\b",
+      r"\bHexDecode\b",
+      r"\bHexDump\b",
   ]
   messages = [
       "Include \"spdy/platform/api/spdy_export.h\" "
@@ -48,6 +50,8 @@ def CheckChange(input_api, message_type):
       "Use SpdyStringPrintf instead of base::StringPrintf",
       "Use SpdyStringAppendF instead of base::StringAppendF",
       "Use SpdyHexDigitToInt instead of base::HexDigitToInt",
+      "Use SpdyHexDecode instead of HexDecode",
+      "Use SpdyHexDump instead of HexDump",
   ]
   for forbidden_regex, message in zip(forbidden_regex_list, messages):
     result.extend(CheckForbiddenRegex(

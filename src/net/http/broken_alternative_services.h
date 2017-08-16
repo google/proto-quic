@@ -48,6 +48,10 @@ class NET_EXPORT_PRIVATE BrokenAlternativeServices {
 
   ~BrokenAlternativeServices();
 
+  // Clears all broken and recently-broken alternative services (i.e. mark all
+  // as not broken nor recently-broken).
+  void Clear();
+
   // Marks |alternative_service| as broken until after some expiration delay
   // (determined by how many times it's been marked broken before). Being broken
   // will cause IsAlternativeServiceBroken(alternative_service) to return true

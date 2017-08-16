@@ -273,13 +273,12 @@ class TargetDescBuilder : public BaseDescBuilder {
                                    target_->visibility().AsValue());
 
     if (what(variables::kTestonly))
-      res->SetBooleanWithoutPathExpansion(variables::kTestonly,
-                                          target_->testonly());
+      res->SetKey(variables::kTestonly, base::Value(target_->testonly()));
 
     if (is_binary_output) {
       if (what(variables::kCheckIncludes))
-        res->SetBooleanWithoutPathExpansion(variables::kCheckIncludes,
-                                            target_->check_includes());
+        res->SetKey(variables::kCheckIncludes,
+                    base::Value(target_->check_includes()));
 
       if (what(variables::kAllowCircularIncludesFrom)) {
         auto labels = base::MakeUnique<base::ListValue>();

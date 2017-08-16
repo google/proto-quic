@@ -15,6 +15,7 @@ if (current_cpu == "mipsel" || v8_current_cpu == "mipsel" ||
     #   "r1"
     #   "r2"
     #   "r6"
+    #   "loongson3"
     mips_arch_variant = "r1"
 
     # MIPS DSP ASE revision. Possible values are:
@@ -42,6 +43,7 @@ if (current_cpu == "mipsel" || v8_current_cpu == "mipsel" ||
   # MIPS arch variant. Possible values are:
   #   "r2"
   #   "r6"
+  #   "loongson3"
   if (current_os == "android" || target_os == "android") {
     declare_args() {
       mips_arch_variant = "r6"

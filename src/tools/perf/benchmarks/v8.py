@@ -35,7 +35,7 @@ class V8DetachedContextAgeInGC(perf_benchmark.PerfBenchmark):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing not disabled.
+        pass # Nothing disabled.
     return StoryExpectations()
 
 

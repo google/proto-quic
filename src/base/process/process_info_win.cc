@@ -15,11 +15,11 @@ namespace base {
 
 namespace {
 
-HANDLE GetCurrentProcessToken() {
+base::win::ScopedHandle GetCurrentProcessToken() {
   HANDLE process_token;
   OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &process_token);
   DCHECK(process_token != NULL && process_token != INVALID_HANDLE_VALUE);
-  return process_token;
+  return base::win::ScopedHandle(process_token);
 }
 
 }  // namespace

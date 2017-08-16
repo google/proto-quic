@@ -7,6 +7,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string>
 #include <type_traits>
 
 #include "base/macros.h"
@@ -14,6 +15,8 @@
 
 namespace net {
 namespace ntlm {
+
+using Buffer = std::basic_string<uint8_t>;
 
 // A security buffer is a structure within an NTLM message that indicates
 // the offset from the beginning of the message and the length of a payload
@@ -35,7 +38,7 @@ enum class NtlmVersion {
 };
 
 // There are 3 types of messages in NTLM. The message type is a field in
-// every NTLM message header.
+// every NTLM message header. See [MS-NLMP] Section 2.2.
 enum class MessageType : uint32_t {
   kNegotiate = 0x01,
   kChallenge = 0x02,
@@ -75,10 +78,15 @@ static constexpr size_t kSignatureLen = arraysize(kSignature);
 static constexpr size_t kSecurityBufferLen =
     (2 * sizeof(uint16_t)) + sizeof(uint32_t);
 static constexpr size_t kNegotiateMessageLen = 32;
+static constexpr size_t kMinChallengeHeaderLen = 32;
 static constexpr size_t kChallengeHeaderLen = 32;
 static constexpr size_t kResponseLenV1 = 24;
 static constexpr size_t kChallengeLen = 8;
 static constexpr size_t kNtlmHashLen = 16;
+static constexpr size_t kAuthenticateHeaderLenV1 = 64;
+static constexpr size_t kMaxFqdnLen = 255;
+static constexpr size_t kMaxUsernameLen = 104;
+static constexpr size_t kMaxPasswordLen = 256;
 
 static constexpr NegotiateFlags kNegotiateMessageFlags =
     NegotiateFlags::kUnicode | NegotiateFlags::kOem |

@@ -279,22 +279,6 @@ class ScopedJavaGlobalRef : public JavaRef<T> {
   }
 };
 
-// Temporary type for parameters to Java functions, to allow incremental
-// migration from bare jobject to JavaRef. Don't use outside JNI generator.
-template <typename T>
-class JavaRefOrBare {
- public:
-  JavaRefOrBare(std::nullptr_t) : obj_(nullptr) {}
-  JavaRefOrBare(const JavaRef<T>& ref) : obj_(ref.obj()) {}
-  JavaRefOrBare(T obj) : obj_(obj) {}
-  T obj() const { return obj_; }
-
- private:
-  T obj_;
-
-  DISALLOW_COPY_AND_ASSIGN(JavaRefOrBare);
-};
-
 }  // namespace android
 }  // namespace base
 

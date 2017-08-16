@@ -18,6 +18,7 @@ import copy
 import json
 import logging
 import os
+import sys
 import tempfile
 import threading
 
@@ -97,6 +98,7 @@ def _initial_load():
 
   ctx_path = os.environ.get(_ENV_KEY)
   if ctx_path:
+    ctx_path = ctx_path.decode(sys.getfilesystemencoding())
     _LOGGER.debug('Loading LUCI_CONTEXT: %r', ctx_path)
     try:
       with open(ctx_path, 'r') as f:
@@ -120,6 +122,19 @@ def _read_full():
       if _CUR_CONTEXT is None:
         _initial_load()
   return _CUR_CONTEXT
+
+
+def _mutate(section_values):
+  new_val = read_full()
+  for section, value in section_values.iteritems():
+    if value is None:
+      new_val.pop(section, None)
+    elif isinstance(value, dict):
+      new_val[section] = value
+    else:
+      raise ValueError(
+        'Bad type for LUCI_CONTEXT[%r]: %s', section, type(value).__name__)
+  return new_val
 
 
 def read_full():
@@ -206,15 +221,7 @@ def write(_tmpdir=None, **section_values):
     yield
     return
 
-  new_val = read_full()
-  for section, value in section_values.iteritems():
-    if value is None:
-      new_val.pop(section, None)
-    elif isinstance(value, dict):
-      new_val[section] = value
-    else:
-      raise ValueError(
-        'Bad type for LUCI_CONTEXT[%r]: %s', section, type(value).__name__)
+  new_val = _mutate(section_values)
 
   global _CUR_CONTEXT
   got_lock = _WRITE_LOCK.acquire(blocking=False)
@@ -226,12 +233,32 @@ def write(_tmpdir=None, **section_values):
         old_value = _CUR_CONTEXT
         old_envvar = os.environ.get(_ENV_KEY, None)
 
-        os.environ[_ENV_KEY] = name
+        os.environ[_ENV_KEY] = name.encode(sys.getfilesystemencoding())
         _CUR_CONTEXT = new_val
         yield
       finally:
         _CUR_CONTEXT = old_value
         if old_envvar is None:
           del os.environ[_ENV_KEY]
+        else:
+          os.environ[_ENV_KEY] = old_envvar
   finally:
     _WRITE_LOCK.release()
+
+
+@contextlib.contextmanager
+def stage(_tmpdir=None, **section_values):
+  """Prepares and writes new LUCI_CONTEXT file, but doesn't replace the env var.
+
+  This is useful when launching new process asynchronously in new LUCI_CONTEXT
+  environment. In this case, modifying the environment of the current process
+  (like 'write' does) may be harmful.
+
+  Calls the body with a path to the new LUCI_CONTEXT file or None if
+  'section_values' is empty (meaning, no changes have been made).
+  """
+  if not section_values:
+    yield None
+    return
+  with _tf(_mutate(section_values), workdir=_tmpdir) as name:
+    yield name

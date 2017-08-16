@@ -153,7 +153,7 @@ void TaskSchedulerImpl::JoinForTesting() {
 #endif
   single_thread_task_runner_manager_.JoinForTesting();
   for (const auto& worker_pool : worker_pools_)
-    worker_pool->DisallowWorkerDetachmentForTesting();
+    worker_pool->DisallowWorkerCleanupForTesting();
   for (const auto& worker_pool : worker_pools_)
     worker_pool->JoinForTesting();
   service_thread_.Stop();

@@ -22,7 +22,9 @@ Local Modifications:
    imported.
  - The contents of the google directory are original Chromium-specific
    additions.
- - google.patch contains changes from the upstream version, mostly related to
-   the build.
- - Intel SIMD optimisations from https://github.com/jtkukunas/zlib/ have been
-   integrated. These changes are reflected in simd.patch.
+ - 0000-build.patch: changes from the upstream version, mostly related to the
+   build.
+ - 0001-simd.patch: integrate Intel SIMD optimisations from
+   https://github.com/jtkukunas/zlib/
+ - 0002-uninitializedcheck.patch: default-initialize state->check, see
+   crbug.com/697481

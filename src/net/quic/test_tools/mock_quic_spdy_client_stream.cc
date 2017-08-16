@@ -7,8 +7,9 @@
 namespace net {
 namespace test {
 
-MockQuicSpdyClientStream::MockQuicSpdyClientStream(QuicStreamId id,
-                                                   QuicClientSession* session)
+MockQuicSpdyClientStream::MockQuicSpdyClientStream(
+    QuicStreamId id,
+    QuicSpdyClientSession* session)
     : QuicSpdyClientStream(id, session) {}
 
 MockQuicSpdyClientStream::~MockQuicSpdyClientStream() {}

@@ -340,17 +340,17 @@ class Trybot(command_line.ArgParseCommand):
         help=("""specify the repo path where the patch is created.'
 This argument should only be used if the changes are made outside chromium repo.
 E.g.,
-1) Assume you are running run_benchmarks command from $HOME/cr/src/ direcory:'
+1) Assume you are running run_benchmarks command from $HOME/cr/src/ directory:'
   a) If your changes are in $HOME/cr/src/v8, then --repo_path=v8 or
      --repo-path=$HOME/cr/src/v8
   b) If your changes are in $HOME/cr/src/third_party/catapult, then
      --repo_path=third_party/catapult or
      --repo_path = $HOME/cr/src/third_party/catapult'
   c) If your changes are not relative to src/ e.g. you created changes in some
-     other direcotry say $HOME/mydir/v8/v8/, then the
+     other directory say $HOME/mydir/v8/v8/, then the
      --repo_path=$HOME/mydir/v8/v8
-2) Assume you are running run_benchmarks command not relatvie to src i.e.,
-   you are running from $HOME/mydir/ direcory:'
+2) Assume you are running run_benchmarks command not relative to src i.e.,
+   you are running from $HOME/mydir/ directory:'
    a) If your changes are in $HOME/cr/src/v8, then --repo-path=$HOME/cr/src/v8
    b) If your changes are in $HOME/cr/src/third_party/catapult, then
       --repo_path=$HOME/cr/src/third_party/catapult'

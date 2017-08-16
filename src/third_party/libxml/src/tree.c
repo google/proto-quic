@@ -254,10 +254,10 @@ xmlBuildQName(const xmlChar *ncname, const xmlChar *prefix,
  *
  * [NS 7] LocalPart ::= NCName
  *
- * Returns NULL if not a QName, otherwise the local part, and prefix
- *   is updated to get the Prefix if any.
+ * Returns NULL if the name doesn't have a prefix. Otherwise, returns the
+ * local part, and prefix is updated to get the Prefix. Both the return value
+ * and the prefix must be freed by the caller.
  */
-
 xmlChar *
 xmlSplitQName2(const xmlChar *name, xmlChar **prefix) {
     int len = 0;

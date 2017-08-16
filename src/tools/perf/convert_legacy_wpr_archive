@@ -95,7 +95,10 @@ def upload(page_sets_json_file, bucket):
         count += 1
     print "successfully upload %d wprgo files in %s to buckets: %s\n" % (count,
         page_sets_json_file, bucket)
-    print "remember to run \"git add *.wprgo.sha1\" to include them in your CL\n"
+    print ('Also run \"git add *.wprgo.sha1\" to include them in your CL? '
+           '(Press Enter to continue or ctrl+C to skip this step)\n')
+    raw_input()
+    subprocess.check_call(['git', 'add', '*.wprgo.sha1'])
 
 def GetStorySet(benchmark):
   # Create a dummy options object which hold default values that are expected

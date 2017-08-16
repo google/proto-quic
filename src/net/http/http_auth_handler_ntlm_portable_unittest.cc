@@ -48,11 +48,18 @@ class HttpAuthHandlerNtlmPortableTest : public PlatformTest {
         &auth_handler_);
   }
 
-  std::string CreateNtlmAuthHeader(base::StringPiece message) {
+  std::string CreateNtlmAuthHeader(ntlm::Buffer message) {
     std::string output;
-    base::Base64Encode(message, &output);
+    base::Base64Encode(
+        base::StringPiece(reinterpret_cast<const char*>(message.data()),
+                          message.size()),
+        &output);
 
     return "NTLM " + output;
+  }
+
+  std::string CreateNtlmAuthHeader(const uint8_t* buffer, size_t length) {
+    return CreateNtlmAuthHeader(ntlm::Buffer(buffer, length));
   }
 
   HttpAuth::AuthorizationResult HandleAnotherChallenge(
@@ -202,9 +209,8 @@ TEST_F(HttpAuthHandlerNtlmPortableTest, MinimalStructurallyValidType2) {
   ASSERT_EQ(OK, CreateHandler());
   ASSERT_EQ(OK, GetGenerateAuthTokenResult());
   ASSERT_EQ(HttpAuth::AUTHORIZATION_RESULT_ACCEPT,
-            HandleAnotherChallenge(CreateNtlmAuthHeader(base::StringPiece(
-                reinterpret_cast<const char*>(ntlm::test::kMinChallengeMessage),
-                ntlm::kChallengeHeaderLen))));
+            HandleAnotherChallenge(CreateNtlmAuthHeader(
+                ntlm::test::kMinChallengeMessage, ntlm::kChallengeHeaderLen)));
   ASSERT_EQ(OK, GetGenerateAuthTokenResult());
 }
 
@@ -212,13 +218,12 @@ TEST_F(HttpAuthHandlerNtlmPortableTest, Type2MessageTooShort) {
   ASSERT_EQ(OK, CreateHandler());
   ASSERT_EQ(OK, GetGenerateAuthTokenResult());
 
-  char raw[31];
+  uint8_t raw[31];
   memcpy(raw, ntlm::test::kMinChallengeMessage, 31);
 
   // Fail because the minimum size valid message is 32 bytes.
   ASSERT_EQ(HttpAuth::AUTHORIZATION_RESULT_ACCEPT,
-            HandleAnotherChallenge(
-                CreateNtlmAuthHeader(base::StringPiece(raw, sizeof(raw)))));
+            HandleAnotherChallenge(CreateNtlmAuthHeader(raw, arraysize(raw))));
   ASSERT_EQ(ERR_UNEXPECTED, GetGenerateAuthTokenResult());
 }
 
@@ -226,7 +231,7 @@ TEST_F(HttpAuthHandlerNtlmPortableTest, Type2MessageWrongSignature) {
   ASSERT_EQ(OK, CreateHandler());
   ASSERT_EQ(OK, GetGenerateAuthTokenResult());
 
-  char raw[32];
+  uint8_t raw[32];
   memcpy(raw, ntlm::test::kMinChallengeMessage, 32);
   // Modify the default valid message to overwrite the last byte of the
   // signature.
@@ -234,8 +239,7 @@ TEST_F(HttpAuthHandlerNtlmPortableTest, Type2MessageWrongSignature) {
 
   // Fail because the first 8 bytes don't match "NTLMSSP\0"
   ASSERT_EQ(HttpAuth::AUTHORIZATION_RESULT_ACCEPT,
-            HandleAnotherChallenge(
-                CreateNtlmAuthHeader(base::StringPiece(raw, sizeof(raw)))));
+            HandleAnotherChallenge(CreateNtlmAuthHeader(raw, arraysize(raw))));
   ASSERT_EQ(ERR_UNEXPECTED, GetGenerateAuthTokenResult());
 }
 
@@ -243,7 +247,7 @@ TEST_F(HttpAuthHandlerNtlmPortableTest, Type2WrongMessageType) {
   ASSERT_EQ(OK, CreateHandler());
   ASSERT_EQ(OK, GetGenerateAuthTokenResult());
 
-  char raw[32];
+  uint8_t raw[32];
   memcpy(raw, ntlm::test::kMinChallengeMessage, 32);
   // Modify the message type so it is not 0x00000002
   raw[8] = 0x03;
@@ -251,7 +255,7 @@ TEST_F(HttpAuthHandlerNtlmPortableTest, Type2WrongMessageType) {
   // Fail because the message type should be MessageType::kChallenge
   // (0x00000002)
   ASSERT_EQ(HttpAuth::AUTHORIZATION_RESULT_ACCEPT,
-            HandleAnotherChallenge(CreateNtlmAuthHeader(raw)));
+            HandleAnotherChallenge(CreateNtlmAuthHeader(raw, arraysize(raw))));
   ASSERT_EQ(ERR_UNEXPECTED, GetGenerateAuthTokenResult());
 }
 
@@ -264,14 +268,13 @@ TEST_F(HttpAuthHandlerNtlmPortableTest, Type2MessageWithNoTargetName) {
   // expected response from a compliant server when no target name is sent.
   // In reality the offset should always be ignored if the length is zero.
   // Also implementations often just write zeros.
-  char raw[32];
+  uint8_t raw[32];
   memcpy(raw, ntlm::test::kMinChallengeMessage, 32);
   // Modify the default valid message to overwrite the offset to zero.
   raw[16] = 0x00;
 
   ASSERT_EQ(HttpAuth::AUTHORIZATION_RESULT_ACCEPT,
-            HandleAnotherChallenge(
-                CreateNtlmAuthHeader(base::StringPiece(raw, sizeof(raw)))));
+            HandleAnotherChallenge(CreateNtlmAuthHeader(raw, arraysize(raw))));
   ASSERT_EQ(OK, GetGenerateAuthTokenResult());
 }
 
@@ -280,7 +283,7 @@ TEST_F(HttpAuthHandlerNtlmPortableTest, Type2MessageWithTargetName) {
   ASSERT_EQ(OK, GetGenerateAuthTokenResult());
 
   // One extra byte is provided for target name.
-  char raw[33];
+  uint8_t raw[33];
   memcpy(raw, ntlm::test::kMinChallengeMessage, 32);
   // Modify the default valid message to indicate 1 byte is present in the
   // target name payload.
@@ -290,8 +293,7 @@ TEST_F(HttpAuthHandlerNtlmPortableTest, Type2MessageWithTargetName) {
   raw[32] = 'Z';
 
   ASSERT_EQ(HttpAuth::AUTHORIZATION_RESULT_ACCEPT,
-            HandleAnotherChallenge(
-                CreateNtlmAuthHeader(base::StringPiece(raw, sizeof(raw)))));
+            HandleAnotherChallenge(CreateNtlmAuthHeader(raw, arraysize(raw))));
   ASSERT_EQ(OK, GetGenerateAuthTokenResult());
 }
 
@@ -299,7 +301,7 @@ TEST_F(HttpAuthHandlerNtlmPortableTest, NoTargetNameOverflowFromOffset) {
   ASSERT_EQ(OK, CreateHandler());
   ASSERT_EQ(OK, GetGenerateAuthTokenResult());
 
-  char raw[32];
+  uint8_t raw[32];
   memcpy(raw, ntlm::test::kMinChallengeMessage, 32);
   // Modify the default valid message to claim that the target name field is 1
   // byte long overrunning the end of the message message.
@@ -310,8 +312,7 @@ TEST_F(HttpAuthHandlerNtlmPortableTest, NoTargetNameOverflowFromOffset) {
   // the message buffer because the offset is past the end of the message.
   // Verify it gets rejected.
   ASSERT_EQ(HttpAuth::AUTHORIZATION_RESULT_ACCEPT,
-            HandleAnotherChallenge(
-                CreateNtlmAuthHeader(base::StringPiece(raw, sizeof(raw)))));
+            HandleAnotherChallenge(CreateNtlmAuthHeader(raw, arraysize(raw))));
   ASSERT_EQ(ERR_UNEXPECTED, GetGenerateAuthTokenResult());
 }
 
@@ -321,7 +322,7 @@ TEST_F(HttpAuthHandlerNtlmPortableTest, NoTargetNameOverflowFromLength) {
 
   // Message has 1 extra byte of space after the header for the target name.
   // One extra byte is provided for target name.
-  char raw[33];
+  uint8_t raw[33];
   memcpy(raw, ntlm::test::kMinChallengeMessage, 32);
   // Modify the default valid message to indicate 2 bytes are present in the
   // target name payload (however there is only space for 1).
@@ -334,8 +335,7 @@ TEST_F(HttpAuthHandlerNtlmPortableTest, NoTargetNameOverflowFromLength) {
   // the message buffer because the length is longer than available space.
   // Verify it gets rejected.
   ASSERT_EQ(HttpAuth::AUTHORIZATION_RESULT_ACCEPT,
-            HandleAnotherChallenge(
-                CreateNtlmAuthHeader(base::StringPiece(raw, sizeof(raw)))));
+            HandleAnotherChallenge(CreateNtlmAuthHeader(raw, arraysize(raw))));
   ASSERT_EQ(ERR_UNEXPECTED, GetGenerateAuthTokenResult());
 }
 

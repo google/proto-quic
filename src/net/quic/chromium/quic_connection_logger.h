@@ -64,7 +64,8 @@ class NET_EXPORT_PRIVATE QuicConnectionLogger
   void OnStopWaitingFrame(const QuicStopWaitingFrame& frame) override;
   void OnRstStreamFrame(const QuicRstStreamFrame& frame) override;
   void OnConnectionCloseFrame(const QuicConnectionCloseFrame& frame) override;
-  void OnWindowUpdateFrame(const QuicWindowUpdateFrame& frame) override;
+  void OnWindowUpdateFrame(const QuicWindowUpdateFrame& frame,
+                           const QuicTime& receive_time) override;
   void OnBlockedFrame(const QuicBlockedFrame& frame) override;
   void OnGoAwayFrame(const QuicGoAwayFrame& frame) override;
   void OnPingFrame(const QuicPingFrame& frame) override;
