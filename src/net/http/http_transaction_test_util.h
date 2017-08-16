@@ -237,6 +237,8 @@ class MockNetworkTransaction
   void SetBeforeHeadersSentCallback(
       const BeforeHeadersSentCallback& callback) override;
 
+  void SetRequestHeadersCallback(RequestHeadersCallback callback) override {}
+
   int ResumeNetworkStart() override;
 
   void GetConnectionAttempts(ConnectionAttempts* out) const override;

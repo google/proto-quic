@@ -21,7 +21,12 @@ QuicRandom* QuicChromiumConnectionHelper::GetRandomGenerator() {
   return random_generator_;
 }
 
-QuicBufferAllocator* QuicChromiumConnectionHelper::GetBufferAllocator() {
+QuicBufferAllocator*
+QuicChromiumConnectionHelper::GetStreamFrameBufferAllocator() {
+  return &buffer_allocator_;
+}
+QuicBufferAllocator*
+QuicChromiumConnectionHelper::GetStreamSendBufferAllocator() {
   return &buffer_allocator_;
 }
 

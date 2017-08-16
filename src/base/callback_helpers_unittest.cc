@@ -43,14 +43,14 @@ TEST(CallbackHelpersTest, TestScopedClosureRunnerExitScope) {
 
 TEST(CallbackHelpersTest, TestScopedClosureRunnerRelease) {
   int run_count = 0;
-  base::Closure c;
+  base::OnceClosure c;
   {
     base::ScopedClosureRunner runner(base::Bind(&Increment, &run_count));
     c = runner.Release();
     EXPECT_EQ(0, run_count);
   }
   EXPECT_EQ(0, run_count);
-  c.Run();
+  std::move(c).Run();
   EXPECT_EQ(1, run_count);
 }
 

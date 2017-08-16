@@ -387,6 +387,52 @@ TEST(GURLTest, GetWithEmptyPath) {
   }
 }
 
+TEST(GURLTest, GetWithoutFilename) {
+  struct TestCase {
+    const char* input;
+    const char* expected;
+  } cases[] = {
+    // Common Standard URLs.
+    {"https://www.google.com",                    "https://www.google.com/"},
+    {"https://www.google.com/",                   "https://www.google.com/"},
+    {"https://www.google.com/maps.htm",           "https://www.google.com/"},
+    {"https://www.google.com/maps/",              "https://www.google.com/maps/"},
+    {"https://www.google.com/index.html",         "https://www.google.com/"},
+    {"https://www.google.com/index.html?q=maps",  "https://www.google.com/"},
+    {"https://www.google.com/index.html#maps/",   "https://www.google.com/"},
+    {"https://foo:bar@www.google.com/maps.htm",   "https://foo:bar@www.google.com/"},
+    {"https://www.google.com/maps/au/index.html", "https://www.google.com/maps/au/"},
+    {"https://www.google.com/maps/au/north",      "https://www.google.com/maps/au/"},
+    {"https://www.google.com/maps/au/north/",     "https://www.google.com/maps/au/north/"},
+    {"https://www.google.com/maps/au/index.html?q=maps#fragment/",     "https://www.google.com/maps/au/"},
+    {"http://www.google.com:8000/maps/au/index.html?q=maps#fragment/", "http://www.google.com:8000/maps/au/"},
+    {"https://www.google.com/maps/au/north/?q=maps#fragment",          "https://www.google.com/maps/au/north/"},
+    {"https://www.google.com/maps/au/north?q=maps#fragment",           "https://www.google.com/maps/au/"},
+    // Less common standard URLs.
+    {"filesystem:http://www.google.com/temporary/bar.html?baz=22", "filesystem:http://www.google.com/temporary/"},
+    {"file:///temporary/bar.html?baz=22","file:///temporary/"},
+    {"ftp://foo/test/index.html",        "ftp://foo/test/"},
+    {"gopher://foo/test/index.html",     "gopher://foo/test/"},
+    {"ws://foo/test/index.html",         "ws://foo/test/"},
+    // Non-standard, hierarchical URLs.
+    {"chrome://foo/bar.html", "chrome://foo/"},
+    {"httpa://foo/test/index.html", "httpa://foo/test/"},
+    // Non-standard, non-hierarchical URLs.
+    {"blob:https://foo.bar/test/index.html", ""},
+    {"about:blank", ""},
+    {"data:foobar", ""},
+    {"scheme:opaque_data", ""},
+    // Invalid URLs.
+    {"foobar", ""},
+  };
+
+  for (size_t i = 0; i < arraysize(cases); i++) {
+    GURL url(cases[i].input);
+    GURL without_filename = url.GetWithoutFilename();
+    EXPECT_EQ(cases[i].expected, without_filename.spec()) << i;
+  }
+}
+
 TEST(GURLTest, Replacements) {
   // The URL canonicalizer replacement test will handle most of these case.
   // The most important thing to do here is to check that the proper

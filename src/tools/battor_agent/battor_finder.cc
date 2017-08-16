@@ -35,7 +35,7 @@ std::string BattOrFinder::FindBattOr() {
           kBattOrPathSwitch);
   if (switch_specified_path.empty()) {
     // If we have no switch-specified path, look for a device with the right
-    // display name.
+    // display name. See crbug.com/588244 for why this never works on Windows.
     for (size_t i = 0; i < devices.size(); i++) {
       if (!devices[i]->display_name)
         continue;

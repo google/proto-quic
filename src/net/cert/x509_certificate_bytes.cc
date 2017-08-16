@@ -12,7 +12,6 @@
 #include "net/cert/asn1_util.h"
 #include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/name_constraints.h"
-#include "net/cert/internal/parse_name.h"
 #include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/internal/signature_algorithm.h"
 #include "net/cert/internal/verify_name_match.h"
@@ -83,62 +82,6 @@ bool GetNormalizedCertIssuer(CRYPTO_BUFFER* cert,
   return NormalizeName(issuer_value, out_normalized_issuer, &errors);
 }
 
-// Fills |principal| from the DER encoded |name_tlv|, returning true on success
-// or false if parsing failed or some of the values could not be converted to
-// UTF-8.
-bool ParsePrincipal(const der::Input& name_tlv, CertPrincipal* principal) {
-  RDNSequence rdns;
-  if (!ParseName(name_tlv, &rdns))
-    return false;
-
-  for (const RelativeDistinguishedName& rdn : rdns) {
-    for (const X509NameAttribute& name_attribute : rdn) {
-      if (name_attribute.type == TypeCommonNameOid()) {
-        if (principal->common_name.empty() &&
-            !name_attribute.ValueAsString(&principal->common_name)) {
-          return false;
-        }
-      } else if (name_attribute.type == TypeLocalityNameOid()) {
-        if (principal->locality_name.empty() &&
-            !name_attribute.ValueAsString(&principal->locality_name)) {
-          return false;
-        }
-      } else if (name_attribute.type == TypeStateOrProvinceNameOid()) {
-        if (principal->state_or_province_name.empty() &&
-            !name_attribute.ValueAsString(&principal->state_or_province_name)) {
-          return false;
-        }
-      } else if (name_attribute.type == TypeCountryNameOid()) {
-        if (principal->country_name.empty() &&
-            !name_attribute.ValueAsString(&principal->country_name)) {
-          return false;
-        }
-      } else if (name_attribute.type == TypeStreetAddressOid()) {
-        std::string s;
-        if (!name_attribute.ValueAsString(&s))
-          return false;
-        principal->street_addresses.push_back(s);
-      } else if (name_attribute.type == TypeOrganizationNameOid()) {
-        std::string s;
-        if (!name_attribute.ValueAsString(&s))
-          return false;
-        principal->organization_names.push_back(s);
-      } else if (name_attribute.type == TypeOrganizationUnitNameOid()) {
-        std::string s;
-        if (!name_attribute.ValueAsString(&s))
-          return false;
-        principal->organization_unit_names.push_back(s);
-      } else if (name_attribute.type == TypeDomainComponentOid()) {
-        std::string s;
-        if (!name_attribute.ValueAsString(&s))
-          return false;
-        principal->domain_components.push_back(s);
-      }
-    }
-  }
-  return true;
-}
-
 // Parses certificates from a PKCS#7 SignedData structure, appending them to
 // |handles|.
 void CreateOSCertHandlesFromPKCS7Bytes(
@@ -182,8 +125,10 @@ bool X509Certificate::Initialize() {
                            DefaultParseCertificateOptions(), &tbs, nullptr))
     return false;
 
-  if (!ParsePrincipal(tbs.subject_tlv, &subject_) ||
-      !ParsePrincipal(tbs.issuer_tlv, &issuer_)) {
+  if (!subject_.ParseDistinguishedName(tbs.subject_tlv.UnsafeData(),
+                                       tbs.subject_tlv.Length()) ||
+      !issuer_.ParseDistinguishedName(tbs.issuer_tlv.UnsafeData(),
+                                      tbs.issuer_tlv.Length())) {
     return false;
   }
 

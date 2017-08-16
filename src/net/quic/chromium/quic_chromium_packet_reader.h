@@ -55,6 +55,8 @@ class NET_EXPORT_PRIVATE QuicChromiumPacketReader {
  private:
   // A completion callback invoked when a read completes.
   void OnReadComplete(int result);
+  // Return true if reading should continue.
+  bool ProcessReadResult(int result);
 
   DatagramClientSocket* socket_;
   Visitor* visitor_;

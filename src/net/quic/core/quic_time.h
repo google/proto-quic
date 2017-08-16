@@ -206,9 +206,6 @@ inline bool operator<=(QuicTime::Delta lhs, QuicTime::Delta rhs) {
 inline bool operator>=(QuicTime::Delta lhs, QuicTime::Delta rhs) {
   return !(lhs < rhs);
 }
-inline QuicTime::Delta operator<<(QuicTime::Delta lhs, size_t rhs) {
-  return QuicTime::Delta(lhs.time_offset_ << rhs);
-}
 inline QuicTime::Delta operator>>(QuicTime::Delta lhs, size_t rhs) {
   return QuicTime::Delta(lhs.time_offset_ >> rhs);
 }

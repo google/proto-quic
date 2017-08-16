@@ -35,9 +35,6 @@ Http2StringPiece ToStringPiece(T (&data)[N]) {
   return Http2StringPiece(reinterpret_cast<const char*>(data), N * sizeof(T));
 }
 
-// strings/hex_ascii_dump.h doesn't support Http2StringPiece args for this case.
-Http2String HexEncode(Http2StringPiece s);
-
 // Overwrite the enum with some random value, probably not a valid value for
 // the enum type, but which fits into its storage.
 template <typename T,

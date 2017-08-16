@@ -17,23 +17,35 @@
 #include "base/android/jni_int_wrapper.h"
 
 // Step 1: forward declarations.
-namespace {
+JNI_REGISTRATION_EXPORT extern const char
+    kClassPath_org_chromium_example_jni_1generator_SampleForTests_00024InnerStructA[];
 const char
     kClassPath_org_chromium_example_jni_1generator_SampleForTests_00024InnerStructA[]
     = "org/chromium/example/jni_generator/SampleForTests$InnerStructA";
+
+JNI_REGISTRATION_EXPORT extern const char
+    kClassPath_org_chromium_example_jni_1generator_SampleForTests_00024InnerClass[];
 const char
     kClassPath_org_chromium_example_jni_1generator_SampleForTests_00024InnerClass[]
     = "org/chromium/example/jni_generator/SampleForTests$InnerClass";
+
+JNI_REGISTRATION_EXPORT extern const char
+    kClassPath_org_chromium_example_jni_1generator_SampleForTests[];
 const char kClassPath_org_chromium_example_jni_1generator_SampleForTests[] =
     "org/chromium/example/jni_generator/SampleForTests";
+
+JNI_REGISTRATION_EXPORT extern const char
+    kClassPath_org_chromium_example_jni_1generator_SampleForTests_00024InnerStructB[];
 const char
     kClassPath_org_chromium_example_jni_1generator_SampleForTests_00024InnerStructB[]
     = "org/chromium/example/jni_generator/SampleForTests$InnerStructB";
-// Leaking this jclass as we cannot use LazyInstance from some threads.
-base::subtle::AtomicWord
-    g_org_chromium_example_jni_1generator_SampleForTests_00024InnerStructA_clazz
-    __attribute__((unused)) = 0;
 
+// Leaking this jclass as we cannot use LazyInstance from some threads.
+JNI_REGISTRATION_EXPORT base::subtle::AtomicWord
+    g_org_chromium_example_jni_1generator_SampleForTests_00024InnerStructA_clazz
+    = 0;
+#ifndef org_chromium_example_jni_1generator_SampleForTests_00024InnerStructA_clazz_defined
+#define org_chromium_example_jni_1generator_SampleForTests_00024InnerStructA_clazz_defined
 inline jclass
     org_chromium_example_jni_1generator_SampleForTests_00024InnerStructA_clazz(JNIEnv*
     env) {
@@ -41,11 +53,14 @@ inline jclass
       kClassPath_org_chromium_example_jni_1generator_SampleForTests_00024InnerStructA,
       &g_org_chromium_example_jni_1generator_SampleForTests_00024InnerStructA_clazz);
 }
-// Leaking this jclass as we cannot use LazyInstance from some threads.
-base::subtle::AtomicWord
-    g_org_chromium_example_jni_1generator_SampleForTests_00024InnerClass_clazz
-    __attribute__((unused)) = 0;
+#endif
 
+// Leaking this jclass as we cannot use LazyInstance from some threads.
+JNI_REGISTRATION_EXPORT base::subtle::AtomicWord
+    g_org_chromium_example_jni_1generator_SampleForTests_00024InnerClass_clazz =
+    0;
+#ifndef org_chromium_example_jni_1generator_SampleForTests_00024InnerClass_clazz_defined
+#define org_chromium_example_jni_1generator_SampleForTests_00024InnerClass_clazz_defined
 inline jclass
     org_chromium_example_jni_1generator_SampleForTests_00024InnerClass_clazz(JNIEnv*
     env) {
@@ -53,22 +68,27 @@ inline jclass
       kClassPath_org_chromium_example_jni_1generator_SampleForTests_00024InnerClass,
       &g_org_chromium_example_jni_1generator_SampleForTests_00024InnerClass_clazz);
 }
-// Leaking this jclass as we cannot use LazyInstance from some threads.
-base::subtle::AtomicWord
-    g_org_chromium_example_jni_1generator_SampleForTests_clazz
-    __attribute__((unused)) = 0;
+#endif
 
+// Leaking this jclass as we cannot use LazyInstance from some threads.
+JNI_REGISTRATION_EXPORT base::subtle::AtomicWord
+    g_org_chromium_example_jni_1generator_SampleForTests_clazz = 0;
+#ifndef org_chromium_example_jni_1generator_SampleForTests_clazz_defined
+#define org_chromium_example_jni_1generator_SampleForTests_clazz_defined
 inline jclass org_chromium_example_jni_1generator_SampleForTests_clazz(JNIEnv*
     env) {
   return base::android::LazyGetClass(env,
       kClassPath_org_chromium_example_jni_1generator_SampleForTests,
       &g_org_chromium_example_jni_1generator_SampleForTests_clazz);
 }
-// Leaking this jclass as we cannot use LazyInstance from some threads.
-base::subtle::AtomicWord
-    g_org_chromium_example_jni_1generator_SampleForTests_00024InnerStructB_clazz
-    __attribute__((unused)) = 0;
+#endif
 
+// Leaking this jclass as we cannot use LazyInstance from some threads.
+JNI_REGISTRATION_EXPORT base::subtle::AtomicWord
+    g_org_chromium_example_jni_1generator_SampleForTests_00024InnerStructB_clazz
+    = 0;
+#ifndef org_chromium_example_jni_1generator_SampleForTests_00024InnerStructB_clazz_defined
+#define org_chromium_example_jni_1generator_SampleForTests_00024InnerStructB_clazz_defined
 inline jclass
     org_chromium_example_jni_1generator_SampleForTests_00024InnerStructB_clazz(JNIEnv*
     env) {
@@ -76,8 +96,7 @@ inline jclass
       kClassPath_org_chromium_example_jni_1generator_SampleForTests_00024InnerStructB,
       &g_org_chromium_example_jni_1generator_SampleForTests_00024InnerStructB_clazz);
 }
-
-}  // namespace
+#endif
 
 namespace base {
 namespace android {
@@ -213,7 +232,7 @@ JNI_GENERATOR_EXPORT jint
 static base::subtle::AtomicWord
     g_org_chromium_example_jni_1generator_SampleForTests_javaMethod = 0;
 static jint Java_SampleForTests_javaMethod(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj, JniIntWrapper foo,
+    base::android::JavaRef<jobject>& obj, JniIntWrapper foo,
     JniIntWrapper bar) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_example_jni_1generator_SampleForTests_clazz(env), 0);
@@ -263,7 +282,7 @@ static base::subtle::AtomicWord
     g_org_chromium_example_jni_1generator_SampleForTests_packagePrivateJavaMethod
     = 0;
 static void Java_SampleForTests_packagePrivateJavaMethod(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_example_jni_1generator_SampleForTests_clazz(env));
   jmethodID method_id =
@@ -285,7 +304,7 @@ static base::subtle::AtomicWord
     g_org_chromium_example_jni_1generator_SampleForTests_methodThatThrowsException
     = 0;
 static void Java_SampleForTests_methodThatThrowsException(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_example_jni_1generator_SampleForTests_clazz(env));
   jmethodID method_id =
@@ -306,7 +325,7 @@ static base::subtle::AtomicWord
     g_org_chromium_example_jni_1generator_SampleForTests_javaMethodWithAnnotatedParam
     = 0;
 static void Java_SampleForTests_javaMethodWithAnnotatedParam(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj, JniIntWrapper foo) {
+    base::android::JavaRef<jobject>& obj, JniIntWrapper foo) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_example_jni_1generator_SampleForTests_clazz(env));
   jmethodID method_id =
@@ -331,7 +350,7 @@ static base::subtle::AtomicWord
 static base::android::ScopedJavaLocalRef<jobject>
     Java_InnerStructA_create(JNIEnv* env, jlong l,
     JniIntWrapper i,
-    const base::android::JavaRefOrBare<jstring>& s) {
+    const base::android::JavaRef<jstring>& s) {
   CHECK_CLAZZ(env,
       org_chromium_example_jni_1generator_SampleForTests_00024InnerStructA_clazz(env),
 org_chromium_example_jni_1generator_SampleForTests_00024InnerStructA_clazz(env),
@@ -360,8 +379,8 @@ env->CallStaticObjectMethod(org_chromium_example_jni_1generator_SampleForTests_0
 static base::subtle::AtomicWord
     g_org_chromium_example_jni_1generator_SampleForTests_addStructA = 0;
 static void Java_SampleForTests_addStructA(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj, const
-    base::android::JavaRefOrBare<jobject>& a) {
+    base::android::JavaRef<jobject>& obj, const base::android::JavaRef<jobject>&
+    a) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_example_jni_1generator_SampleForTests_clazz(env));
   jmethodID method_id =
@@ -384,7 +403,7 @@ static base::subtle::AtomicWord
     g_org_chromium_example_jni_1generator_SampleForTests_iterateAndDoSomething =
     0;
 static void Java_SampleForTests_iterateAndDoSomething(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
       org_chromium_example_jni_1generator_SampleForTests_clazz(env));
   jmethodID method_id =
@@ -406,7 +425,7 @@ static base::subtle::AtomicWord
     g_org_chromium_example_jni_1generator_SampleForTests_00024InnerStructB_getKey
     = 0;
 static jlong Java_InnerStructB_getKey(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
 org_chromium_example_jni_1generator_SampleForTests_00024InnerStructB_clazz(env),
           0);
@@ -433,7 +452,7 @@ static base::subtle::AtomicWord
     = 0;
 static base::android::ScopedJavaLocalRef<jstring>
     Java_InnerStructB_getValue(JNIEnv* env, const
-    base::android::JavaRefOrBare<jobject>& obj) {
+    base::android::JavaRef<jobject>& obj) {
   CHECK_CLAZZ(env, obj.obj(),
 org_chromium_example_jni_1generator_SampleForTests_00024InnerStructB_clazz(env),
           NULL);
@@ -457,96 +476,6 @@ org_chromium_example_jni_1generator_SampleForTests_00024InnerStructB_clazz(env),
 
 // Step 3: RegisterNatives.
 
-static const JNINativeMethod
-    kMethods_org_chromium_example_jni_1generator_SampleForTests_00024InnerClass[]
-    = {
-    { "nativeGetInnerIntFunction",
-"("
-")"
-"I",
-    reinterpret_cast<void*>(Java_org_chromium_example_jni_1generator_SampleForTests_00024InnerClass_nativeGetInnerIntFunction)
-    },
-};
-
-static const JNINativeMethod
-    kMethods_org_chromium_example_jni_1generator_SampleForTests[] = {
-    { "nativeInit",
-"("
-"Ljava/lang/String;"
-")"
-"J",
-    reinterpret_cast<void*>(Java_org_chromium_example_jni_1generator_SampleForTests_nativeInit)
-    },
-    { "nativeDestroy",
-"("
-"J"
-")"
-"V",
-    reinterpret_cast<void*>(Java_org_chromium_example_jni_1generator_SampleForTests_nativeDestroy)
-    },
-    { "nativeGetDoubleFunction",
-"("
-")"
-"D",
-    reinterpret_cast<void*>(Java_org_chromium_example_jni_1generator_SampleForTests_nativeGetDoubleFunction)
-    },
-    { "nativeGetFloatFunction",
-"("
-")"
-"F",
-    reinterpret_cast<void*>(Java_org_chromium_example_jni_1generator_SampleForTests_nativeGetFloatFunction)
-    },
-    { "nativeSetNonPODDatatype",
-"("
-"Landroid/graphics/Rect;"
-")"
-"V",
-    reinterpret_cast<void*>(Java_org_chromium_example_jni_1generator_SampleForTests_nativeSetNonPODDatatype)
-    },
-    { "nativeGetNonPODDatatype",
-"("
-")"
-"Ljava/lang/Object;",
-    reinterpret_cast<void*>(Java_org_chromium_example_jni_1generator_SampleForTests_nativeGetNonPODDatatype)
-    },
-    { "nativeMethod",
-"("
-"J"
-")"
-"I",
-    reinterpret_cast<void*>(Java_org_chromium_example_jni_1generator_SampleForTests_nativeMethod)
-    },
-    { "nativeMethodOtherP0",
-"("
-"J"
-")"
-"D",
-    reinterpret_cast<void*>(Java_org_chromium_example_jni_1generator_SampleForTests_nativeMethodOtherP0)
-    },
-    { "nativeAddStructB",
-"("
-"J"
-"Lorg/chromium/example/jni_generator/SampleForTests$InnerStructB;"
-")"
-"V",
-    reinterpret_cast<void*>(Java_org_chromium_example_jni_1generator_SampleForTests_nativeAddStructB)
-    },
-    { "nativeIterateAndDoSomethingWithStructB",
-"("
-"J"
-")"
-"V",
-    reinterpret_cast<void*>(Java_org_chromium_example_jni_1generator_SampleForTests_nativeIterateAndDoSomethingWithStructB)
-    },
-    { "nativeReturnAString",
-"("
-"J"
-")"
-"Ljava/lang/String;",
-    reinterpret_cast<void*>(Java_org_chromium_example_jni_1generator_SampleForTests_nativeReturnAString)
-    },
-};
-
 // TODO(agrieve): Remove these empty registration functions and functions
 // calling them. https://crbug.com/683256.
 inline bool RegisterNativesImpl(JNIEnv* env) {
@@ -555,42 +484,5 @@ inline bool RegisterNativesImpl(JNIEnv* env) {
 
 }  // namespace android
 }  // namespace base
-
-JNI_REGISTRATION_EXPORT bool
-    RegisterNative_org_chromium_example_jni_1generator_SampleForTests(JNIEnv*
-    env) {
-
-  const int
-      kMethods_org_chromium_example_jni_1generator_SampleForTests_00024InnerClassSize
-      =
-arraysize(base::android::kMethods_org_chromium_example_jni_1generator_SampleForTests_00024InnerClass);
-
-  if
-      (env->RegisterNatives(org_chromium_example_jni_1generator_SampleForTests_00024InnerClass_clazz(env),
-base::android::kMethods_org_chromium_example_jni_1generator_SampleForTests_00024InnerClass,
-kMethods_org_chromium_example_jni_1generator_SampleForTests_00024InnerClassSize)
-                               < 0) {
-    jni_generator::HandleRegistrationError(
-        env,
-            org_chromium_example_jni_1generator_SampleForTests_00024InnerClass_clazz(env),
-            __FILE__);
-    return false;
-  }
-
-  const int kMethods_org_chromium_example_jni_1generator_SampleForTestsSize =
-arraysize(base::android::kMethods_org_chromium_example_jni_1generator_SampleForTests);
-
-  if
-      (env->RegisterNatives(org_chromium_example_jni_1generator_SampleForTests_clazz(env),
-base::android::kMethods_org_chromium_example_jni_1generator_SampleForTests,
-kMethods_org_chromium_example_jni_1generator_SampleForTestsSize) < 0) {
-    jni_generator::HandleRegistrationError(
-        env, org_chromium_example_jni_1generator_SampleForTests_clazz(env),
-            __FILE__);
-    return false;
-  }
-
-  return true;
-}
 
 #endif  // org_chromium_example_jni_generator_SampleForTests_JNI

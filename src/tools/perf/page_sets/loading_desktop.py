@@ -108,9 +108,3 @@ class LoadingDesktopStorySet(story.StorySet):
           self.AddStory(page_cycler_story.PageCyclerStory(url, self,
               shared_page_state_class=shared_page_state.SharedMobilePageState,
               cache_temperature=temp, tags=tags, name=name))
-
-
-class LoadingDesktopExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    self.DisableStory(
-        'uol.com.br', [story.expectations.ALL_LINUX], 'crbug.com/723783')

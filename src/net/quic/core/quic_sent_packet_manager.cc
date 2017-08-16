@@ -309,6 +309,7 @@ void QuicSentPacketManager::HandleAckForSentPackets(
       break;
     }
     if (skip_unackable_packets_early && it->is_unackable) {
+      QUIC_FLAG_COUNT(quic_reloadable_flag_quic_handle_acks);
       continue;
     }
     if (!ack_frame.packets.Contains(packet_number)) {

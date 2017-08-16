@@ -13,6 +13,8 @@ from core import benchmark_finders
 
 from py_utils import cloud_storage
 
+path_util.AddAndroidPylibToPath()
+
 
 def GetAllStorySets():
   story_sets = []

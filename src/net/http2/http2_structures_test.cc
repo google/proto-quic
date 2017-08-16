@@ -413,6 +413,13 @@ TEST(Http2PushPromiseTest, Misc) {
   EXPECT_EQ(v, w);
 }
 
+TEST(Http2PingFieldsTest, Misc) {
+  Http2PingFields v{{'8', ' ', 'b', 'y', 't', 'e', 's', '\0'}};
+  std::stringstream s;
+  s << v;
+  EXPECT_EQ("opaque_data=0x3820627974657300", s.str());
+}
+
 TEST(Http2GoAwayFieldsTest, Misc) {
   Http2Random random;
   uint32_t last_stream_id = random.Rand32() & StreamIdMask();

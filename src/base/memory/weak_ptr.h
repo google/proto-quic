@@ -96,39 +96,16 @@ class BASE_EXPORT WeakReference {
    public:
     Flag();
 
-    // Get a pointer to the "Null Flag", a sentinel object used by WeakReference
-    // objects that don't point to a valid Flag, either because they're default
-    // constructed or because they have been invalidated. This can be used like
-    // any other Flag object, but it is invalidated already from the start, and
-    // its refcount will never reach zero.
-    static Flag* NullFlag();
-
     void Invalidate();
-
-    // Returns a pointer-sized bitmask of all 1s if valid or all 0s otherwise.
-    uintptr_t IsValid() const {
-#if DCHECK_IS_ON()
-      if (this == NullFlag()) {
-        // The Null Flag does not participate in the sequence checks below.
-        // Since its state never changes, it can be accessed from any thread.
-        DCHECK(!is_valid_);
-        return 0;
-      }
-      DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
-#endif
-      return is_valid_;
-    }
+    bool IsValid() const;
 
    private:
     friend class base::RefCountedThreadSafe<Flag>;
 
-    enum NullFlagTag { kNullFlagTag };
-    Flag(NullFlagTag);
-
     ~Flag();
 
-    uintptr_t is_valid_;
-    SEQUENCE_CHECKER(sequence_checker_);
+    SequenceChecker sequence_checker_;
+    bool is_valid_;
   };
 
   WeakReference();
@@ -137,14 +114,12 @@ class BASE_EXPORT WeakReference {
 
   WeakReference(WeakReference&& other);
   WeakReference(const WeakReference& other);
-  WeakReference& operator=(WeakReference&& other);
+  WeakReference& operator=(WeakReference&& other) = default;
   WeakReference& operator=(const WeakReference& other) = default;
 
-  uintptr_t is_valid() const { return flag_->IsValid(); }
+  bool is_valid() const;
 
  private:
-  // Note: To avoid null-checks, flag_ always points to either Flag::NullFlag()
-  // or some other object.
   scoped_refptr<const Flag> flag_;
 };
 
@@ -156,7 +131,7 @@ class BASE_EXPORT WeakReferenceOwner {
   WeakReference GetRef() const;
 
   bool HasRefs() const {
-    return flag_ != WeakReference::Flag::NullFlag() && !flag_->HasOneRef();
+    return flag_.get() && !flag_->HasOneRef();
   }
 
   void Invalidate();
@@ -261,10 +236,7 @@ class WeakPtr : public internal::WeakPtrBase {
   }
 
   T* get() const {
-    // Intentionally bitwise and; see command on Flag::IsValid(). This provides
-    // a fast way of conditionally retrieving the pointer, and conveniently sets
-    // EFLAGS for any null-check performed by the caller.
-    return reinterpret_cast<T*>(ref_.is_valid() & ptr_);
+    return ref_.is_valid() ? reinterpret_cast<T*>(ptr_) : nullptr;
   }
 
   T& operator*() const {

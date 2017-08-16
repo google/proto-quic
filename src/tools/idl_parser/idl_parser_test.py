@@ -9,6 +9,7 @@ import unittest
 from idl_lexer import IDLLexer
 from idl_parser import IDLParser, ParseFile
 
+
 def ParseCommentTest(comment):
   comment = comment.strip()
   comments = comment.split(None, 1)
@@ -16,6 +17,7 @@ def ParseCommentTest(comment):
 
 
 class WebIDLParser(unittest.TestCase):
+
   def setUp(self):
     self.parser = IDLParser(IDLLexer(), mute_error=True)
     self.filenames = glob.glob('test_parser/*_web.idl')
@@ -36,7 +38,8 @@ class WebIDLParser(unittest.TestCase):
       if check == 'TREE':
         quick = '\n'.join(node.Tree())
         lineno = node.GetProperty('LINENO')
-        msg = 'Mismatched tree at line %d:\n%sVS\n%s' % (lineno, value, quick)
+        msg = 'Mismatched tree at line %d:\n%sVS\n%s' % (
+            lineno, value, quick)
         self.assertEqual(value, quick, msg)
 
   def testExpectedNodes(self):
@@ -51,6 +54,7 @@ class WebIDLParser(unittest.TestCase):
 
 
 class TestImplements(unittest.TestCase):
+
   def setUp(self):
     self.parser = IDLParser(IDLLexer(), mute_error=True)
 
@@ -96,6 +100,82 @@ class TestImplements(unittest.TestCase):
     error_message = node.GetName()
     self.assertEqual('Unexpected keyword "implements" after "]".',
                      error_message)
+
+
+class TestEnums(unittest.TestCase):
+
+  def setUp(self):
+    self.parser = IDLParser(IDLLexer(), mute_error=True)
+
+  def _ParseEnums(self, idl_text):
+    filenode = self.parser.ParseText(
+        filename='', data=idl_text)
+    self.assertEqual(1, len(filenode.GetChildren()))
+    return filenode.GetChildren()[0]
+
+  def testBasic(self):
+    idl_text = 'enum MealType { "rice", "noodles", "other" };'
+    node = self._ParseEnums(idl_text)
+    children = node.GetChildren()
+    self.assertEqual('Enum', node.GetClass())
+    self.assertEqual(3, len(children))
+    self.assertEqual('EnumItem', children[0].GetClass())
+    self.assertEqual('rice', children[0].GetName())
+    self.assertEqual('EnumItem', children[1].GetClass())
+    self.assertEqual('noodles', children[1].GetName())
+    self.assertEqual('EnumItem', children[2].GetClass())
+    self.assertEqual('other', children[2].GetName())
+
+  def testErrorMissingName(self):
+    idl_text = 'enum {"rice","noodles","other"};'
+    node = self._ParseEnums(idl_text)
+    self.assertEqual('Error', node.GetClass())
+    error_message = node.GetName()
+    self.assertEqual('Enum missing name.', error_message)
+
+  def testTrailingCommaIsAllowed(self):
+    idl_text = 'enum TrailingComma { "rice", "noodles", "other",};'
+    node = self._ParseEnums(idl_text)
+    children = node.GetChildren()
+    self.assertEqual('Enum', node.GetClass())
+    self.assertEqual(3, len(children))
+    self.assertEqual('EnumItem', children[0].GetClass())
+    self.assertEqual('rice', children[0].GetName())
+    self.assertEqual('EnumItem', children[1].GetClass())
+    self.assertEqual('noodles', children[1].GetName())
+    self.assertEqual('EnumItem', children[2].GetClass())
+    self.assertEqual('other', children[2].GetName())
+
+  def testErrorMissingCommaBetweenIdentifiers(self):
+    idl_text = 'enum MissingComma { "rice" "noodles", "other" };'
+    node = self._ParseEnums(idl_text)
+    self.assertEqual('Error', node.GetClass())
+    error_message = node.GetName()
+    self.assertEqual('Unexpected string "noodles" after string "rice".',
+      error_message)
+
+  def testErrorExtraCommaBetweenIdentifiers(self):
+    idl_text = 'enum ExtraComma {"rice", "noodles",, "other"};'
+    node = self._ParseEnums(idl_text)
+    self.assertEqual('Error', node.GetClass())
+    error_message = node.GetName()
+    self.assertEqual('Unexpected "," after ",".', error_message)
+
+  def testErrorUnexpectedKeyword(self):
+    idl_text = 'enum TestEnum { interface, "noodles", "other"};'
+    node = self._ParseEnums(idl_text)
+    self.assertEqual('Error', node.GetClass())
+    error_message = node.GetName()
+    self.assertEqual('Unexpected keyword "interface" after "{".',
+      error_message)
+
+  def testErrorUnexpectedIdentifier(self):
+    idl_text = 'enum TestEnum { somename, "noodles", "other"};'
+    node = self._ParseEnums(idl_text)
+    self.assertEqual('Error', node.GetClass())
+    error_message = node.GetName()
+    self.assertEqual('Unexpected identifier "somename" after "{".',
+      error_message)
 
 
 if __name__ == '__main__':

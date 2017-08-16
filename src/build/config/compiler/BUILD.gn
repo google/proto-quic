@@ -701,6 +701,12 @@ config("compiler_cpu_abi") {
             "-Wa,-mips32",
           ]
         }
+      } else if (mips_arch_variant == "loongson3") {
+        cflags += [
+          "-march=loongson3a",
+          "-mno-branch-likely",
+          "-Wa,-march=loongson3a",
+        ]
       }
 
       if (mips_dsp_rev == 1) {
@@ -774,6 +780,12 @@ config("compiler_cpu_abi") {
           "-Wa,-mips64r2",
         ]
         ldflags += [ "-mips64r2" ]
+      } else if (mips_arch_variant == "loongson3") {
+        cflags += [
+          "-march=loongson3a",
+          "-mno-branch-likely",
+          "-Wa,-march=loongson3a",
+        ]
       }
     } else if (current_cpu == "mips64") {
       if (mips_arch_variant == "r6") {
@@ -991,6 +1003,13 @@ config("default_warnings") {
       # This is necessary for the shared library build.
       "/wd4251",
 
+      # C4275:  non dll-interface class used as base for dll-interface class
+      # This points out a potential (but rare) problem with referencing static
+      # fields of a non-exported base, through the base's non-exported inline
+      # functions, or directly. The warning is subtle enough that people just
+      # suppressed it when they saw it, so it's not worth it.
+      "/wd4275",
+
       # C4312 is a VS 2015 64-bit warning for integer to larger pointer.
       # TODO(brucedawson): fix warnings, crbug.com/554200
       "/wd4312",
@@ -1185,6 +1204,9 @@ config("default_warnings") {
 
         # TODO(thakis ): https://crbug.com/683349
         "-Wno-user-defined-warnings",
+
+        # TODO(thakis): https://crbug.com/753973
+        "-Wno-enum-compare-switch",
       ]
     } else if (use_xcode_clang && xcode_version_int >= 830) {
       # This is necessary to allow a progressive transition from using xcode 8.0
@@ -1744,9 +1766,15 @@ config("symbols") {
       }
     } else {
       cflags = []
-      if (target_cpu == "arm") {
+      if (!use_debug_fission && target_cpu == "arm") {
         # dump_syms has issues with dwarf4 on arm, https://crbug.com/744956
         # TODO(thakis): Remove this again once dump_syms is fixed.
+        #
+        # debug fission needs DWARF DIEs to be emitted at version 4.
+        # Chrome OS emits Debug Frame in DWARF1 to make breakpad happy. [1]
+        # Unless Android needs debug fission, DWARF3 is the simplest solution.
+        #
+        # [1] crrev.com/a81d5ade0b043208e06ad71a38bcf9c348a1a52f
         cflags += [ "-gdwarf-3" ]
       }
       cflags += [ "-g2" ]

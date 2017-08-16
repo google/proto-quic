@@ -833,7 +833,11 @@ int SSL_accept(SSL *ssl) {
   return SSL_do_handshake(ssl);
 }
 
-static int ssl_do_renegotiate(SSL *ssl) {
+static int ssl_do_post_handshake(SSL *ssl, const SSLMessage &msg) {
+  if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
+    return tls13_post_handshake(ssl, msg);
+  }
+
   /* We do not accept renegotiations as a server or SSL 3.0. SSL 3.0 will be
    * removed entirely in the future and requires retaining more data for
    * renegotiation_info. */
@@ -841,8 +845,7 @@ static int ssl_do_renegotiate(SSL *ssl) {
     goto no_renegotiation;
   }
 
-  if (ssl->s3->tmp.message_type != SSL3_MT_HELLO_REQUEST ||
-      ssl->init_num != 0) {
+  if (msg.type != SSL3_MT_HELLO_REQUEST || CBS_len(&msg.body) != 0) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
     OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_HELLO_REQUEST);
     return 0;
@@ -893,14 +896,6 @@ no_renegotiation:
   return 0;
 }
 
-static int ssl_do_post_handshake(SSL *ssl) {
-  if (ssl3_protocol_version(ssl) < TLS1_3_VERSION) {
-    return ssl_do_renegotiate(ssl);
-  }
-
-  return tls13_post_handshake(ssl);
-}
-
 static int ssl_read_impl(SSL *ssl, void *buf, int num, int peek) {
   ssl_reset_error_state(ssl);
 
@@ -938,11 +933,14 @@ static int ssl_read_impl(SSL *ssl, void *buf, int num, int peek) {
       continue;
     }
 
-    /* Handle the post-handshake message and try again. */
-    if (!ssl_do_post_handshake(ssl)) {
-      return -1;
+    SSLMessage msg;
+    while (ssl->method->get_message(ssl, &msg)) {
+      /* Handle the post-handshake message and try again. */
+      if (!ssl_do_post_handshake(ssl, msg)) {
+        return -1;
+      }
+      ssl->method->next_message(ssl);
     }
-    ssl->method->release_current_message(ssl, 1 /* free buffer */);
   }
 }
 
@@ -1660,8 +1658,15 @@ int SSL_set_tmp_dh(SSL *ssl, const DH *dh) {
   return 1;
 }
 
-OPENSSL_EXPORT STACK_OF(SSL_CIPHER) *SSL_CTX_get_ciphers(const SSL_CTX *ctx) {
+STACK_OF(SSL_CIPHER) *SSL_CTX_get_ciphers(const SSL_CTX *ctx) {
   return ctx->cipher_list->ciphers;
+}
+
+int SSL_CTX_cipher_in_group(const SSL_CTX *ctx, size_t i) {
+  if (i >= sk_SSL_CIPHER_num(ctx->cipher_list->ciphers)) {
+    return 0;
+  }
+  return ctx->cipher_list->in_group_flags[i];
 }
 
 STACK_OF(SSL_CIPHER) *SSL_get_ciphers(const SSL *ssl) {
@@ -2148,8 +2153,8 @@ int SSL_get_ex_new_index(long argl, void *argp, CRYPTO_EX_unused *unused,
   return index;
 }
 
-int SSL_set_ex_data(SSL *ssl, int idx, void *arg) {
-  return CRYPTO_set_ex_data(&ssl->ex_data, idx, arg);
+int SSL_set_ex_data(SSL *ssl, int idx, void *data) {
+  return CRYPTO_set_ex_data(&ssl->ex_data, idx, data);
 }
 
 void *SSL_get_ex_data(const SSL *ssl, int idx) {
@@ -2167,8 +2172,8 @@ int SSL_CTX_get_ex_new_index(long argl, void *argp, CRYPTO_EX_unused *unused,
   return index;
 }
 
-int SSL_CTX_set_ex_data(SSL_CTX *ctx, int idx, void *arg) {
-  return CRYPTO_set_ex_data(&ctx->ex_data, idx, arg);
+int SSL_CTX_set_ex_data(SSL_CTX *ctx, int idx, void *data) {
+  return CRYPTO_set_ex_data(&ctx->ex_data, idx, data);
 }
 
 void *SSL_CTX_get_ex_data(const SSL_CTX *ctx, int idx) {
@@ -2179,21 +2184,17 @@ int SSL_want(const SSL *ssl) { return ssl->rwstate; }
 
 void SSL_CTX_set_tmp_rsa_callback(SSL_CTX *ctx,
                                   RSA *(*cb)(SSL *ssl, int is_export,
-                                             int keylength)) {
-}
+                                             int keylength)) {}
 
 void SSL_set_tmp_rsa_callback(SSL *ssl, RSA *(*cb)(SSL *ssl, int is_export,
-                                                   int keylength)) {
-}
+                                                   int keylength)) {}
 
 void SSL_CTX_set_tmp_dh_callback(SSL_CTX *ctx,
-                                 DH *(*callback)(SSL *ssl, int is_export,
-                                                 int keylength)) {
-}
+                                 DH *(*cb)(SSL *ssl, int is_export,
+                                           int keylength)) {}
 
-void SSL_set_tmp_dh_callback(SSL *ssl, DH *(*callback)(SSL *ssl, int is_export,
-                                                       int keylength)) {
-}
+void SSL_set_tmp_dh_callback(SSL *ssl, DH *(*cb)(SSL *ssl, int is_export,
+                                                 int keylength)) {}
 
 static int use_psk_identity_hint(char **out, const char *identity_hint) {
   if (identity_hint != NULL && strlen(identity_hint) > PSK_MAX_IDENTITY_LEN) {
@@ -2470,8 +2471,6 @@ int SSL_clear(SSL *ssl) {
 
   BUF_MEM_free(ssl->init_buf);
   ssl->init_buf = NULL;
-  ssl->init_msg = NULL;
-  ssl->init_num = 0;
 
   /* The ssl->d1->mtu is simultaneously configuration (preserved across
    * clear) and connection-specific state (gets reset).

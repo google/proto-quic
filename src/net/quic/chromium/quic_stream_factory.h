@@ -215,6 +215,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       bool race_cert_verification,
       bool estimate_initial_rtt,
       const QuicTagVector& connection_options,
+      const QuicTagVector& client_connection_options,
       bool enable_token_binding);
   ~QuicStreamFactory() override;
 

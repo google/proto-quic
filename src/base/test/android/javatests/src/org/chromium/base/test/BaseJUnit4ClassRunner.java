@@ -4,11 +4,14 @@
 
 package org.chromium.base.test;
 
+import static org.chromium.base.test.BaseChromiumAndroidJUnitRunner.shouldListTests;
+
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.internal.runner.junit4.AndroidJUnit4ClassRunner;
 import android.support.test.internal.util.AndroidRunnerParams;
 
+import org.junit.runner.Description;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
@@ -21,6 +24,7 @@ import org.chromium.base.test.util.MinAndroidSdkLevelSkipCheck;
 import org.chromium.base.test.util.RestrictionSkipCheck;
 import org.chromium.base.test.util.SkipCheck;
 
+import java.io.File;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +40,9 @@ import java.util.List;
 public class BaseJUnit4ClassRunner extends AndroidJUnit4ClassRunner {
     private final List<SkipCheck> mSkipChecks;
     private final List<PreTestHook> mPreTestHooks;
+
+    private static final String EXTRA_TRACE_FILE =
+            "org.chromium.base.test.BaseJUnit4ClassRunner.TraceFile";
 
     /**
      * Create a BaseJUnit4ClassRunner to run {@code klass} and initialize values
@@ -84,6 +91,20 @@ public class BaseJUnit4ClassRunner extends AndroidJUnit4ClassRunner {
         super(klass,
                 new AndroidRunnerParams(InstrumentationRegistry.getInstrumentation(),
                         InstrumentationRegistry.getArguments(), false, 0L, false));
+
+        String traceOutput = InstrumentationRegistry.getArguments().getString(EXTRA_TRACE_FILE);
+
+        if (traceOutput != null) {
+            File traceOutputFile = new File(traceOutput);
+            File traceOutputDir = traceOutputFile.getParentFile();
+
+            if (traceOutputDir != null) {
+                if (traceOutputDir.exists() || traceOutputDir.mkdirs()) {
+                    TestTraceEvent.enable(traceOutputFile);
+                }
+            }
+        }
+
         mSkipChecks = mergeList(checks, defaultSkipChecks());
         mPreTestHooks = mergeList(hooks, defaultPreTestHooks());
     }
@@ -129,10 +150,36 @@ public class BaseJUnit4ClassRunner extends AndroidJUnit4ClassRunner {
         return super.isIgnored(method) || shouldSkip(method);
     }
 
+    /**
+     * Run test with or without execution based on bundle arguments.
+     */
+    @Override
+    public void run(RunNotifier notifier) {
+        if (shouldListTests(InstrumentationRegistry.getArguments())) {
+            for (Description child : getDescription().getChildren()) {
+                notifier.fireTestStarted(child);
+                notifier.fireTestFinished(child);
+            }
+        } else {
+            super.run(notifier);
+        }
+    }
+
     @Override
     protected void runChild(FrameworkMethod method, RunNotifier notifier) {
+        String testName = method.getName();
+        TestTraceEvent.begin(testName);
+
         runPreTestHooks(method);
+
         super.runChild(method, notifier);
+
+        TestTraceEvent.end(testName);
+
+        // A new instance of BaseJUnit4ClassRunner is created on the device
+        // for each new method, so runChild will only be called once. Thus, we
+        // can disable tracing, and dump the output, once we get here.
+        TestTraceEvent.disable();
     }
 
     /**

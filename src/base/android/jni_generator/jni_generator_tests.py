@@ -18,6 +18,7 @@ import os
 import sys
 import unittest
 import jni_generator
+import jni_registration_generator
 from jni_generator import CalledByNative
 from jni_generator import IsMainDexJavaClass
 from jni_generator import NativeMethod
@@ -99,14 +100,14 @@ class TestGenerator(unittest.TestCase):
     with file(golden_file, 'r') as f:
       return f.read()
 
-  def assertGoldenTextEquals(self, generated_text):
+  def assertGoldenTextEquals(self, generated_text, suffix=''):
     script_dir = os.path.dirname(sys.argv[0])
     # This is the caller test method.
     caller = inspect.stack()[1][3]
     self.assertTrue(caller.startswith('test'),
                     'assertGoldenTextEquals can only be called from a '
                     'test* method, not %s' % caller)
-    golden_file = os.path.join(script_dir, caller + '.golden')
+    golden_file = os.path.join(script_dir, '%s%s.golden' % (caller, suffix))
     golden_text = self._ReadGoldenFile(golden_file)
     if os.environ.get(REBASELINE_ENV):
       if golden_text != generated_text:
@@ -283,10 +284,18 @@ class TestGenerator(unittest.TestCase):
                      type='function')
     ]
     self.assertListEquals(golden_natives, natives)
-    h = jni_generator.InlHeaderFileGenerator('', 'org/chromium/TestJni',
-                                             natives, [], [], jni_params,
-                                             TestOptions())
-    self.assertGoldenTextEquals(h.GetContent())
+    h1 = jni_generator.InlHeaderFileGenerator('', 'org/chromium/TestJni',
+                                              natives, [], [], jni_params,
+                                              TestOptions())
+    self.assertGoldenTextEquals(h1.GetContent())
+    content = {}
+    h2 = jni_registration_generator.HeaderGenerator(
+        '', 'org/chromium/TestJni', natives, jni_params, content, True)
+    h2.AddContent()
+    self.assertGoldenTextEquals(
+        jni_registration_generator.CreateFromDict(content),
+        suffix='Registrations')
+
 
   def testInnerClassNatives(self):
     test_data = """
@@ -365,6 +374,14 @@ class TestGenerator(unittest.TestCase):
                                              natives, [], [], jni_params,
                                              TestOptions())
     self.assertGoldenTextEquals(h.GetContent())
+
+    content = {}
+    h2 = jni_registration_generator.HeaderGenerator(
+        '', 'org/chromium/TestJni', natives, jni_params, content, True)
+    h2.AddContent()
+    self.assertGoldenTextEquals(
+        jni_registration_generator.CreateFromDict(content),
+        suffix='Registrations')
 
   def testCalledByNatives(self):
     test_data = """"

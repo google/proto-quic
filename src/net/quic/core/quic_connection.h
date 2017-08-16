@@ -230,7 +230,8 @@ class QUIC_EXPORT_PRIVATE QuicConnectionDebugVisitor
   virtual void OnConnectionCloseFrame(const QuicConnectionCloseFrame& frame) {}
 
   // Called when a WindowUpdate has been parsed.
-  virtual void OnWindowUpdateFrame(const QuicWindowUpdateFrame& frame) {}
+  virtual void OnWindowUpdateFrame(const QuicWindowUpdateFrame& frame,
+                                   const QuicTime& receive_time) {}
 
   // Called when a BlockedFrame has been parsed.
   virtual void OnBlockedFrame(const QuicBlockedFrame& frame) {}
@@ -282,7 +283,10 @@ class QUIC_EXPORT_PRIVATE QuicConnectionHelperInterface {
   virtual QuicRandom* GetRandomGenerator() = 0;
 
   // Returns a QuicBufferAllocator to be used for all stream frame buffers.
-  virtual QuicBufferAllocator* GetBufferAllocator() = 0;
+  virtual QuicBufferAllocator* GetStreamFrameBufferAllocator() = 0;
+
+  // Returns a QuicBufferAllocator to be used for stream send buffers.
+  virtual QuicBufferAllocator* GetStreamSendBufferAllocator() = 0;
 };
 
 class QUIC_EXPORT_PRIVATE QuicConnection
@@ -957,6 +961,9 @@ class QUIC_EXPORT_PRIVATE QuicConnection
   AckMode ack_mode_;
   // The max delay in fraction of min_rtt to use when sending decimated acks.
   float ack_decimation_delay_;
+  // When true, removes ack decimation's max number of packets(10) before
+  // sending an ack.
+  bool unlimited_ack_decimation_;
 
   // Indicates the retransmit alarm is going to be set by the
   // ScopedRetransmitAlarmDelayer
@@ -1092,7 +1099,7 @@ class QUIC_EXPORT_PRIVATE QuicConnection
 
   // Indicates whether a write error is encountered currently. This is used to
   // avoid infinite write errors.
-  bool write_error_occured_;
+  bool write_error_occurred_;
 
   // Indicates not to send or process stop waiting frames.
   bool no_stop_waiting_frames_;

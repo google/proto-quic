@@ -49,8 +49,6 @@ void SetFrameFlags(SpdySerializedFrame* frame, uint8_t flags);
 
 void SetFrameLength(SpdySerializedFrame* frame, size_t length);
 
-SpdyString a2b_hex(const char* hex_data);
-
 // Returns a SHA1 HashValue in which each byte has the value |label|.
 HashValue GetTestHashValue(uint8_t label);
 

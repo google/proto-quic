@@ -53,7 +53,7 @@ ClusterFuzz uses seed corpus stored in Chromium repository. You need to add
 ```
 fuzzer_test("my_protocol_fuzzer") {
   ...
-  seed_corpus = "src/fuzz/testcases"
+  seed_corpus = "test/fuzz/testcases"
   ...
 }
 ```
@@ -63,7 +63,7 @@ You may specify multiple seed corpus directories via `seed_corpuses` attribute:
 ```
 fuzzer_test("my_protocol_fuzzer") {
   ...
-  seed_corpuses = [ "src/fuzz/testcases", "src/unittest/data" ]
+  seed_corpuses = [ "test/fuzz/testcases", "test/unittest/data" ]
   ...
 }
 ```

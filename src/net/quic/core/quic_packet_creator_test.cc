@@ -23,6 +23,7 @@
 #include "net/quic/test_tools/quic_framer_peer.h"
 #include "net/quic/test_tools/quic_packet_creator_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
+#include "net/quic/test_tools/simple_data_producer.h"
 
 using std::string;
 using testing::DoAll;
@@ -50,7 +51,7 @@ struct TestParams {
         framer_has_data_producer(framer_has_data_producer) {}
 
   friend std::ostream& operator<<(std::ostream& os, const TestParams& p) {
-    os << "{ client_version: " << QuicVersionToString(p.version)
+    os << "{ version: " << QuicVersionToString(p.version)
        << " connection id length: " << p.connection_id_length
        << " include version: " << p.version_serialization
        << " framer_has_data_producer: " << p.framer_has_data_producer << " }";
@@ -83,6 +84,37 @@ std::vector<TestParams> GetTestParams() {
   }
   return params;
 }
+
+class TestPacketCreator : public QuicPacketCreator {
+ public:
+  TestPacketCreator(QuicConnectionId connection_id,
+                    QuicFramer* framer,
+                    QuicBufferAllocator* buffer_allocator,
+                    DelegateInterface* delegate,
+                    SimpleDataProducer* producer)
+      : QuicPacketCreator(connection_id, framer, buffer_allocator, delegate),
+        producer_(producer) {}
+
+  bool ConsumeData(QuicStreamId id,
+                   QuicIOVector iov,
+                   size_t iov_offset,
+                   QuicStreamOffset offset,
+                   bool fin,
+                   bool needs_full_padding,
+                   QuicFrame* frame) {
+    if (QuicPacketCreatorPeer::framer(this)->HasDataProducer()) {
+      // Save data before data is consumed.
+      QuicByteCount data_length = iov.total_length - iov_offset;
+      if (data_length > 0) {
+        producer_->SaveStreamData(id, iov, iov_offset, offset, data_length);
+      }
+    }
+    return QuicPacketCreator::ConsumeData(id, iov, iov_offset, offset, fin,
+                                          needs_full_padding, frame);
+  }
+
+  SimpleDataProducer* producer_;
+};
 
 class QuicPacketCreatorTest : public QuicTestWithParam<TestParams> {
  public:
@@ -122,7 +154,8 @@ class QuicPacketCreatorTest : public QuicTestWithParam<TestParams> {
         creator_(connection_id_,
                  &client_framer_,
                  &buffer_allocator_,
-                 &delegate_),
+                 &delegate_,
+                 &producer_),
         serialized_packet_(creator_.NoPacket()) {
     creator_.set_connection_id_length(GetParam().connection_id_length);
 
@@ -219,7 +252,7 @@ class QuicPacketCreatorTest : public QuicTestWithParam<TestParams> {
         num_padding_bytes, encryption_level, packet_number_length);
   }
 
-  static const QuicStreamOffset kOffset = 1u;
+  static const QuicStreamOffset kOffset = 0u;
 
   char buffer_[kMaxPacketSize];
   QuicFrames frames_;
@@ -231,7 +264,7 @@ class QuicPacketCreatorTest : public QuicTestWithParam<TestParams> {
   string data_;
   struct iovec iov_;
   SimpleBufferAllocator buffer_allocator_;
-  QuicPacketCreator creator_;
+  TestPacketCreator creator_;
   SerializedPacket serialized_packet_;
   SimpleDataProducer producer_;
 };
@@ -354,6 +387,10 @@ TEST_P(QuicPacketCreatorTest, ReserializeFramesWithFullPadding) {
   QuicFrame frame;
   QuicIOVector io_vector(
       MakeIOVectorFromStringPiece("fake handshake message data"));
+  if (client_framer_.HasDataProducer()) {
+    producer_.SaveStreamData(kCryptoStreamId, io_vector, 0u, 0u,
+                             io_vector.total_length);
+  }
   QuicPacketCreatorPeer::CreateStreamFrame(&creator_, kCryptoStreamId,
                                            io_vector, 0u, 0u, false, &frame);
   QuicFrames frames;
@@ -373,6 +410,10 @@ TEST_P(QuicPacketCreatorTest, ReserializeFramesWithFullPadding) {
 TEST_P(QuicPacketCreatorTest, DoNotRetransmitPendingPadding) {
   QuicFrame frame;
   QuicIOVector io_vector(MakeIOVectorFromStringPiece("fake message data"));
+  if (client_framer_.HasDataProducer()) {
+    producer_.SaveStreamData(kCryptoStreamId, io_vector, 0u, 0u,
+                             io_vector.total_length);
+  }
   QuicPacketCreatorPeer::CreateStreamFrame(&creator_, kCryptoStreamId,
                                            io_vector, 0u, 0u, false, &frame);
 
@@ -433,6 +474,12 @@ TEST_P(QuicPacketCreatorTest, ReserializeFramesWithFullPacketAndPadding) {
 
     QuicFrame frame;
     QuicIOVector io_vector(MakeIOVectorFromStringPiece(data));
+    SimpleDataProducer producer;
+    if (client_framer_.HasDataProducer()) {
+      producer.SaveStreamData(kCryptoStreamId, io_vector, 0u, 0u,
+                              io_vector.total_length);
+      QuicPacketCreatorPeer::framer(&creator_)->set_data_producer(&producer);
+    }
     QuicPacketCreatorPeer::CreateStreamFrame(
         &creator_, kCryptoStreamId, io_vector, 0, kOffset, false, &frame);
     QuicFrames frames;
@@ -500,12 +547,12 @@ TEST_P(QuicPacketCreatorTest, ConsumeData) {
 TEST_P(QuicPacketCreatorTest, ConsumeDataFin) {
   QuicFrame frame;
   QuicIOVector io_vector(MakeIOVectorFromStringPiece("test"));
-  ASSERT_TRUE(creator_.ConsumeData(kCryptoStreamId, io_vector, 0u, 10u, true,
+  ASSERT_TRUE(creator_.ConsumeData(kCryptoStreamId, io_vector, 0u, 0u, true,
                                    false, &frame));
   ASSERT_TRUE(frame.stream_frame);
   size_t consumed = frame.stream_frame->data_length;
   EXPECT_EQ(4u, consumed);
-  CheckStreamFrame(frame, 1u, "test", 10u, true);
+  CheckStreamFrame(frame, 1u, "test", 0u, true);
   EXPECT_TRUE(creator_.HasPendingFrames());
 }
 
@@ -688,8 +735,13 @@ TEST_P(QuicPacketCreatorTest, UpdatePacketSequenceNumberLengthLeastAwaiting) {
   QuicPacketCreatorPeer::SetPacketNumber(&creator_,
                                          UINT64_C(64) * 256 * 256 * 256 * 256);
   creator_.UpdatePacketNumberLength(2, 10000 / kDefaultMaxPacketSize);
-  EXPECT_EQ(PACKET_6BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
+  if (GetParam().version <= QUIC_VERSION_39) {
+    EXPECT_EQ(PACKET_6BYTE_PACKET_NUMBER,
+              QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
+  } else {
+    EXPECT_EQ(PACKET_8BYTE_PACKET_NUMBER,
+              QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
+  }
 }
 
 TEST_P(QuicPacketCreatorTest, UpdatePacketSequenceNumberLengthCwnd) {
@@ -711,8 +763,13 @@ TEST_P(QuicPacketCreatorTest, UpdatePacketSequenceNumberLengthCwnd) {
 
   creator_.UpdatePacketNumberLength(
       1, UINT64_C(1000) * 256 * 256 * 256 * 256 / kDefaultMaxPacketSize);
-  EXPECT_EQ(PACKET_6BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
+  if (GetParam().version <= QUIC_VERSION_39) {
+    EXPECT_EQ(PACKET_6BYTE_PACKET_NUMBER,
+              QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
+  } else {
+    EXPECT_EQ(PACKET_8BYTE_PACKET_NUMBER,
+              QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
+  }
 }
 
 TEST_P(QuicPacketCreatorTest, SerializeFrame) {
@@ -835,6 +892,9 @@ TEST_P(QuicPacketCreatorTest, SerializeAndSendStreamFrame) {
   EXPECT_FALSE(creator_.HasPendingFrames());
 
   QuicIOVector iov(MakeIOVectorFromStringPiece("test"));
+  if (client_framer_.HasDataProducer()) {
+    producer_.SaveStreamData(kHeadersStreamId, iov, 0u, 0u, iov.total_length);
+  }
   EXPECT_CALL(delegate_, OnSerializedPacket(_))
       .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
   size_t num_bytes_consumed;
@@ -958,6 +1018,10 @@ TEST_P(QuicPacketCreatorTest, SendPacketAfterFullPaddingRetransmission) {
   QuicFrame frame;
   QuicIOVector io_vector(
       MakeIOVectorFromStringPiece("fake handshake message data"));
+  if (client_framer_.HasDataProducer()) {
+    producer_.SaveStreamData(kCryptoStreamId, io_vector, 0u, 0u,
+                             io_vector.total_length);
+  }
   QuicPacketCreatorPeer::CreateStreamFrame(&creator_, kCryptoStreamId,
                                            io_vector, 0u, 0u, false, &frame);
   QuicFrames frames;
@@ -1035,7 +1099,7 @@ TEST_P(QuicPacketCreatorTest, ConsumeDataAndRandomPadding) {
   creator_.ConsumeData(kCryptoStreamId,
                        MakeIOVectorFromStringPiece(
                            QuicStringPiece(buf, kStreamFramePayloadSize + 1)),
-                       0u, 0u, false, false, &frame);
+                       0u, kStreamFramePayloadSize, false, false, &frame);
   // No padding is sent.
   creator_.Flush();
   delete frame.stream_frame;

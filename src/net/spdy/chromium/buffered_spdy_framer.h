@@ -14,6 +14,7 @@
 #include "net/base/net_export.h"
 #include "net/log/net_log_source.h"
 #include "net/spdy/chromium/header_coalescer.h"
+#include "net/spdy/core/http2_frame_decoder_adapter.h"
 #include "net/spdy/core/spdy_alt_svc_wire_format.h"
 #include "net/spdy/core/spdy_framer.h"
 #include "net/spdy/core/spdy_header_block.h"
@@ -138,7 +139,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
   void set_debug_visitor(SpdyFramerDebugVisitorInterface* debug_visitor);
 
   // SpdyFramerVisitorInterface
-  void OnError(SpdyFramer* spdy_framer) override;
+  void OnError(SpdyFramer::SpdyFramerError spdy_framer_error) override;
   void OnHeaders(SpdyStreamId stream_id,
                  bool has_priority,
                  int weight,
@@ -175,6 +176,10 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
                          size_t length,
                          bool fin) override;
   void OnContinuation(SpdyStreamId stream_id, bool end) override;
+  void OnPriority(SpdyStreamId stream_id,
+                  SpdyStreamId parent_stream_id,
+                  int weight,
+                  bool exclusive) override {}
   bool OnUnknownFrame(SpdyStreamId stream_id, uint8_t frame_type) override;
 
   // SpdyFramer methods.

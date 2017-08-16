@@ -8,9 +8,9 @@
 #include <stddef.h>
 
 #include <memory>
-#include <queue>
 
 #include "base/base_export.h"
+#include "base/containers/queue.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/sequence_token.h"
@@ -85,7 +85,7 @@ class BASE_EXPORT Sequence : public RefCountedThreadSafe<Sequence> {
   mutable SchedulerLock lock_;
 
   // Queue of tasks to execute.
-  std::queue<std::unique_ptr<Task>> queue_;
+  base::queue<std::unique_ptr<Task>> queue_;
 
   // Number of tasks contained in the Sequence for each priority.
   size_t num_tasks_per_priority_[static_cast<int>(TaskPriority::HIGHEST) + 1] =

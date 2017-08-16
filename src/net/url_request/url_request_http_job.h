@@ -49,6 +49,7 @@ class NET_EXPORT_PRIVATE URLRequestHttpJob : public URLRequestJob {
   // Record Sdch specific packet stats. Public so that SdchPolicyDelegate can
   // access it.
   void RecordPacketStats(SdchPolicyDelegate::StatisticSelector statistic) const;
+  void SetRequestHeadersCallback(RequestHeadersCallback callback) override;
 
  protected:
   URLRequestHttpJob(URLRequest* request,
@@ -268,6 +269,8 @@ class NET_EXPORT_PRIVATE URLRequestHttpJob : public URLRequestJob {
   // Keeps track of total sent bytes over the network from transactions used by
   // this job that have already been destroyed.
   int64_t total_sent_bytes_from_previous_transactions_;
+
+  RequestHeadersCallback request_headers_callback_;
 
   base::WeakPtrFactory<URLRequestHttpJob> weak_factory_;
 

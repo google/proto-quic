@@ -86,9 +86,7 @@
 -NavigationHandleImplBrowserTest.ErrorCodeOnRedirect
 -NavigationHandleImplBrowserTest.RedirectToRendererDebugUrl
 -ParallelDownloadTest.ParallelDownloadComplete
--PaymentAppBrowserTest.PaymentAppInvocation
--PaymentAppBrowserTest.PaymentAppInvocationAndFailed
--PaymentAppBrowserTest.PaymentAppOpenWindowFailed
+-PaymentAppBrowserTest.*
 -PlzNavigateNavigationHandleImplBrowserTest.ErrorPageNetworkError
 -PowerMonitorTest.TestGpuProcess
 -PowerMonitorTest.TestRendererProcess
@@ -145,8 +143,10 @@
 -TouchInputBrowserTest.MultiPointTouchPress
 -TouchInputBrowserTest.TouchHandlerNoConsume
 -WebContentsImplBrowserTest.ClearNonVisiblePendingOnFail
+-WebContentsImplBrowserTest.DidGetResourceResponseStartUpdatesWaitingState
 -WebContentsImplBrowserTest.DownloadImage_Deny_FileImage
 -WebContentsImplBrowserTest.GetSizeForNewRenderView
+-WebContentsImplBrowserTest.LoadingStateChangedForSameDocumentNavigation
 -WebContentsImplBrowserTest.UserAgentOverride
 -WebContentsViewAuraTest.ScreenshotForSwappedOutRenderViews
 -WebRtcGetUserMediaOldConstraintsBrowserTest.GetUserMediaWithInvalidMandatorySourceID
@@ -159,3 +159,11 @@
 -WorkerTest.SharedWorkerHttpAuth
 -WorkerTest.WorkerHttpAuth
 -WorkerTest.WorkerTlsClientAuth
+
+# content/network/url_loader_impl.cc should handle failure in
+# URLLoaderImpl::OnResponseBodyStreamRead().
+-SRC_ClearKey/EncryptedMediaTest.FrameSizeChangeVideo/0
+
+# https://crbug.com/754827
+-ResourceDispatcherHostBrowserTest.SyncXMLHttpRequest_Cancelled
+-BrowserSideNavigationBrowserDisableWebSecurityTest.ValidateBaseUrlForDataUrl

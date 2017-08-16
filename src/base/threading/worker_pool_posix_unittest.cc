@@ -8,6 +8,7 @@
 
 #include "base/bind.h"
 #include "base/callback.h"
+#include "base/containers/queue.h"
 #include "base/macros.h"
 #include "base/synchronization/condition_variable.h"
 #include "base/synchronization/lock.h"
@@ -27,7 +28,7 @@ class PosixDynamicThreadPool::PosixDynamicThreadPoolPeer {
   ConditionVariable* pending_tasks_available_cv() {
     return &pool_->pending_tasks_available_cv_;
   }
-  const std::queue<PendingTask>& pending_tasks() const {
+  const base::queue<PendingTask>& pending_tasks() const {
     return pool_->pending_tasks_;
   }
   int num_idle_threads() const { return pool_->num_idle_threads_; }

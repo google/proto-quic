@@ -43,41 +43,25 @@ const char* GetNameForEffectiveConnectionType(EffectiveConnectionType type) {
   return "";
 }
 
-bool GetEffectiveConnectionTypeForName(
-    base::StringPiece connection_type_name,
-    EffectiveConnectionType* effective_connection_type) {
-  if (connection_type_name == kEffectiveConnectionTypeUnknown) {
-    *effective_connection_type = EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
-    return true;
-  }
-  if (connection_type_name == kEffectiveConnectionTypeOffline) {
-    *effective_connection_type = EFFECTIVE_CONNECTION_TYPE_OFFLINE;
-    return true;
-  }
-  if (connection_type_name == kEffectiveConnectionTypeSlow2G) {
-    *effective_connection_type = EFFECTIVE_CONNECTION_TYPE_SLOW_2G;
-    return true;
-  }
+base::Optional<EffectiveConnectionType> GetEffectiveConnectionTypeForName(
+    base::StringPiece connection_type_name) {
+  if (connection_type_name == kEffectiveConnectionTypeUnknown)
+    return EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
+  if (connection_type_name == kEffectiveConnectionTypeOffline)
+    return EFFECTIVE_CONNECTION_TYPE_OFFLINE;
+  if (connection_type_name == kEffectiveConnectionTypeSlow2G)
+    return EFFECTIVE_CONNECTION_TYPE_SLOW_2G;
   // Return EFFECTIVE_CONNECTION_TYPE_SLOW_2G if the deprecated string
   // representation is in use.
-  if (connection_type_name == kDeprectedEffectiveConnectionTypeSlow2G) {
-    *effective_connection_type = EFFECTIVE_CONNECTION_TYPE_SLOW_2G;
-    return true;
-  }
-  if (connection_type_name == kEffectiveConnectionType2G) {
-    *effective_connection_type = EFFECTIVE_CONNECTION_TYPE_2G;
-    return true;
-  }
-  if (connection_type_name == kEffectiveConnectionType3G) {
-    *effective_connection_type = EFFECTIVE_CONNECTION_TYPE_3G;
-    return true;
-  }
-  if (connection_type_name == kEffectiveConnectionType4G) {
-    *effective_connection_type = EFFECTIVE_CONNECTION_TYPE_4G;
-    return true;
-  }
-  *effective_connection_type = EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
-  return false;
+  if (connection_type_name == kDeprectedEffectiveConnectionTypeSlow2G)
+    return EFFECTIVE_CONNECTION_TYPE_SLOW_2G;
+  if (connection_type_name == kEffectiveConnectionType2G)
+    return EFFECTIVE_CONNECTION_TYPE_2G;
+  if (connection_type_name == kEffectiveConnectionType3G)
+    return EFFECTIVE_CONNECTION_TYPE_3G;
+  if (connection_type_name == kEffectiveConnectionType4G)
+    return EFFECTIVE_CONNECTION_TYPE_4G;
+  return base::nullopt;
 }
 
 const char* DeprecatedGetNameForEffectiveConnectionType(

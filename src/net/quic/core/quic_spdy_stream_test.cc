@@ -924,7 +924,7 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersWithQueuedBytes) {
   stream_->WriteHeaders(SpdyHeaderBlock(), /*fin=*/false, nullptr);
 
   // Write non-zero body data, but only consume partially, ensuring queueing.
-  const int kBodySize = 1 * 1024;  // 1 MB
+  const int kBodySize = 1 * 1024;  // 1 KB
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .WillOnce(Return(QuicConsumedData(kBodySize - 1, false)));
   stream_->WriteOrBufferData(string(kBodySize, 'x'), false, nullptr);
@@ -973,8 +973,7 @@ TEST_P(QuicSpdyStreamTest, HeaderStreamNotiferCorrespondingSpdyStream) {
   }
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
       .Times(AnyNumber())
-      .WillRepeatedly(
-          Invoke(session_.get(), &MockQuicSpdySession::ConsumeAndSaveAllData));
+      .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
   testing::InSequence s;
   QuicReferenceCountedPointer<MockAckListener> ack_listener1(
       new MockAckListener());

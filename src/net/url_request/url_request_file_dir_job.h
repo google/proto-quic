@@ -20,7 +20,7 @@ namespace net {
 
 class NET_EXPORT_PRIVATE URLRequestFileDirJob
     : public URLRequestJob,
-      public NON_EXPORTED_BASE(DirectoryLister::DirectoryListerDelegate) {
+      public DirectoryLister::DirectoryListerDelegate {
  public:
   URLRequestFileDirJob(URLRequest* request,
                        NetworkDelegate* network_delegate,

@@ -4,7 +4,15 @@
 
 """Functions to instrument all Python function calls.
 
-Generates a JSON file readable by Chrome's about:tracing."""
+This generates a JSON file readable by Chrome's about:tracing. To use it,
+either call start_instrumenting and stop_instrumenting at the appropriate times,
+or use the Instrument context manager.
+
+A function is only traced if it is from a Python module that matches at least
+one regular expression object in to_include, and does not match any in
+to_exclude. In between the start and stop events, every function call of a
+function from such a module will be added to the trace.
+"""
 
 import contextlib
 import functools

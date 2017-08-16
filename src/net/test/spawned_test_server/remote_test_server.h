@@ -18,11 +18,9 @@ class SpawnerCommunicator;
 // machine that is different from the machine in which RemoteTestServer runs.
 class RemoteTestServer : public BaseTestServer {
  public:
-  // Initialize a TestServer listening on a specific host (IP or hostname).
-  // |document_root| must be a relative path under the root tree.
-  RemoteTestServer(Type type,
-                   const std::string& host,
-                   const base::FilePath& document_root);
+  // Initialize a TestServer. |document_root| must be a relative path under the
+  // root tree.
+  RemoteTestServer(Type type, const base::FilePath& document_root);
 
   // Initialize a TestServer with a specific set of SSLOptions.
   // |document_root| must be a relative path under the root tree.

@@ -566,10 +566,10 @@ void URLFetcherCore::StartURLRequest() {
   request_->SetLoadFlags(flags);
   request_->SetReferrer(referrer_);
   request_->set_referrer_policy(referrer_policy_);
-  request_->set_first_party_for_cookies(initiator_.has_value() &&
-                                                !initiator_.value().unique()
-                                            ? initiator_.value().GetURL()
-                                            : original_url_);
+  request_->set_site_for_cookies(initiator_.has_value() &&
+                                         !initiator_.value().unique()
+                                     ? initiator_.value().GetURL()
+                                     : original_url_);
   request_->set_initiator(initiator_);
   if (url_request_data_key_ && !url_request_create_data_callback_.is_null()) {
     request_->SetUserData(url_request_data_key_,

@@ -372,21 +372,9 @@ bool GetSystemMemoryInfo(SystemMemoryInfoKB* meminfo) {
 }
 
 size_t ProcessMetrics::GetMallocUsage() {
-  // Iterate through whichever heap the CRT is using.
-  HANDLE crt_heap = reinterpret_cast<HANDLE>(_get_heap_handle());
-  if (crt_heap == NULL)
-    return 0;
-  if (!::HeapLock(crt_heap))
-    return 0;
-  size_t malloc_usage = 0;
-  PROCESS_HEAP_ENTRY heap_entry;
-  heap_entry.lpData = NULL;
-  while (::HeapWalk(crt_heap, &heap_entry) != 0) {
-    if ((heap_entry.wFlags & PROCESS_HEAP_ENTRY_BUSY) != 0)
-      malloc_usage += heap_entry.cbData;
-  }
-  ::HeapUnlock(crt_heap);
-  return malloc_usage;
+  // Unsupported as getting malloc usage on Windows requires iterating through
+  // the heap which is slow and crashes.
+  return 0;
 }
 
 }  // namespace base

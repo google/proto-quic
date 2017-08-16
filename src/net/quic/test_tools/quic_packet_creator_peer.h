@@ -10,6 +10,7 @@
 #include "net/quic/core/quic_packets.h"
 
 namespace net {
+class QuicFramer;
 class QuicPacketCreator;
 
 namespace test {
@@ -40,6 +41,7 @@ class QuicPacketCreatorPeer {
                                              char* buffer,
                                              size_t buffer_len);
   static EncryptionLevel GetEncryptionLevel(QuicPacketCreator* creator);
+  static QuicFramer* framer(QuicPacketCreator* creator);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicPacketCreatorPeer);

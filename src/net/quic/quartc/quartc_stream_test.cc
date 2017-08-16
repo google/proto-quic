@@ -5,6 +5,7 @@
 #include "net/quic/quartc/quartc_stream.h"
 
 #include "net/quic/core/crypto/quic_random.h"
+#include "net/quic/core/quic_data_writer.h"
 #include "net/quic/core/quic_session.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
 #include "net/quic/quartc/quartc_clock_interface.h"
@@ -47,9 +48,24 @@ class MockQuicSession : public QuicSession {
       return QuicConsumedData(0, false);
     }
 
-    const char* data = reinterpret_cast<const char*>(iovector.iov->iov_base);
     size_t len = iovector.total_length;
-    write_buffer_->append(data, len);
+    if (iovector.iov == nullptr) {
+      // WritevData does not pass down a iovec, data is saved in stream before
+      // data is consumed. Retrieve data from stream.
+      char* buf = new char[len];
+      QuicDataWriter writer(len, buf, Perspective::IS_CLIENT,
+                            NETWORK_BYTE_ORDER);
+      QuicStream* stream = GetOrCreateStream(kStreamId);
+      DCHECK(stream);
+      if (len > 0) {
+        stream->WriteStreamData(stream->stream_bytes_written(), len, &writer);
+      }
+      write_buffer_->append(buf, len);
+      delete[] buf;
+    } else {
+      const char* data = reinterpret_cast<const char*>(iovector.iov->iov_base);
+      write_buffer_->append(data, len);
+    }
     return QuicConsumedData(len, state != StreamSendingState::NO_FIN);
   }
 
@@ -190,7 +206,11 @@ class QuartcStreamTest : public ::testing::Test,
     return QuicRandom::GetInstance();
   }
 
-  QuicBufferAllocator* GetBufferAllocator() override {
+  QuicBufferAllocator* GetStreamFrameBufferAllocator() override {
+    return &buffer_allocator_;
+  }
+
+  QuicBufferAllocator* GetStreamSendBufferAllocator() override {
     return &buffer_allocator_;
   }
 
@@ -232,19 +252,33 @@ TEST_F(QuartcStreamTest, NoBuffer) {
   stream_->Write("Foo bar", 7, kDefaultParam);
   // The data will not be buffered.
   EXPECT_EQ(0ul, write_buffer_.size());
-  EXPECT_FALSE(stream_->HasBufferedData());
+  if (session_->save_data_before_consumption()) {
+    EXPECT_TRUE(stream_->HasBufferedData());
+  } else {
+    EXPECT_FALSE(stream_->HasBufferedData());
+  }
   EXPECT_EQ(0u, stream_->bytes_written());
   // The stream is writable, but there's nothing to send.
   session_->set_writable(true);
   stream_->OnCanWrite();
-  EXPECT_EQ(0u, stream_->bytes_written());
+  if (session_->save_data_before_consumption()) {
+    EXPECT_EQ(7u, stream_->bytes_written());
+    EXPECT_EQ(7ul, write_buffer_.size());
+  } else {
+    EXPECT_EQ(0u, stream_->bytes_written());
+    EXPECT_EQ(0ul, write_buffer_.size());
+  }
   EXPECT_FALSE(stream_->HasBufferedData());
-  EXPECT_EQ(0ul, write_buffer_.size());
 
-  // The stream threw away the previous data.  It only sends this.
   stream_->Write("xyzzy", 5, kDefaultParam);
-  EXPECT_EQ("xyzzy", write_buffer_);
-  EXPECT_EQ(5u, stream_->bytes_written());
+  if (session_->save_data_before_consumption()) {
+    EXPECT_EQ("Foo barxyzzy", write_buffer_);
+    EXPECT_EQ(12u, stream_->bytes_written());
+  } else {
+    // The stream threw away the previous data.  It only sends this.
+    EXPECT_EQ("xyzzy", write_buffer_);
+    EXPECT_EQ(5u, stream_->bytes_written());
+  }
 }
 
 // Finish writing to a stream.

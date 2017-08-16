@@ -14,6 +14,7 @@
 #if defined(USE_NSS_CERTS)
 #include <cert.h>
 #include <vector>
+#include "net/cert/scoped_nss_types.h"
 #elif defined(OS_WIN)
 #include <windows.h>
 #include "crypto/wincrypt_shim.h"
@@ -100,15 +101,15 @@ class NET_EXPORT TestRootCerts {
    public:
     // Creates a new TrustEntry by incrementing the reference to |certificate|
     // and copying |trust|.
-    TrustEntry(CERTCertificate* certificate, const CERTCertTrust& trust);
+    TrustEntry(ScopedCERTCertificate certificate, const CERTCertTrust& trust);
     ~TrustEntry();
 
-    CERTCertificate* certificate() const { return certificate_; }
+    CERTCertificate* certificate() const { return certificate_.get(); }
     const CERTCertTrust& trust() const { return trust_; }
 
    private:
     // The temporary root certificate.
-    CERTCertificate* certificate_;
+    ScopedCERTCertificate certificate_;
 
     // The original trust settings, before |certificate_| was manipulated to
     // be a temporarily trusted root.

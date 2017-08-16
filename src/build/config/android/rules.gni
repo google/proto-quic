@@ -197,7 +197,6 @@ if (enable_java_templates) {
         rebase_path(jni_output_dir, root_build_dir),
         "--includes",
         rebase_path(jni_generator_include, jni_output_dir),
-        "--native_exports_optional",
       ]
 
       if (enable_profiling) {
@@ -306,7 +305,6 @@ if (enable_java_templates) {
           rebase_path(jni_output_dir, root_build_dir),
           "--includes",
           rebase_path(jni_generator_include, jni_output_dir),
-          "--native_exports_optional",
         ]
 
         if (enable_profiling) {
@@ -1272,8 +1270,6 @@ if (enable_java_templates) {
   #   supports_android: If true, Android targets (android_library, android_apk)
   #     may depend on this target. Note: if true, this target must only use the
   #     subset of Java available on Android.
-  #   process_java8: The specified prebuilt jar contains Java 8 bytecode;
-  #     process it for compatibility with Java 7.
   #
   # Example
   #   java_prebuilt("foo_java") {
@@ -1492,8 +1488,6 @@ if (enable_java_templates) {
   #     Defaults to the input .jar file name.
   #   proguard_configs: List of proguard configs to use in final apk step for
   #     any apk that depends on this library.
-  #   process_java8: The specified prebuilt jar contains Java 8 bytecode;
-  #     process it for compatibility with Java 7.
   #
   # Example
   #   android_java_prebuilt("foo_java") {
@@ -1651,16 +1645,8 @@ if (enable_java_templates) {
     _final_apk_path_no_ext = _final_apk_path_no_ext_list[0]
     assert(_final_apk_path_no_ext != "")  # Mark as used.
 
-    _install_script_name = "install_$_template_name"
-    if (defined(invoker.install_script_name)) {
-      _install_script_name = invoker.install_script_name
-    }
-    _incremental_install_script_path =
-        "${root_out_dir}/bin/${_install_script_name}"
-    if (!incremental_apk_by_default) {
-      _incremental_install_script_path =
-          "${_incremental_install_script_path}_incremental"
-    }
+    _incremental_install_json_path =
+        "$target_gen_dir/$target_name.incremental.json"
 
     _version_code = android_default_version_code
     if (defined(invoker.version_code)) {
@@ -1684,6 +1670,13 @@ if (enable_java_templates) {
     _srcjar_deps = []
     if (defined(invoker.srcjar_deps)) {
       _srcjar_deps += invoker.srcjar_deps
+    }
+
+    if (defined(invoker.build_hooks_android_impl_deps)) {
+      _build_hooks_android_impl_deps = invoker.build_hooks_android_impl_deps
+    } else {
+      _build_hooks_android_impl_deps =
+          [ "//build/android/buildhooks:build_hooks_android_impl_java" ]
     }
 
     _use_chromium_linker =
@@ -1818,7 +1811,7 @@ if (enable_java_templates) {
       apk_path = _final_apk_path
       incremental_allowed = _incremental_allowed
       incremental_apk_path = "${_final_apk_path_no_ext}_incremental.apk"
-      incremental_install_script_path = _incremental_install_script_path
+      incremental_install_json_path = _incremental_install_json_path
       resources_zip = resources_zip_path
       build_config = _build_config
       android_manifest = _android_root_manifest
@@ -1829,9 +1822,9 @@ if (enable_java_templates) {
 
       deps = _android_root_manifest_deps
 
-      possible_config_deps = []
+      possible_config_deps = _build_hooks_android_impl_deps
       if (defined(invoker.deps)) {
-        possible_config_deps = invoker.deps
+        possible_config_deps += invoker.deps
       }
 
       # Added emma to the target's classpath via its .build_config.
@@ -2034,9 +2027,9 @@ if (enable_java_templates) {
       requires_android = true
       override_build_config = _build_config
       deps = [
-        ":$android_manifest_target",
-        ":$build_config_target",
-      ]
+               ":$android_manifest_target",
+               ":$build_config_target",
+             ] + _build_hooks_android_impl_deps
 
       android_manifest = _android_manifest
       srcjar_deps = _srcjar_deps
@@ -2174,8 +2167,8 @@ if (enable_java_templates) {
         args = [ "--inputs=@FileArg($_dex_arg_key)" ]
       }
 
-      # http://crbug.com/725224. Speculative fix for bots running out of memory.
-      use_pool = !enable_concurrent_apk_finalization
+      # http://crbug.com/725224. Fix for bots running out of memory.
+      use_pool = true
     }
 
     _native_libs_file_arg_dep = ":$build_config_target"
@@ -2404,28 +2397,27 @@ if (enable_java_templates) {
       }
     }
 
-    _create_incremental_script_rule_name =
-        "${_template_name}__incremental_script"
-    action(_create_incremental_script_rule_name) {
-      script = "//build/android/incremental_install/create_install_script.py"
+    _write_installer_json_rule_name = "${_template_name}__incremental_json"
+    action(_write_installer_json_rule_name) {
+      script = "//build/android/incremental_install/write_installer_json.py"
       depfile = "$target_gen_dir/$target_name.d"
       deps = [
         _native_libs_file_arg_dep,
       ]
 
       outputs = [
-        _incremental_install_script_path,
+        _incremental_install_json_path,
       ]
 
       _rebased_apk_path_no_ext =
           rebase_path(_final_apk_path_no_ext, root_build_dir)
-      _rebased_incremental_install_script_path =
-          rebase_path(_incremental_install_script_path, root_build_dir)
+      _rebased_incremental_install_json_path =
+          rebase_path(_incremental_install_json_path, root_build_dir)
       _rebased_depfile = rebase_path(depfile, root_build_dir)
       _dex_arg_key = "${_rebased_build_config}:final_dex:dependency_dex_files"
       args = [
         "--apk-path=${_rebased_apk_path_no_ext}_incremental.apk",
-        "--script-output-path=$_rebased_incremental_install_script_path",
+        "--output-path=$_rebased_incremental_install_json_path",
         "--dex-file=$_rebased_lib_dex_path",
         "--dex-file-list=@FileArg($_dex_arg_key)",
         "--depfile=$_rebased_depfile",
@@ -2469,6 +2461,8 @@ if (enable_java_templates) {
         args = [
           "--script-output-path",
           rebase_path(_generated_script, root_build_dir),
+          "--apk-path",
+          rebase_path(_final_apk_path, root_build_dir),
         ]
         if (defined(invoker.command_line_flags_file)) {
           args += [
@@ -2476,20 +2470,10 @@ if (enable_java_templates) {
             invoker.command_line_flags_file,
           ]
         }
-
         if (_incremental_allowed) {
           args += [
-            "--incremental-apk-path",
-            rebase_path("${_final_apk_path_no_ext}_incremental.apk",
-                        root_build_dir),
-            "--incremental-install-script",
-            rebase_path(_incremental_install_script_path, root_build_dir),
-          ]
-        }
-        if (!incremental_apk_by_default) {
-          args += [
-            "--apk-path",
-            rebase_path(_final_apk_path, root_build_dir),
+            "--incremental-install-json-path",
+            rebase_path(_incremental_install_json_path, root_build_dir),
           ]
         }
       }
@@ -2542,8 +2526,8 @@ if (enable_java_templates) {
         # actual target, but instead loads them at runtime, we need to explicitly
         # depend on them here.
         public_deps = [
-          ":${_create_incremental_script_rule_name}",
           ":${_template_name}__create_incremental",
+          ":${_write_installer_json_rule_name}",
           ":${java_target}",
         ]
 
@@ -2596,7 +2580,6 @@ if (enable_java_templates) {
     testonly = true
     _apk_target_name = "${target_name}__apk"
     _test_runner_target_name = "${target_name}__test_runner_script"
-    _install_script_name = "install_$target_name"
     _dist_ijar_path =
         "$root_build_dir/test.lib.java/" + invoker.apk_name + ".jar"
     _incremental_test_runner_target_name =
@@ -2647,7 +2630,6 @@ if (enable_java_templates) {
       deps = []
       data_deps = []
       forward_variables_from(invoker, "*")
-      install_script_name = _install_script_name
       deps += [ "//testing/android/broker:broker_java" ]
       data_deps += [
         "//build/android/pylib/device/commands",
@@ -2949,7 +2931,6 @@ if (enable_java_templates) {
   #     any apk that depends on this library.
   #   ignore_aidl: Whether to ignore .aidl files found with the .aar.
   #   ignore_assets: Whether to ignore assets found in the .aar.
-  #   ignore_manifest: Whether to ignore merging of AndroidManifest.xml.
   #   ignore_native_libraries: Whether to ignore .so files found in the .aar.
   #   create_srcjar: If false, does not create an R.java file.
   #   TODO(jbudorick@): remove this arguments after crbug.com/522043 is fixed.
@@ -2964,8 +2945,6 @@ if (enable_java_templates) {
     _unpack_target_name = "${target_name}__unpack_aar"
     _ignore_aidl = defined(invoker.ignore_aidl) && invoker.ignore_aidl
     _ignore_assets = defined(invoker.ignore_assets) && invoker.ignore_assets
-    _ignore_manifest =
-        defined(invoker.ignore_manifest) && invoker.ignore_manifest
     _ignore_native_libraries = defined(invoker.ignore_native_libraries) &&
                                invoker.ignore_native_libraries
 
@@ -2991,11 +2970,6 @@ if (enable_java_templates) {
     assert(_ignore_native_libraries || !_scanned_files.has_native_libraries,
            "android_aar_prebuilt() with .so files is not supported." +
                " Use ignore_native_libraries = true to silence this error.")
-    assert(_ignore_manifest || _scanned_files.is_manifest_empty,
-           "android_aar_prebuilt() manifest merging not yet supported and" +
-               " non-trivial AndroidManifest.xml detected." +
-               " Implement or use ignore_manifest = true." +
-               " http://crbug.com/643967")
     assert(_scanned_files.has_classes_jar || _scanned_files.subjars == [])
 
     action(_unpack_target_name) {
@@ -3038,7 +3012,8 @@ if (enable_java_templates) {
     }
 
     # Create the android_resources target for resources.
-    if (_scanned_files.resources != [] || _scanned_files.has_r_text_file) {
+    if (_scanned_files.resources != [] || _scanned_files.has_r_text_file ||
+        !_scanned_files.is_manifest_empty) {
       _res_target_name = "${target_name}__res"
       android_resources(_res_target_name) {
         forward_variables_from(invoker,

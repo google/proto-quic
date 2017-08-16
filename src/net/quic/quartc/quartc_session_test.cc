@@ -551,7 +551,11 @@ class QuartcSessionTest : public ::testing::Test,
     return QuicRandom::GetInstance();
   }
 
-  QuicBufferAllocator* GetBufferAllocator() override {
+  QuicBufferAllocator* GetStreamFrameBufferAllocator() override {
+    return &buffer_allocator_;
+  }
+
+  QuicBufferAllocator* GetStreamSendBufferAllocator() override {
     return &buffer_allocator_;
   }
 

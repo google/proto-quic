@@ -116,6 +116,16 @@ ALWAYS_INLINE uintptr_t RoundDownToSystemPage(uintptr_t address) {
   return address & kSystemPageBaseMask;
 }
 
+// Reserves address space equal to 'size' bytes, at the given alignment. This
+// can be used to make it more likely that large allocations will succeed.
+// Returns true if the reservation succeeded, false if the reservation failed
+// or a reservation was already made.
+BASE_EXPORT bool ReserveAddressSpace(size_t size, size_t alignment);
+
+// Releases any reserved address space. AllocPages calls this automatically on
+// an allocation failure. External allocators may also call this on failure.
+BASE_EXPORT void ReleaseReservation();
+
 // Returns errno (or GetLastError code) when mmap (or VirtualAlloc) fails.
 BASE_EXPORT uint32_t GetAllocPageErrorCode();
 

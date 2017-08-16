@@ -40,6 +40,7 @@
 #if defined(OS_FUCHSIA)
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
+#include "base/fuchsia/scoped_mx_handle.h"
 #endif
 
 namespace base {
@@ -377,15 +378,14 @@ TEST(SharedMemoryTest, GetReadOnlyHandle) {
                                contents.size(), MX_VM_FLAG_PERM_WRITE, &addr))
       << "Shouldn't be able to map as writable.";
 
-  mx_handle_t duped_handle;
+  ScopedMxHandle duped_handle;
   EXPECT_NE(MX_OK, mx_handle_duplicate(handle.GetHandle(), MX_RIGHT_WRITE,
-                                       &duped_handle))
+                                       duped_handle.receive()))
       << "Shouldn't be able to duplicate the handle into a writable one.";
 
   EXPECT_EQ(MX_OK, mx_handle_duplicate(handle.GetHandle(), MX_RIGHT_READ,
-                                       &duped_handle))
+                                       duped_handle.receive()))
       << "Should be able to duplicate the handle into a readable one.";
-  EXPECT_EQ(MX_OK, mx_handle_close(duped_handle));
 #elif defined(OS_POSIX)
   int handle_fd = SharedMemory::GetFdFromSharedMemoryHandle(handle);
   EXPECT_EQ(O_RDONLY, fcntl(handle_fd, F_GETFL) & O_ACCMODE)

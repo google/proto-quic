@@ -20,6 +20,8 @@
 #include <windows.h>
 #elif defined(OS_MACOSX)
 #include <mach/mach_types.h>
+#elif defined(OS_FUCHSIA)
+#include <magenta/types.h>
 #elif defined(OS_POSIX)
 #include <pthread.h>
 #include <unistd.h>
@@ -32,6 +34,8 @@ namespace base {
 typedef DWORD PlatformThreadId;
 #elif defined(OS_MACOSX)
 typedef mach_port_t PlatformThreadId;
+#elif defined(OS_FUCHSIA)
+typedef mx_handle_t PlatformThreadId;
 #elif defined(OS_POSIX)
 typedef pid_t PlatformThreadId;
 #endif

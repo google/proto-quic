@@ -147,9 +147,6 @@ class QUIC_EXPORT_PRIVATE TcpCubicSenderBase : public SendAlgorithmInterface {
   // When true, exit slow start with large cutback of congestion window.
   bool slow_start_large_reduction_;
 
-  // When true, use rate based sending instead of only sending if there's CWND.
-  bool rate_based_sending_;
-
   // When true, use unity pacing instead of PRR.
   bool no_prr_;
 

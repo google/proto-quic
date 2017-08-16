@@ -301,6 +301,68 @@ Value::dict_iterator Value::SetKey(const char* key, Value value) {
   return SetKey(StringPiece(key), std::move(value));
 }
 
+Value* Value::FindPath(std::initializer_list<const char*> path) {
+  return const_cast<Value*>(const_cast<const Value*>(this)->FindPath(path));
+}
+
+const Value* Value::FindPath(std::initializer_list<const char*> path) const {
+  const Value* cur = this;
+  for (const char* component : path) {
+    if (!cur->is_dict())
+      return nullptr;
+
+    auto found = cur->FindKey(component);
+    if (found == cur->DictEnd())
+      return nullptr;
+    cur = &found->second;
+  }
+  return cur;
+}
+
+Value* Value::FindPathOfType(std::initializer_list<const char*> path,
+                             Type type) {
+  return const_cast<Value*>(
+      const_cast<const Value*>(this)->FindPathOfType(path, type));
+}
+
+const Value* Value::FindPathOfType(std::initializer_list<const char*> path,
+                                   Type type) const {
+  const Value* result = FindPath(path);
+  if (!result || !result->IsType(type))
+    return nullptr;
+  return result;
+}
+
+Value* Value::SetPath(std::initializer_list<const char*> path, Value value) {
+  DCHECK_NE(path.begin(), path.end());  // Can't be empty path.
+
+  // Walk/construct intermediate dictionaries. The last element requires
+  // special handling so skip it in this loop.
+  Value* cur = this;
+  const char* const* cur_path = path.begin();
+  for (; (cur_path + 1) < path.end(); ++cur_path) {
+    if (!cur->is_dict())
+      return nullptr;
+
+    // Use lower_bound to avoid doing the search twice for missing keys.
+    const char* path_component = *cur_path;
+    auto found = cur->dict_->lower_bound(path_component);
+    if (found == cur->dict_->end() || found->first != path_component) {
+      // No key found, insert one.
+      auto inserted = cur->dict_->emplace_hint(
+          found, path_component, MakeUnique<Value>(Type::DICTIONARY));
+      cur = inserted->second.get();
+    } else {
+      cur = found->second.get();
+    }
+  }
+
+  // "cur" will now contain the last dictionary to insert or replace into.
+  if (!cur->is_dict())
+    return nullptr;
+  return &cur->SetKey(*cur_path, std::move(value))->second;
+}
+
 Value::dict_iterator Value::DictEnd() {
   CHECK(is_dict());
   return dict_iterator(dict_->end());
@@ -739,16 +801,6 @@ Value* DictionaryValue::SetWithoutPathExpansion(
     StringPiece key,
     std::unique_ptr<Value> in_value) {
   return ((*dict_)[key.as_string()] = std::move(in_value)).get();
-}
-
-Value* DictionaryValue::SetBooleanWithoutPathExpansion(StringPiece path,
-                                                       bool in_value) {
-  return SetWithoutPathExpansion(path, MakeUnique<Value>(in_value));
-}
-
-Value* DictionaryValue::SetIntegerWithoutPathExpansion(StringPiece path,
-                                                       int in_value) {
-  return SetWithoutPathExpansion(path, MakeUnique<Value>(in_value));
 }
 
 Value* DictionaryValue::SetDoubleWithoutPathExpansion(StringPiece path,

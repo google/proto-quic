@@ -26,7 +26,7 @@
 
 namespace net {
 
-class QuicClientSessionBase;
+class QuicSpdyClientSessionBase;
 
 // A client-initiated ReliableQuicStream.  Instances of this class
 // are owned by the QuicClientSession which created them.
@@ -190,7 +190,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
   };
 
   QuicChromiumClientStream(QuicStreamId id,
-                           QuicClientSessionBase* session,
+                           QuicSpdyClientSessionBase* session,
                            const NetLogWithSource& net_log);
 
   ~QuicChromiumClientStream() override;
@@ -273,7 +273,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
   // True when initial headers have been sent.
   bool initial_headers_sent_;
 
-  QuicClientSessionBase* session_;
+  QuicSpdyClientSessionBase* session_;
 
   // Set to false if this stream to not be migrated during connection migration.
   bool can_migrate_;

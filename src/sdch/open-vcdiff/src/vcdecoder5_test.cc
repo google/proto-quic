@@ -29,10 +29,10 @@ class VCDiffLargeTargetTest : public VCDiffDecoderTest {
   VCDiffLargeTargetTest();
   virtual ~VCDiffLargeTargetTest() {}
 
-  static const char kLargeRunWindow[];
+  static const uint8_t kLargeRunWindow[];
 };
 
-const char VCDiffLargeTargetTest::kLargeRunWindow[] = {
+const uint8_t VCDiffLargeTargetTest::kLargeRunWindow[] = {
     0x00,  // Win_Indicator: no source segment
     0x0E,  // Length of the delta encoding
     0xA0,  // Size of the target window (0x4000000)
@@ -70,8 +70,9 @@ TEST_F(VCDiffLargeTargetTest, Decode) {
                                    &output_));
   EXPECT_EQ("", output_);
   for (int i = 0; i < kIterations; i++) {
-    EXPECT_TRUE(decoder_.DecodeChunk(kLargeRunWindow, sizeof(kLargeRunWindow),
-                                     &output_));
+    EXPECT_TRUE(
+        decoder_.DecodeChunk(reinterpret_cast<const char *>(kLargeRunWindow),
+                             sizeof(kLargeRunWindow), &output_));
     EXPECT_EQ(0x4000000U, output_.size());
     EXPECT_EQ(static_cast<char>(0xBE), output_[0]);
     EXPECT_EQ(static_cast<char>(0xBE),
@@ -94,8 +95,9 @@ TEST_F(VCDiffLargeTargetTest, DecodeReachesMaxFileSize) {
   EXPECT_EQ("", output_);
   // The default maximum target file size is 64MB, which just matches the target
   // data produced by a single iteration.
-  EXPECT_TRUE(decoder_.DecodeChunk(kLargeRunWindow, sizeof(kLargeRunWindow),
-                                   &output_));
+  EXPECT_TRUE(
+      decoder_.DecodeChunk(reinterpret_cast<const char *>(kLargeRunWindow),
+                           sizeof(kLargeRunWindow), &output_));
   EXPECT_EQ(0x4000000U, output_.size());
   EXPECT_EQ(static_cast<char>(0xBE), output_[0]);
   EXPECT_EQ(static_cast<char>(0xBE),
@@ -104,8 +106,9 @@ TEST_F(VCDiffLargeTargetTest, DecodeReachesMaxFileSize) {
             output_[output_.size() - 1]);  // last element
   output_.clear();
   // Trying to decode a second window should exceed the target file size limit.
-  EXPECT_FALSE(decoder_.DecodeChunk(kLargeRunWindow, sizeof(kLargeRunWindow),
-                                    &output_));
+  EXPECT_FALSE(
+      decoder_.DecodeChunk(reinterpret_cast<const char *>(kLargeRunWindow),
+                           sizeof(kLargeRunWindow), &output_));
 }
 
 }  // unnamed namespace

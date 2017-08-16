@@ -40,8 +40,7 @@ class QuicSessionPeer {
   static QuicSession::StaticStreamMap& static_streams(QuicSession* session);
   static QuicSession::DynamicStreamMap& dynamic_streams(QuicSession* session);
   static const QuicSession::ClosedStreams& closed_streams(QuicSession* session);
-  static const QuicSession::ZombieStreamMap& zombie_streams(
-      QuicSession* session);
+  static QuicSession::ZombieStreamMap& zombie_streams(QuicSession* session);
   static QuicUnorderedSet<QuicStreamId>* GetDrainingStreams(
       QuicSession* session);
   static void ActivateStream(QuicSession* session,
@@ -53,6 +52,8 @@ class QuicSessionPeer {
   static bool IsStreamCreated(QuicSession* session, QuicStreamId id);
   static bool IsStreamAvailable(QuicSession* session, QuicStreamId id);
   static bool IsStreamUncreated(QuicSession* session, QuicStreamId id);
+
+  static QuicStream* GetStream(QuicSession* session, QuicStreamId id);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicSessionPeer);

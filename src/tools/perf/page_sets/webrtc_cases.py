@@ -149,22 +149,3 @@ class WebrtcPageSet(story.StorySet):
     self.AddStory(AudioCall(self, 'G772', tags=['audio']))
     self.AddStory(AudioCall(self, 'PCMU', tags=['audio']))
     self.AddStory(AudioCall(self, 'ISAC/1600', tags=['audio']))
-
-
-class WebrtcExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    # TODO(qyearsley, mcasas): Add webrtc.audio when http://crbug.com/468732
-    # is fixed, or revert https://codereview.chromium.org/1544573002/ when
-    # http://crbug.com/568333 is fixed.
-    self.DisableStory('audio_call_opus_10s',
-                      [story.expectations.ALL],
-                      'crbug.com/468732')
-    self.DisableStory('audio_call_g772_10s',
-                      [story.expectations.ALL],
-                      'crbug.com/468732')
-    self.DisableStory('audio_call_pcmu_10s',
-                      [story.expectations.ALL],
-                      'crbug.com/468732')
-    self.DisableStory('audio_call_isac/1600_10s',
-                      [story.expectations.ALL],
-                      'crbug.com/468732')

@@ -6,12 +6,16 @@
 #define NET_QUIC_PLATFORM_IMPL_QUIC_TEXT_UTILS_IMPL_H_
 
 #include <algorithm>
+#include <cstdint>
+#include <string>
+#include <vector>
 
 #include "base/base64.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
+#include "net/base/hex_utils.h"
 #include "net/base/parse_number.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 
@@ -79,15 +83,7 @@ class QuicTextUtilsImpl {
   // Converts |data| from a hexadecimal ASCII string to a binary string
   // that is |data.length()/2| bytes long.
   static std::string HexDecode(QuicStringPiece data) {
-    if (data.empty())
-      return "";
-    std::vector<uint8_t> v;
-    if (!base::HexStringToBytes(data.as_string(), &v))
-      return "";
-    std::string out;
-    if (!v.empty())
-      out.assign(reinterpret_cast<const char*>(&v[0]), v.size());
-    return out;
+    return net::HexDecode(data);
   }
 
   // Base64 encodes with no padding |data_len| bytes of |data| into |output|.
@@ -115,35 +111,7 @@ class QuicTextUtilsImpl {
   // For example, given the input "Hello, QUIC!\01\02\03\04", returns:
   // "0x0000:  4865 6c6c 6f2c 2051 5549 4321 0102 0304  Hello,.QUIC!...."
   static std::string HexDump(QuicStringPiece binary_input) {
-    int offset = 0;
-    const int kBytesPerLine = 16;  // Max bytes dumped per line
-    const char* buf = binary_input.data();
-    int bytes_remaining = binary_input.size();
-    std::string s;  // our output
-    const char* p = buf;
-    while (bytes_remaining > 0) {
-      const int line_bytes = std::min(bytes_remaining, kBytesPerLine);
-      base::StringAppendF(&s, "0x%04x:  ", offset);  // Do the line header
-      for (int i = 0; i < kBytesPerLine; ++i) {
-        if (i < line_bytes) {
-          base::StringAppendF(&s, "%02x", static_cast<unsigned char>(p[i]));
-        } else {
-          s += "  ";  // two-space filler instead of two-space hex digits
-        }
-        if (i % 2)
-          s += ' ';
-      }
-      s += ' ';
-      for (int i = 0; i < line_bytes; ++i) {  // Do the ASCII dump
-        s += (p[i] > 32 && p[i] < 127) ? p[i] : '.';
-      }
-
-      bytes_remaining -= line_bytes;
-      offset += line_bytes;
-      p += line_bytes;
-      s += '\n';
-    }
-    return s;
+    return net::HexDump(binary_input);
   }
 
   // Returns true if |data| contains any uppercase characters.

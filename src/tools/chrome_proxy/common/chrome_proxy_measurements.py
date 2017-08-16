@@ -69,10 +69,8 @@ class ChromeProxyValidation(legacy_page_test.LegacyPageTest):
   # Value of the extra via header. |None| if no extra via header is expected.
   extra_via_header = None
 
-  def __init__(self, restart_after_each_page=False, metrics=None,
-               clear_cache_before_each_run=True):
+  def __init__(self, metrics=None, clear_cache_before_each_run=True):
     super(ChromeProxyValidation, self).__init__(
-        needs_browser_restart_after_each_page=restart_after_each_page,
         clear_cache_before_each_run=clear_cache_before_each_run)
     self._metrics = metrics
     self._page = None
@@ -113,8 +111,3 @@ class ChromeProxyValidation(legacy_page_test.LegacyPageTest):
 
   def AddResults(self, tab, results):
     raise NotImplementedError
-
-  def StopBrowserAfterPage(self, browser, page):  # pylint: disable=W0613
-    if hasattr(page, 'restart_after') and page.restart_after:
-      return True
-    return False

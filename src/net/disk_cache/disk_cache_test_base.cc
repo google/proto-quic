@@ -16,6 +16,7 @@
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
 #include "net/base/test_completion_callback.h"
+#include "net/disk_cache/backend_cleanup_tracker.h"
 #include "net/disk_cache/blockfile/backend_impl.h"
 #include "net/disk_cache/cache_util.h"
 #include "net/disk_cache/disk_cache.h"
@@ -316,8 +317,9 @@ void DiskCacheTestWithCache::CreateBackend(uint32_t flags) {
   if (simple_cache_mode_) {
     net::TestCompletionCallback cb;
     std::unique_ptr<disk_cache::SimpleBackendImpl> simple_backend(
-        new disk_cache::SimpleBackendImpl(cache_path_, size_, type_, runner,
-                                          NULL));
+        new disk_cache::SimpleBackendImpl(
+            cache_path_, /* cleanup_tracker = */ nullptr, size_, type_, runner,
+            /*net_log = */ nullptr));
     int rv = simple_backend->Init(cb.callback());
     ASSERT_THAT(cb.GetResult(rv), IsOk());
     simple_cache_impl_ = simple_backend.get();
@@ -332,9 +334,12 @@ void DiskCacheTestWithCache::CreateBackend(uint32_t flags) {
   }
 
   if (mask_)
-    cache_impl_ = new disk_cache::BackendImpl(cache_path_, mask_, runner, NULL);
+    cache_impl_ = new disk_cache::BackendImpl(cache_path_, mask_, runner,
+                                              /* net_log = */ nullptr);
   else
-    cache_impl_ = new disk_cache::BackendImpl(cache_path_, runner, NULL);
+    cache_impl_ = new disk_cache::BackendImpl(cache_path_,
+                                              /* cleanup_tracker = */ nullptr,
+                                              runner, /* net_log = */ nullptr);
   cache_.reset(cache_impl_);
   ASSERT_TRUE(cache_);
   if (size_)

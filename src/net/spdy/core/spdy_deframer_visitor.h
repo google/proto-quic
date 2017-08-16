@@ -76,6 +76,7 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
+#include "net/spdy/core/http2_frame_decoder_adapter.h"
 #include "net/spdy/core/spdy_framer.h"
 #include "net/spdy/core/spdy_protocol.h"
 #include "net/spdy/core/spdy_protocol_test_utils.h"
@@ -150,7 +151,8 @@ class SpdyDeframerVisitorInterface {
   virtual void OnWindowUpdate(std::unique_ptr<SpdyWindowUpdateIR> frame) {}
 
   // The SpdyFramer will not process any more data at this point.
-  virtual void OnError(SpdyFramer* framer, SpdyTestDeframer* deframer) {}
+  virtual void OnError(SpdyFramer::SpdyFramerError error,
+                       SpdyTestDeframer* deframer) {}
 };
 
 class SpdyTestDeframer : public SpdyFramerVisitorInterface {
@@ -238,7 +240,8 @@ class DeframerCallbackCollector : public SpdyDeframerVisitorInterface {
                   std::unique_ptr<SettingVector> settings) override;
   void OnSettingsAck(std::unique_ptr<SpdySettingsIR> frame_ir) override;
   void OnWindowUpdate(std::unique_ptr<SpdyWindowUpdateIR> frame_ir) override;
-  void OnError(SpdyFramer* framer, SpdyTestDeframer* deframer) override;
+  void OnError(SpdyFramer::SpdyFramerError error,
+               SpdyTestDeframer* deframer) override;
 
  private:
   std::vector<CollectedFrame>* collected_frames_;

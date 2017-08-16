@@ -176,10 +176,7 @@ public abstract class ContentUriUtils {
     public static String getDisplayName(Uri uri, Context context, String columnField) {
         if (uri == null) return "";
         ContentResolver contentResolver = context.getContentResolver();
-        Cursor cursor = null;
-        try {
-            cursor = contentResolver.query(uri, null, null, null, null);
-
+        try (Cursor cursor = contentResolver.query(uri, null, null, null, null)) {
             if (cursor != null && cursor.getCount() >= 1) {
                 cursor.moveToFirst();
                 int displayNameIndex = cursor.getColumnIndex(columnField);
@@ -207,8 +204,6 @@ public abstract class ContentUriUtils {
             // Some android models don't handle the provider call correctly.
             // see crbug.com/345393
             return "";
-        } finally {
-            StreamUtil.closeQuietly(cursor);
         }
         return "";
     }
@@ -226,10 +221,7 @@ public abstract class ContentUriUtils {
             return false;
         }
         ContentResolver contentResolver = ContextUtils.getApplicationContext().getContentResolver();
-        Cursor cursor = null;
-        try {
-            cursor = contentResolver.query(uri, null, null, null, null);
-
+        try (Cursor cursor = contentResolver.query(uri, null, null, null, null)) {
             if (cursor != null && cursor.getCount() >= 1) {
                 cursor.moveToFirst();
                 return hasVirtualFlag(cursor);
@@ -238,8 +230,6 @@ public abstract class ContentUriUtils {
             // Some android models don't handle the provider call correctly.
             // see crbug.com/345393
             return false;
-        } finally {
-            StreamUtil.closeQuietly(cursor);
         }
         return false;
     }

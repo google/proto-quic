@@ -116,7 +116,7 @@ void QuicPacketCreator::UpdatePacketNumberLength(
       packet_.packet_number + 1 - least_packet_awaited_by_peer;
   const uint64_t delta = std::max(current_delta, max_packets_in_flight);
   packet_.packet_number_length =
-      QuicFramer::GetMinPacketNumberLength(delta * 4);
+      QuicFramer::GetMinPacketNumberLength(framer_->version(), delta * 4);
 }
 
 bool QuicPacketCreator::ConsumeData(QuicStreamId id,
@@ -131,13 +131,13 @@ bool QuicPacketCreator::ConsumeData(QuicStreamId id,
   }
   CreateStreamFrame(id, iov, iov_offset, offset, fin, frame);
   // Explicitly disallow multi-packet CHLOs.
-  if (StreamFrameStartsWithChlo(iov, iov_offset, *frame->stream_frame) &&
-      FLAGS_quic_enforce_single_packet_chlo &&
-      frame->stream_frame->data_length < iov.iov->iov_len) {
+  if (FLAGS_quic_enforce_single_packet_chlo &&
+      StreamFrameStartsWithChlo(iov, iov_offset, *frame->stream_frame) &&
+      frame->stream_frame->data_length < iov.total_length) {
     const string error_details = "Client hello won't fit in a single packet.";
     QUIC_BUG << error_details << " Constructed stream frame length: "
              << frame->stream_frame->data_length
-             << " CHLO length: " << iov.iov->iov_len;
+             << " CHLO length: " << iov.total_length;
     delegate_->OnUnrecoverableError(QUIC_CRYPTO_CHLO_TOO_LARGE, error_details,
                                     ConnectionCloseSource::FROM_SELF);
     delete frame->stream_frame;
@@ -212,9 +212,6 @@ void QuicPacketCreator::CreateStreamFrame(QuicStreamId id,
   if (framer_->HasDataProducer()) {
     *frame =
         QuicFrame(new QuicStreamFrame(id, set_fin, offset, bytes_consumed));
-    if (bytes_consumed > 0) {
-      framer_->SaveStreamData(id, iov, iov_offset, offset, bytes_consumed);
-    }
     return;
   }
   UniqueStreamBuffer buffer =
@@ -349,10 +346,6 @@ void QuicPacketCreator::CreateAndSerializeStreamFrame(
   if (framer_->HasDataProducer()) {
     frame = QuicMakeUnique<QuicStreamFrame>(id, set_fin, stream_offset,
                                             bytes_consumed);
-    if (bytes_consumed > 0) {
-      framer_->SaveStreamData(id, iov, iov_offset, stream_offset,
-                              bytes_consumed);
-    }
   } else {
     UniqueStreamBuffer stream_buffer =
         NewStreamBuffer(buffer_allocator_, bytes_consumed);
@@ -645,18 +638,10 @@ bool QuicPacketCreator::StreamFrameStartsWithChlo(
   }
 
   if (framer_->perspective() == Perspective::IS_SERVER ||
-      frame.stream_id != kCryptoStreamId || iov_offset != 0 ||
-      frame.data_length < sizeof(kCHLO)) {
+      frame.stream_id != kCryptoStreamId || frame.data_length < sizeof(kCHLO)) {
     return false;
   }
-
-  if (iov.iov[0].iov_len < sizeof(kCHLO)) {
-    QUIC_BUG << "iov length " << iov.iov[0].iov_len << " is less than "
-             << sizeof(kCHLO);
-    return false;
-  }
-  return strncmp(reinterpret_cast<const char*>(iov.iov[0].iov_base),
-                 reinterpret_cast<const char*>(&kCHLO), sizeof(kCHLO)) == 0;
+  return framer_->StartsWithChlo(frame.stream_id, frame.offset);
 }
 
 }  // namespace net

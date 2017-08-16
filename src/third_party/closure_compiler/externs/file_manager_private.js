@@ -659,6 +659,12 @@ chrome.fileManagerPrivate.getCustomActions = function(entries, callback) {};
 chrome.fileManagerPrivate.getDirectorySize = function(entry, callback) {};
 
 /**
+ * Gets recently modified files across file systems.
+ * @param {function((!Array<!FileEntry>))} callback
+ */
+chrome.fileManagerPrivate.getRecentFiles = function(callback) {};
+
+/**
  * Executes the action on the specified set of entries. If not possible, then
  * returns an error via chrome.runtime.lastError.
  * @param {!Array<!Entry>} entries

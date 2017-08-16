@@ -216,6 +216,7 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
       stop_waiting_count_(0),
       ack_mode_(TCP_ACKING),
       ack_decimation_delay_(kAckDecimationDelay),
+      unlimited_ack_decimation_(false),
       delay_setting_retransmission_alarm_(false),
       pending_retransmission_alarm_(false),
       defer_send_in_response_to_packets_(false),
@@ -246,7 +247,7 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
       packet_generator_(connection_id_,
                         &framer_,
                         random_generator_,
-                        helper->GetBufferAllocator(),
+                        helper->GetStreamFrameBufferAllocator(),
                         this),
       idle_network_timeout_(QuicTime::Delta::Infinite()),
       handshake_timeout_(QuicTime::Delta::Infinite()),
@@ -270,7 +271,7 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
       largest_received_packet_size_(0),
       goaway_sent_(false),
       goaway_received_(false),
-      write_error_occured_(false),
+      write_error_occurred_(false),
       no_stop_waiting_frames_(false),
       consecutive_num_packets_with_no_retransmittable_frames_(0) {
   QUIC_DLOG(INFO) << ENDPOINT
@@ -353,6 +354,12 @@ void QuicConnection::SetFromConfig(const QuicConfig& config) {
   if (config.HasClientSentConnectionOption(kAKD4, perspective_)) {
     ack_mode_ = ACK_DECIMATION_WITH_REORDERING;
     ack_decimation_delay_ = kShortAckDecimationDelay;
+  }
+  if (FLAGS_quic_reloadable_flag_quic_ack_decimation) {
+    QUIC_FLAG_COUNT(quic_reloadable_flag_quic_ack_decimation);
+    if (config.HasClientSentConnectionOption(kAKDU, perspective_)) {
+      unlimited_ack_decimation_ = true;
+    }
   }
   if (config.HasClientSentConnectionOption(k5RTO, perspective_)) {
     close_connection_after_five_rtos_ = true;
@@ -536,9 +543,7 @@ void QuicConnection::OnVersionNegotiationPacket(
     return;
   }
 
-  if (FLAGS_quic_reloadable_flag_quic_to_backend_multi_version) {
-    server_supported_versions_ = packet.versions;
-  }
+  server_supported_versions_ = packet.versions;
 
   if (!SelectMutualVersion(packet.versions)) {
     CloseConnection(
@@ -553,9 +558,6 @@ void QuicConnection::OnVersionNegotiationPacket(
 
   QUIC_DLOG(INFO) << ENDPOINT
                   << "Negotiated version: " << QuicVersionToString(version());
-  if (!FLAGS_quic_reloadable_flag_quic_to_backend_multi_version) {
-    server_supported_versions_ = packet.versions;
-  }
   version_negotiation_state_ = NEGOTIATION_IN_PROGRESS;
   RetransmitUnackedPackets(ALL_UNACKED_RETRANSMISSION);
 }
@@ -903,7 +905,7 @@ bool QuicConnection::OnGoAwayFrame(const QuicGoAwayFrame& frame) {
 bool QuicConnection::OnWindowUpdateFrame(const QuicWindowUpdateFrame& frame) {
   DCHECK(connected_);
   if (debug_visitor_ != nullptr) {
-    debug_visitor_->OnWindowUpdateFrame(frame);
+    debug_visitor_->OnWindowUpdateFrame(frame, time_of_last_received_packet_);
   }
   QUIC_DLOG(INFO) << ENDPOINT << "WINDOW_UPDATE_FRAME received for stream: "
                   << frame.stream_id
@@ -974,9 +976,10 @@ void QuicConnection::MaybeQueueAck(bool was_missing) {
     ++num_retransmittable_packets_received_since_last_ack_sent_;
     if (ack_mode_ != TCP_ACKING &&
         last_header_.packet_number > kMinReceivedBeforeAckDecimation) {
-      // Ack up to 10 packets at once.
-      if (num_retransmittable_packets_received_since_last_ack_sent_ >=
-          kMaxRetransmittablePacketsBeforeAck) {
+      // Ack up to 10 packets at once unless ack decimation is unlimited.
+      if (!unlimited_ack_decimation_ &&
+          num_retransmittable_packets_received_since_last_ack_sent_ >=
+              kMaxRetransmittablePacketsBeforeAck) {
         ack_queued_ = true;
       } else if (!ack_alarm_->IsSet()) {
         // Wait the minimum of a quarter min_rtt and the delayed ack time.
@@ -1097,14 +1100,17 @@ QuicConsumedData QuicConnection::SendStreamData(
   ScopedPacketBundler ack_bundler(this, SEND_ACK_IF_PENDING);
   // The optimized path may be used for data only packets which fit into a
   // standard buffer and don't need padding.
-  if (id != kCryptoStreamId && !packet_generator_.HasQueuedFrames() &&
+  const bool flag_run_fast_path =
+      FLAGS_quic_reloadable_flag_quic_consuming_data_faster;
+  if (!flag_run_fast_path && id != kCryptoStreamId &&
+      !packet_generator_.HasQueuedFrames() &&
       iov.total_length > kMaxPacketSize && state != FIN_AND_PADDING) {
     // Use the fast path to send full data packets.
     return packet_generator_.ConsumeDataFastPath(
-        id, iov, offset, state != NO_FIN, std::move(ack_listener));
+        id, iov, offset, state != NO_FIN, 0, ack_listener);
   }
-  return packet_generator_.ConsumeData(id, iov, offset, state,
-                                       std::move(ack_listener));
+  return packet_generator_.ConsumeData(
+      id, iov, offset, state, std::move(ack_listener), flag_run_fast_path);
 }
 
 void QuicConnection::SendRstStream(QuicStreamId id,
@@ -1537,7 +1543,7 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
 
   if (result.status == WRITE_STATUS_BLOCKED) {
     visitor_->OnWriteBlocked();
-    // If the socket buffers the the data, then the packet should not
+    // If the socket buffers the data, then the packet should not
     // be queued and sent again, which would result in an unnecessary
     // duplicate packet being sent.  The helper must call OnCanWrite
     // when the write completes, and OnWriteError if an error occurs.
@@ -1639,11 +1645,11 @@ bool QuicConnection::AllowSelfAddressChange() const {
 }
 
 void QuicConnection::OnWriteError(int error_code) {
-  if (write_error_occured_) {
+  if (write_error_occurred_) {
     // A write error already occurred. The connection is being closed.
     return;
   }
-  write_error_occured_ = true;
+  write_error_occurred_ = true;
 
   const string error_details = QuicStrCat(
       "Write failed with error: ", error_code, " (", strerror(error_code), ")");

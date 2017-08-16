@@ -137,6 +137,24 @@ class NET_EXPORT NetworkQualityEstimatorParams {
     effective_connection_type_algorithm_ = algorithm;
   }
 
+  // Returns the multiplier by which the transport RTT should be multipled when
+  // computing the HTTP RTT. The multiplied value of the transport RTT serves
+  // as a lower bound to the HTTP RTT estimate. e.g., if the multiplied
+  // transport RTT is 100 msec., then HTTP RTT estimate can't be lower than
+  // 100 msec. Returns a negative value if the param is not set.
+  double lower_bound_http_rtt_transport_rtt_multiplier() const {
+    return lower_bound_http_rtt_transport_rtt_multiplier_;
+  }
+
+  // Returns the multiplier by which the transport RTT should be multipled when
+  // computing the HTTP RTT. The multiplied value of the transport RTT serves
+  // as an upper bound to the HTTP RTT estimate. e.g., if the multiplied
+  // transport RTT is 100 msec., then HTTP RTT estimate can't be more than
+  // 100 msec. Returns a negative value if the param is not set.
+  double upper_bound_http_rtt_transport_rtt_multiplier() const {
+    return upper_bound_http_rtt_transport_rtt_multiplier_;
+  }
+
  private:
   // Map containing all field trial parameters related to
   // NetworkQualityEstimator field trial.
@@ -149,6 +167,8 @@ class NET_EXPORT NetworkQualityEstimatorParams {
   base::Optional<EffectiveConnectionType> forced_effective_connection_type_;
   bool persistent_cache_reading_enabled_;
   const base::TimeDelta min_socket_watcher_notification_interval_;
+  const double lower_bound_http_rtt_transport_rtt_multiplier_;
+  const double upper_bound_http_rtt_transport_rtt_multiplier_;
 
   EffectiveConnectionTypeAlgorithm effective_connection_type_algorithm_;
 

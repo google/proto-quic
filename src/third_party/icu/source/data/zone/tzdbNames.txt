@@ -428,6 +428,7 @@ tzdbNames{
         }
         "meta:Lord_Howe"{
             ss{"LHST"}
+            sd{"LHDT"}
         }
         "meta:Macau"{
             sd{"MOST"}
@@ -560,6 +561,10 @@ tzdbNames{
         }
         "meta:Ponape"{
             ss{"PONT"}
+        }
+        "meta:Pyongyang"{
+            ss{"KST"}
+            sd{"KDT"}
         }
         "meta:Qyzylorda"{
             sd{"QYZST"}

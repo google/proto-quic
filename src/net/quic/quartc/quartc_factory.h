@@ -42,7 +42,9 @@ class QUIC_EXPORT_PRIVATE QuartcFactory : public QuartcFactoryInterface,
 
   QuicRandom* GetRandomGenerator() override;
 
-  QuicBufferAllocator* GetBufferAllocator() override;
+  QuicBufferAllocator* GetStreamFrameBufferAllocator() override;
+
+  QuicBufferAllocator* GetStreamSendBufferAllocator() override;
 
  private:
   std::unique_ptr<QuicConnection> CreateQuicConnection(

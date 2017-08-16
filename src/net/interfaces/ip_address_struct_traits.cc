@@ -10,7 +10,7 @@ bool StructTraits<net::interfaces::IPAddressDataView, net::IPAddress>::Read(
     net::interfaces::IPAddressDataView data,
     net::IPAddress* out) {
   std::vector<uint8_t> bytes;
-  if (!data.ReadAddress(&bytes))
+  if (!data.ReadAddressBytes(&bytes))
     return false;
 
   *out = net::IPAddress(bytes.data(), bytes.size());

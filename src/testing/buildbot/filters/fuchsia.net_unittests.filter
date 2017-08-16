@@ -1,5 +1,4 @@
 # TODO(fuchsia): Fix these tests and remove the filter. crbug.com/731302 .
-
 -*HTTPS*
 -*QuicEndToEndTest.Large*
 -*QuicEndToEndTest.TokenBinding*
@@ -8,18 +7,20 @@
 -*RootCert*
 -*Socket*
 -BbrSenderTest.SimpleTransferAckDecimation2
+-BidirectionalStreamTest.TestHonorAlternativeServiceHeader
 -CertNetFetcherImplTest*
 -CertVerifyProcInternalTest.*
 -CloseOnConnectHttpServerTest.ServerImmediatelyClosesConnection
 -DiskCache*
 -EffectiveConnectionTypeTest*
 -EmbeddedTestServer*
--FileStreamTest.*
+-HttpCache.RangeGET_ParallelValidationDifferentRanges  # crbug.com/755552
 -HttpNetworkTransactionTest.UploadUnreadableFile
 -HttpServerTest.*
 -NetworkInterfacesTest.GetNetworkList
 -NetworkQualitiesPrefManager*
 -NetworkQualityEstimatorTest*
+-NetworkThrottleManager*
 -Proxy*
 -PythonUtils*
 -QuicSimpleClientTest*
@@ -32,3 +33,13 @@
 -TokenBindingURLRequest*
 -URLFetcher*
 -URLRequest*
+-HostResolverImplDnsTest.DnsTask
+
+# TODO(fuchsia): These run too slowly at present. crbug.com/745094
+-BbrSenderTest.*
+-CryptoServerTests/*
+-HttpNetworkTransactionTest.*
+-*Quic*
+-RangeOfTreeSizes/*
+-*Spdy*
+-*SendAlgorithmTests.*

@@ -59,6 +59,7 @@ class NET_EXPORT CookieOptions {
   bool has_server_time() const { return !server_time_.is_null(); }
   base::Time server_time() const { return server_time_; }
 
+  void set_update_access_time() { update_access_time_ = true; }
   void set_do_not_update_access_time() { update_access_time_ = false; }
   bool update_access_time() const { return update_access_time_; }
 

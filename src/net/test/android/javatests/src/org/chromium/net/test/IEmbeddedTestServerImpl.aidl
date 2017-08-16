@@ -9,13 +9,19 @@ import org.chromium.net.test.IConnectionListener;
 interface IEmbeddedTestServerImpl {
 
     /** Initialize the native object. */
-    boolean initializeNative();
+    boolean initializeNative(boolean https);
 
     /** Start the server.
      *
      *  @return Whether the server was successfully started.
      */
     boolean start();
+
+    /** Get the path of the server's root certificate.
+     *
+     *  @return The pathname of a PEM file containing the server's root certificate.
+     */
+    String getRootCertPemPath();
 
     /** Add the default handlers and serve files from the provided directory relative to the
      *  external storage directory.
@@ -24,6 +30,12 @@ interface IEmbeddedTestServerImpl {
      *      to the external storage directory.
      */
     void addDefaultHandlers(String directoryPath);
+
+    /** Configure the server to use a particular type of SSL certificate.
+     *
+     * @param serverCertificate The type of certificate the server should use.
+     */
+    void setSSLConfig(int serverCertificate);
 
     /** Serve files from the provided directory.
      *

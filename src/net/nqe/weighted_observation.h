@@ -20,10 +20,10 @@ namespace nqe {
 namespace internal {
 
 // Holds an observation and its weight.
-template <typename ValueType>
 struct NET_EXPORT_PRIVATE WeightedObservation {
-  WeightedObservation(ValueType value, double weight)
+  WeightedObservation(int32_t value, double weight)
       : value(value), weight(weight) {}
+
   WeightedObservation(const WeightedObservation& other)
       : WeightedObservation(other.value, other.weight) {}
 
@@ -39,7 +39,7 @@ struct NET_EXPORT_PRIVATE WeightedObservation {
   }
 
   // Value of the sample.
-  ValueType value;
+  int32_t value;
 
   // Weight of the sample. This is computed based on how much time has passed
   // since the sample was taken.

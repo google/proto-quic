@@ -278,6 +278,10 @@ bool ParseBitString(const Input& in, BitString* out) {
   return true;
 }
 
+bool GeneralizedTime::InUTCTimeRange() const {
+  return 1950 <= year && year < 2050;
+}
+
 bool operator<(const GeneralizedTime& lhs, const GeneralizedTime& rhs) {
   return std::tie(lhs.year, lhs.month, lhs.day, lhs.hours, lhs.minutes,
                   lhs.seconds) < std::tie(rhs.year, rhs.month, rhs.day,

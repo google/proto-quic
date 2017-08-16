@@ -121,12 +121,12 @@ class VCDiffStandardWindowDecoderTest : public VCDiffDecoderTest {
   virtual ~VCDiffStandardWindowDecoderTest() {}
 
  private:
-  static const char kWindowBody[];
+  static const uint8_t kWindowBody[];
 };
 
 const size_t VCDiffStandardWindowDecoderTest::kWindow2Size;
 
-const char VCDiffStandardWindowDecoderTest::kWindowBody[] = {
+const uint8_t VCDiffStandardWindowDecoderTest::kWindowBody[] = {
 // Window 1:
     VCD_SOURCE,  // Win_Indicator: take source from dictionary
     FirstByteOfStringLength(kDictionary),  // Source segment size
@@ -242,7 +242,8 @@ const char VCDiffStandardWindowDecoderTest::kWindowBody[] = {
 
 VCDiffStandardWindowDecoderTest::VCDiffStandardWindowDecoderTest() {
   UseStandardFileHeader();
-  delta_window_body_.assign(kWindowBody, sizeof(kWindowBody));
+  delta_window_body_.assign(reinterpret_cast<const char *>(kWindowBody),
+                            sizeof(kWindowBody));
 }
 
 TEST_F(VCDiffStandardWindowDecoderTest, Decode) {
@@ -422,10 +423,10 @@ class VCDiffInterleavedWindowDecoderTest
   VCDiffInterleavedWindowDecoderTest();
   virtual ~VCDiffInterleavedWindowDecoderTest() {}
  private:
-  static const char kWindowBody[];
+  static const uint8_t kWindowBody[];
 };
 
-const char VCDiffInterleavedWindowDecoderTest::kWindowBody[] = {
+const uint8_t VCDiffInterleavedWindowDecoderTest::kWindowBody[] = {
 // Window 1:
     VCD_SOURCE,  // Win_Indicator: take source from dictionary
     FirstByteOfStringLength(kDictionary),  // Source segment size
@@ -523,7 +524,8 @@ VCDiffInterleavedWindowDecoderTest::VCDiffInterleavedWindowDecoderTest() {
   // delta_window_header_ is left blank.  All window headers and bodies are
   // lumped together in delta_window_body_.  This means that AddChecksum()
   // cannot be used to test the checksum feature.
-  delta_window_body_.assign(kWindowBody, sizeof(kWindowBody));
+  delta_window_body_.assign(reinterpret_cast<const char *>(kWindowBody),
+                            sizeof(kWindowBody));
 }
 
 TEST_F(VCDiffInterleavedWindowDecoderTest, Decode) {
@@ -636,14 +638,14 @@ TEST_F(VCDiffInterleavedWindowDecoderTest, OutputStringIsPreserved) {
 class VCDiffStandardCrossDecoderTest : public VCDiffDecoderTest {
  protected:
   static const char kExpectedTarget[];
-  static const char kWindowHeader[];
-  static const char kWindowBody[];
+  static const uint8_t kWindowHeader[];
+  static const uint8_t kWindowBody[];
 
   VCDiffStandardCrossDecoderTest();
   virtual ~VCDiffStandardCrossDecoderTest() {}
 };
 
-const char VCDiffStandardCrossDecoderTest::kWindowHeader[] = {
+const uint8_t VCDiffStandardCrossDecoderTest::kWindowHeader[] = {
     VCD_SOURCE,  // Win_Indicator: take source from dictionary
     FirstByteOfStringLength(kDictionary),  // Source segment size
     SecondByteOfStringLength(kDictionary),
@@ -656,7 +658,7 @@ const char VCDiffStandardCrossDecoderTest::kWindowHeader[] = {
     0x03   // length of addresses for COPYs
   };
 
-const char VCDiffStandardCrossDecoderTest::kWindowBody[] = {
+const uint8_t VCDiffStandardCrossDecoderTest::kWindowBody[] = {
     // Data for ADD (length 7)
     'S', 'p', 'i', 'd', 'e', 'r', 's',
     // Instructions and sizes (length 6)
@@ -678,8 +680,10 @@ const char VCDiffStandardCrossDecoderTest::kExpectedTarget[] =
 
 VCDiffStandardCrossDecoderTest::VCDiffStandardCrossDecoderTest() {
   UseStandardFileHeader();
-  delta_window_header_.assign(kWindowHeader, sizeof(kWindowHeader));
-  delta_window_body_.assign(kWindowBody, sizeof(kWindowBody));
+  delta_window_header_.assign(reinterpret_cast<const char *>(kWindowHeader),
+                              sizeof(kWindowHeader));
+  delta_window_body_.assign(reinterpret_cast<const char *>(kWindowBody),
+                            sizeof(kWindowBody));
   expected_target_.assign(kExpectedTarget);
 }
 
@@ -713,11 +717,11 @@ class VCDiffInterleavedCrossDecoderTest
   virtual ~VCDiffInterleavedCrossDecoderTest() {}
 
  private:
-  static const char kWindowHeader[];
-  static const char kWindowBody[];
+  static const uint8_t kWindowHeader[];
+  static const uint8_t kWindowBody[];
 };
 
-const char VCDiffInterleavedCrossDecoderTest::kWindowHeader[] = {
+const uint8_t VCDiffInterleavedCrossDecoderTest::kWindowHeader[] = {
     VCD_SOURCE,  // Win_Indicator: take source from dictionary
     FirstByteOfStringLength(kDictionary),  // Source segment size
     SecondByteOfStringLength(kDictionary),
@@ -730,7 +734,7 @@ const char VCDiffInterleavedCrossDecoderTest::kWindowHeader[] = {
     0x00,  // length of addresses for COPYs
   };
 
-const char VCDiffInterleavedCrossDecoderTest::kWindowBody[] = {
+const uint8_t VCDiffInterleavedCrossDecoderTest::kWindowBody[] = {
     0x01,  // VCD_ADD size 0
     0x07,  // Size of ADD (7)
     // Data for ADD (length 7)
@@ -746,8 +750,10 @@ const char VCDiffInterleavedCrossDecoderTest::kWindowBody[] = {
 
 VCDiffInterleavedCrossDecoderTest::VCDiffInterleavedCrossDecoderTest() {
   UseInterleavedFileHeader();
-  delta_window_header_.assign(kWindowHeader, sizeof(kWindowHeader));
-  delta_window_body_.assign(kWindowBody, sizeof(kWindowBody));
+  delta_window_header_.assign(reinterpret_cast<const char *>(kWindowHeader),
+                              sizeof(kWindowHeader));
+  delta_window_body_.assign(reinterpret_cast<const char *>(kWindowBody),
+                            sizeof(kWindowBody));
 }
 
 TEST_F(VCDiffInterleavedCrossDecoderTest, Decode) {
@@ -797,16 +803,16 @@ TEST_F(VCDiffInterleavedCrossDecoderTestByteByByte, DecodeWithChecksum) {
 // format.
 class VCDiffCustomCodeTableDecoderTest : public VCDiffInterleavedDecoderTest {
  protected:
-  static const char kFileHeader[];
-  static const char kWindowHeader[];
-  static const char kWindowBody[];
-  static const char kEncodedCustomCodeTable[];
+  static const uint8_t kFileHeader[];
+  static const uint8_t kWindowHeader[];
+  static const uint8_t kWindowBody[];
+  static const uint8_t kEncodedCustomCodeTable[];
 
   VCDiffCustomCodeTableDecoderTest();
   virtual ~VCDiffCustomCodeTableDecoderTest() {}
 };
 
-const char VCDiffCustomCodeTableDecoderTest::kFileHeader[] = {
+const uint8_t VCDiffCustomCodeTableDecoderTest::kFileHeader[] = {
     0xD6,  // 'V' | 0x80
     0xC3,  // 'C' | 0x80
     0xC4,  // 'D' | 0x80
@@ -828,7 +834,7 @@ const char VCDiffCustomCodeTableDecoderTest::kFileHeader[] = {
 // COPY mode 0 size 18 (opcode 34) => COPY mode 0 size 28 (size1[34] = 28)
 // COPY mode 1 size 18 (opcode 50) => COPY mode 1 size 44 (size1[50] = 44)
 //
-const char VCDiffCustomCodeTableDecoderTest::kEncodedCustomCodeTable[] = {
+const uint8_t VCDiffCustomCodeTableDecoderTest::kEncodedCustomCodeTable[] = {
     0xD6,  // 'V' | 0x80
     0xC3,  // 'C' | 0x80
     0xC4,  // 'D' | 0x80
@@ -879,7 +885,7 @@ const char VCDiffCustomCodeTableDecoderTest::kEncodedCustomCodeTable[] = {
 // has the size of the NEAR cache set to 1; only the most recent
 // COPY instruction is available.  This will also be a test of
 // custom cache sizes.
-const char VCDiffCustomCodeTableDecoderTest::kWindowHeader[] = {
+const uint8_t VCDiffCustomCodeTableDecoderTest::kWindowHeader[] = {
     VCD_SOURCE,  // Win_Indicator: take source from dictionary
     FirstByteOfStringLength(kDictionary),  // Source segment size
     SecondByteOfStringLength(kDictionary),
@@ -893,7 +899,7 @@ const char VCDiffCustomCodeTableDecoderTest::kWindowHeader[] = {
     0x00   // length of addresses for COPYs (unused)
   };
 
-const char VCDiffCustomCodeTableDecoderTest::kWindowBody[] = {
+const uint8_t VCDiffCustomCodeTableDecoderTest::kWindowBody[] = {
     0x22,  // VCD_COPY mode VCD_SELF, size 28
     0x00,  // Address of COPY: Start of dictionary
     0x12,  // VCD_ADD size 61
@@ -925,13 +931,16 @@ const char VCDiffCustomCodeTableDecoderTest::kWindowBody[] = {
   };
 
 VCDiffCustomCodeTableDecoderTest::VCDiffCustomCodeTableDecoderTest() {
-  delta_file_header_.assign(kFileHeader, sizeof(kFileHeader));
+  delta_file_header_.assign(reinterpret_cast<const char *>(kFileHeader),
+                            sizeof(kFileHeader));
   delta_file_header_.push_back(0x01);  // NEAR cache size (custom)
   delta_file_header_.push_back(0x06);  // SAME cache size (custom)
-  delta_file_header_.append(kEncodedCustomCodeTable,
+  delta_file_header_.append(reinterpret_cast<const char*>(kEncodedCustomCodeTable),
                             sizeof(kEncodedCustomCodeTable));
-  delta_window_header_.assign(kWindowHeader, sizeof(kWindowHeader));
-  delta_window_body_.assign(kWindowBody, sizeof(kWindowBody));
+  delta_window_header_.assign(reinterpret_cast<const char *>(kWindowHeader),
+                              sizeof(kWindowHeader));
+  delta_window_body_.assign(reinterpret_cast<const char *>(kWindowBody),
+                            sizeof(kWindowBody));
 }
 
 TEST_F(VCDiffCustomCodeTableDecoderTest, CustomCodeTableEncodingMatches) {
@@ -947,9 +956,9 @@ TEST_F(VCDiffCustomCodeTableDecoderTest, CustomCodeTableEncodingMatches) {
       reinterpret_cast<const char*>(
           &VCDiffCodeTableData::kDefaultCodeTableData),
       sizeof(VCDiffCodeTableData::kDefaultCodeTableData));
-  EXPECT_TRUE(decoder_.DecodeChunk(kEncodedCustomCodeTable,
-                                   sizeof(kEncodedCustomCodeTable),
-                                   &output_));
+  EXPECT_TRUE(decoder_.DecodeChunk(
+      reinterpret_cast<const char *>(kEncodedCustomCodeTable),
+      sizeof(kEncodedCustomCodeTable), &output_));
   EXPECT_TRUE(decoder_.FinishDecoding());
   EXPECT_EQ(sizeof(custom_code_table), output_.size());
   const VCDiffCodeTableData* decoded_table =
@@ -1031,11 +1040,13 @@ void VCDiffCustomCacheSizeTest::CustomCacheSizeTest(int32_t near_value,
                                                     int32_t same_value) {
   SCOPED_TRACE(testing::Message() << "Near value: " << near_value
                                   << ", same value: " << same_value);
-  delta_file_header_.assign(kFileHeader, sizeof(kFileHeader));
+  delta_file_header_.assign(reinterpret_cast<const char *>(kFileHeader),
+                            sizeof(kFileHeader));
   VarintBE<int32_t>::AppendToString(near_value, &delta_file_header_);
   VarintBE<int32_t>::AppendToString(same_value, &delta_file_header_);
-  delta_file_header_.append(kEncodedCustomCodeTable,
-                            sizeof(kEncodedCustomCodeTable));
+  delta_file_header_.append(
+      reinterpret_cast<const char *>(kEncodedCustomCodeTable),
+      sizeof(kEncodedCustomCodeTable));
   InitializeDeltaFile();
   EXPECT_DEBUG_DEATH({
     decoder_.StartDecoding(dictionary_.data(), dictionary_.size());

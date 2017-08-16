@@ -140,7 +140,9 @@ enum QuicPacketNumberLength : int8_t {
   PACKET_1BYTE_PACKET_NUMBER = 1,
   PACKET_2BYTE_PACKET_NUMBER = 2,
   PACKET_4BYTE_PACKET_NUMBER = 4,
-  PACKET_6BYTE_PACKET_NUMBER = 6
+  // TODO(rch): Remove this when we remove QUIC_VERSION_39.
+  PACKET_6BYTE_PACKET_NUMBER = 6,
+  PACKET_8BYTE_PACKET_NUMBER = 8
 };
 
 // Used to indicate a QuicSequenceNumberLength using two flag bits.
@@ -148,7 +150,7 @@ enum QuicPacketNumberLengthFlags {
   PACKET_FLAGS_1BYTE_PACKET = 0,           // 00
   PACKET_FLAGS_2BYTE_PACKET = 1,           // 01
   PACKET_FLAGS_4BYTE_PACKET = 1 << 1,      // 10
-  PACKET_FLAGS_6BYTE_PACKET = 1 << 1 | 1,  // 11
+  PACKET_FLAGS_8BYTE_PACKET = 1 << 1 | 1,  // 11
 };
 
 // The public flags are specified in one byte.
@@ -180,7 +182,7 @@ enum QuicPacketPublicFlags {
   PACKET_PUBLIC_FLAGS_1BYTE_PACKET = PACKET_FLAGS_1BYTE_PACKET << 4,
   PACKET_PUBLIC_FLAGS_2BYTE_PACKET = PACKET_FLAGS_2BYTE_PACKET << 4,
   PACKET_PUBLIC_FLAGS_4BYTE_PACKET = PACKET_FLAGS_4BYTE_PACKET << 4,
-  PACKET_PUBLIC_FLAGS_6BYTE_PACKET = PACKET_FLAGS_6BYTE_PACKET << 4,
+  PACKET_PUBLIC_FLAGS_6BYTE_PACKET = PACKET_FLAGS_8BYTE_PACKET << 4,
 
   // Reserved, unimplemented flags:
 

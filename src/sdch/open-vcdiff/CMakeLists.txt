@@ -8,12 +8,21 @@ set (PROJECT_SOVERSION 0)
 
 
 # Configuration options
-option(vcdiff_build_tests "Build all of vcdiff tests." ON)
-option(vcdiff_build_exec "Build vcdiff exectuable" ON)
-option(vcdiff_use_system_gflags "Use system wide installed gflags" OFF)
-option(vcdiff_use_system_gtest "Use system wide installed gtest" OFF)
+option (vcdiff_build_exec "Build vcdiff executable" ON)
+option (vcdiff_use_system_gflags "Use system wide installed gflags" OFF)
+option (vcdiff_use_system_gtest "Use system wide installed gtest" OFF)
+option (BUILD_SHARED_LIBS "Request build of shared libraries." OFF)
+option (BUILD_STATIC_LIBS "Request build of static libraries (default if BUILD_SHARED_LIBS is OFF)." OFF)
+option (BUILD_TESTING "Enable build of the unit tests and their execution using CTest." OFF)
+
+if (NOT BUILD_SHARED_LIBS AND NOT BUILD_STATIC_LIBS)
+  set (BUILD_STATIC_LIBS ON)
+endif ()
 
 # Add subprojects first so we won't interfere with config.h.in
+
+# Copy value. We'll override BUILD_TESTING for subprojects
+set (vcdiff_build_tests ${BUILD_TESTING})
 
 if (vcdiff_build_exec)
   set (GFLAGS_BUILD_gflags_LIB OFF)
@@ -21,6 +30,7 @@ if (vcdiff_build_exec)
   set (GFLAGS_INSTALL_HEADERS OFF)
   set (GFLAGS_INSTALL_SHARED_LIBS OFF)
   set (GFLAGS_INSTALL_STATIC_LIBS OFF)
+  set (BUILD_TESTING OFF)
   if (${vcdiff_use_system_gflags})
     find_library(gflags gflags)
   else()
@@ -67,30 +77,12 @@ set (VCDCOM_SRC
   "src/logging.cc"
   "src/varint_bigendian.cc"
 )
-add_library (vcdcom "" ${VCDCOM_SRC})
-if (BUILD_SHARED_LIBS)
-  add_library (vcdcom_shared "SHARED" ${VCDCOM_SRC})
-  set_target_properties (vcdcom_shared PROPERTIES
-    OUTPUT_NAME vcdcom
-    VERSION ${PROJECT_VERSION}
-    SOVERSION ${PROJECT_SOVERSION})
-endif ()
 
 set (VCDDEC_SRC
   "src/decodetable.cc"
   "src/headerparser.cc"
   "src/vcdecoder.cc"
 )
-add_library (vcddec "" ${VCDDEC_SRC})
-target_link_libraries (vcddec vcdcom)
-if (BUILD_SHARED_LIBS)
-  add_library (vcddec_shared "SHARED" ${VCDDEC_SRC})
-  set_target_properties (vcddec_shared PROPERTIES
-    OUTPUT_NAME vcddec
-    VERSION ${PROJECT_VERSION}
-    SOVERSION ${PROJECT_SOVERSION})
-  target_link_libraries (vcddec_shared vcdcom_shared)
-endif ()
 
 set (VCDENC_SRC
   "src/blockhash.cc"
@@ -100,27 +92,52 @@ set (VCDENC_SRC
   "src/vcdiffengine.cc"
   "src/vcencoder.cc"
 )
-add_library (vcdenc "" ${VCDENC_SRC})
-target_link_libraries (vcdenc vcdcom)
-if (BUILD_SHARED_LIBS)
-  add_library (vcdenc_shared "SHARED" ${VCDENC_SRC})
-  set_target_properties (vcdenc_shared PROPERTIES
-    OUTPUT_NAME vcdenc
-    VERSION ${PROJECT_VERSION}
-    SOVERSION ${PROJECT_SOVERSION})
-  target_link_libraries (vcdenc_shared vcdcom_shared)
-endif ()
+
+foreach (TYPE IN ITEMS STATIC SHARED)
+  if (BUILD_${TYPE}_LIBS)
+    add_library (vcdcom_${TYPE} ${TYPE} ${VCDCOM_SRC})
+    set_target_properties (vcdcom_${TYPE} PROPERTIES
+      OUTPUT_NAME vcdcom
+      VERSION ${OPEN_VCDIFF_VERSION}
+      SOVERSION ${PROJECT_SOVERSION})
+
+    add_library (vcddec_${TYPE} ${TYPE} ${VCDDEC_SRC})
+    set_target_properties (vcddec_${TYPE} PROPERTIES
+      OUTPUT_NAME vcddec
+      VERSION ${OPEN_VCDIFF_VERSION}
+      SOVERSION ${PROJECT_SOVERSION})
+    target_link_libraries (vcddec_${TYPE} vcdcom_${TYPE})
+
+    add_library (vcdenc_${TYPE} ${TYPE} ${VCDENC_SRC})
+    set_target_properties (vcdenc_${TYPE} PROPERTIES
+      OUTPUT_NAME vcdenc
+      VERSION ${OPEN_VCDIFF_VERSION}
+      SOVERSION ${PROJECT_SOVERSION})
+    target_link_libraries (vcdenc_${TYPE} vcdcom_${TYPE})
+
+    install (TARGETS vcdcom_${TYPE} vcdenc_${TYPE} vcddec_${TYPE} DESTINATION lib)
+
+  endif ()  # BUILD_${TYPE}_LIBS
+endforeach ()
 
 install (DIRECTORY src/google DESTINATION include)
-install (TARGETS vcdcom vcdenc vcddec DESTINATION lib)
-if (BUILD_SHARED_LIBS)
-  install (TARGETS vcdcom_shared vcdenc_shared vcddec_shared DESTINATION lib)
-endif ()
+
+# Setup aliases for next executable targets
+if (BUILD_STATIC_LIBS)
+  add_library (vcdcom ALIAS vcdcom_STATIC)
+  add_library (vcddec ALIAS vcddec_STATIC)
+  add_library (vcdenc ALIAS vcdenc_STATIC)
+else ()
+  add_library (vcdcom ALIAS vcdcom_SHARED)
+  add_library (vcddec ALIAS vcddec_SHARED)
+  add_library (vcdenc ALIAS vcdenc_SHARED)
+endif()
 
 if (vcdiff_build_exec)
   add_executable (vcdiff "src/vcdiff_main.cc")
   target_link_libraries (vcdiff vcddec vcdenc gflags)
   install (TARGETS vcdiff DESTINATION bin)
+  install (FILES man/vcdiff.1 DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man1)
 endif ()
 
 if (vcdiff_build_tests)
@@ -139,12 +156,6 @@ if (vcdiff_build_tests)
     set (gtest_install OFF CACHE BOOL "Don't install gtest" FORCE)
     add_subdirectory (third_party/googletest/googletest)
   endif()
-
-  add_library (vcdecoder_test_common
-    "src/vcdecoder_test.cc"
-  )
-  target_link_libraries (vcdecoder_test_common vcddec gtest_main)
-
 
   add_executable (addrcache_test src/addrcache_test.cc)
   target_link_libraries (addrcache_test vcdcom gtest_main)
@@ -186,24 +197,24 @@ if (vcdiff_build_tests)
   target_link_libraries (varint_bigendian_test vcdcom gtest_main)
   add_test (varint_bigendian_test varint_bigendian_test)
 
-  add_executable (vcdecoder1_test src/vcdecoder1_test.cc)
-  target_link_libraries (vcdecoder1_test vcdecoder_test_common)
+  add_executable (vcdecoder1_test src/vcdecoder1_test.cc src/vcdecoder_test.cc)
+  target_link_libraries (vcdecoder1_test vcddec gtest_main)
   add_test (vcdecoder1_test vcdecoder1_test)
 
-  add_executable (vcdecoder2_test src/vcdecoder2_test.cc)
-  target_link_libraries (vcdecoder2_test vcdecoder_test_common)
+  add_executable (vcdecoder2_test src/vcdecoder2_test.cc src/vcdecoder_test.cc)
+  target_link_libraries (vcdecoder2_test vcddec gtest_main)
   add_test (vcdecoder2_test vcdecoder2_test)
 
-  add_executable (vcdecoder3_test src/vcdecoder3_test.cc)
-  target_link_libraries (vcdecoder3_test vcdecoder_test_common)
+  add_executable (vcdecoder3_test src/vcdecoder3_test.cc src/vcdecoder_test.cc)
+  target_link_libraries (vcdecoder3_test vcddec gtest_main)
   add_test (vcdecoder3_test vcdecoder3_test)
 
-  add_executable (vcdecoder4_test src/vcdecoder4_test.cc)
-  target_link_libraries (vcdecoder4_test vcdecoder_test_common)
+  add_executable (vcdecoder4_test src/vcdecoder4_test.cc src/vcdecoder_test.cc)
+  target_link_libraries (vcdecoder4_test vcddec gtest_main)
   add_test (vcdecoder4_test vcdecoder4_test)
 
-  add_executable (vcdecoder5_test src/vcdecoder5_test.cc)
-  target_link_libraries (vcdecoder5_test vcdecoder_test_common)
+  add_executable (vcdecoder5_test src/vcdecoder5_test.cc src/vcdecoder_test.cc)
+  target_link_libraries (vcdecoder5_test vcddec gtest_main)
   add_test (vcdecoder5_test vcdecoder5_test)
 
   add_executable (vcdiffengine_test src/vcdiffengine_test.cc)

@@ -6,6 +6,7 @@ from core import perf_benchmark
 import page_sets
 
 from telemetry import benchmark
+from telemetry import story
 from telemetry.timeline import chrome_trace_category_filter
 from telemetry.web_perf import timeline_based_measurement
 from telemetry.web_perf.metrics import startup
@@ -51,8 +52,15 @@ class StartWithUrlColdTBM(_StartupPerfBenchmark):
   def Name(cls):
     return 'start_with_url.cold.startup_pages'
 
+  # TODO(rnephew): Test if kapook.com fails on both or just one of the configs.
   def GetExpectations(self):
-    return page_sets.ColdStartupStoryExpectations()
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        self.PermanentlyDisableBenchmark(
+            [story.expectations.ALL_DESKTOP], 'Mobile benchmark')
+        self.DisableStory(
+            'http://kapook.com', [story.expectations.ALL], 'crbug.com/667470')
+    return StoryExpectations()
 
 
 @benchmark.Enabled('has tabs')
@@ -74,5 +82,13 @@ class StartWithUrlWarmTBM(_StartupPerfBenchmark):
     # we are loading the profile for the first time.
     return not is_first_result
 
+  # TODO(rnephew): Test if kapook.com fails on both or just one of the configs.
   def GetExpectations(self):
-    return page_sets.WarmStartupStoryExpectations()
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        self.PermanentlyDisableBenchmark(
+            [story.expectations.ALL_DESKTOP], 'Mobile benchmark')
+        self.DisableStory(
+            'http://kapook.com', [story.expectations.ALL], 'crbug.com/667470')
+    return StoryExpectations()
+

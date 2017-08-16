@@ -192,6 +192,10 @@ OPENSSL_EXPORT const SSL_METHOD *DTLS_method(void);
  * crypto/x509. */
 OPENSSL_EXPORT const SSL_METHOD *TLS_with_buffers_method(void);
 
+/* DTLS_with_buffers_method is like |DTLS_method|, but avoids all use of
+ * crypto/x509. */
+OPENSSL_EXPORT const SSL_METHOD *DTLS_with_buffers_method(void);
+
 /* SSL_CTX_new returns a newly-allocated |SSL_CTX| with default settings or NULL
  * on error. */
 OPENSSL_EXPORT SSL_CTX *SSL_CTX_new(const SSL_METHOD *method);
@@ -1196,56 +1200,36 @@ OPENSSL_EXPORT const SSL_CIPHER *SSL_get_cipher_by_value(uint16_t value);
  * get the cipher suite value. */
 OPENSSL_EXPORT uint32_t SSL_CIPHER_get_id(const SSL_CIPHER *cipher);
 
-/* SSL_CIPHER_is_AES returns one if |cipher| uses AES (either GCM or CBC
- * mode). */
-OPENSSL_EXPORT int SSL_CIPHER_is_AES(const SSL_CIPHER *cipher);
-
-/* SSL_CIPHER_has_SHA1_HMAC returns one if |cipher| uses HMAC-SHA1. */
-OPENSSL_EXPORT int SSL_CIPHER_has_SHA1_HMAC(const SSL_CIPHER *cipher);
-
-/* SSL_CIPHER_has_SHA256_HMAC returns one if |cipher| uses HMAC-SHA256. */
-OPENSSL_EXPORT int SSL_CIPHER_has_SHA256_HMAC(const SSL_CIPHER *cipher);
-
-/* SSL_CIPHER_has_SHA384_HMAC returns one if |cipher| uses HMAC-SHA384. */
-OPENSSL_EXPORT int SSL_CIPHER_has_SHA384_HMAC(const SSL_CIPHER *cipher);
-
-/* SSL_CIPHER_is_AEAD returns one if |cipher| uses an AEAD cipher. */
-OPENSSL_EXPORT int SSL_CIPHER_is_AEAD(const SSL_CIPHER *cipher);
-
-/* SSL_CIPHER_is_AESGCM returns one if |cipher| uses AES-GCM. */
-OPENSSL_EXPORT int SSL_CIPHER_is_AESGCM(const SSL_CIPHER *cipher);
-
-/* SSL_CIPHER_is_AES128GCM returns one if |cipher| uses 128-bit AES-GCM. */
-OPENSSL_EXPORT int SSL_CIPHER_is_AES128GCM(const SSL_CIPHER *cipher);
-
-/* SSL_CIPHER_is_AES128CBC returns one if |cipher| uses 128-bit AES in CBC
- * mode. */
-OPENSSL_EXPORT int SSL_CIPHER_is_AES128CBC(const SSL_CIPHER *cipher);
-
-/* SSL_CIPHER_is_AES256CBC returns one if |cipher| uses 256-bit AES in CBC
- * mode. */
-OPENSSL_EXPORT int SSL_CIPHER_is_AES256CBC(const SSL_CIPHER *cipher);
-
-/* SSL_CIPHER_is_CHACHA20POLY1305 returns one if |cipher| uses
- * CHACHA20_POLY1305. Note this includes both the RFC 7905 and
- * draft-agl-tls-chacha20poly1305-04 versions. */
-OPENSSL_EXPORT int SSL_CIPHER_is_CHACHA20POLY1305(const SSL_CIPHER *cipher);
-
-/* SSL_CIPHER_is_NULL returns one if |cipher| does not encrypt. */
-OPENSSL_EXPORT int SSL_CIPHER_is_NULL(const SSL_CIPHER *cipher);
+/* SSL_CIPHER_is_aead returns one if |cipher| uses an AEAD cipher. */
+OPENSSL_EXPORT int SSL_CIPHER_is_aead(const SSL_CIPHER *cipher);
 
 /* SSL_CIPHER_is_block_cipher returns one if |cipher| is a block cipher. */
 OPENSSL_EXPORT int SSL_CIPHER_is_block_cipher(const SSL_CIPHER *cipher);
 
-/* SSL_CIPHER_is_ECDSA returns one if |cipher| uses ECDSA. */
-OPENSSL_EXPORT int SSL_CIPHER_is_ECDSA(const SSL_CIPHER *cipher);
+/* SSL_CIPHER_get_cipher_nid returns the NID for |cipher|'s bulk
+ * cipher. Possible values are |NID_aes_128_gcm|, |NID_aes_256_gcm|,
+ * |NID_chacha20_poly1305|, |NID_aes_128_cbc|, |NID_aes_256_cbc|, and
+ * |NID_des_ede3_cbc|. */
+OPENSSL_EXPORT int SSL_CIPHER_get_cipher_nid(const SSL_CIPHER *cipher);
 
-/* SSL_CIPHER_is_ECDHE returns one if |cipher| uses ECDHE. */
-OPENSSL_EXPORT int SSL_CIPHER_is_ECDHE(const SSL_CIPHER *cipher);
+/* SSL_CIPHER_get_digest_nid returns the NID for |cipher|'s HMAC if it is a
+ * legacy cipher suite. For modern AEAD-based ciphers (see
+ * |SSL_CIPHER_is_aead|), it returns |NID_undef|.
+ *
+ * Note this function only returns the legacy HMAC digest, not the PRF hash. */
+OPENSSL_EXPORT int SSL_CIPHER_get_digest_nid(const SSL_CIPHER *cipher);
 
-/* SSL_CIPHER_is_static_RSA returns one if |cipher| uses the static RSA key
- * exchange. */
-OPENSSL_EXPORT int SSL_CIPHER_is_static_RSA(const SSL_CIPHER *cipher);
+/* SSL_CIPHER_get_kx_nid returns the NID for |cipher|'s key exchange. This may
+ * be |NID_kx_rsa|, |NID_kx_ecdhe|, or |NID_kx_psk| for TLS 1.2. In TLS 1.3,
+ * cipher suites do not specify the key exchange, so this function returns
+ * |NID_kx_any|. */
+OPENSSL_EXPORT int SSL_CIPHER_get_kx_nid(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_get_auth_nid returns the NID for |cipher|'s authentication
+ * type. This may be |NID_auth_rsa|, |NID_auth_ecdsa|, or |NID_auth_psk| for TLS
+ * 1.2. In TLS 1.3, cipher suites do not specify authentication, so this
+ * function returns |NID_auth_any|. */
+OPENSSL_EXPORT int SSL_CIPHER_get_auth_nid(const SSL_CIPHER *cipher);
 
 /* SSL_CIPHER_get_min_version returns the minimum protocol version required
  * for |cipher|. */
@@ -1409,6 +1393,11 @@ OPENSSL_EXPORT int SSL_set_cipher_list(SSL *ssl, const char *str);
 /* SSL_CTX_get_ciphers returns the cipher list for |ctx|, in order of
  * preference. */
 OPENSSL_EXPORT STACK_OF(SSL_CIPHER) *SSL_CTX_get_ciphers(const SSL_CTX *ctx);
+
+/* SSL_CTX_cipher_in_group returns one if the |i|th cipher (see
+ * |SSL_CTX_get_ciphers|) is in the same equipreference group as the one
+ * following it and zero otherwise. */
+OPENSSL_EXPORT int SSL_CTX_cipher_in_group(const SSL_CTX *ctx, size_t i);
 
 /* SSL_get_ciphers returns the cipher list for |ssl|, in order of preference. */
 OPENSSL_EXPORT STACK_OF(SSL_CIPHER) *SSL_get_ciphers(const SSL *ssl);
@@ -2819,20 +2808,17 @@ OPENSSL_EXPORT const SRTP_PROTECTION_PROFILE *SSL_get_selected_srtp_profile(
  * The callback returns the length of the PSK or 0 if no suitable identity was
  * found. */
 OPENSSL_EXPORT void SSL_CTX_set_psk_client_callback(
-    SSL_CTX *ctx,
-    unsigned (*psk_client_callback)(
-        SSL *ssl, const char *hint, char *identity,
-        unsigned max_identity_len, uint8_t *psk, unsigned max_psk_len));
+    SSL_CTX *ctx, unsigned (*cb)(SSL *ssl, const char *hint, char *identity,
+                                 unsigned max_identity_len, uint8_t *psk,
+                                 unsigned max_psk_len));
 
 /* SSL_set_psk_client_callback sets the callback to be called when PSK is
  * negotiated on the client. This callback must be set to enable PSK cipher
  * suites on the client. See also |SSL_CTX_set_psk_client_callback|. */
 OPENSSL_EXPORT void SSL_set_psk_client_callback(
-    SSL *ssl, unsigned (*psk_client_callback)(SSL *ssl, const char *hint,
-                                              char *identity,
-                                              unsigned max_identity_len,
-                                              uint8_t *psk,
-                                              unsigned max_psk_len));
+    SSL *ssl, unsigned (*cb)(SSL *ssl, const char *hint, char *identity,
+                             unsigned max_identity_len, uint8_t *psk,
+                             unsigned max_psk_len));
 
 /* SSL_CTX_set_psk_server_callback sets the callback to be called when PSK is
  * negotiated on the server. This callback must be set to enable PSK cipher
@@ -2842,19 +2828,15 @@ OPENSSL_EXPORT void SSL_set_psk_client_callback(
  * length at most |max_psk_len| to |psk| and return the number of bytes written
  * or zero if the PSK identity is unknown. */
 OPENSSL_EXPORT void SSL_CTX_set_psk_server_callback(
-    SSL_CTX *ctx,
-    unsigned (*psk_server_callback)(SSL *ssl, const char *identity,
-                                    uint8_t *psk,
-                                    unsigned max_psk_len));
+    SSL_CTX *ctx, unsigned (*cb)(SSL *ssl, const char *identity, uint8_t *psk,
+                                 unsigned max_psk_len));
 
 /* SSL_set_psk_server_callback sets the callback to be called when PSK is
  * negotiated on the server. This callback must be set to enable PSK cipher
  * suites on the server. See also |SSL_CTX_set_psk_server_callback|. */
 OPENSSL_EXPORT void SSL_set_psk_server_callback(
-    SSL *ssl,
-    unsigned (*psk_server_callback)(SSL *ssl, const char *identity,
-                                    uint8_t *psk,
-                                    unsigned max_psk_len));
+    SSL *ssl, unsigned (*cb)(SSL *ssl, const char *identity, uint8_t *psk,
+                             unsigned max_psk_len));
 
 /* SSL_CTX_use_psk_identity_hint configures server connections to advertise an
  * identity hint of |identity_hint|. It returns one on success and zero on
@@ -2901,14 +2883,14 @@ OPENSSL_EXPORT const char *SSL_get_psk_identity(const SSL *ssl);
  *
  * Early data as a client is more complex. If the offered session (see
  * |SSL_set_session|) is 0-RTT-capable, the handshake will return after sending
- * the ClientHello. The predicted peer certificate and ALPN protocol will be
+ * the ClientHello. The predicted peer certificates and ALPN protocol will be
  * available via the usual APIs. |SSL_write| will write early data, up to the
  * session's limit. Writes past this limit and |SSL_read| will complete the
  * handshake before continuing. Callers may also call |SSL_do_handshake| again
  * to complete the handshake sooner.
  *
  * If the server accepts early data, the handshake will succeed. |SSL_read| and
- * |SSL_write| will then act as in a 1-RTT handshake. The peer certificate and
+ * |SSL_write| will then act as in a 1-RTT handshake. The peer certificates and
  * ALPN protocol will be as predicted and need not be re-queried.
  *
  * If the server rejects early data, |SSL_do_handshake| (and thus |SSL_read| and
@@ -2918,10 +2900,12 @@ OPENSSL_EXPORT const char *SSL_get_psk_identity(const SSL *ssl);
  * have processed the early data due to attacker replays.
  *
  * To then continue the handshake on the original connection, use
- * |SSL_reset_early_data_reject|. This allows a faster retry than making a fresh
- * connection. |SSL_do_handshake| will the complete the full handshake as in a
- * fresh connection. Once reset, the peer certificate, ALPN protocol, and other
- * properties may change so the caller must query them again.
+ * |SSL_reset_early_data_reject|. The connection will then behave as one which
+ * had not yet completed the handshake. This allows a faster retry than making a
+ * fresh connection. |SSL_do_handshake| will complete the full handshake,
+ * possibly resulting in different peer certificates, ALPN protocol, and other
+ * properties. The caller must disregard any values from before the reset and
+ * query again.
  *
  * Finally, to implement the fallback described in draft-ietf-tls-tls13-18
  * appendix C.3, retry on a fresh connection without 0-RTT if the handshake
@@ -3572,7 +3556,7 @@ OPENSSL_EXPORT int SSL_CTX_sess_timeouts(const SSL_CTX *ctx);
 OPENSSL_EXPORT int SSL_CTX_sess_cache_full(const SSL_CTX *ctx);
 
 /* SSL_cutthrough_complete calls |SSL_in_false_start|. */
-OPENSSL_EXPORT int SSL_cutthrough_complete(const SSL *s);
+OPENSSL_EXPORT int SSL_cutthrough_complete(const SSL *ssl);
 
 /* SSL_num_renegotiations calls |SSL_total_renegotiations|. */
 OPENSSL_EXPORT int SSL_num_renegotiations(const SSL *ssl);
@@ -3596,10 +3580,10 @@ OPENSSL_EXPORT int SSL_CTX_get_read_ahead(const SSL_CTX *ctx);
 OPENSSL_EXPORT void SSL_CTX_set_read_ahead(SSL_CTX *ctx, int yes);
 
 /* SSL_get_read_ahead returns zero. */
-OPENSSL_EXPORT int SSL_get_read_ahead(const SSL *s);
+OPENSSL_EXPORT int SSL_get_read_ahead(const SSL *ssl);
 
 /* SSL_set_read_ahead does nothing. */
-OPENSSL_EXPORT void SSL_set_read_ahead(SSL *s, int yes);
+OPENSSL_EXPORT void SSL_set_read_ahead(SSL *ssl, int yes);
 
 /* SSL_renegotiate put an error on the error queue and returns zero. */
 OPENSSL_EXPORT int SSL_renegotiate(SSL *ssl);
@@ -3664,10 +3648,10 @@ OPENSSL_EXPORT int SSL_CTX_set_tlsext_use_srtp(SSL_CTX *ctx,
 OPENSSL_EXPORT int SSL_set_tlsext_use_srtp(SSL *ssl, const char *profiles);
 
 /* SSL_get_current_compression returns NULL. */
-OPENSSL_EXPORT const COMP_METHOD *SSL_get_current_compression(SSL *s);
+OPENSSL_EXPORT const COMP_METHOD *SSL_get_current_compression(SSL *ssl);
 
 /* SSL_get_current_expansion returns NULL. */
-OPENSSL_EXPORT const COMP_METHOD *SSL_get_current_expansion(SSL *s);
+OPENSSL_EXPORT const COMP_METHOD *SSL_get_current_expansion(SSL *ssl);
 
 /* SSL_get_server_tmp_key returns zero. */
 OPENSSL_EXPORT int *SSL_get_server_tmp_key(SSL *ssl, EVP_PKEY **out_key);
@@ -3680,11 +3664,11 @@ OPENSSL_EXPORT int SSL_set_tmp_dh(SSL *ssl, const DH *dh);
 
 /* SSL_CTX_set_tmp_dh_callback does nothing. */
 OPENSSL_EXPORT void SSL_CTX_set_tmp_dh_callback(
-    SSL_CTX *ctx, DH *(*callback)(SSL *ssl, int is_export, int keylength));
+    SSL_CTX *ctx, DH *(*cb)(SSL *ssl, int is_export, int keylength));
 
 /* SSL_set_tmp_dh_callback does nothing. */
 OPENSSL_EXPORT void SSL_set_tmp_dh_callback(SSL *ssl,
-                                            DH *(*dh)(SSL *ssl, int is_export,
+                                            DH *(*cb)(SSL *ssl, int is_export,
                                                       int keylength));
 
 
@@ -3784,8 +3768,7 @@ OPENSSL_EXPORT const char *SSL_get_cipher_list(const SSL *ssl, int n);
  * this function is confusing. This callback may not be registered concurrently
  * with |SSL_CTX_set_cert_cb| or |SSL_set_cert_cb|. */
 OPENSSL_EXPORT void SSL_CTX_set_client_cert_cb(
-    SSL_CTX *ctx,
-    int (*client_cert_cb)(SSL *ssl, X509 **out_x509, EVP_PKEY **out_pkey));
+    SSL_CTX *ctx, int (*cb)(SSL *ssl, X509 **out_x509, EVP_PKEY **out_pkey));
 
 #define SSL_NOTHING 1
 #define SSL_WRITING 2
@@ -3979,6 +3962,64 @@ OPENSSL_EXPORT SSL_SESSION *SSL_get_session(const SSL *ssl);
 /* SSL_get1_session acts like |SSL_get_session| but returns a new reference to
  * the session. */
 OPENSSL_EXPORT SSL_SESSION *SSL_get1_session(SSL *ssl);
+
+/* TODO(davidben): Convert all the callers of these old |SSL_CIPHER| functions
+ * and remove them. */
+
+/* SSL_CIPHER_is_AEAD calls |SSL_CIPHER_is_aead|. */
+OPENSSL_EXPORT int SSL_CIPHER_is_AEAD(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_is_AES returns one if |cipher| uses AES (either GCM or CBC
+ * mode). Use |SSL_CIPHER_get_cipher_nid| instead. */
+OPENSSL_EXPORT int SSL_CIPHER_is_AES(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_has_SHA1_HMAC returns one if |cipher| uses HMAC-SHA1. Use
+ * |SSL_CIPHER_get_digest_nid| instead. */
+OPENSSL_EXPORT int SSL_CIPHER_has_SHA1_HMAC(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_has_SHA256_HMAC returns one if |cipher| uses HMAC-SHA256. Use
+ * |SSL_CIPHER_get_digest_nid| instead. */
+OPENSSL_EXPORT int SSL_CIPHER_has_SHA256_HMAC(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_has_SHA384_HMAC returns one if |cipher| uses HMAC-SHA384. Use
+ * |SSL_CIPHER_get_digest_nid| instead. */
+OPENSSL_EXPORT int SSL_CIPHER_has_SHA384_HMAC(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_is_AESGCM returns one if |cipher| uses AES-GCM. Use
+ * |SSL_CIPHER_get_cipher_nid| instead. */
+OPENSSL_EXPORT int SSL_CIPHER_is_AESGCM(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_is_AES128GCM returns one if |cipher| uses 128-bit AES-GCM. Use
+ * |SSL_CIPHER_get_cipher_nid| instead. */
+OPENSSL_EXPORT int SSL_CIPHER_is_AES128GCM(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_is_AES128CBC returns one if |cipher| uses 128-bit AES in CBC
+ * mode. Use |SSL_CIPHER_get_cipher_nid| instead. */
+OPENSSL_EXPORT int SSL_CIPHER_is_AES128CBC(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_is_AES256CBC returns one if |cipher| uses 256-bit AES in CBC
+ * mode. Use |SSL_CIPHER_get_cipher_nid| instead. */
+OPENSSL_EXPORT int SSL_CIPHER_is_AES256CBC(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_is_CHACHA20POLY1305 returns one if |cipher| uses
+ * CHACHA20_POLY1305. Use |SSL_CIPHER_get_cipher_nid| instead. */
+OPENSSL_EXPORT int SSL_CIPHER_is_CHACHA20POLY1305(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_is_NULL returns one if |cipher| does not encrypt. Use
+ * |SSL_CIPHER_get_cipher_nid| instead. */
+OPENSSL_EXPORT int SSL_CIPHER_is_NULL(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_is_ECDSA returns one if |cipher| uses ECDSA. Use
+ * |SSL_CIPHER_get_auth_nid| instead. */
+OPENSSL_EXPORT int SSL_CIPHER_is_ECDSA(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_is_ECDHE returns one if |cipher| uses ECDHE. Use
+ * |SSL_CIPHER_get_kx_nid| instead. */
+OPENSSL_EXPORT int SSL_CIPHER_is_ECDHE(const SSL_CIPHER *cipher);
+
+/* SSL_CIPHER_is_static_RSA returns one if |cipher| uses the static RSA key
+ * exchange. Use |SSL_CIPHER_get_kx_nid| instead. */
+OPENSSL_EXPORT int SSL_CIPHER_is_static_RSA(const SSL_CIPHER *cipher);
 
 
 /* Private structures.
@@ -4368,7 +4409,7 @@ struct ssl_ctx_st {
    *   in: points to the client's list of supported protocols in
    *       wire-format.
    *   inlen: the length of |in|. */
-  int (*alpn_select_cb)(SSL *s, const uint8_t **out, uint8_t *out_len,
+  int (*alpn_select_cb)(SSL *ssl, const uint8_t **out, uint8_t *out_len,
                         const uint8_t *in, unsigned in_len, void *arg);
   void *alpn_select_cb_arg;
 
@@ -4837,7 +4878,7 @@ OPENSSL_EXPORT bool SealRecord(SSL *ssl, Span<uint8_t> out_prefix,
 #define SSL_R_TICKET_ENCRYPTION_FAILED 276
 #define SSL_R_ALPN_MISMATCH_ON_EARLY_DATA 277
 #define SSL_R_WRONG_VERSION_ON_EARLY_DATA 278
-#define SSL_R_CHANNEL_ID_ON_EARLY_DATA 279
+#define SSL_R_UNEXPECTED_EXTENSION_ON_EARLY_DATA 279
 #define SSL_R_NO_SUPPORTED_VERSIONS_ENABLED 280
 #define SSL_R_APPLICATION_DATA_INSTEAD_OF_HANDSHAKE 281
 #define SSL_R_SSLV3_ALERT_CLOSE_NOTIFY 1000

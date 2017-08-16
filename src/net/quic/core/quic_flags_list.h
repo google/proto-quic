@@ -61,12 +61,6 @@ QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop,
           true)
 
-// If true, release QuicCryptoStream\'s read buffer when stream are less
-// frequently used.
-QUIC_FLAG(bool,
-          FLAGS_quic_reloadable_flag_quic_release_crypto_stream_buffer,
-          true)
-
 // If true, v33 QUIC client uses 1 bit to specify 8-byte connection id in
 // public flag.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_remove_v33_hacks2, false)
@@ -117,12 +111,6 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_random_padding, true)
 // If enabled, use refactored stream creation methods.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_refactor_stream_creation, false)
 
-// If true, GFEs generate and validate source address token using the actual
-// client IP for proxied session.
-QUIC_FLAG(bool,
-          FLAGS_quic_reloadable_flag_quic_use_client_address_for_stk_in_proxy,
-          true)
-
 // If true, export a varz mapping QUIC non 0-rtt handshake with corresponding
 // frontend service.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_account_handshake, false)
@@ -137,18 +125,12 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_pcc, false)
 // If true, enable QUIC v40.
 QUIC_FLAG(bool, FLAGS_quic_enable_version_40, false)
 
-// If true, use the more CPU efficient bandwidth sampler datastructure.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_faster_bandwidth_sampler, true)
-
 // In QUIC, QuicSession gets notified when stream frames are acked, discarded or
 // retransmitted.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_use_stream_notifier2, false)
 
 // When true, defaults to BBR congestion control instead of Cubic.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_default_to_bbr, false)
-
-// If true, stream sent data is saved in streams rather than stream frames.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_stream_owns_data, false)
 
 // Allow a new rate based recovery in QUIC BBR to be enabled via connection
 // option.
@@ -161,17 +143,14 @@ QUIC_FLAG(bool,
           false)
 
 // If true, disables support for QUIC version 36.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_disable_version_36, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_disable_version_36, true)
 
 // If true, disables support for the packets-based QUIC congestion control
 // algorithms.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_disable_packets_based_cc, false)
 
 // When enabled, ack frame uses a deque internally instead of a set.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_frames_deque, false)
-
-// If true, server supported versions is updated before SelectMutualVersion.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_to_backend_multi_version, true)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_frames_deque2, false)
 
 // If true, QUIC packet creator passes a stack allocated SerializedPacket to the
 // connection.
@@ -192,8 +171,34 @@ QUIC_FLAG(bool, FLAGS_quic_restart_flag_quic_header_list_size, false)
 // STARTUP when in recovery and there has been no bandwidth increase for 1RTT.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_exit_startup_on_loss, false)
 
+// If true, application data is saved before consumption in QUIC.
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_save_data_before_consumption2,
+          false)
+
+// If buffered data in QUIC stream is less than this threshold, buffers all
+// provided data or asks upper layer for more data.
+QUIC_FLAG(uint32_t, FLAGS_quic_buffered_data_threshold, 8192u)
+
+// Max size of data slice in bytes for QUIC stream send buffer.
+QUIC_FLAG(uint32_t, FLAGS_quic_send_buffer_max_data_slice_size, 4096u)
+
 // Enables the BBR1 and BBR2 QUIC connection options, which enable two forms of
 // ack aggregation that prevent persistent standing queues.
 QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_bbr_ack_aggregation_bytes4,
           false)
+
+// Add 4 new ack decimation modes to QUIC that are entirely time based at 1/4
+// or 1/8 RTT.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_ack_decimation, false)
+
+// Enables using the ConsumeDataFastPath more often for large transfers.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_consuming_data_faster, false)
+
+// If true, in QUIC, set dispatcher framer\'s version to client packet's
+// version in QuicDispatcher::OnStatelessRejectorProcessDone.
+QUIC_FLAG(
+    bool,
+    FLAGS_quic_reloadable_flag_quic_set_version_on_async_get_proof_returns,
+    false)

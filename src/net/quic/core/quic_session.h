@@ -110,12 +110,7 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface,
   bool HasOpenDynamicStreams() const override;
   void OnPathDegrading() override;
 
-  // QuicStreamFrameDataProducer methods:
-  void SaveStreamData(QuicStreamId id,
-                      QuicIOVector iov,
-                      size_t iov_offset,
-                      QuicStreamOffset offset,
-                      QuicByteCount data_length) override;
+  // QuicStreamFrameDataProducer
   bool WriteStreamData(QuicStreamId id,
                        QuicStreamOffset offset,
                        QuicByteCount data_length,
@@ -281,7 +276,9 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface,
 
   bool use_stream_notifier() const { return use_stream_notifier_; }
 
-  bool streams_own_data() const { return streams_own_data_; }
+  bool save_data_before_consumption() const {
+    return save_data_before_consumption_;
+  }
 
  protected:
   using StaticStreamMap = QuicSmallMap<QuicStreamId, QuicStream*, 2>;
@@ -530,9 +527,8 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface,
   // This session is notified on every ack or loss.
   const bool use_stream_notifier_;
 
-  // Streams of this session own their outstanding data. Outstanding data here
-  // means sent data waiting to be acked.
-  const bool streams_own_data_;
+  // Application data is saved before it is actually consumed.
+  const bool save_data_before_consumption_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicSession);
 };

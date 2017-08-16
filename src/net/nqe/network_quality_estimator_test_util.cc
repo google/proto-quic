@@ -87,6 +87,27 @@ TestNetworkQualityEstimator::TestNetworkQualityEstimator(
   EXPECT_TRUE(embedded_test_server_.Start());
 }
 
+TestNetworkQualityEstimator::TestNetworkQualityEstimator(
+    std::unique_ptr<NetworkQualityEstimatorParams> params)
+    : TestNetworkQualityEstimator(std::move(params),
+                                  base::MakeUnique<BoundTestNetLog>()) {}
+
+TestNetworkQualityEstimator::TestNetworkQualityEstimator(
+    std::unique_ptr<NetworkQualityEstimatorParams> params,
+    std::unique_ptr<BoundTestNetLog> net_log)
+    : NetworkQualityEstimator(std::unique_ptr<ExternalEstimateProvider>(),
+                              std::move(params),
+                              net_log->bound().net_log()),
+      current_network_type_(NetworkChangeNotifier::CONNECTION_UNKNOWN),
+      accuracy_recording_intervals_set_(false),
+      rand_double_(0.0),
+      embedded_test_server_(base::FilePath(kTestFilePath)),
+      suppress_notifications_for_testing_(false),
+      net_log_(std::move(net_log)) {
+  // Set up the embedded test server.
+  EXPECT_TRUE(embedded_test_server_.Start());
+}
+
 TestNetworkQualityEstimator::~TestNetworkQualityEstimator() {}
 
 void TestNetworkQualityEstimator::RunOneRequest() {

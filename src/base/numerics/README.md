@@ -56,8 +56,12 @@ performing a range of conversions, assignments, and tests.
 ### Other helper and conversion functions
 
 *   `IsValueInRangeForNumericType<>()` - A convenience function that returns
-    true if the type supplied to the template parameter can represent the value
+    true if the type supplied as the template parameter can represent the value
     passed as an argument to the function.
+*   `IsTypeInRangeForNumericType<>()` - A convenience function that evaluates
+    entirely at compile-time and returns true if the destination type (first
+    template parameter) can represent the full range of the source type
+    (second template parameter).
 *   `IsValueNegative()` - A convenience function that will accept any
     arithmetic type as an argument and will return whether the value is less
     than zero. Unsigned types always return false.
@@ -85,11 +89,16 @@ boundary conditions such as overflow, underflow, and invalid conversions.
 The `CheckedNumeric` type implicitly converts from floating point and integer
 data types, and contains overloads for basic arithmetic operations (i.e.: `+`,
 `-`, `*`, `/` for all types and `%`, `<<`, `>>`, `&`, `|`, `^` for integers).
+However, *the variadic template functions are the prefered API,* as they remove
+type ambiguities and help prevent a number of common errors. The variadic
+functions can also be more performant, as the eliminate redundant expressions that are unavoidable with the with the operator overloads. (Ideally the compiler should
+optimize those away, but better to avoid them in the first place.)
+
 Type promotions are a slightly modified version of the [standard C/C++ numeric
 promotions
 ](http://en.cppreference.com/w/cpp/language/implicit_conversion#Numeric_promotions)
-with the two differences being that there is no default promotion to int
-and bitwise logical operations always return an unsigned of the wider type.
+with the two differences being that *there is no default promotion to int*
+and *bitwise logical operations always return an unsigned of the wider type.*
 
 ### Members
 
@@ -139,12 +148,13 @@ types because they could result in a crash if the type is not in a valid state.
 Patterns like the following should be used instead:
 
 ```cpp
-CheckedNumeric<size_t> checked_size = untrusted_input_value;
-checked_size += HEADER LENGTH;
-if (checked_size.IsValid() && checked_size.ValueOrDie() < buffer_size) {
-  \\ Do stuff on success...
+// Either input or padding (or both) may be arbitrary sizes.
+size_t buff_size;
+if (!CheckAdd(input, padding, kHeaderLength).AssignIfValid(&buff_size) ||
+     buff_size >= kMaxBuffer) {
+  // Handle an error...
 } else {
-  \\ Handle an error...
+  // Do stuff on success...
 }
 ```
 
@@ -188,11 +198,18 @@ arithmetic types to `CheckedNumeric` types:
 and integer data types, saturating on assignment as appropriate. It contains
 overloads for basic arithmetic operations (i.e.: `+`, `-`, `*`, `/` for
 all types and `%`, `<<`, `>>`, `&`, `|`, `^` for integers) along with comparison
-operators for arithmetic types of any size. Type promotions are a slightly
-modified version of the [standard C/C++ numeric promotions
+operators for arithmetic types of any size. However, *the variadic template
+functions are the prefered API,* as they remove type ambiguities and help prevent
+a number of common errors. The variadic functions can also be more performant,
+as they eliminate redundant expressions that are unavoidable with the operator
+overloads. (Ideally the compiler should optimize those away, but better to avoid
+them in the first place.)
+
+Type promotions are a slightly modified version of the [standard C/C++ numeric
+promotions
 ](http://en.cppreference.com/w/cpp/language/implicit_conversion#Numeric_promotions)
-with the two differences being that there is no default promotion to int and
-bitwise logical operations always return an unsigned of the wider type.
+with the two differences being that *there is no default promotion to int*
+and *bitwise logical operations always return an unsigned of the wider type.*
 
 *** aside
 Most arithmetic operations saturate normally, to the numeric limit in the
@@ -206,7 +223,7 @@ direction of the sign. The potentially unusual cases are:
     limit (max/min), even for shifts larger than the bit width. 0 shifted any
     amount results in 0.
 *   **Right shift:** Negative values saturate to -1. Positive or 0 saturates
-    to 0.
+    to 0. (Effectively just an unbounded arithmetic-right-shift.)
 *   **Bitwise operations:** No saturation; bit pattern is identical to
     non-saturated bitwise operations.
 ***
@@ -230,6 +247,9 @@ with the following unary arithmetic methods, which return a new
 The following are for converting `ClampedNumeric` instances:
 
 *   `type` - The underlying numeric type.
+*   `RawValue()` - Returns the raw value as the underlying arithmetic type. This
+    is useful when e.g. assigning to an auto type or passing as a deduced
+    template parameter.
 *   `Cast<>()` - Instance method returning a `ClampedNumeric` derived from
     casting the current instance to a `ClampedNumeric` of the supplied
     destination type.

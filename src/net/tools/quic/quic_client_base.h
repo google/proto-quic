@@ -16,7 +16,7 @@
 #include "net/quic/core/quic_config.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/platform/api/quic_string_piece.h"
-#include "net/tools/quic/quic_client_session.h"
+#include "net/tools/quic/quic_spdy_client_session.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
 
 namespace net {
@@ -24,46 +24,38 @@ namespace net {
 class ProofVerifier;
 class QuicServerId;
 
-class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
-                       public QuicSpdyStream::Visitor {
+// QuicClientBase handles establishing a connection to the passed in
+// server id, including ensuring that it supports the passed in versions
+// and config.
+// Subclasses derived from this class are responsible for creating the
+// actual QuicSession instance, as well as defining functions that
+// create and run the underlying network transport.
+class QuicClientBase {
  public:
-  // A ResponseListener is notified when a complete response is received.
-  class ResponseListener {
+  // An interface to various network events that the QuicClient will need to
+  // interact with.
+  class NetworkHelper {
    public:
-    ResponseListener() {}
-    virtual ~ResponseListener() {}
-    virtual void OnCompleteResponse(QuicStreamId id,
-                                    const SpdyHeaderBlock& response_headers,
-                                    const std::string& response_body) = 0;
-  };
+    virtual ~NetworkHelper();
 
-  // The client uses these objects to keep track of any data to resend upon
-  // receipt of a stateless reject.  Recall that the client API allows callers
-  // to optimistically send data to the server prior to handshake-confirmation.
-  // If the client subsequently receives a stateless reject, it must tear down
-  // its existing session, create a new session, and resend all previously sent
-  // data.  It uses these objects to keep track of all the sent data, and to
-  // resend the data upon a subsequent connection.
-  class QuicDataToResend {
-   public:
-    // |headers| may be null, since it's possible to send data without headers.
-    QuicDataToResend(std::unique_ptr<SpdyHeaderBlock> headers,
-                     QuicStringPiece body,
-                     bool fin);
+    // Runs one iteration of the event loop.
+    virtual void RunEventLoop() = 0;
 
-    virtual ~QuicDataToResend();
+    // Used during initialization: creates the UDP socket FD, sets socket
+    // options, and binds the socket to our address.
+    virtual bool CreateUDPSocketAndBind(QuicSocketAddress server_address,
+                                        QuicIpAddress bind_to_address,
+                                        int bind_to_port) = 0;
 
-    // Must be overridden by specific classes with the actual method for
-    // re-sending data.
-    virtual void Resend() = 0;
+    // Unregister and close all open UDP sockets.
+    virtual void CleanUpAllUDPSockets() = 0;
 
-   protected:
-    std::unique_ptr<SpdyHeaderBlock> headers_;
-    QuicStringPiece body_;
-    bool fin_;
+    // If the client has at least one UDP socket, return address of the latest
+    // created one. Otherwise, return an empty socket address.
+    virtual QuicSocketAddress GetLatestClientAddress() const = 0;
 
-   private:
-    DISALLOW_COPY_AND_ASSIGN(QuicDataToResend);
+    // Creates a packet writer to be used for the next connection.
+    virtual QuicPacketWriter* CreateQuicPacketWriter() = 0;
   };
 
   QuicClientBase(const QuicServerId& server_id,
@@ -71,12 +63,10 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
                  const QuicConfig& config,
                  QuicConnectionHelperInterface* helper,
                  QuicAlarmFactory* alarm_factory,
+                 std::unique_ptr<NetworkHelper> network_helper,
                  std::unique_ptr<ProofVerifier> proof_verifier);
 
-  ~QuicClientBase() override;
-
-  // QuicSpdyStream::Visitor
-  void OnClose(QuicSpdyStream* stream) override;
+  virtual ~QuicClientBase();
 
   // Initializes the client to create a connection. Should be called exactly
   // once before calling StartConnect or Connect. Returns true if the
@@ -92,6 +82,11 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   // completes.
   void StartConnect();
 
+  // Calls session()->Initialize(). Subclasses may override this if any extra
+  // initialization needs to be done. Subclasses should expect that session()
+  // is non-null and valid.
+  virtual void InitializeSession();
+
   // Disconnects from the QUIC server.
   void Disconnect();
 
@@ -99,24 +94,6 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   // Returns false if encryption is active (even if the server hasn't confirmed
   // the handshake) or if the connection has been closed.
   bool EncryptionBeingEstablished();
-
-  // Sends an HTTP request and does not wait for response before returning.
-  void SendRequest(const SpdyHeaderBlock& headers,
-                   QuicStringPiece body,
-                   bool fin);
-
-  // Sends an HTTP request and waits for response before returning.
-  void SendRequestAndWaitForResponse(const SpdyHeaderBlock& headers,
-                                     QuicStringPiece body,
-                                     bool fin);
-
-  // Sends a request simple GET for each URL in |url_list|, and then waits for
-  // each to complete.
-  void SendRequestsAndWaitForResponse(const std::vector<std::string>& url_list);
-
-  // Returns a newly created QuicSpdyClientStream, owned by the
-  // QuicSimpleClient.
-  virtual QuicSpdyClientStream* CreateClientStream();
 
   // Wait for events until the stream with the given ID is closed.
   void WaitForStreamToClose(QuicStreamId id);
@@ -132,7 +109,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   // Migrate to a new socket during an active connection.
   bool MigrateSocket(const QuicIpAddress& new_host);
 
-  QuicClientSession* session() { return session_.get(); }
+  QuicSession* session();
 
   bool connected() const;
   bool goaway_received() const;
@@ -235,36 +212,6 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
 
   ProofVerifier* proof_verifier() const;
 
-  void set_session(QuicClientSession* session) { session_.reset(session); }
-
-  QuicClientPushPromiseIndex* push_promise_index() {
-    return &push_promise_index_;
-  }
-
-  bool CheckVary(const SpdyHeaderBlock& client_request,
-                 const SpdyHeaderBlock& promise_request,
-                 const SpdyHeaderBlock& promise_response) override;
-  void OnRendezvousResult(QuicSpdyStream*) override;
-
-  // If the crypto handshake has not yet been confirmed, adds the data to the
-  // queue of data to resend if the client receives a stateless reject.
-  // Otherwise, deletes the data.
-  void MaybeAddQuicDataToResend(
-      std::unique_ptr<QuicDataToResend> data_to_resend);
-
-  void set_store_response(bool val) { store_response_ = val; }
-
-  size_t latest_response_code() const;
-  const std::string& latest_response_headers() const;
-  const std::string& preliminary_response_headers() const;
-  const SpdyHeaderBlock& latest_response_header_block() const;
-  const std::string& latest_response_body() const;
-  const std::string& latest_response_trailers() const;
-
-  void set_response_listener(std::unique_ptr<ResponseListener> listener) {
-    response_listener_ = std::move(listener);
-  }
-
   void set_bind_to_address(QuicIpAddress address) {
     bind_to_address_ = address;
   }
@@ -281,29 +228,39 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
     server_address_ = server_address;
   }
 
+  QuicConnectionHelperInterface* helper() { return helper_.get(); }
+
+  NetworkHelper* network_helper();
+  const NetworkHelper* network_helper() const;
+
  protected:
-  // Creates a packet writer to be used for the next connection.
-  virtual QuicPacketWriter* CreateQuicPacketWriter() = 0;
+  // TODO(rch): Move GetNumSentClientHellosFromSession and
+  // GetNumReceivedServerConfigUpdatesFromSession into a new/better
+  // QuicSpdyClientSession class. The current inherits dependencies from
+  // Spdy. When that happens this class and all its subclasses should
+  // work with QuicSpdyClientSession instead of QuicSession.
+  // That will obviate the need for the pure virtual functions below.
 
-  // Takes ownership of |connection|.
-  virtual QuicClientSession* CreateQuicClientSession(
-      QuicConnection* connection);
+  // Extract the number of sent client hellos from the session.
+  virtual int GetNumSentClientHellosFromSession() = 0;
 
-  // Runs one iteration of the event loop.
-  virtual void RunEventLoop() = 0;
+  // The number of server config updates received.  We assume no
+  // updates can be sent during a previously, statelessly rejected
+  // connection, so only the latest session is taken into account.
+  virtual int GetNumReceivedServerConfigUpdatesFromSession() = 0;
 
-  // Used during initialization: creates the UDP socket FD, sets socket options,
-  // and binds the socket to our address.
-  virtual bool CreateUDPSocketAndBind(QuicSocketAddress server_address,
-                                      QuicIpAddress bind_to_address,
-                                      int bind_to_port) = 0;
+  // If this client supports buffering data, resend it.
+  virtual void ResendSavedData() = 0;
 
-  // Unregister and close all open UDP sockets.
-  virtual void CleanUpAllUDPSockets() = 0;
+  // If this client supports buffering data, clear it.
+  virtual void ClearDataToResend() = 0;
 
-  // If the client has at least one UDP socket, return address of the latest
-  // created one. Otherwise, return an empty socket address.
-  virtual QuicSocketAddress GetLatestClientAddress() const = 0;
+  // Takes ownership of |connection|. If you override this function,
+  // you probably want to call ResetSession() in your destructor.
+  // TODO(rch): Change the connection parameter to take in a
+  // std::unique_ptr<QuicConnection> instead.
+  virtual std::unique_ptr<QuicSession> CreateQuicClientSession(
+      QuicConnection* connection) = 0;
 
   // Generates the next ConnectionId for |server_id_|.  By default, if the
   // cached server config contains a server-designated ID, that ID will be
@@ -318,23 +275,6 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   // connection ID).
   virtual QuicConnectionId GenerateNewConnectionId();
 
-  // If the crypto handshake has not yet been confirmed, adds the data to the
-  // queue of data to resend if the client receives a stateless reject.
-  // Otherwise, deletes the data.
-  void MaybeAddDataToResend(const SpdyHeaderBlock& headers,
-                            QuicStringPiece body,
-                            bool fin);
-
-  void ClearDataToResend();
-
-  void ResendSavedData();
-
-  void AddPromiseDataToResend(const SpdyHeaderBlock& headers,
-                              QuicStringPiece body,
-                              bool fin);
-
-  QuicConnectionHelperInterface* helper() { return helper_.get(); }
-
   QuicAlarmFactory* alarm_factory() { return alarm_factory_.get(); }
 
   void set_num_sent_client_hellos(int num_sent_client_hellos) {
@@ -345,29 +285,12 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
     num_stateless_rejects_received_ = num_stateless_rejects_received;
   }
 
+  // Subclasses may need to explicitly clear the session on destruction
+  // if they create it with objects that will be destroyed before this is.
+  // You probably want to call this if you override CreateQuicSpdyClientSession.
+  void ResetSession() { session_.reset(); }
+
  private:
-  // Specific QuicClient class for storing data to resend.
-  class ClientQuicDataToResend : public QuicDataToResend {
-   public:
-    ClientQuicDataToResend(std::unique_ptr<SpdyHeaderBlock> headers,
-                           QuicStringPiece body,
-                           bool fin,
-                           QuicClientBase* client)
-        : QuicDataToResend(std::move(headers), body, fin), client_(client) {
-      DCHECK(headers_);
-      DCHECK(client);
-    }
-
-    ~ClientQuicDataToResend() override {}
-
-    void Resend() override;
-
-   private:
-    QuicClientBase* client_;
-
-    DISALLOW_COPY_AND_ASSIGN(ClientQuicDataToResend);
-  };
-
   // |server_id_| is a tuple (hostname, port, is_https) of the server.
   QuicServerId server_id_;
 
@@ -397,11 +320,8 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   // Writer used to actually send packets to the wire. Must outlive |session_|.
   std::unique_ptr<QuicPacketWriter> writer_;
 
-  // Index of pending promised streams. Must outlive |session_|.
-  QuicClientPushPromiseIndex push_promise_index_;
-
   // Session which manages streams.
-  std::unique_ptr<QuicClientSession> session_;
+  std::unique_ptr<QuicSession> session_;
 
   // This vector contains QUIC versions which we currently support.
   // This should be ordered such that the highest supported version is the first
@@ -435,29 +355,9 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   // to the previous client-level connection.
   bool connected_or_attempting_connect_;
 
-  // If true, store the latest response code, headers, and body.
-  bool store_response_;
-  // HTTP response code from most recent response.
-  int latest_response_code_;
-  // HTTP/2 headers from most recent response.
-  std::string latest_response_headers_;
-  // preliminary 100 Continue HTTP/2 headers from most recent response, if any.
-  std::string preliminary_response_headers_;
-  // HTTP/2 headers from most recent response.
-  SpdyHeaderBlock latest_response_header_block_;
-  // Body of most recent response.
-  std::string latest_response_body_;
-  // HTTP/2 trailers from most recent response.
-  std::string latest_response_trailers_;
-
-  // Listens for full responses.
-  std::unique_ptr<ResponseListener> response_listener_;
-
-  // Keeps track of any data that must be resent upon a subsequent successful
-  // connection, in case the client receives a stateless reject.
-  std::vector<std::unique_ptr<QuicDataToResend>> data_to_resend_on_connect_;
-
-  std::unique_ptr<ClientQuicDataToResend> push_promise_data_to_resend_;
+  // The network helper used to create sockets and manage the event loop.
+  // Not owned by this class.
+  std::unique_ptr<NetworkHelper> network_helper_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicClientBase);
 };

@@ -10,6 +10,8 @@
 #include <memory>
 #include <vector>
 
+#include "base/allocator/partition_allocator/address_space_randomization.h"
+#include "base/bit_cast.h"
 #include "base/bits.h"
 #include "base/sys_info.h"
 #include "build/build_config.h"
@@ -304,7 +306,76 @@ class MockPartitionStatsDumper : public PartitionStatsDumper {
   std::vector<PartitionBucketMemoryStats> bucket_stats;
 };
 
+// Any number of bytes that can be allocated with no trouble.
+const size_t kEasyAllocSize = 1024 * 1024;
+
+// Generate many random addresses to get a very large fraction of the platform
+// address space. This gives us an allocation size that is very likely to fail
+// on most platforms without triggering bugs in allocation code for very large
+// requests.
+size_t GetHugeMemoryAmount() {
+  static size_t huge_memory = 0;
+  if (!huge_memory) {
+    for (int i = 0; i < 100; i++) {
+      huge_memory |= bit_cast<size_t>(base::GetRandomPageBase());
+    }
+    // Make it larger than the available address space.
+    huge_memory *= 2;
+  }
+  return huge_memory;
+}
+
 }  // anonymous namespace
+
+// Test that failed page allocations invoke base::ReleaseReservation().
+// We detect this by making a reservation and ensuring that after failure, we
+// can make a new reservation.
+TEST(PageAllocatorTest, AllocFailure) {
+  // We can make a reservation.
+  EXPECT_TRUE(
+      base::ReserveAddressSpace(kEasyAllocSize, kPageAllocationGranularity));
+
+  // We can't make another reservation until we trigger an allocation failure.
+  EXPECT_FALSE(
+      base::ReserveAddressSpace(kEasyAllocSize, kPageAllocationGranularity));
+
+  size_t size = GetHugeMemoryAmount();
+  // Skip the test for sanitizers and platforms with ASLR turned
+  if (size == 0)
+    return;
+
+  void* result = base::AllocPages(nullptr, size, kPageAllocationGranularity,
+                                  PageInaccessible);
+  if (result == nullptr) {
+    // We triggered allocation failure. Our reservation should have been
+    // released, and we should be able to make a new reservation.
+    EXPECT_TRUE(
+        base::ReserveAddressSpace(kEasyAllocSize, kPageAllocationGranularity));
+    base::ReleaseReservation();
+    return;
+  }
+  // We couldn't fail. Make sure reservation is still there.
+  EXPECT_FALSE(
+      base::ReserveAddressSpace(kEasyAllocSize, kPageAllocationGranularity));
+}
+
+// Test that reserving address space can fail.
+TEST(PageAllocatorTest, ReserveAddressSpace) {
+  size_t size = GetHugeMemoryAmount();
+  // Skip the test for sanitizers and platforms with ASLR turned
+  if (size == 0)
+    return;
+
+  bool success = base::ReserveAddressSpace(size, kPageAllocationGranularity);
+  if (!success) {
+    EXPECT_TRUE(
+        base::ReserveAddressSpace(kEasyAllocSize, kPageAllocationGranularity));
+    return;
+  }
+  // We couldn't fail. Make sure reservation is still there.
+  EXPECT_FALSE(
+      base::ReserveAddressSpace(kEasyAllocSize, kPageAllocationGranularity));
+}
 
 // Check that the most basic of allocate / free pairs work.
 TEST_F(PartitionAllocTest, Basic) {

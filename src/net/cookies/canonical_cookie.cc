@@ -92,6 +92,7 @@ int PartialCookieOrdering(const CanonicalCookie& a, const CanonicalCookie& b) {
 
 }  // namespace
 
+// Keep defaults here in sync with content/public/common/cookie_manager.mojom.
 CanonicalCookie::CanonicalCookie()
     : secure_(false),
       httponly_(false),

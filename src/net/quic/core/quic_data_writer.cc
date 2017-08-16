@@ -59,6 +59,17 @@ bool QuicDataWriter::WriteUInt64(uint64_t value) {
   return WriteBytes(&value, sizeof(value));
 }
 
+bool QuicDataWriter::WriteUInt8AtOffset(uint8_t value, size_t offset) {
+  if (offset > length_) {
+    return false;
+  }
+  size_t old_length = length_;
+  length_ = offset;
+  bool result = WriteBytes(&value, sizeof(value));
+  length_ = old_length;
+  return result;
+}
+
 bool QuicDataWriter::WriteBytesToUInt64(size_t num_bytes, uint64_t value) {
   if (num_bytes > sizeof(value)) {
     return false;

@@ -86,7 +86,9 @@ struct ClampedAddOp<T,
     V result;
     // TODO(jschuh) C++14 constexpr allows a compile-time constant optimization.
     const V saturated = CommonMaxOrMin<V>(IsValueNegative(y));
-    return CheckedAddOp<T, U>::Do(x, y, &result) ? result : saturated;
+    return BASE_NUMERICS_LIKELY((CheckedAddOp<T, U>::Do(x, y, &result)))
+               ? result
+               : saturated;
   }
 };
 
@@ -108,7 +110,9 @@ struct ClampedSubOp<T,
     V result;
     // TODO(jschuh) C++14 constexpr allows a compile-time constant optimization.
     const V saturated = CommonMaxOrMin<V>(!IsValueNegative(y));
-    return CheckedSubOp<T, U>::Do(x, y, &result) ? result : saturated;
+    return BASE_NUMERICS_LIKELY((CheckedSubOp<T, U>::Do(x, y, &result)))
+               ? result
+               : saturated;
   }
 };
 
@@ -130,7 +134,9 @@ struct ClampedMulOp<T,
     V result;
     const V saturated =
         CommonMaxOrMin<V>(IsValueNegative(x) ^ IsValueNegative(y));
-    return CheckedMulOp<T, U>::Do(x, y, &result) ? result : saturated;
+    return BASE_NUMERICS_LIKELY((CheckedMulOp<T, U>::Do(x, y, &result)))
+               ? result
+               : saturated;
   }
 };
 
@@ -146,11 +152,11 @@ struct ClampedDivOp<T,
   template <typename V = result_type>
   static V Do(T x, U y) {
     V result;
-    if (CheckedDivOp<T, U>::Do(x, y, &result))
+    if (BASE_NUMERICS_LIKELY((CheckedDivOp<T, U>::Do(x, y, &result))))
       return result;
-    const V saturated =
-        CommonMaxOrMin<V>(IsValueNegative(x) ^ IsValueNegative(y));
-    return x ? saturated : SaturationDefaultLimits<V>::NaN();
+    // Saturation goes to max, min, or NaN (if x is zero).
+    return x ? CommonMaxOrMin<V>(IsValueNegative(x) ^ IsValueNegative(y))
+             : SaturationDefaultLimits<V>::NaN();
   }
 };
 
@@ -166,7 +172,9 @@ struct ClampedModOp<T,
   template <typename V = result_type>
   static V Do(T x, U y) {
     V result;
-    return CheckedModOp<T, U>::Do(x, y, &result) ? result : x;
+    return BASE_NUMERICS_LIKELY((CheckedModOp<T, U>::Do(x, y, &result)))
+               ? result
+               : x;
   }
 };
 
@@ -175,7 +183,6 @@ struct ClampedLshOp {};
 
 // Left shift. Non-zero values saturate in the direction of the sign. A zero
 // shifted by any value always results in zero.
-// Note: This class template supports left shifting negative values.
 template <typename T, typename U>
 struct ClampedLshOp<T,
                     U,
@@ -185,12 +192,14 @@ struct ClampedLshOp<T,
   template <typename V = result_type>
   static V Do(T x, U shift) {
     static_assert(!std::is_signed<U>::value, "Shift value must be unsigned.");
-    V result = x;
-    const V saturated = x ? CommonMaxOrMin<V>(IsValueNegative(x)) : 0;
-    return (shift < std::numeric_limits<T>::digits &&
-            CheckedMulOp<T, T>::Do(x, T(1) << shift, &result))
-               ? result
-               : saturated;
+    if (BASE_NUMERICS_LIKELY(shift < std::numeric_limits<T>::digits)) {
+      // Shift as unsigned to avoid undefined behavior.
+      V result = static_cast<V>(as_unsigned(x) << shift);
+      // If the shift can be reversed, we know it was valid.
+      if (BASE_NUMERICS_LIKELY(result >> shift == x))
+        return result;
+    }
+    return x ? CommonMaxOrMin<V>(IsValueNegative(x)) : 0;
   }
 };
 
@@ -209,8 +218,9 @@ struct ClampedRshOp<T,
     static_assert(!std::is_signed<U>::value, "Shift value must be unsigned.");
     // Signed right shift is odd, because it saturates to -1 or 0.
     const V saturated = as_unsigned(V(0)) - IsValueNegative(x);
-    return shift < IntegerBitsPlusSign<T>::value ? saturated_cast<V>(x >> shift)
-                                                 : saturated;
+    return BASE_NUMERICS_LIKELY(shift < IntegerBitsPlusSign<T>::value)
+               ? saturated_cast<V>(x >> shift)
+               : saturated;
   }
 };
 

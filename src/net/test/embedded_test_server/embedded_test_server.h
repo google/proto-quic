@@ -92,6 +92,8 @@ class EmbeddedTestServer {
     TYPE_HTTPS,
   };
 
+  // A Java counterpart will be generated for this enum.
+  // GENERATED_JAVA_ENUM_PACKAGE: org.chromium.net.test
   enum ServerCertificate {
     CERT_OK,
 
@@ -150,6 +152,8 @@ class EmbeddedTestServer {
   bool Started() const {
     return listen_socket_.get() != NULL;
   }
+
+  static base::FilePath GetRootCertPemPath();
 
   HostPortPair host_port_pair() const {
     return HostPortPair::FromURL(base_url_);

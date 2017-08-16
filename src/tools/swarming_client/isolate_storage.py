@@ -6,28 +6,29 @@
 """A low-level blob storage/retrieval interface to the Isolate server"""
 
 import base64
-import binascii
 import collections
 import logging
+import os
 import re
 import sys
 import threading
 import time
 import types
+import uuid
 
 from utils import file_path
 from utils import net
 
 import isolated_format
 
-# gRPC may not be installed on the worker machine. This is fine, as long as
-# the bot doesn't attempt to use gRPC (checked in IsolateServerGrpc.__init__).
 try:
-  import grpc
-  from proto import isolate_bot_pb2
-except ImportError:
+  import grpc # for error codes
+  from utils import grpc_proxy
+  from proto import bytestream_pb2
+except ImportError as err:
   grpc = None
-  isolate_bot_pb2 = None
+  grpc_proxy = None
+  bytestream_pb2 = None
 
 
 # Chunk size to use when reading from network stream.
@@ -39,9 +40,9 @@ NET_IO_FILE_CHUNK = 16 * 1024
 DOWNLOAD_READ_TIMEOUT = 60
 
 
-# A class to use to communicate with the server by default. Can be changed by
-# 'set_storage_api_class'. Default is IsolateServer.
-_storage_api_cls = None
+# Stores the gRPC proxy address. Must be set if the storage API class is
+# IsolateServerGrpc (call 'set_grpc_proxy').
+_grpc_proxy = None
 
 
 class Item(object):
@@ -107,6 +108,15 @@ class StorageApi(object):
     Indirectly defines hashing scheme and compression method used.
     """
     raise NotImplementedError()
+
+  @property
+  def internal_compression(self):
+    """True if this class doesn't require external compression.
+
+    If true, callers should not compress items, even if the namespace indicates
+    otherwise. Compression will be performed by the StorageApi class.
+    """
+    return False
 
   def fetch(self, digest, offset=0):
     """Fetches an object and yields its content.
@@ -503,23 +513,20 @@ class IsolateServerGrpc(StorageApi):
   while fetching.
   """
 
-  def __init__(self, server, namespace):
+  def __init__(self, server, namespace, proxy):
     super(IsolateServerGrpc, self).__init__()
     logging.info('Using gRPC for Isolate')
-
-    # Make sure grpc was successfully imported
-    assert grpc
-    assert isolate_bot_pb2
-
     # Proxies only support the default-gzip namespace for now.
-    # TODO(aludwin): support other namespaces
+    # TODO(aludwin): support other namespaces if necessary
     assert namespace == 'default-gzip'
     self._server = server
-    self._channel = grpc.insecure_channel(server)
-    self._stub = isolate_bot_pb2.FileServiceStub(self._channel)
     self._lock = threading.Lock()
     self._memory_use = 0
-    logging.info('...gRPC successfully initialized')
+    self._num_pushes = 0
+    self._already_exists = 0
+    self._proxy = grpc_proxy.Proxy(proxy, bytestream_pb2.ByteStreamStub)
+    self._namespace = namespace
+
 
   @property
   def location(self):
@@ -527,33 +534,23 @@ class IsolateServerGrpc(StorageApi):
 
   @property
   def namespace(self):
-    # This is used to determine if the data is compressed, but gRPC proxies
-    # don't have concepts of 'namespaces' and natively compress all messages
-    # before transmission. So return an unlikely-to-be-used name so that
-    # isolateserver doesn't try to compress anything.
-    return 'grpc-proxy'
+    return self._namespace
+
+  @property
+  def internal_compression(self):
+    # gRPC natively compresses all messages before transmission.
+    return True
 
   def fetch(self, digest, offset=0):
     # The gRPC APIs only work with an offset of 0
     assert offset == 0
-    request = isolate_bot_pb2.FetchBlobsRequest()
-    req_digest = request.digest.add()
-    # Convert the utf-8 encoded hexidecimal string (like '012abc') to a byte
-    # array (like [0x01, 0x2a, 0xbc]).
-    req_digest.digest = binascii.unhexlify(digest)
-    expected_offset = 0
+    request = bytestream_pb2.ReadRequest()
+    #TODO(aludwin): send the expected size of the item
+    request.resource_name = '%s/blobs/%s/0' % (
+        self._proxy.prefix, digest)
     try:
-      for response in self._stub.FetchBlobs(request,
-                                            timeout=DOWNLOAD_READ_TIMEOUT):
-        if not response.status.succeeded:
-          raise IOError(
-              'Error while fetching %s: %s' % (digest, response.status))
-        if not expected_offset == response.data.offset:
-          raise IOError(
-              'Error while fetching %s: expected offset %d, got %d' % (
-                  digest, expected_offset, response.data.offset))
-        expected_offset += len(response.data.data)
-        yield response.data.data
+      for response in self._proxy.get_stream('Read', request):
+        yield response.data
     except grpc.RpcError as g:
       logging.error('gRPC error during fetch: re-throwing as IOError (%s)' % g)
       raise IOError(g)
@@ -567,6 +564,7 @@ class IsolateServerGrpc(StorageApi):
     # Default to item.content().
     content = item.content() if content is None else content
     guard_memory_use(self, content, item.size)
+    self._num_pushes += 1
 
     try:
       def chunker():
@@ -580,34 +578,46 @@ class IsolateServerGrpc(StorageApi):
       def slicer():
         # Ensures every bit of content is under the gRPC max size; yields
         # proto messages to send via gRPC.
-        request = isolate_bot_pb2.PushBlobsRequest()
-        request.data.digest.digest = binascii.unhexlify(item.digest)
-        request.data.digest.size_bytes = item.size
-        request.data.offset = 0
+        request = bytestream_pb2.WriteRequest()
+        u = uuid.uuid4()
+        request.resource_name = '%s/uploads/%s/blobs/%s/%d' % (
+            self._proxy.prefix, u, item.digest, item.size)
+        request.write_offset = 0
         for chunk in chunker():
           # Make sure we send at least one chunk for zero-length blobs
           has_sent_anything = False
           while chunk or not has_sent_anything:
-            slice_len = min(len(chunk), NET_IO_FILE_CHUNK)
-            request.data.data = chunk[:slice_len]
-            yield request
             has_sent_anything = True
-            request.data.offset += slice_len
-            # The proxy only expects the first chunk to have the digest
-            request.data.ClearField("digest")
+            slice_len = min(len(chunk), NET_IO_FILE_CHUNK)
+            request.data = chunk[:slice_len]
+            if request.write_offset + slice_len == item.size:
+              request.finish_write = True
+            yield request
+            request.write_offset += slice_len
             chunk = chunk[slice_len:]
 
-      # TODO(aludwin): batch up several requests to reuse TCP connections
+      response = None
       try:
-        response = self._stub.PushBlobs(slicer())
-      except grpc.RpcError as g:
-        logging.error('gRPC error during push: re-throwing as IOError (%s)' % g)
-        raise IOError(g)
+        response = self._proxy.call_no_retries('Write', slicer())
+      except grpc.RpcError as r:
+        if r.code() == grpc.StatusCode.ALREADY_EXISTS:
+          # This is legit - we didn't check before we pushed so no problem if
+          # it's already there.
+          self._already_exists += 1
+          if self._already_exists % 100 == 0:
+            logging.info('unnecessarily pushed %d/%d blobs (%.1f%%)' % (
+                self._already_exists, self._num_pushes,
+                100.0 * self._already_exists / self._num_pushes))
+        else:
+          logging.error('gRPC error during push: throwing as IOError (%s)' % r)
+          raise IOError(r)
+      except Exception as e:
+        logging.error('error during push: throwing as IOError (%s)' % e)
+        raise IOError(e)
 
-      if not response.status.succeeded:
-        raise IOError(
-            'Error while uploading %s: %s' % (
-                item.digest, response.status.error_detail))
+      if response is not None and response.committed_size != item.size:
+        raise IOError('%s/%d: incorrect size written (%d)' % (
+            item.digest, item.size, response.committed_size))
 
     finally:
       with self._lock:
@@ -615,47 +625,24 @@ class IsolateServerGrpc(StorageApi):
 
   def contains(self, items):
     """Returns the set of all missing items."""
+    # TODO(aludwin): this isn't supported directly in Bytestream, so for now
+    # assume that nothing is present in the cache.
     # Ensure all items were initialized with 'prepare' call. Storage does that.
     assert all(i.digest is not None and i.size is not None for i in items)
-    request = isolate_bot_pb2.ContainsRequest()
-    items_by_digest = {}
-    for item in items:
-      cd = request.digest.add()
-      cd.digest = binascii.unhexlify(item.digest)
-      items_by_digest[cd.digest] = item
-    try:
-      response = self._stub.Contains(request)
-    except grpc.RpcError as g:
-      logging.error('gRPC error during contains: re-throwing as IOError (%s)'
-                    % g)
-      raise IOError(g)
-
-    # If everything's present, return the empty set.
-    if response.status.succeeded:
-      return {}
-
-    if not response.status.error == isolate_bot_pb2.BlobStatus.MISSING_DIGEST:
-      raise IOError('Unknown response during lookup: %s' % response.status)
-
-    # Pick Items that are missing, attach _PushState to them. The gRPC
-    # implementation doesn't actually have a push state, we just attach
-    # empty objects to satisfy the StorageApi interface.
+    # Assume all Items are missing, and attach _PushState to them. The gRPC
+    # implementation doesn't actually have a push state, we just attach empty
+    # objects to satisfy the StorageApi interface.
     missing_items = {}
-    for missing in response.status.missing_digest:
-      item = items_by_digest[missing.digest]
+    for item in items:
       missing_items[item] = _IsolateServerGrpcPushState()
-
-    logging.info('Queried %d files, %d cache hit',
-        len(items), len(items) - len(missing_items))
     return missing_items
 
 
-def set_storage_api_class(cls):
-  """Replaces StorageApi implementation used by default."""
-  global _storage_api_cls
-  assert _storage_api_cls is None
-  assert issubclass(cls, StorageApi)
-  _storage_api_cls = cls
+def set_grpc_proxy(proxy):
+  """Sets the StorageApi to use the specified proxy."""
+  global _grpc_proxy
+  assert _grpc_proxy is None
+  _grpc_proxy = proxy
 
 
 def get_storage_api(url, namespace):
@@ -674,5 +661,6 @@ def get_storage_api(url, namespace):
   Returns:
     Instance of StorageApi subclass.
   """
-  cls = _storage_api_cls or IsolateServer
-  return cls(url, namespace)
+  if _grpc_proxy is not None:
+    return IsolateServerGrpc(url, namespace, _grpc_proxy)
+  return IsolateServer(url, namespace)

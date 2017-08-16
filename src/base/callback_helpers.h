@@ -77,7 +77,7 @@ RepeatingCallback<void(Args...)> AdaptCallbackForRepeating(
 class BASE_EXPORT ScopedClosureRunner {
  public:
   ScopedClosureRunner();
-  explicit ScopedClosureRunner(const Closure& closure);
+  explicit ScopedClosureRunner(OnceClosure closure);
   ~ScopedClosureRunner();
 
   ScopedClosureRunner(ScopedClosureRunner&& other);
@@ -90,13 +90,13 @@ class BASE_EXPORT ScopedClosureRunner {
   void RunAndReset();
 
   // Replaces closure with the new one releasing the old one without calling it.
-  void ReplaceClosure(const Closure& closure);
+  void ReplaceClosure(OnceClosure closure);
 
   // Releases the Closure without calling.
-  Closure Release() WARN_UNUSED_RESULT;
+  OnceClosure Release() WARN_UNUSED_RESULT;
 
  private:
-  Closure closure_;
+  OnceClosure closure_;
 
   DISALLOW_COPY_AND_ASSIGN(ScopedClosureRunner);
 };

@@ -124,8 +124,6 @@ class SmoothnessToughPathRenderingCases(_Smoothness):
     return StoryExpectations()
 
 
-@benchmark.Disabled('android')  # crbug.com/526901
-@benchmark.Disabled('linux')  # crbug.com/715607
 @benchmark.Owner(emails=['junov@chromium.org'])
 class SmoothnessToughCanvasCases(_Smoothness):
   """Measures frame rate and a variety of other statistics.
@@ -154,11 +152,12 @@ class SmoothnessToughCanvasCases(_Smoothness):
         self.DisableStory('http://geoapis.appspot.com/agdnZW9hcGlzchMLEgtFeGFtcGxlQ29kZRjh1wIM',
                           [story_module.expectations.ANDROID_NEXUS5],
                           'crbug.com/364248')
+        self.DisableStory('tough_canvas_cases/canvas_toBlob.html',
+                          [story_module.expectations.ANDROID_ONE],
+                          'crbug.com/755657')
     return StoryExpectations()
 
 
-@benchmark.Disabled('android')  # crbug.com/373812
-@benchmark.Disabled('win-reference')  # crbug.com/612810
 @benchmark.Owner(emails=['kbr@chromium.org', 'zmo@chromium.org'])
 class SmoothnessToughWebGLCases(_Smoothness):
   page_set = page_sets.ToughWebglCasesPageSet
@@ -174,8 +173,6 @@ class SmoothnessToughWebGLCases(_Smoothness):
     return StoryExpectations()
 
 
-@benchmark.Disabled('win') # http://crbug.com/692663
-@benchmark.Disabled('android-webview')  # http://crbug.com/653933
 @benchmark.Owner(emails=['kbr@chromium.org', 'zmo@chromium.org'])
 class SmoothnessMaps(perf_benchmark.PerfBenchmark):
   page_set = page_sets.MapsPageSet
@@ -187,12 +184,17 @@ class SmoothnessMaps(perf_benchmark.PerfBenchmark):
   def GetExpectations(self):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing.
+        self.DisableStory(
+            'http://localhost:8000/performance.html',
+            [story_module.expectations.ALL_WIN],
+            'crbug.com/692663')
+        self.DisableStory(
+            'http://localhost:8000/performance.html',
+            [story_module.expectations.ANDROID_WEBVIEW],
+            'crbug.com/653993')
     return StoryExpectations()
 
 
-@benchmark.Disabled('android',
-                    'mac')     # crbug.com/567802
 @benchmark.Owner(emails=['ssid@chromium.org'])
 class SmoothnessKeyDesktopMoveCases(_Smoothness):
   page_set = page_sets.KeyDesktopMoveCasesPageSet
@@ -201,14 +203,11 @@ class SmoothnessKeyDesktopMoveCases(_Smoothness):
   def Name(cls):
     return 'smoothness.key_desktop_move_cases'
 
-  @classmethod
-  def ShouldDisable(cls, possible_browser):  # http://crbug.com/597656
-      return (possible_browser.browser_type == 'reference' and
-              possible_browser.platform.GetOSName() == 'win')
-
   def GetExpectations(self):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
+        self.PermanentlyDisableBenchmark(
+            [story_module.expectations.ALL_MOBILE], 'Desktop benchmark.')
         self.DisableStory('https://mail.google.com/mail/',
                           [story_module.expectations.ALL_WIN],
                           'crbug.com/750131')
@@ -240,9 +239,6 @@ class SmoothnessKeyMobileSites(_Smoothness):
     return StoryExpectations()
 
 
-@benchmark.Disabled('android')  # crbug.com/589580
-@benchmark.Disabled('android-reference')  # crbug.com/588786
-@benchmark.Disabled('mac')  # crbug.com/563615
 @benchmark.Owner(emails=['alancutter@chromium.org'])
 class SmoothnessToughAnimationCases(_Smoothness):
   page_set = page_sets.ToughAnimationCasesPageSet
@@ -262,6 +258,19 @@ class SmoothnessToughAnimationCases(_Smoothness):
       def SetExpectations(self):
         self.DisableStory('robohornetpro', [story_module.expectations.ALL],
                           'crbug.com/350692')
+        self.DisableStory(
+            'balls_css_keyframe_animations_composited_transform.html',
+            [story_module.expectations.ALL_MOBILE],
+            'crbug.com/755556')
+        self.DisableStory(
+            'mix_blend_mode_animation_difference.html',
+            [story_module.expectations.ALL_MAC],
+            'crbug.com/755556')
+        self.DisableStory(
+            'mix_blend_mode_animation_hue.html',
+            [story_module.expectations.ALL_MAC],
+            'crbug.com/755556')
+
     return StoryExpectations()
 
 
@@ -287,7 +296,15 @@ class SmoothnessKeySilkCases(_Smoothness):
     return stories
 
   def GetExpectations(self):
-     return page_sets.KeySilkCasesStoryExpectations()
+    class StoryExpectations(story_module.expectations.StoryExpectations):
+      def SetExpectations(self):
+        self.DisableStory('https://polymer-topeka.appspot.com/',
+                          [story_module.expectations.ALL], 'crbug.com/507865')
+        self.DisableStory('http://plus.google.com/app/basic/stream',
+                          [story_module.expectations.ALL], 'crbug.com/338838')
+        self.DisableStory('inbox_app.html?slide_drawer',
+                          [story_module.expectations.ALL], 'crbug.com/446332')
+    return StoryExpectations()
 
 
 @benchmark.Enabled('android')
@@ -423,7 +440,7 @@ class SmoothnessSimpleMobilePages(_Smoothness):
     return StoryExpectations()
 
 
-@benchmark.Disabled('all') # http://crbug.com/631015
+@benchmark.Enabled('android')
 @benchmark.Owner(emails=['bokan@chromium.org'])
 class SmoothnessToughPinchZoomCases(_Smoothness):
   """Measures rendering statistics for pinch-zooming in the tough pinch zoom
@@ -435,18 +452,85 @@ class SmoothnessToughPinchZoomCases(_Smoothness):
   def Name(cls):
     return 'smoothness.tough_pinch_zoom_cases'
 
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    return (
-       # http://crbug.com/564008
-       cls.IsSvelte(possible_browser) or
-       # http://crbug.com/630701
-       possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X')
-
   def GetExpectations(self):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing.
+        self.DisableStory('https://www.google.com/#hl=en&q=barack+obama',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('https://mail.google.com/mail/',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('https://www.google.com/calendar/',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('https://www.google.com/search?q=cats&tbm=isch',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('http://www.youtube.com',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('Blogger',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('Facebook',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('LinkedIn',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('Wikipedia (1 tab)',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('Twitter',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('ESPN',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('http://news.yahoo.com',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('http://www.cnn.com',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('Weather.com',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('http://www.amazon.com',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('http://www.ebay.com',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('http://games.yahoo.com',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('http://booking.com',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
+        self.DisableStory('http://sports.yahoo.com/',
+                          [story_module.expectations.ALL_ANDROID,
+                          story_module.expectations.ALL_WIN],
+                          'crbug.com/631015')
     return StoryExpectations()
 
 
@@ -469,10 +553,7 @@ class SmoothnessDesktopToughPinchZoomCases(_Smoothness):
     return StoryExpectations()
 
 
-# This benchmark runs only on android by it is disabled on android as well
-# because of http://crbug.com/610021
-# @benchmark.Enabled('android')
-@benchmark.Disabled('all')
+@benchmark.Enabled('android')
 @benchmark.Owner(emails=['ericrk@chromium.org'])
 class SmoothnessGpuRasterizationToughPinchZoomCases(_Smoothness):
   """Measures rendering statistics for pinch-zooming in the tough pinch zoom
@@ -489,18 +570,70 @@ class SmoothnessGpuRasterizationToughPinchZoomCases(_Smoothness):
   def Name(cls):
     return 'smoothness.gpu_rasterization.tough_pinch_zoom_cases'
 
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    return cls.IsSvelte(possible_browser)  # http://crbug.com/564008
-
   def GetExpectations(self):
+
     class StoryExpectations(story_module.expectations.StoryExpectations):
+
       def SetExpectations(self):
-        pass # Nothing.
+        self.DisableStory('https://www.google.com/#hl=en&q=barack+obama',
+                          [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('https://mail.google.com/mail/',
+                          [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('https://www.google.com/calendar/',
+                          [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('https://www.google.com/search?q=cats&tbm=isch',
+                          [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('http://www.youtube.com',
+                          [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('Blogger', [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('Facebook', [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('LinkedIn', [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('Wikipedia (1 tab)',
+                          [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('Twitter', [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('ESPN', [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('http://news.yahoo.com',
+                          [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('http://www.cnn.com',
+                          [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('Weather.com',
+                          [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('http://www.amazon.com',
+                          [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('http://www.ebay.com',
+                          [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('http://games.yahoo.com',
+                          [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('http://booking.com',
+                          [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+        self.DisableStory('http://sports.yahoo.com/',
+                          [story_module.expectations.ALL_ANDROID],
+                          'crbug.com/610021')
+
     return StoryExpectations()
 
 
-@benchmark.Enabled('android')
+# This benchmark runs only on android, but is disabled because the page set
+# uses deprecated web platform features.  See http://crbug.com/750876
+@benchmark.Disabled('all')
 @benchmark.Owner(emails=['vmiura@chromium.org'])
 class SmoothnessGpuRasterizationPolymer(_Smoothness):
   """Measures rendering statistics for the Polymer cases with GPU rasterization.
@@ -545,7 +678,6 @@ class SmoothnessToughScrollingCases(_Smoothness):
     return StoryExpectations()
 
 
-@benchmark.Disabled('all')  # crbug.com/667489
 @benchmark.Owner(emails=['ericrk@chromium.org'])
 class SmoothnessGpuRasterizationToughScrollingCases(_Smoothness):
   tag = 'gpu_rasterization'
@@ -566,8 +698,6 @@ class SmoothnessGpuRasterizationToughScrollingCases(_Smoothness):
     return StoryExpectations()
 
 
-@benchmark.Disabled('android')  # http://crbug.com/531593
-@benchmark.Disabled('win')  # http://crbug.com/652372
 class SmoothnessToughImageDecodeCases(_Smoothness):
   page_set = page_sets.ToughImageDecodeCasesPageSet
 
@@ -582,7 +712,6 @@ class SmoothnessToughImageDecodeCases(_Smoothness):
     return StoryExpectations()
 
 
-@benchmark.Disabled('android')  # http://crbug.com/610015
 @benchmark.Owner(emails=['cblume@chromium.org'])
 class SmoothnessImageDecodingCases(_Smoothness):
   """Measures decoding statistics for jpeg images.
@@ -597,10 +726,6 @@ class SmoothnessImageDecodingCases(_Smoothness):
   def Name(cls):
     return 'smoothness.image_decoding_cases'
 
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    return cls.IsSvelte(possible_browser)  # http://crbug.com/563974
-
   def GetExpectations(self):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
@@ -608,7 +733,6 @@ class SmoothnessImageDecodingCases(_Smoothness):
     return StoryExpectations()
 
 
-@benchmark.Disabled('android')  # http://crbug.com/513699
 @benchmark.Owner(emails=['cblume@chromium.org'])
 class SmoothnessGpuImageDecodingCases(_Smoothness):
   """Measures decoding statistics for jpeg images with GPU rasterization.
@@ -717,7 +841,6 @@ class SmoothnessToughWebGLAdCases(_Smoothness):
     return StoryExpectations()
 
 
-@benchmark.Disabled('reference')  # crbug.com/549428
 @benchmark.Owner(emails=['skyostil@chromium.org', 'brianderson@chromium.org'])
 class SmoothnessToughSchedulingCases(_Smoothness):
   """Measures rendering statistics while interacting with pages that have

@@ -23,6 +23,9 @@ inline bool GetQuicFlagImpl(bool flag) {
 inline int32_t GetQuicFlagImpl(int32_t flag) {
   return flag;
 }
+inline uint32_t GetQuicFlagImpl(uint32_t flag) {
+  return flag;
+}
 inline int64_t GetQuicFlagImpl(int64_t flag) {
   return flag;
 }
@@ -40,6 +43,9 @@ inline void SetQuicFlagImpl(bool* f, bool v) {
   *f = v;
 }
 inline void SetQuicFlagImpl(int32_t* f, int32_t v) {
+  *f = v;
+}
+inline void SetQuicFlagImpl(uint32_t* f, uint32_t v) {
   *f = v;
 }
 inline void SetQuicFlagImpl(int64_t* f, int64_t v) {

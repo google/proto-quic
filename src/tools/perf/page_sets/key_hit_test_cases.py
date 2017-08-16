@@ -43,8 +43,3 @@ class KeyHitTestCasesPageSet(story.StorySet):
     super(KeyHitTestCasesPageSet, self).__init__()
 
     self.AddStory(PaperCalculatorHitTest(self))
-
-
-class KeyHitTestCasesStoryExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    pass

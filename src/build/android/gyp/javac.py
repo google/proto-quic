@@ -371,8 +371,11 @@ def _ParseOptions(argv):
   if options.java_version == '1.8' and options.bootclasspath:
     # Android's boot jar doesn't contain all java 8 classes.
     # See: https://github.com/evant/gradle-retrolambda/issues/23.
-    javac_path = os.path.realpath(distutils.spawn.find_executable('javac'))
-    jdk_dir = os.path.dirname(os.path.dirname(javac_path))
+    # Get the path of the jdk folder by searching for the 'jar' executable. We
+    # cannot search for the 'javac' executable because goma provides a custom
+    # version of 'javac'.
+    jar_path = os.path.realpath(distutils.spawn.find_executable('jar'))
+    jdk_dir = os.path.dirname(os.path.dirname(jar_path))
     rt_jar = os.path.join(jdk_dir, 'jre', 'lib', 'rt.jar')
     options.bootclasspath.append(rt_jar)
 

@@ -312,7 +312,8 @@ class QuicDispatcher : public QuicTimeWaitListManager::Visitor,
   void ProcessUnauthenticatedHeaderFate(QuicPacketFate fate,
                                         QuicConnectionId connection_id);
 
-  // Invoked when StatelessRejector::Process completes.
+  // Invoked when StatelessRejector::Process completes. |first_version| is the
+  // version of the packet which initiated the stateless reject.
   void OnStatelessRejectorProcessDone(
       std::unique_ptr<StatelessRejector> rejector,
       const QuicSocketAddress& current_client_address,

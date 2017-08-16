@@ -8,6 +8,7 @@
 #include <stddef.h>
 
 #include <memory>
+#include <stack>
 #include <string>
 #include <vector>
 
@@ -97,18 +98,23 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   void WaitForAllWorkersIdleForTesting();
 
   // Joins all workers of this worker pool. Tasks that are already running are
-  // allowed to complete their execution. This can only be called once.
+  // allowed to complete their execution. It is invalid to post a task after
+  // this is called. TaskTracker::Flush() can be called before this to complete
+  // existing tasks, which might otherwise post a task during JoinForTesting().
+  // This can only be called once.
   void JoinForTesting();
 
-  // Disallows worker detachment. If the suggested reclaim time is not
+  // Disallows worker cleanup. If the suggested reclaim time is not
   // TimeDelta::Max(), the test must call this before JoinForTesting() to reduce
   // the chance of thread detachment during the process of joining all of the
   // threads, and as a result, threads running after JoinForTesting().
-  void DisallowWorkerDetachmentForTesting();
+  void DisallowWorkerCleanupForTesting();
 
-  // Returns the number of workers alive in this worker pool. The value may
-  // change if workers are woken up or detached during this call.
-  size_t NumberOfAliveWorkersForTesting();
+  // Returns the number of workers in this worker pool.
+  size_t NumberOfWorkersForTesting();
+
+  // Returns |worker_capacity_|.
+  size_t GetWorkerCapacityForTesting();
 
  private:
   class SchedulerWorkerDelegateImpl;
@@ -129,19 +135,13 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // Removes |worker| from |idle_workers_stack_|.
   void RemoveFromIdleWorkersStack(SchedulerWorker* worker);
 
-  // Returns true if worker thread detachment is permitted.
-  bool CanWorkerDetachForTesting();
+  // Returns true if worker cleanup is permitted.
+  bool CanWorkerCleanupForTesting();
 
-  // Adds a new SchedulerWorker based on SchedulerWorkerPoolParams
-  // that were passed into Start(). SchedulerWorker::Start() must be called on
-  // the worker before it is usable. Returns the newly added worker. This cannot
-  // be called before Start(). This function should only be called under the
-  // protection of |lock_|.
-  scoped_refptr<SchedulerWorker> CreateAndRegisterSchedulerWorker();
-
-  // Performs the same function as CreateAndRegisterSchedulerWorker(), except
-  // this also calls Start() on the worker.
-  scoped_refptr<SchedulerWorker> CreateRegisterAndStartSchedulerWorker();
+  // Tries to add a new SchedulerWorker to the pool. Returns the new
+  // SchedulerWorker on success, nullptr otherwise. Cannot be called before
+  // Start(). Must be called under the protection of |lock_|.
+  SchedulerWorker* CreateRegisterAndStartSchedulerWorker();
 
   const std::string name_;
   const ThreadPriority priority_hint_;
@@ -150,17 +150,17 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   PriorityQueue shared_priority_queue_;
 
   // Suggested reclaim time for workers. Initialized by Start(). Never modified
-  // afterwards (i.e. can be read without synchronization once
-  // |workers_created_.IsSet()|).
+  // afterwards (i.e. can be read without synchronization after Start()).
   TimeDelta suggested_reclaim_time_;
 
   SchedulerBackwardCompatibility backward_compatibility_;
 
   // Synchronizes accesses to |workers_|, |worker_capacity_|,
-  // |idle_workers_stack_|, |idle_workers_stack_cv_for_testing_| and
-  // |num_wake_ups_before_start_|. Has |shared_priority_queue_|'s lock as
-  // its predecessor so that a worker can be pushed to |idle_workers_stack_|
-  // within the scope of a Transaction (more details in GetWork()).
+  // |idle_workers_stack_|, |idle_workers_stack_cv_for_testing_|,
+  // |num_wake_ups_before_start_|, and |cleanup_timestamps_| . Has
+  // |shared_priority_queue_|'s lock as its predecessor so that a worker can be
+  // pushed to |idle_workers_stack_| within the scope of a Transaction (more
+  // details in GetWork()).
   mutable SchedulerLock lock_;
 
   // All workers owned by this worker pool.
@@ -168,7 +168,7 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
 
   // Workers can be added as needed up until there are |worker_capacity_|
   // workers.
-  size_t worker_capacity_;
+  size_t worker_capacity_ = 0;
 
   // Stack of idle workers. Initially, all workers are on this stack. A worker
   // is removed from the stack before its WakeUp() function is called and when
@@ -181,20 +181,22 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   std::unique_ptr<ConditionVariable> idle_workers_stack_cv_for_testing_;
 
   // Number of wake ups that occurred before Start(). Never modified after
-  // Start() (i.e. can be read without synchronization once
-  // |workers_created_.IsSet()|).
+  // Start() (i.e. can be read without synchronization after Start()).
   int num_wake_ups_before_start_ = 0;
+
+  // Stack that contains the timestamps of when workers get cleaned up.
+  // Timestamps get popped off the stack as new workers are added.
+  std::stack<TimeTicks, std::vector<TimeTicks>> cleanup_timestamps_;
 
   // Signaled once JoinForTesting() has returned.
   WaitableEvent join_for_testing_returned_;
 
-  // Indicates to the delegates that workers are not permitted to detach their
-  // threads.
-  AtomicFlag worker_detachment_disallowed_;
+  // Indicates to the delegates that workers are not permitted to cleanup.
+  AtomicFlag worker_cleanup_disallowed_;
 
 #if DCHECK_IS_ON()
-  // Set after all the initial workers have been created.
-  AtomicFlag workers_created_;
+  // Set at the start of JoinForTesting().
+  AtomicFlag join_for_testing_started_;
 #endif
 
   // TaskScheduler.DetachDuration.[worker pool name] histogram. Intentionally

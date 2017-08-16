@@ -27,11 +27,9 @@ namespace net {
 // same machine in which the LocalTestServer runs.
 class LocalTestServer : public BaseTestServer {
  public:
-  // Initialize a TestServer listening on a specific host (IP or hostname).
-  // |document_root| must be a relative path under the root tree.
-  LocalTestServer(Type type,
-                  const std::string& host,
-                  const base::FilePath& document_root);
+  // Initialize a TestServer. |document_root| must be a relative path under the
+  // root tree.
+  LocalTestServer(Type type, const base::FilePath& document_root);
 
   // Initialize a TestServer with a specific set of SSLOptions.
   // |document_root| must be a relative path under the root tree.

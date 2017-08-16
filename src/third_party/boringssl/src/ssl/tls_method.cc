@@ -69,9 +69,21 @@ namespace bssl {
 
 static int ssl3_supports_cipher(const SSL_CIPHER *cipher) { return 1; }
 
-static void ssl3_expect_flight(SSL *ssl) {}
+static void ssl3_on_handshake_complete(SSL *ssl) {
+  /* The handshake should have released its final message. */
+  assert(!ssl->s3->has_message);
 
-static void ssl3_received_flight(SSL *ssl) {}
+  /* During the handshake, |init_buf| is retained. Release if it there is no
+   * excess in it.
+   *
+   * TODO(davidben): The second check is always true but will not be once we
+   * switch to copying the entire handshake record. Replace this comment with an
+   * explanation when that happens and a TODO to reject it. */
+  if (ssl->init_buf != NULL && ssl->init_buf->length == 0) {
+    BUF_MEM_free(ssl->init_buf);
+    ssl->init_buf = NULL;
+  }
+}
 
 static int ssl3_set_read_state(SSL *ssl, UniquePtr<SSLAEADContext> aead_ctx) {
   if (ssl->s3->rrec.length != 0) {
@@ -101,8 +113,8 @@ static const SSL_PROTOCOL_METHOD kTLSProtocolMethod = {
     ssl3_new,
     ssl3_free,
     ssl3_get_message,
-    ssl3_get_current_message,
-    ssl3_release_current_message,
+    ssl3_read_message,
+    ssl3_next_message,
     ssl3_read_app_data,
     ssl3_read_change_cipher_spec,
     ssl3_read_close_notify,
@@ -115,8 +127,7 @@ static const SSL_PROTOCOL_METHOD kTLSProtocolMethod = {
     ssl3_add_change_cipher_spec,
     ssl3_add_alert,
     ssl3_flush_flight,
-    ssl3_expect_flight,
-    ssl3_received_flight,
+    ssl3_on_handshake_complete,
     ssl3_set_read_state,
     ssl3_set_write_state,
 };
@@ -154,7 +165,7 @@ static int ssl_noop_x509_ssl_ctx_new(SSL_CTX *ctx) { return 1; }
 static void ssl_noop_x509_ssl_ctx_free(SSL_CTX *ctx) { }
 static void ssl_noop_x509_ssl_ctx_flush_cached_client_CA(SSL_CTX *ctx) {}
 
-static const SSL_X509_METHOD ssl_noop_x509_method = {
+const SSL_X509_METHOD ssl_noop_x509_method = {
   ssl_noop_x509_check_client_CA_names,
   ssl_noop_x509_clear,
   ssl_noop_x509_free,

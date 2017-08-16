@@ -65,7 +65,6 @@ static_library("sdch") {
     include_dirs = [ "ios" ]
   } else if (is_mac) {
     include_dirs = [ "mac" ]
-    defines = [ "OPEN_VCDIFF_USE_AUTO_PTR" ]
   } else if (is_win) {
     include_dirs = [ "win" ]
   }

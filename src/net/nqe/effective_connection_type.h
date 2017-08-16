@@ -5,6 +5,7 @@
 #ifndef NET_NQE_EFFECTIVE_CONNECTION_TYPE_H_
 #define NET_NQE_EFFECTIVE_CONNECTION_TYPE_H_
 
+#include "base/optional.h"
 #include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 
@@ -61,15 +62,12 @@ enum EffectiveConnectionType {
 NET_EXPORT const char* GetNameForEffectiveConnectionType(
     EffectiveConnectionType type);
 
-// Returns true if the EffectiveConnectionType that corresponds to
-// |connection_type_name| is available, and sets |effective_connection_type| to
-// that value. If the effective connection type is unavailable, false is
-// returned, and |effective_connection_type| is set to
-// EFFECTIVE_CONNECTION_TYPE_UNKNOWN. |effective_connection_type| must be
-// non-null.
-NET_EXPORT bool GetEffectiveConnectionTypeForName(
-    base::StringPiece connection_type_name,
-    EffectiveConnectionType* effective_connection_type);
+// Returns the EffectiveConnectionType that corresponds to
+// |connection_type_name|. If the effective connection type is unavailable or if
+// |connection_type_name| does not match to a known effective connection type,
+// an unset value is returned.
+NET_EXPORT base::Optional<EffectiveConnectionType>
+GetEffectiveConnectionTypeForName(base::StringPiece connection_type_name);
 
 // Returns the string equivalent of |type|. Deprecated, and replaced by
 // GetNameForEffectiveConnectionType.

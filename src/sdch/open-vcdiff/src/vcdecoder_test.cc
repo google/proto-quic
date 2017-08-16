@@ -23,7 +23,7 @@
 
 namespace open_vcdiff {
 
-const char VCDiffDecoderTest::kStandardFileHeader[] = {
+const uint8_t VCDiffDecoderTest::kStandardFileHeader[] = {
     0xD6,  // 'V' | 0x80
     0xC3,  // 'C' | 0x80
     0xC4,  // 'D' | 0x80
@@ -31,7 +31,7 @@ const char VCDiffDecoderTest::kStandardFileHeader[] = {
     0x00   // Hdr_Indicator: no custom code table, no compression
   };
 
-const char VCDiffDecoderTest::kInterleavedFileHeader[] = {
+const uint8_t VCDiffDecoderTest::kInterleavedFileHeader[] = {
     0xD6,  // 'V' | 0x80
     0xC3,  // 'C' | 0x80
     0xC4,  // 'D' | 0x80
@@ -61,21 +61,22 @@ void VCDiffDecoderTest::SetUp() {
 }
 
 void VCDiffDecoderTest::UseStandardFileHeader() {
-  delta_file_header_.assign(kStandardFileHeader,
+  delta_file_header_.assign(reinterpret_cast<const char *>(kStandardFileHeader),
                             sizeof(kStandardFileHeader));
 }
 
 void VCDiffDecoderTest::UseInterleavedFileHeader() {
-  delta_file_header_.assign(kInterleavedFileHeader,
-                            sizeof(kInterleavedFileHeader));
+  delta_file_header_.assign(
+      reinterpret_cast<const char *>(kInterleavedFileHeader),
+      sizeof(kInterleavedFileHeader));
 }
 
 void VCDiffDecoderTest::InitializeDeltaFile() {
   delta_file_ = delta_file_header_ + delta_window_header_ + delta_window_body_;
 }
 
-char VCDiffDecoderTest::GetByteFromStringLength(const char* s,
-                                                int which_byte) {
+uint8_t VCDiffDecoderTest::GetByteFromStringLength(const char* s,
+                                                   int which_byte) {
   char varint_buf[VarintBE<int32_t>::kMaxBytes];
   VarintBE<int32_t>::Encode(static_cast<int32_t>(strlen(s)), varint_buf);
   return varint_buf[which_byte];
@@ -101,10 +102,10 @@ void VCDiffDecoderTest::ComputeAndAddChecksum() {
 // (0x7FFFFFFF) at the given offset in the delta window.
 void VCDiffDecoderTest::WriteMaxVarintAtOffset(int offset,
                                                int bytes_to_replace) {
-  static const char kMaxVarint[] = { 0x87, 0xFF, 0xFF, 0xFF, 0x7F };
+  static const uint8_t kMaxVarint[] = { 0x87, 0xFF, 0xFF, 0xFF, 0x7F };
   delta_file_.replace(delta_file_header_.size() + offset,
                       bytes_to_replace,
-                      kMaxVarint,
+                      reinterpret_cast<const char*>(kMaxVarint),
                       sizeof(kMaxVarint));
 }
 
@@ -112,10 +113,10 @@ void VCDiffDecoderTest::WriteMaxVarintAtOffset(int offset,
 // in the delta window.
 void VCDiffDecoderTest::WriteNegativeVarintAtOffset(int offset,
                                                     int bytes_to_replace) {
-  static const char kNegativeVarint[] = { 0x88, 0x80, 0x80, 0x80, 0x00 };
+  static const uint8_t kNegativeVarint[] = { 0x88, 0x80, 0x80, 0x80, 0x00 };
   delta_file_.replace(delta_file_header_.size() + offset,
                       bytes_to_replace,
-                      kNegativeVarint,
+                      reinterpret_cast<const char*>(kNegativeVarint),
                       sizeof(kNegativeVarint));
 }
 
@@ -123,18 +124,18 @@ void VCDiffDecoderTest::WriteNegativeVarintAtOffset(int offset,
 // at the given offset in the delta window.
 void VCDiffDecoderTest::WriteInvalidVarintAtOffset(int offset,
                                                    int bytes_to_replace) {
-  static const char kInvalidVarint[] = { 0x87, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F };
+  static const uint8_t kInvalidVarint[] = { 0x87, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F };
   delta_file_.replace(delta_file_header_.size() + offset,
                       bytes_to_replace,
-                      kInvalidVarint,
+                      reinterpret_cast<const char*>(kInvalidVarint),
                       sizeof(kInvalidVarint));
 }
 
 bool VCDiffDecoderTest::FuzzOneByteInDeltaFile() {
   static const struct Fuzzer {
-    char _and;
-    char _or;
-    char _xor;
+    uint8_t _and;
+    uint8_t _or;
+    uint8_t _xor;
   } fuzzers[] = {
     { 0xff, 0x80, 0x00 },
     { 0xff, 0xff, 0x00 },
@@ -162,7 +163,7 @@ bool VCDiffDecoderTest::FuzzOneByteInDeltaFile() {
   return false;
 }
 
-const char VCDiffStandardDecoderTest::kWindowHeader[] = {
+const uint8_t VCDiffStandardDecoderTest::kWindowHeader[] = {
     VCD_SOURCE,  // Win_Indicator: take source from dictionary
     FirstByteOfStringLength(kDictionary),  // Source segment size
     SecondByteOfStringLength(kDictionary),
@@ -176,7 +177,7 @@ const char VCDiffStandardDecoderTest::kWindowHeader[] = {
     0x03  // length of addresses for COPYs
   };
 
-const char VCDiffStandardDecoderTest::kWindowBody[] = {
+const uint8_t VCDiffStandardDecoderTest::kWindowBody[] = {
     // Data for ADDs: 1st section (length 61)
     ' ', 'I', ' ', 'h', 'a', 'v', 'e', ' ', 's', 'a', 'i', 'd', ' ',
     'i', 't', ' ', 't', 'w', 'i', 'c', 'e', ':', '\n',
@@ -216,11 +217,13 @@ const char VCDiffStandardDecoderTest::kWindowBody[] = {
 
 VCDiffStandardDecoderTest::VCDiffStandardDecoderTest() {
   UseStandardFileHeader();
-  delta_window_header_.assign(kWindowHeader, sizeof(kWindowHeader));
-  delta_window_body_.assign(kWindowBody, sizeof(kWindowBody));
+  delta_window_header_.assign(reinterpret_cast<const char *>(kWindowHeader),
+                              sizeof(kWindowHeader));
+  delta_window_body_.assign(reinterpret_cast<const char *>(kWindowBody),
+                            sizeof(kWindowBody));
 }
 
-const char VCDiffInterleavedDecoderTest::kWindowHeader[] = {
+const uint8_t VCDiffInterleavedDecoderTest::kWindowHeader[] = {
     VCD_SOURCE,  // Win_Indicator: take source from dictionary
     FirstByteOfStringLength(kDictionary),  // Source segment size
     SecondByteOfStringLength(kDictionary),
@@ -234,7 +237,7 @@ const char VCDiffInterleavedDecoderTest::kWindowHeader[] = {
     0x00  // length of addresses for COPYs (unused)
   };
 
-const char VCDiffInterleavedDecoderTest::kWindowBody[] = {
+const uint8_t VCDiffInterleavedDecoderTest::kWindowBody[] = {
     0x13,  // VCD_COPY mode VCD_SELF, size 0
     0x1C,  // Size of COPY (28)
     0x00,  // Address of COPY: Start of dictionary
@@ -272,8 +275,10 @@ const char VCDiffInterleavedDecoderTest::kWindowBody[] = {
 
 VCDiffInterleavedDecoderTest::VCDiffInterleavedDecoderTest() {
   UseInterleavedFileHeader();
-  delta_window_header_.assign(kWindowHeader, sizeof(kWindowHeader));
-  delta_window_body_.assign(kWindowBody, sizeof(kWindowBody));
+  delta_window_header_.assign(reinterpret_cast<const char *>(kWindowHeader),
+                              sizeof(kWindowHeader));
+  delta_window_body_.assign(reinterpret_cast<const char *>(kWindowBody),
+                            sizeof(kWindowBody));
 }
 
 }  // namespace open_vcdiff

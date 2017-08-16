@@ -48,4 +48,6 @@ class TabSwitchingTypical25(perf_benchmark.PerfBenchmark):
       def SetExpectations(self):
         self.PermanentlyDisableBenchmark([story.expectations.ALL_MOBILE],
                                          'Desktop benchmark.')
+        self.DisableStory('multitab:misc:typical24',
+                          [story.expectations.ALL_MAC], 'crbug.com/747026')
     return StoryExpectations()

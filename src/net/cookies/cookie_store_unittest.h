@@ -497,9 +497,9 @@ TYPED_TEST_P(CookieStoreTest, SetCanonicalCookieTest) {
       cs,
       base::MakeUnique<CanonicalCookie>(
           "A", "B", foo_foo_host, "/foo", one_hour_ago, one_hour_from_now,
-          base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-          COOKIE_PRIORITY_DEFAULT),
-      false, true));
+          base::Time(), false /* secure */, false /* httponly */,
+          CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT),
+      false /* secure_source */, true));
   // Note that for the creation time to be set exactly, without modification,
   // it must be different from the one set by the line above.
   EXPECT_TRUE(this->SetCanonicalCookie(
@@ -508,7 +508,7 @@ TYPED_TEST_P(CookieStoreTest, SetCanonicalCookieTest) {
           "C", "D", "." + foo_bar_domain, "/bar", two_hours_ago, base::Time(),
           one_hour_ago, false, true, CookieSameSite::DEFAULT_MODE,
           COOKIE_PRIORITY_DEFAULT),
-      false, true));
+      false /* secure_source */, true));
 
   // A secure source is required for creating secure cookies.
   EXPECT_FALSE(this->SetCanonicalCookie(
@@ -517,7 +517,7 @@ TYPED_TEST_P(CookieStoreTest, SetCanonicalCookieTest) {
           "E", "F", http_foo_host, "/", base::Time(), base::Time(),
           base::Time(), true, false, CookieSameSite::DEFAULT_MODE,
           COOKIE_PRIORITY_DEFAULT),
-      false, true));
+      false /* secure_source */, true));
 
   // A secure source is also required for overwriting secure cookies.  Writing
   // a secure cookie then overwriting it from a non-secure source should fail.
@@ -525,17 +525,56 @@ TYPED_TEST_P(CookieStoreTest, SetCanonicalCookieTest) {
       cs,
       base::MakeUnique<CanonicalCookie>(
           "E", "F", http_foo_host, "/", base::Time(), base::Time(),
-          base::Time(), true, false, CookieSameSite::DEFAULT_MODE,
-          COOKIE_PRIORITY_DEFAULT),
-      true, true));
+          base::Time(), true /* secure */, false /* httponly */,
+          CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT),
+      true /* secure_source */, true /* modify_http_only */));
 
   EXPECT_FALSE(this->SetCanonicalCookie(
       cs,
       base::MakeUnique<CanonicalCookie>(
           "E", "F", http_foo_host, "/", base::Time(), base::Time(),
-          base::Time(), true, false, CookieSameSite::DEFAULT_MODE,
-          COOKIE_PRIORITY_DEFAULT),
-      false, true));
+          base::Time(), true /* secure */, false /* httponly */,
+          CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT),
+      false /* secure_source */, true /* modify_http_only */));
+
+  if (TypeParam::supports_http_only) {
+    // Permission to modify http only cookies is required to create an
+    // httponly cookie.
+    EXPECT_FALSE(this->SetCanonicalCookie(
+        cs,
+        base::MakeUnique<CanonicalCookie>(
+            "G", "H", http_foo_host, "/unique", base::Time(), base::Time(),
+            base::Time(), false /* secure */, true /* httponly */,
+            CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT),
+        false /* secure_source */, false /* modify_http_only */));
+
+    // Permission to modify httponly cookies is also required to overwrite
+    // an httponly cookie.
+    EXPECT_TRUE(this->SetCanonicalCookie(
+        cs,
+        base::MakeUnique<CanonicalCookie>(
+            "G", "H", http_foo_host, "/unique", base::Time(), base::Time(),
+            base::Time(), false /* secure */, true /* httponly */,
+            CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT),
+        false /* secure_source */, true /* modify_http_only */));
+
+    EXPECT_FALSE(this->SetCanonicalCookie(
+        cs,
+        base::MakeUnique<CanonicalCookie>(
+            "G", "H", http_foo_host, "/unique", base::Time(), base::Time(),
+            base::Time(), false /* secure */, true /* httponly */,
+            CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT),
+        false /* secure_source */, false /* modify_http_only */));
+  } else {
+    // Leave store in same state as if the above tests had been run.
+    EXPECT_TRUE(this->SetCanonicalCookie(
+        cs,
+        base::MakeUnique<CanonicalCookie>(
+            "G", "H", http_foo_host, "/unique", base::Time(), base::Time(),
+            base::Time(), false /* secure */, true /* httponly */,
+            CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT),
+        false /* secure_source */, true /* modify_http_only */));
+  }
 
   // Get all the cookies for a given URL, regardless of properties. This 'get()'
   // operation shouldn't update the access time, as the test checks that the

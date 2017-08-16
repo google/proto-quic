@@ -26,8 +26,8 @@ ScopedJavaLocalRef<jstring> ConvertToJstring(const std::string& text,
   base::android::ScopedJavaLocalRef<jstring> java_charset =
       base::android::ConvertUTF8ToJavaString(env, base::StringPiece(charset));
   ScopedJavaLocalRef<jstring> java_result =
-      android::Java_NetStringUtil_convertToUnicode(env, java_byte_buffer.obj(),
-                                                   java_charset.obj());
+      android::Java_NetStringUtil_convertToUnicode(env, java_byte_buffer,
+                                                   java_charset);
   return java_result;
 }
 
@@ -44,7 +44,7 @@ ScopedJavaLocalRef<jstring> ConvertToNormalizedJstring(
       base::android::ConvertUTF8ToJavaString(env, base::StringPiece(charset));
   ScopedJavaLocalRef<jstring> java_result =
       android::Java_NetStringUtil_convertToUnicodeAndNormalize(
-          env, java_byte_buffer.obj(), java_charset.obj());
+          env, java_byte_buffer, java_charset);
   return java_result;
 }
 
@@ -60,7 +60,7 @@ ScopedJavaLocalRef<jstring> ConvertToJstringWithSubstitutions(
       base::android::ConvertUTF8ToJavaString(env, base::StringPiece(charset));
   ScopedJavaLocalRef<jstring> java_result =
       android::Java_NetStringUtil_convertToUnicodeWithSubstitutions(
-          env, java_byte_buffer.obj(), java_charset.obj());
+          env, java_byte_buffer, java_charset);
   return java_result;
 }
 

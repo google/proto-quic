@@ -18,6 +18,9 @@ enum CookiePriority {
   COOKIE_PRIORITY_DEFAULT = COOKIE_PRIORITY_MEDIUM
 };
 
+// See https://tools.ietf.org/html/draft-ietf-httpbis-cookie-same-site-00
+// and https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis for
+// information about same site cookie restrictions.
 enum class CookieSameSite {
   NO_RESTRICTION = 0,
   LAX_MODE = 1,

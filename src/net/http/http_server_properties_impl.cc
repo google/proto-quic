@@ -185,6 +185,7 @@ void HttpServerPropertiesImpl::Clear() {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   spdy_servers_map_.Clear();
   alternative_service_map_.Clear();
+  broken_alternative_services_.Clear();
   canonical_host_to_origin_map_.clear();
   last_quic_address_ = IPAddress();
   server_network_stats_map_.Clear();

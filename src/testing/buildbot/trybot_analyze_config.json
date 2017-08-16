@@ -16,7 +16,6 @@
       "build/check_gn_headers_whitelist.txt",
       "build/get_landmines.py",
       "build/gyp_chromium",
-      "build/linux/sysroot_ld_path.sh",
       "build/mac_toolchain.py",
       "build/toolchain/get_concurrent_links.py",
       "build/toolchain/mac/.*py",
@@ -74,6 +73,12 @@
   "ios": {
     "exclusions": [
       "ios/build/bots/.*"
+    ]
+  },
+  "linux": {
+    "exclusions": [
+      "build/linux/sysroot_ld_path.sh",
+      "build/linux/sysroot_scripts/sysroots.json"
     ]
   }
 }

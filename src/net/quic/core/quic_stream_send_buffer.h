@@ -12,6 +12,10 @@
 
 namespace net {
 
+namespace test {
+class QuicStreamSendBufferPeer;
+}  // namespace test
+
 class QuicDataWriter;
 
 // QuicStreamDataSlice comprises information of a piece of stream data.
@@ -29,8 +33,8 @@ struct QuicStreamDataSlice {
   QuicStreamOffset offset;
   // Length of this data slice in bytes.
   QuicByteCount data_length;
-  // Length of payload which is waiting for acks.
-  QuicByteCount data_length_waiting_for_acks;
+  // Length of payload which is outstanding and waiting for acks.
+  QuicByteCount outstanding_data_length;
 };
 
 // QuicStreamSendBuffer contains a list of QuicStreamDataSlices. New data slices
@@ -47,7 +51,6 @@ class QUIC_EXPORT_PRIVATE QuicStreamSendBuffer {
   // Save |data_length| of data starts at |iov_offset| in |iov| to send buffer.
   void SaveStreamData(QuicIOVector iov,
                       size_t iov_offset,
-                      QuicStreamOffset offset,
                       QuicByteCount data_length);
 
   // Write |data_length| of data starts at |offset|.
@@ -62,8 +65,20 @@ class QUIC_EXPORT_PRIVATE QuicStreamSendBuffer {
   // Number of data slices in send buffer.
   size_t size() const;
 
+  QuicStreamOffset stream_offset() const { return stream_offset_; }
+
  private:
+  friend class test::QuicStreamSendBufferPeer;
+  // Save |data_length| of data starts at |iov_offset| in |iov| to one data
+  // slice which contains data in a contiguous memory space.
+  void SaveStreamDataOneSlice(QuicIOVector iov,
+                              size_t iov_offset,
+                              QuicByteCount data_length);
+
   std::deque<QuicStreamDataSlice> send_buffer_;
+
+  // Offset of next inserted byte.
+  QuicStreamOffset stream_offset_;
 
   QuicBufferAllocator* allocator_;
 };

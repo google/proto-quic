@@ -372,7 +372,7 @@ config("cfi_flags") {
         cflags += [ "-fsanitize-recover=cfi" ]
       }
     } else {
-      defines = [ "CFI_ENFORCEMENT" ]
+      defines = [ "CFI_ENFORCEMENT_TRAP" ]
     }
   }
 }

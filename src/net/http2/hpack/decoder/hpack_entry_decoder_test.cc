@@ -4,6 +4,8 @@
 
 #include "net/http2/hpack/decoder/hpack_entry_decoder.h"
 
+#include <cstdint>
+
 // Tests of HpackEntryDecoder.
 
 #include "net/http2/hpack/decoder/hpack_entry_collector.h"
@@ -34,7 +36,7 @@ class HpackEntryDecoderTest : public RandomDecoderTest {
   }
 
   AssertionResult DecodeAndValidateSeveralWays(DecodeBuffer* db,
-                                               Validator validator) {
+                                               const Validator& validator) {
     // StartDecoding, above, requires the DecodeBuffer be non-empty so that it
     // can call Start with the prefix byte.
     bool return_non_zero_on_first = true;
@@ -43,7 +45,7 @@ class HpackEntryDecoderTest : public RandomDecoderTest {
   }
 
   AssertionResult DecodeAndValidateSeveralWays(const HpackBlockBuilder& hbb,
-                                               Validator validator) {
+                                               const Validator& validator) {
     DecodeBuffer db(hbb.buffer());
     return DecodeAndValidateSeveralWays(&db, validator);
   }

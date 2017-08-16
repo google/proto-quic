@@ -29,6 +29,8 @@ class SSLServerContextImpl : public SSLServerContext {
       std::unique_ptr<StreamSocket> socket) override;
 
  private:
+  class SocketImpl;
+
   bssl::UniquePtr<SSL_CTX> ssl_ctx_;
 
   // Options for the SSL socket.

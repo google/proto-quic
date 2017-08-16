@@ -1409,7 +1409,8 @@ void CookieMonster::SetCanonicalCookie(std::unique_ptr<CanonicalCookie> cc,
                                        SetCookiesCallback callback) {
   DCHECK(thread_checker_.CalledOnValidThread());
 
-  if (cc->IsSecure() && !secure_source) {
+  if ((cc->IsSecure() && !secure_source) ||
+      (cc->IsHttpOnly() && !modify_http_only)) {
     MaybeRunCookieCallback(std::move(callback), false);
     return;
   }

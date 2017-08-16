@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import os
+import collections
 
 from core import path_util
 from core import perf_benchmark
@@ -26,6 +27,11 @@ BLINK_PERF_BASE_DIR = os.path.join(path_util.GetChromiumSrcDir(),
                                    'third_party', 'WebKit', 'PerformanceTests')
 SKIPPED_FILE = os.path.join(BLINK_PERF_BASE_DIR, 'Skipped')
 
+EventBoundary = collections.namedtuple('EventBoundary',
+                                       ['type', 'wall_time', 'thread_time'])
+
+MergedEvent = collections.namedtuple('MergedEvent',
+                                     ['bounds', 'thread_or_wall_duration'])
 
 def CreateStorySetFromPath(path, skipped_file,
                            shared_page_state_class=(
@@ -79,6 +85,76 @@ def CreateStorySetFromPath(path, skipped_file,
         name=name))
   return ps
 
+def _CreateMergedEventsBoundaries(events, max_start_time):
+  """ Merge events with the given |event_name| and return a list of MergedEvent
+  objects. All events that are overlapping are megred together. Same as a union
+  operation.
+
+  Note: When merging multiple events, we approximate the thread_duration:
+  duration = (last.thread_start + last.thread_duration) - first.thread_start
+
+  Args:
+    events: a list of TimelineEvents
+    max_start_time: the maximum time that a TimelineEvent's start value can be.
+    Events past this this time will be ignored.
+
+  Returns:
+    a sorted list of MergedEvent objects which contain a Bounds object of the
+    wall time boundary and a thread_or_wall_duration which contains the thread
+    duration if possible, and otherwise the wall duration.
+  """
+  event_boundaries = []  # Contains EventBoundary objects.
+  merged_event_boundaries = []     # Contains MergedEvent objects.
+
+  # Deconstruct our trace events into boundaries, sort, and then create
+  # MergedEvents.
+  # This is O(N*log(N)), although this can be done in O(N) with fancy
+  # datastructures.
+  # Note: When merging multiple events, we approximate the thread_duration:
+  # dur = (last.thread_start + last.thread_duration) - first.thread_start
+  for event in events:
+    # Handle events where thread duration is None (async events).
+    thread_start = None
+    thread_end = None
+    if event.thread_start and event.thread_duration:
+      thread_start = event.thread_start
+      thread_end = event.thread_start + event.thread_duration
+    event_boundaries.append(
+        EventBoundary("start", event.start, thread_start))
+    event_boundaries.append(
+        EventBoundary("end", event.end, thread_end))
+  event_boundaries.sort(key=lambda e: e[1])
+
+  # Merge all trace events that overlap.
+  event_counter = 0
+  curr_bounds = None
+  curr_thread_start = None
+  for event_boundary in event_boundaries:
+    if event_boundary.type == "start":
+      event_counter += 1
+    else:
+      event_counter -= 1
+    # Initialization
+    if curr_bounds is None:
+      assert event_boundary.type == "start"
+      # Exit early if we reach the max time.
+      if event_boundary.wall_time > max_start_time:
+        return merged_event_boundaries
+      curr_bounds = bounds.Bounds()
+      curr_bounds.AddValue(event_boundary.wall_time)
+      curr_thread_start = event_boundary.thread_time
+      continue
+    # Create a the final bounds and thread duration when our event grouping
+    # is over.
+    if event_counter == 0:
+      curr_bounds.AddValue(event_boundary.wall_time)
+      thread_or_wall_duration = curr_bounds.bounds
+      if curr_thread_start and event_boundary.thread_time:
+        thread_or_wall_duration = event_boundary.thread_time - curr_thread_start
+      merged_event_boundaries.append(
+          MergedEvent(curr_bounds, thread_or_wall_duration))
+      curr_bounds = None
+  return merged_event_boundaries
 
 def _ComputeTraceEventsThreadTimeForBlinkPerf(
     model, renderer_thread, trace_events_to_measure):
@@ -107,28 +183,39 @@ def _ComputeTraceEventsThreadTimeForBlinkPerf(
   for t in trace_events_to_measure:
     trace_cpu_time_metrics[t] = [0.0] * len(test_runs_bounds)
 
+  # Handle case where there are no tests.
+  if not test_runs_bounds:
+    return trace_cpu_time_metrics
+
   for event_name in trace_events_to_measure:
+    merged_event_boundaries = _CreateMergedEventsBoundaries(
+        model.IterAllEventsOfName(event_name), test_runs_bounds[-1].max)
+
     curr_test_runs_bound_index = 0
-    prev_event = None
-    for event in model.IterAllEventsOfName(event_name):
-      if prev_event and prev_event.end >= event.start:
-        continue
+    for b in merged_event_boundaries:
+      # Fast forward (if needed) to the first relevant test.
       while (curr_test_runs_bound_index < len(test_runs_bounds) and
-             event.start > test_runs_bounds[curr_test_runs_bound_index].max):
+             b.bounds.min > test_runs_bounds[curr_test_runs_bound_index].max):
         curr_test_runs_bound_index += 1
       if curr_test_runs_bound_index >= len(test_runs_bounds):
         break
-      curr_test_bound = test_runs_bounds[curr_test_runs_bound_index]
-      intersect_wall_time = bounds.Bounds.GetOverlapBetweenBounds(
-          curr_test_bound, bounds.Bounds.CreateFromEvent(event))
-      if event.thread_duration and event.duration:
-        intersect_cpu_time = (
-            intersect_wall_time * event.thread_duration / event.duration)
-      else:
-        intersect_cpu_time = intersect_wall_time
-      trace_cpu_time_metrics[event_name][curr_test_runs_bound_index] += (
-          intersect_cpu_time)
-      prev_event = event
+      # Add metrics for all intersecting tests, as there may be multiple
+      # tests that intersect with the event bounds.
+      start_index = curr_test_runs_bound_index
+      while (curr_test_runs_bound_index < len(test_runs_bounds) and
+             b.bounds.Intersects(
+                 test_runs_bounds[curr_test_runs_bound_index])):
+        intersect_wall_time = bounds.Bounds.GetOverlapBetweenBounds(
+            test_runs_bounds[curr_test_runs_bound_index], b.bounds)
+        intersect_cpu_or_wall_time = (
+            intersect_wall_time * b.thread_or_wall_duration / b.bounds.bounds)
+        trace_cpu_time_metrics[event_name][curr_test_runs_bound_index] += (
+            intersect_cpu_or_wall_time)
+        curr_test_runs_bound_index += 1
+      # Rewind to the last intersecting test as it might intersect with the
+      # next event.
+      curr_test_runs_bound_index = max(start_index,
+                                       curr_test_runs_bound_index - 1)
   return trace_cpu_time_metrics
 
 
@@ -140,6 +227,7 @@ class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
     with open(os.path.join(os.path.dirname(__file__),
                            'blink_perf.js'), 'r') as f:
       self._blink_perf_js = f.read()
+    self._extra_chrome_categories = None
 
   def WillNavigateToPage(self, page, tab):
     del tab  # unused
@@ -165,8 +253,11 @@ class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
 
   def SetOptions(self, options):
     super(_BlinkPerfMeasurement, self).SetOptions(options)
-    if 'content-shell' in options.browser_options.browser_type:
+    browser_type = options.browser_options.browser_type
+    if browser_type and 'content-shell' in browser_type:
       options.AppendExtraBrowserArgs('--expose-internals-for-testing')
+    if options.extra_chrome_categories:
+      self._extra_chrome_categories = options.extra_chrome_categories
 
   def _ContinueTestRunWithTracing(self, tab):
     tracing_categories = tab.EvaluateJavaScript(
@@ -177,6 +268,9 @@ class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
         'blink.console')  # This is always required for js land trace event
     config.chrome_trace_config.category_filter.AddFilterString(
         tracing_categories)
+    if self._extra_chrome_categories:
+      config.chrome_trace_config.category_filter.AddFilterString(
+          self._extra_chrome_categories)
     tab.browser.platform.tracing_controller.StartTracing(config)
     tab.EvaluateJavaScript('testRunner.scheduleTestRun()')
     tab.WaitForJavaScriptCondition('testRunner.isDone')
@@ -228,8 +322,11 @@ class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
       values = [float(v.replace(',', '')) for v in parts[1:-1]]
       units = parts[-1]
       metric = page.name.split('.')[0].replace('/', '_')
-      results.AddValue(list_of_scalar_values.ListOfScalarValues(
-          results.current_page, metric, units, values))
+      if values:
+        results.AddValue(list_of_scalar_values.ListOfScalarValues(
+            results.current_page, metric, units, values))
+      else:
+        raise legacy_page_test.MeasurementFailure('Empty test results')
 
       break
 
@@ -261,7 +358,15 @@ class BlinkPerfBindings(_BlinkPerfBenchmark):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing disabled.
+        self.DisableStory('structured-clone-long-string-deserialize.html',
+            [story.expectations.ALL_ANDROID], 'crbug.com/733655')
+        self.DisableStory('structured-clone-long-string-serialize.html',
+            [story.expectations.ALL_ANDROID], 'crbug.com/733655')
+        self.DisableStory('structured-clone-json-deserialize.html',
+            [story.expectations.ANDROID_ONE], 'crbug.com/733655')
+        self.DisableStory('structured-clone-json-serialize.html',
+            [story.expectations.ANDROID_ONE], 'crbug.com/733655')
+
     return StoryExpectations()
 
 
@@ -345,6 +450,18 @@ class BlinkPerfLayout(_BlinkPerfBenchmark):
         self.PermanentlyDisableBenchmark(
             [story.expectations.ANDROID_SVELTE], 'crbug.com/551950')
     return Expectations()
+
+
+@benchmark.Owner(emails=['dmurph@chromium.org'])
+class BlinkPerfOWPStorage(_BlinkPerfBenchmark):
+  tag = 'owp_storage'
+  subdir = 'OWPStorage'
+
+  def GetExpectations(self):
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
 
 
 @benchmark.Owner(emails=['wangxianzhu@chromium.org'])

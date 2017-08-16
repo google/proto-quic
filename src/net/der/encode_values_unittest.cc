@@ -4,6 +4,7 @@
 
 #include "net/der/encode_values.h"
 
+#include "base/strings/string_piece.h"
 #include "base/time/time.h"
 #include "net/der/parse_values.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -11,6 +12,15 @@
 namespace net {
 namespace der {
 namespace test {
+
+namespace {
+
+template <size_t N>
+base::StringPiece ToStringPiece(const uint8_t (&data)[N]) {
+  return base::StringPiece(reinterpret_cast<const char*>(data), N);
+}
+
+}  // namespace
 
 TEST(EncodeValuesTest, EncodeTimeAsGeneralizedTime) {
   // Fri, 24 Jun 2016 17:04:54 GMT
@@ -91,6 +101,109 @@ TEST(EncodeValuesTest, EncodeTimeAfterTimeTMax) {
   EXPECT_EQ(0, generalized_time.hours);
   EXPECT_EQ(0, generalized_time.minutes);
   EXPECT_EQ(0, generalized_time.seconds);
+}
+
+TEST(EncodeValuesTest, EncodeGeneralizedTime) {
+  GeneralizedTime time;
+  time.year = 2014;
+  time.month = 12;
+  time.day = 18;
+  time.hours = 16;
+  time.minutes = 12;
+  time.seconds = 59;
+
+  // Encode a time where no components have leading zeros.
+  uint8_t out[kGeneralizedTimeLength];
+  ASSERT_TRUE(EncodeGeneralizedTime(time, out));
+  EXPECT_EQ("20141218161259Z", ToStringPiece(out));
+
+  // Test bounds on all components. Note the encoding function does not validate
+  // the input is a valid time, only that it is encodable.
+  time.year = 0;
+  time.month = 0;
+  time.day = 0;
+  time.hours = 0;
+  time.minutes = 0;
+  time.seconds = 0;
+  ASSERT_TRUE(EncodeGeneralizedTime(time, out));
+  EXPECT_EQ("00000000000000Z", ToStringPiece(out));
+
+  time.year = 9999;
+  time.month = 99;
+  time.day = 99;
+  time.hours = 99;
+  time.minutes = 99;
+  time.seconds = 99;
+  ASSERT_TRUE(EncodeGeneralizedTime(time, out));
+  EXPECT_EQ("99999999999999Z", ToStringPiece(out));
+
+  time.year = 10000;
+  EXPECT_FALSE(EncodeGeneralizedTime(time, out));
+
+  time.year = 2000;
+  time.month = 100;
+  EXPECT_FALSE(EncodeGeneralizedTime(time, out));
+}
+
+TEST(EncodeValuesTest, EncodeUTCTime) {
+  GeneralizedTime time;
+  time.year = 2014;
+  time.month = 12;
+  time.day = 18;
+  time.hours = 16;
+  time.minutes = 12;
+  time.seconds = 59;
+
+  // Encode a time where no components have leading zeros.
+  uint8_t out[kUTCTimeLength];
+  ASSERT_TRUE(EncodeUTCTime(time, out));
+  EXPECT_EQ("141218161259Z", ToStringPiece(out));
+
+  time.year = 2049;
+  ASSERT_TRUE(EncodeUTCTime(time, out));
+  EXPECT_EQ("491218161259Z", ToStringPiece(out));
+
+  time.year = 2000;
+  ASSERT_TRUE(EncodeUTCTime(time, out));
+  EXPECT_EQ("001218161259Z", ToStringPiece(out));
+
+  time.year = 1999;
+  ASSERT_TRUE(EncodeUTCTime(time, out));
+  EXPECT_EQ("991218161259Z", ToStringPiece(out));
+
+  time.year = 1950;
+  ASSERT_TRUE(EncodeUTCTime(time, out));
+  EXPECT_EQ("501218161259Z", ToStringPiece(out));
+
+  time.year = 2050;
+  EXPECT_FALSE(EncodeUTCTime(time, out));
+
+  time.year = 1949;
+  EXPECT_FALSE(EncodeUTCTime(time, out));
+
+  // Test bounds on all components. Note the encoding function does not validate
+  // the input is a valid time, only that it is encodable.
+  time.year = 2000;
+  time.month = 0;
+  time.day = 0;
+  time.hours = 0;
+  time.minutes = 0;
+  time.seconds = 0;
+  ASSERT_TRUE(EncodeUTCTime(time, out));
+  EXPECT_EQ("000000000000Z", ToStringPiece(out));
+
+  time.year = 1999;
+  time.month = 99;
+  time.day = 99;
+  time.hours = 99;
+  time.minutes = 99;
+  time.seconds = 99;
+  ASSERT_TRUE(EncodeUTCTime(time, out));
+  EXPECT_EQ("999999999999Z", ToStringPiece(out));
+
+  time.year = 2000;
+  time.month = 100;
+  EXPECT_FALSE(EncodeUTCTime(time, out));
 }
 
 }  // namespace test

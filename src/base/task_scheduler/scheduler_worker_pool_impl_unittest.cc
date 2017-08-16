@@ -52,11 +52,10 @@ constexpr size_t kNumThreadsPostingTasks = 4;
 constexpr size_t kNumTasksPostedPerThread = 150;
 // This can't be lower because Windows' WaitableEvent wakes up too early when a
 // small timeout is used. This results in many spurious wake ups before a worker
-// is allowed to detach.
-constexpr TimeDelta kReclaimTimeForDetachTests =
+// is allowed to cleanup.
+constexpr TimeDelta kReclaimTimeForCleanupTests =
     TimeDelta::FromMilliseconds(500);
-constexpr TimeDelta kExtraTimeToWaitForDetach =
-    TimeDelta::FromSeconds(1);
+constexpr TimeDelta kExtraTimeToWaitForCleanup = TimeDelta::FromSeconds(1);
 
 class TaskSchedulerWorkerPoolImplTest
     : public testing::TestWithParam<test::ExecutionMode> {
@@ -70,6 +69,7 @@ class TaskSchedulerWorkerPoolImplTest
 
   void TearDown() override {
     service_thread_.Stop();
+    task_tracker_.Flush();
     worker_pool_->WaitForAllWorkersIdleForTesting();
     worker_pool_->JoinForTesting();
   }
@@ -424,7 +424,7 @@ TEST_F(TaskSchedulerWorkerPoolImplPostTaskBeforeStartTest,
 
   // Workers should not be created and tasks should not run before the pool is
   // started.
-  EXPECT_EQ(0U, worker_pool_->NumberOfAliveWorkersForTesting());
+  EXPECT_EQ(0U, worker_pool_->NumberOfWorkersForTesting());
   EXPECT_FALSE(task_1_scheduled.IsSignaled());
   EXPECT_FALSE(task_2_scheduled.IsSignaled());
 
@@ -439,6 +439,26 @@ TEST_F(TaskSchedulerWorkerPoolImplPostTaskBeforeStartTest,
 
   barrier.Signal();
   task_tracker_.Flush();
+}
+
+// Verify that posting many tasks before Start will cause the number of workers
+// to grow to |worker_capacity_| during Start.
+TEST_F(TaskSchedulerWorkerPoolImplPostTaskBeforeStartTest, PostManyTasks) {
+  scoped_refptr<TaskRunner> task_runner =
+      worker_pool_->CreateTaskRunnerWithTraits({WithBaseSyncPrimitives()});
+  constexpr size_t kNumTasksPosted = 2 * kNumWorkersInWorkerPool;
+  for (size_t i = 0; i < kNumTasksPosted; ++i)
+    task_runner->PostTask(FROM_HERE, BindOnce(&DoNothing));
+
+  EXPECT_EQ(0U, worker_pool_->NumberOfWorkersForTesting());
+
+  StartWorkerPool(TimeDelta::Max(), kNumWorkersInWorkerPool);
+  ASSERT_GT(kNumTasksPosted, worker_pool_->GetWorkerCapacityForTesting());
+  EXPECT_EQ(kNumWorkersInWorkerPool,
+            worker_pool_->GetWorkerCapacityForTesting());
+
+  EXPECT_EQ(worker_pool_->NumberOfWorkersForTesting(),
+            worker_pool_->GetWorkerCapacityForTesting());
 }
 
 namespace {
@@ -467,7 +487,7 @@ class TaskSchedulerWorkerPoolCheckTlsReuse
               WaitableEvent::InitialState::NOT_SIGNALED) {}
 
   void SetUp() override {
-    CreateAndStartWorkerPool(kReclaimTimeForDetachTests,
+    CreateAndStartWorkerPool(kReclaimTimeForCleanupTests,
                              kNumWorkersInWorkerPool);
   }
 
@@ -483,9 +503,9 @@ class TaskSchedulerWorkerPoolCheckTlsReuse
 
 }  // namespace
 
-// Checks that at least one thread has detached by checking the TLS.
-TEST_F(TaskSchedulerWorkerPoolCheckTlsReuse, CheckDetachedThreads) {
-  // Saturate the threads and mark each thread with a magic TLS value.
+// Checks that at least one worker has been cleaned up by checking the TLS.
+TEST_F(TaskSchedulerWorkerPoolCheckTlsReuse, CheckCleanupWorkers) {
+  // Saturate the workers and mark each worker's thread with a magic TLS value.
   std::vector<std::unique_ptr<test::TestTaskFactory>> factories;
   for (size_t i = 0; i < kNumWorkersInWorkerPool; ++i) {
     factories.push_back(MakeUnique<test::TestTaskFactory>(
@@ -502,16 +522,17 @@ TEST_F(TaskSchedulerWorkerPoolCheckTlsReuse, CheckDetachedThreads) {
   waiter_.Signal();
   worker_pool_->WaitForAllWorkersIdleForTesting();
 
-  // All threads should be done running by now, so reset for the next phase.
+  // All workers should be done running by now, so reset for the next phase.
   waiter_.Reset();
 
-  // Give the worker pool a chance to detach its threads.
-  PlatformThread::Sleep(kReclaimTimeForDetachTests + kExtraTimeToWaitForDetach);
+  // Give the worker pool a chance to cleanup its workers.
+  PlatformThread::Sleep(kReclaimTimeForCleanupTests +
+                        kExtraTimeToWaitForCleanup);
 
-  worker_pool_->DisallowWorkerDetachmentForTesting();
+  worker_pool_->DisallowWorkerCleanupForTesting();
 
-  // Saturate and count the threads that do not have the magic TLS value. If the
-  // value is not there, that means we're at a new thread.
+  // Saturate and count the worker threads that do not have the magic TLS value.
+  // If the value is not there, that means we're at a new worker.
   std::vector<std::unique_ptr<WaitableEvent>> count_waiters;
   for (auto& factory : factories) {
     count_waiters.push_back(WrapUnique(new WaitableEvent(
@@ -600,10 +621,11 @@ void SignalAndWaitEvent(WaitableEvent* signal_event,
 
 }  // namespace
 
-TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBetweenWaitsWithDetach) {
+TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBetweenWaitsWithCleanup) {
   WaitableEvent tasks_can_exit_event(WaitableEvent::ResetPolicy::MANUAL,
                                      WaitableEvent::InitialState::NOT_SIGNALED);
-  CreateAndStartWorkerPool(kReclaimTimeForDetachTests, kNumWorkersInWorkerPool);
+  CreateAndStartWorkerPool(kReclaimTimeForCleanupTests,
+                           kNumWorkersInWorkerPool);
   auto task_runner =
       worker_pool_->CreateTaskRunnerWithTraits({WithBaseSyncPrimitives()});
 
@@ -622,10 +644,11 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBetweenWaitsWithDetach) {
     task_started_event->Wait();
 
   // Allow tasks to complete their execution and wait to allow workers to
-  // detach.
+  // cleanup.
   tasks_can_exit_event.Signal();
   worker_pool_->WaitForAllWorkersIdleForTesting();
-  PlatformThread::Sleep(kReclaimTimeForDetachTests + kExtraTimeToWaitForDetach);
+  PlatformThread::Sleep(kReclaimTimeForCleanupTests +
+                        kExtraTimeToWaitForCleanup);
 
   // Wake up SchedulerWorkers by posting tasks. They should record the
   // TaskScheduler.NumTasksBetweenWaits.* histogram on wake up.
@@ -647,7 +670,7 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBetweenWaitsWithDetach) {
 
   // Verify that counts were recorded to the histogram as expected.
   // - The "0" bucket has a count of at least 1 because the SchedulerWorker on
-  //   top of the idle stack isn't allowed to detach when its sleep timeout
+  //   top of the idle stack isn't allowed to cleanup when its sleep timeout
   //   expires. Instead, it waits on its WaitableEvent again without running a
   //   task. The count may be higher than 1 because of spurious wake ups before
   //   the sleep timeout expires.
@@ -661,11 +684,12 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBetweenWaitsWithDetach) {
 
   tasks_can_exit_event.Signal();
   worker_pool_->WaitForAllWorkersIdleForTesting();
-  worker_pool_->DisallowWorkerDetachmentForTesting();
+  worker_pool_->DisallowWorkerCleanupForTesting();
 }
 
-TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBeforeDetach) {
-  CreateAndStartWorkerPool(kReclaimTimeForDetachTests, kNumWorkersInWorkerPool);
+TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBeforeCleanup) {
+  CreateAndStartWorkerPool(kReclaimTimeForCleanupTests,
+                           kNumWorkersInWorkerPool);
 
   auto histogrammed_thread_task_runner =
       worker_pool_->CreateSequencedTaskRunnerWithTraits(
@@ -690,35 +714,35 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBeforeDetach) {
                      },
                      Unretained(&thread_ref)));
 
-  WaitableEvent detach_thread_running(
+  WaitableEvent cleanup_thread_running(
       WaitableEvent::ResetPolicy::MANUAL,
       WaitableEvent::InitialState::NOT_SIGNALED);
-  WaitableEvent detach_thread_continue(
+  WaitableEvent cleanup_thread_continue(
       WaitableEvent::ResetPolicy::MANUAL,
       WaitableEvent::InitialState::NOT_SIGNALED);
   histogrammed_thread_task_runner->PostTask(
       FROM_HERE,
       BindOnce(
           [](PlatformThreadRef* thread_ref,
-             WaitableEvent* detach_thread_running,
-             WaitableEvent* detach_thread_continue) {
+             WaitableEvent* cleanup_thread_running,
+             WaitableEvent* cleanup_thread_continue) {
             ASSERT_FALSE(thread_ref->is_null());
             EXPECT_EQ(*thread_ref, PlatformThread::CurrentRef());
-            detach_thread_running->Signal();
-            detach_thread_continue->Wait();
+            cleanup_thread_running->Signal();
+            cleanup_thread_continue->Wait();
           },
-          Unretained(&thread_ref), Unretained(&detach_thread_running),
-          Unretained(&detach_thread_continue)));
+          Unretained(&thread_ref), Unretained(&cleanup_thread_running),
+          Unretained(&cleanup_thread_continue)));
 
-  detach_thread_running.Wait();
+  cleanup_thread_running.Wait();
 
   // To allow the SchedulerWorker associated with
-  // |histogrammed_thread_task_runner| to detach, make sure it isn't on top of
+  // |histogrammed_thread_task_runner| to cleanup, make sure it isn't on top of
   // the idle stack by waking up another SchedulerWorker via
   // |task_runner_for_top_idle|. |histogrammed_thread_task_runner| should
   // release and go idle first and then |task_runner_for_top_idle| should
   // release and go idle. This allows the SchedulerWorker associated with
-  // |histogrammed_thread_task_runner| to detach.
+  // |histogrammed_thread_task_runner| to cleanup.
   WaitableEvent top_idle_thread_running(
       WaitableEvent::ResetPolicy::MANUAL,
       WaitableEvent::InitialState::NOT_SIGNALED);
@@ -735,7 +759,7 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBeforeDetach) {
                         WaitableEvent* top_idle_thread_continue) {
                        ASSERT_FALSE(thread_ref.is_null());
                        EXPECT_NE(thread_ref, PlatformThread::CurrentRef())
-                           << "Worker reused. Thread will not detach and the "
+                           << "Worker reused. Worker will not cleanup and the "
                               "histogram value will be wrong.";
                        top_idle_thread_running->Signal();
                        top_idle_thread_continue->Wait();
@@ -743,21 +767,21 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBeforeDetach) {
                      thread_ref, Unretained(&top_idle_thread_running),
                      Unretained(&top_idle_thread_continue)));
   top_idle_thread_running.Wait();
-  detach_thread_continue.Signal();
+  cleanup_thread_continue.Signal();
   // Wait for the thread processing the |histogrammed_thread_task_runner| work
   // to go to the idle stack.
   PlatformThread::Sleep(TestTimeouts::tiny_timeout());
   top_idle_thread_continue.Signal();
   // Allow the thread processing the |histogrammed_thread_task_runner| work to
-  // detach.
-  PlatformThread::Sleep(kReclaimTimeForDetachTests +
-                        kReclaimTimeForDetachTests);
+  // cleanup.
+  PlatformThread::Sleep(kReclaimTimeForCleanupTests +
+                        kReclaimTimeForCleanupTests);
   worker_pool_->WaitForAllWorkersIdleForTesting();
-  worker_pool_->DisallowWorkerDetachmentForTesting();
+  worker_pool_->DisallowWorkerCleanupForTesting();
 
   // Verify that counts were recorded to the histogram as expected.
   const auto* histogram = worker_pool_->num_tasks_before_detach_histogram();
-  // Note: There'll be a thread that detaches after running no tasks. This
+  // Note: There'll be a thread that cleanups after running no tasks. This
   // thread was the one created to maintain an idle thread after posting the
   // task via |task_runner_for_top_idle|.
   EXPECT_EQ(1, histogram->SnapshotSamples()->GetCount(0));
@@ -779,7 +803,7 @@ TEST(TaskSchedulerWorkerPoolStandbyPolicyTest, InitOne) {
       &delayed_task_manager);
   worker_pool->Start(SchedulerWorkerPoolParams(8U, TimeDelta::Max()));
   ASSERT_TRUE(worker_pool);
-  EXPECT_EQ(1U, worker_pool->NumberOfAliveWorkersForTesting());
+  EXPECT_EQ(1U, worker_pool->NumberOfWorkersForTesting());
   worker_pool->JoinForTesting();
 }
 
@@ -795,9 +819,9 @@ TEST(TaskSchedulerWorkerPoolStandbyPolicyTest, VerifyStandbyThread) {
       "StandbyThreadWorkerPool", ThreadPriority::NORMAL, &task_tracker,
       &delayed_task_manager);
   worker_pool->Start(
-      SchedulerWorkerPoolParams(worker_capacity, kReclaimTimeForDetachTests));
+      SchedulerWorkerPoolParams(worker_capacity, kReclaimTimeForCleanupTests));
   ASSERT_TRUE(worker_pool);
-  EXPECT_EQ(1U, worker_pool->NumberOfAliveWorkersForTesting());
+  EXPECT_EQ(1U, worker_pool->NumberOfWorkersForTesting());
 
   auto task_runner =
       worker_pool->CreateTaskRunnerWithTraits({WithBaseSyncPrimitives()});
@@ -816,21 +840,22 @@ TEST(TaskSchedulerWorkerPoolStandbyPolicyTest, VerifyStandbyThread) {
 
   // There should be one idle thread until we reach worker capacity
   for (size_t i = 0; i < worker_capacity; ++i) {
-    EXPECT_EQ(i + 1, worker_pool->NumberOfAliveWorkersForTesting());
+    EXPECT_EQ(i + 1, worker_pool->NumberOfWorkersForTesting());
     task_runner->PostTask(FROM_HERE, closure);
     thread_running.Wait();
   }
 
   // There should not be an extra idle thread if it means going above capacity
-  EXPECT_EQ(worker_capacity, worker_pool->NumberOfAliveWorkersForTesting());
+  EXPECT_EQ(worker_capacity, worker_pool->NumberOfWorkersForTesting());
 
   thread_continue.Signal();
-  // Give time for a worker to detach. Verify that the pool attempts to keep one
-  // idle active worker.
-  PlatformThread::Sleep(kReclaimTimeForDetachTests + kExtraTimeToWaitForDetach);
-  EXPECT_EQ(1U, worker_pool->NumberOfAliveWorkersForTesting());
+  // Give time for a worker to cleanup. Verify that the pool attempts to keep
+  // one idle active worker.
+  PlatformThread::Sleep(kReclaimTimeForCleanupTests +
+                        kExtraTimeToWaitForCleanup);
+  EXPECT_EQ(1U, worker_pool->NumberOfWorkersForTesting());
 
-  worker_pool->DisallowWorkerDetachmentForTesting();
+  worker_pool->DisallowWorkerCleanupForTesting();
   worker_pool->JoinForTesting();
 }
 

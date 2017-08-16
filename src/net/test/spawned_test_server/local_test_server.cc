@@ -57,10 +57,8 @@ bool AppendArgumentFromJSONValue(const std::string& key,
 
 }  // namespace
 
-LocalTestServer::LocalTestServer(Type type,
-                                 const std::string& host,
-                                 const base::FilePath& document_root)
-    : BaseTestServer(type, host) {
+LocalTestServer::LocalTestServer(Type type, const base::FilePath& document_root)
+    : BaseTestServer(type) {
   if (!Init(document_root))
     NOTREACHED();
 }

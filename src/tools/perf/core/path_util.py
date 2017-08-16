@@ -5,9 +5,6 @@
 import os
 import sys
 
-import inspect
-import traceback
-
 
 def GetChromiumSrcDir():
   return os.path.abspath(os.path.join(
@@ -33,6 +30,10 @@ def GetPerfBenchmarksDir():
 
 def GetPerfContribDir():
   return os.path.join(GetPerfDir(), 'contrib')
+
+
+def GetAndroidPylibDir():
+  return os.path.join(GetChromiumSrcDir(), 'build', 'android')
 
 
 def AddTelemetryToPath():
@@ -65,22 +66,7 @@ def GetWprGoDir():
       GetChromiumSrcDir(), 'third_party', 'catapult', 'web_page_replay_go')
 
 
-# Modify shutil.rmtree to print the last call stacks that invoke shutil.rmtree
-# TODO(nedn): remove these after crbug.com/742422 is addressed.
-import shutil
-import logging
-
-_actual_rmtree = shutil.rmtree
-
-def rmtree_with_log(*args, **kwargs):
-  frame = inspect.stack()[1][0]
-  caller_file = os.path.abspath(inspect.stack()[1][1])
-  # Only show extra logging if this rmtree call is invoked by Chromium code.
-  if caller_file.startswith(GetChromiumSrcDir()):
-    logging.info('rmtree is invoked with arguments: %s %s', args, kwargs)
-    # Also log the last 3 stacks.
-    stack_trace = ''.join(traceback.format_stack(frame)[-3:])
-    logging.info('Call site info: %s', stack_trace)
-  return _actual_rmtree(*args, **kwargs)
-
-shutil.rmtree = rmtree_with_log
+def AddAndroidPylibToPath():
+  android_pylib_path = GetAndroidPylibDir()
+  if android_pylib_path not in sys.path:
+    sys.path.insert(1, android_pylib_path)

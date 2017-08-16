@@ -264,29 +264,21 @@ D. Local Modifications
       Put ICU_DATA_ENTRY_POINT(icudtXX_dat) in common when we use
       the icu data file or icudt.dll
 
-5. Add back UTF-32 converters temporarily even when
-   UCONFIG_ONLY_HTML_CONVERSION is defined until UTF-32 is
-   removed from Blink. See
-   http://www.icu-project.org/trac/ticket/11296 and
-   http://crbug.com/417850
-
-   - patches/utf32.patch
-
-6. Don't use '__cdecl' for function arguments (as opposed to functions)
+5. Don't use '__cdecl' for function arguments (as opposed to functions)
    in uclean.h to make MSVC happy (C4229 warning).
 
    http://www.icu-project.org/trac/ticket/13030
 
    - patches/msvc4229.patch
 
-7. C++ 11 does not allow a string literal to be assigned to a variable
+6. C++ 11 does not allow a string literal to be assigned to a variable
    of char*.
 
    http://www.icu-project.org/trac/ticket/13192
 
    - patches/string_literal_charptr.patch
 
-8. Apply post-59 upstream fixes
+7. Apply post-59 upstream fixes
 
    http://www.icu-project.org/trac/ticket/12333
    http://www.icu-project.org/trac/ticket/13189
@@ -299,3 +291,16 @@ D. Local Modifications
    - patches/collator_range.patch
    - patches/fuchsia.patch
    - patches/uloc_buffer_overrun.patch
+
+9. Add timezone abbreviations for Australia/Lord_Howe and Asia/Pyongyang
+
+   http://bugs.icu-project.org/trac/ticket/13296
+   http://bugs.icu-project.org/trac/ticket/13312
+
+  - patches/tzdbname.patch
+
+10. Script name fix for Hans/Hant in Russian
+
+    http://unicode.org/cldr/trac/ticket/10539
+
+  - patches/han_script.patch

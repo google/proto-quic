@@ -28,6 +28,10 @@
 #include <sys/syscall.h>
 #endif
 
+#if defined(OS_FUCHSIA)
+#include <magenta/process.h>
+#endif
+
 namespace base {
 
 void InitThreading();
@@ -137,7 +141,9 @@ PlatformThreadId PlatformThread::CurrentId() {
   return syscall(__NR_gettid);
 #elif defined(OS_ANDROID)
   return gettid();
-#elif defined(OS_SOLARIS) || defined(OS_QNX) || defined(OS_FUCHSIA)
+#elif defined(OS_FUCHSIA)
+  return mx_thread_self();
+#elif defined(OS_SOLARIS) || defined(OS_QNX)
   return pthread_self();
 #elif defined(OS_NACL) && defined(__GLIBC__)
   return pthread_self();

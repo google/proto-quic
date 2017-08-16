@@ -2,10 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import json
 import os
 import subprocess
 import sys
 import unittest
+
+from telemetry import decorators
+from telemetry.testing import options_for_unittests
 
 
 class ScriptsSmokeTest(unittest.TestCase):
@@ -55,3 +59,29 @@ class ScriptsSmokeTest(unittest.TestCase):
       self.skipTest('small_profile_extender is missing')
     self.assertEquals(return_code, 0, stdout)
     self.assertIn('kraken', stdout)
+
+  @decorators.Disabled('chromeos')  # crbug.com/754913
+  def testRunTelemetryBenchmarkAsGoogletest(self):
+    options = options_for_unittests.GetCopy()
+    browser_type = options.browser_type
+    return_code, stdout = self.RunPerfScript(
+        '../../testing/scripts/run_telemetry_benchmark_as_googletest.py '
+        'run_benchmark dummy_benchmark.stable_benchmark_1 --browser=%s '
+        '--isolated-script-test-output=output.json '
+        '--isolated-script-test-chartjson-output=chartjson_output.json '
+        '--output-format=chartjson' % browser_type)
+    self.assertEquals(return_code, 0, stdout)
+    try:
+      with open('../../tools/perf/output.json') as f:
+        self.assertIsNotNone(
+            json.load(f), 'json_test_results should be populated: ' + stdout)
+      os.remove('../../tools/perf/output.json')
+    except IOError as e:
+      self.fail('json_test_results should be populated: ' + stdout + str(e))
+    try:
+      with open('../../tools/perf/chartjson_output.json') as f:
+        self.assertIsNotNone(
+            json.load(f), 'chartjson should be populated: ' + stdout)
+      os.remove('../../tools/perf/chartjson_output.json')
+    except IOError as e:
+      self.fail('chartjson should be populated: ' + stdout + str(e))

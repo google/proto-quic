@@ -163,11 +163,9 @@ public class ResourceExtractor {
      * @see #addCompletionCallback(Runnable)
      */
     public void waitForCompletion() {
-        if (shouldSkipPakExtraction()) {
+        if (mExtractTask == null || shouldSkipPakExtraction()) {
             return;
         }
-
-        assert mExtractTask != null;
 
         try {
             mExtractTask.get();

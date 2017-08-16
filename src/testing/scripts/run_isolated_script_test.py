@@ -45,6 +45,8 @@ def main():
 
   # This argument is ignored for now.
   parser.add_argument('--isolated-script-test-chartjson-output', type=str)
+  # This argument is ignored for now.
+  parser.add_argument('--isolated-script-test-perf-output', type=str)
 
   args, rest_args = parser.parse_known_args()
 

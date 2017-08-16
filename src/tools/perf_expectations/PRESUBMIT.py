@@ -14,6 +14,7 @@ CONFIG_FILE = 'tools/perf_expectations/chromium_perf_expectations.cfg'
 def CheckChangeOnUpload(input_api, output_api):
   run_tests = False
   for path in input_api.LocalPaths():
+    path = path.replace('\\', '/')
     if (PERF_EXPECTATIONS == path or CONFIG_FILE == path):
       run_tests = True
 
@@ -28,6 +29,7 @@ def CheckChangeOnUpload(input_api, output_api):
 def CheckChangeOnCommit(input_api, output_api):
   run_tests = False
   for path in input_api.LocalPaths():
+    path = path.replace('\\', '/')
     if (PERF_EXPECTATIONS == path or CONFIG_FILE == path):
       run_tests = True
 

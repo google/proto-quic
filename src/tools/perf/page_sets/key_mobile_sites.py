@@ -176,13 +176,3 @@ class KeyMobileSitesPageSet(story.StorySet):
 
     for url in urls_list:
       self.AddStory(KeyMobileSitesPage(url, self))
-
-class KeyMobileSitesStoryExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    pass
-    # TODO(rnephew): Uncomment when these stories is rerecorded.
-    # self.DisableStory(
-    #     'http://forecast.io', [story.expectations.ALL], 'crbug.com/249736')
-    # self.DisableStory(
-    #    'Twitter', [story.expectations.ALL], 'Forbidden (Rate Limit Exceeded)')
-    # self.DisableStory('ESPN', [story.expectations.ALL], 'crbug.com/249722')

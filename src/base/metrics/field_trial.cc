@@ -826,7 +826,7 @@ void FieldTrialList::CreateFeaturesFromCommandLine(
       global_->field_trial_allocator_.get());
 }
 
-#if defined(OS_WIN) || defined(OS_FUCHSIA)
+#if defined(OS_WIN)
 // static
 void FieldTrialList::AppendFieldTrialHandleIfNeeded(
     HandlesToInheritVector* handles) {
@@ -838,6 +838,8 @@ void FieldTrialList::AppendFieldTrialHandleIfNeeded(
       handles->push_back(global_->readonly_allocator_handle_.GetHandle());
   }
 }
+#elif defined(OS_FUCHSIA)
+// TODO(fuchsia): Implement shared-memory configuration (crbug.com/752368).
 #elif defined(OS_POSIX) && !defined(OS_NACL)
 // static
 SharedMemoryHandle FieldTrialList::GetFieldTrialHandle() {

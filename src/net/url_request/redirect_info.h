@@ -34,7 +34,7 @@ struct NET_EXPORT RedirectInfo {
   GURL new_url;
 
   // The new first-party URL for cookies.
-  GURL new_first_party_for_cookies;
+  GURL new_site_for_cookies;
 
   // The new HTTP referrer header.
   std::string new_referrer;

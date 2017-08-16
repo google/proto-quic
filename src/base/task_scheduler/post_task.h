@@ -66,7 +66,7 @@ namespace base {
 // valid. This is typically done during the initialization phase in each
 // process. If your code is not running in that phase, you most likely don't
 // have to worry about this. You will encounter DCHECKs or nullptr dereferences
-// if this is violated. For tests, prefer base::test::ScopedTaskScheduler.
+// if this is violated. For tests, prefer base::test::ScopedTaskEnvironment.
 
 // Posts |task| to the TaskScheduler. Calling this is equivalent to calling
 // PostTaskWithTraits with plain TaskTraits.

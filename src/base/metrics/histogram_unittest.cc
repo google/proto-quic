@@ -112,7 +112,7 @@ TEST_P(HistogramTest, BasicTest) {
       "TestCustomHistogram", custom_ranges, HistogramBase::kNoFlags);
   EXPECT_TRUE(custom_histogram);
 
-  // Macros that create hitograms have an internal static variable which will
+  // Macros that create histograms have an internal static variable which will
   // continue to point to those from the very first run of this method even
   // during subsequent runs.
   static bool already_run = false;
@@ -130,7 +130,7 @@ TEST_P(HistogramTest, BasicTest) {
 // Check that the macro correctly matches histograms by name and records their
 // data together.
 TEST_P(HistogramTest, NameMatchTest) {
-  // Macros that create hitograms have an internal static variable which will
+  // Macros that create histograms have an internal static variable which will
   // continue to point to those from the very first run of this method even
   // during subsequent runs.
   static bool already_run = false;

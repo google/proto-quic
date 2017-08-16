@@ -38,7 +38,8 @@ class QuicEpollConnectionHelper : public QuicConnectionHelperInterface {
   const QuicClock* GetClock() const override;
   QuicRandom* GetRandomGenerator() override;
 
-  QuicBufferAllocator* GetBufferAllocator() override;
+  QuicBufferAllocator* GetStreamFrameBufferAllocator() override;
+  QuicBufferAllocator* GetStreamSendBufferAllocator() override;
 
  private:
   friend class QuicConnectionPeer;

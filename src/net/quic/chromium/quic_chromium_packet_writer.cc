@@ -16,16 +16,63 @@
 
 namespace net {
 
+namespace {
+
+enum NotReusableReason {
+  NOT_REUSABLE_NULLPTR = 0,
+  NOT_REUSABLE_TOO_SMALL = 1,
+  NOT_REUSABLE_REF_COUNT = 2,
+  NUM_NOT_REUSABLE_REASONS = 3,
+};
+
+void RecordNotReusableReason(NotReusableReason reason) {
+  UMA_HISTOGRAM_ENUMERATION("Net.QuicSession.WritePacketNotReusable", reason,
+                            NUM_NOT_REUSABLE_REASONS);
+}
+
+}  // namespace
+
+QuicChromiumPacketWriter::ReusableIOBuffer::ReusableIOBuffer(size_t capacity)
+    : IOBuffer(capacity), capacity_(capacity), size_(0) {}
+
+QuicChromiumPacketWriter::ReusableIOBuffer::~ReusableIOBuffer() {}
+
+void QuicChromiumPacketWriter::ReusableIOBuffer::Set(const char* buffer,
+                                                     size_t buf_len) {
+  CHECK_LE(buf_len, capacity_);
+  CHECK(HasOneRef());
+  size_ = buf_len;
+  std::memcpy(data(), buffer, buf_len);
+}
+
 QuicChromiumPacketWriter::QuicChromiumPacketWriter() : weak_factory_(this) {}
 
 QuicChromiumPacketWriter::QuicChromiumPacketWriter(DatagramClientSocket* socket)
     : socket_(socket),
       delegate_(nullptr),
-      packet_(nullptr),
+      packet_(new ReusableIOBuffer(kMaxPacketSize)),
       write_blocked_(false),
       weak_factory_(this) {}
 
 QuicChromiumPacketWriter::~QuicChromiumPacketWriter() {}
+
+void QuicChromiumPacketWriter::SetPacket(const char* buffer, size_t buf_len) {
+  if (UNLIKELY(!packet_)) {
+    packet_ = new ReusableIOBuffer(
+        std::max(buf_len, static_cast<size_t>(kMaxPacketSize)));
+    RecordNotReusableReason(NOT_REUSABLE_NULLPTR);
+  }
+  if (UNLIKELY(packet_->capacity() < buf_len)) {
+    packet_ = new ReusableIOBuffer(buf_len);
+    RecordNotReusableReason(NOT_REUSABLE_TOO_SMALL);
+  }
+  if (UNLIKELY(!packet_->HasOneRef())) {
+    packet_ = new ReusableIOBuffer(
+        std::max(buf_len, static_cast<size_t>(kMaxPacketSize)));
+    RecordNotReusableReason(NOT_REUSABLE_REF_COUNT);
+  }
+  packet_->Set(buffer, buf_len);
+}
 
 WriteResult QuicChromiumPacketWriter::WritePacket(
     const char* buffer,
@@ -33,16 +80,20 @@ WriteResult QuicChromiumPacketWriter::WritePacket(
     const QuicIpAddress& self_address,
     const QuicSocketAddress& peer_address,
     PerPacketOptions* /*options*/) {
-  scoped_refptr<StringIOBuffer> buf(
-      new StringIOBuffer(std::string(buffer, buf_len)));
   DCHECK(!IsWriteBlocked());
-  return WritePacketToSocket(buf);
+  SetPacket(buffer, buf_len);
+  return WritePacketToSocketImpl();
 }
 
 WriteResult QuicChromiumPacketWriter::WritePacketToSocket(
-    scoped_refptr<StringIOBuffer> packet) {
+    scoped_refptr<ReusableIOBuffer> packet) {
+  packet_ = std::move(packet);
+  return QuicChromiumPacketWriter::WritePacketToSocketImpl();
+}
+
+WriteResult QuicChromiumPacketWriter::WritePacketToSocketImpl() {
   base::TimeTicks now = base::TimeTicks::Now();
-  int rv = socket_->Write(packet.get(), packet.get()->size(),
+  int rv = socket_->Write(packet_.get(), packet_->size(),
                           base::Bind(&QuicChromiumPacketWriter::OnWriteComplete,
                                      weak_factory_.GetWeakPtr()));
 
@@ -50,7 +101,8 @@ WriteResult QuicChromiumPacketWriter::WritePacketToSocket(
     // If write error, then call delegate's HandleWriteError, which
     // may be able to migrate and rewrite packet on a new socket.
     // HandleWriteError returns the outcome of that rewrite attempt.
-    rv = delegate_->HandleWriteError(rv, packet);
+    rv = delegate_->HandleWriteError(rv, std::move(packet_));
+    DCHECK(packet_ == nullptr);
   }
 
   WriteStatus status = WRITE_STATUS_OK;
@@ -61,7 +113,6 @@ WriteResult QuicChromiumPacketWriter::WritePacketToSocket(
     } else {
       status = WRITE_STATUS_BLOCKED;
       write_blocked_ = true;
-      packet_ = std::move(packet);
     }
   }
 
@@ -97,8 +148,8 @@ void QuicChromiumPacketWriter::OnWriteComplete(int rv) {
     // If write error, then call delegate's HandleWriteError, which
     // may be able to migrate and rewrite packet on a new socket.
     // HandleWriteError returns the outcome of that rewrite attempt.
-    rv = delegate_->HandleWriteError(rv, packet_);
-    packet_ = nullptr;
+    rv = delegate_->HandleWriteError(rv, std::move(packet_));
+    DCHECK(packet_ == nullptr);
     if (rv == ERR_IO_PENDING)
       return;
   }

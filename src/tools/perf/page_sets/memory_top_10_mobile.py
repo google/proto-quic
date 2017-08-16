@@ -6,11 +6,23 @@ import re
 
 from telemetry.page import page as page_module
 from telemetry.page import shared_page_state
-from telemetry import story
+from telemetry import story as story_module
 
 from devil.android.sdk import keyevent # pylint: disable=import-error
 
 from page_sets import top_10_mobile
+
+
+class Top10MobileSharedState(shared_page_state.SharedMobilePageState):
+  def __init__(self, test, finder_options, story_set):
+    super(Top10MobileSharedState, self).__init__(
+        test, finder_options, story_set)
+    self._story_set = story_set
+
+  def ShouldStopBrowserAfterStoryRun(self, story):
+    # Close the browser after the last story in the set.
+    # TODO(crbug.com/750055): Switch to close after each background page.
+    return self._story_set[-1] == story
 
 
 class MemoryMeasurementPage(page_module.Page):
@@ -21,7 +33,7 @@ class MemoryMeasurementPage(page_module.Page):
   def __init__(self, story_set, name, url):
     super(MemoryMeasurementPage, self).__init__(
         page_set=story_set, name=name, url=url,
-        shared_page_state_class=shared_page_state.SharedMobilePageState,
+        shared_page_state_class=Top10MobileSharedState,
         grouping_keys={'phase': self._PHASE})
 
 
@@ -61,14 +73,14 @@ class BackgroundPage(MemoryMeasurementPage):
         keyevent.KEYCODE_BACK)
 
 
-class MemoryTop10Mobile(story.StorySet):
+class MemoryTop10Mobile(story_module.StorySet):
   """User story to measure foreground/background memory in top 10 mobile."""
   DETERMINISTIC_MODE = True
 
   def __init__(self):
     super(MemoryTop10Mobile, self).__init__(
         archive_data_file='data/memory_top_10_mobile.json',
-        cloud_storage_bucket=story.PARTNER_BUCKET)
+        cloud_storage_bucket=story_module.PARTNER_BUCKET)
 
     for url in top_10_mobile.URL_LIST:
       # We name pages so their foreground/background counterparts are easy
@@ -77,8 +89,3 @@ class MemoryTop10Mobile(story.StorySet):
       name = re.sub(r'\W+', '_', url)
       self.AddStory(ForegroundPage(self, name, url))
       self.AddStory(BackgroundPage(self, 'after_' + name))
-
-
-class MemoryTop10MobileStoryExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    pass  # No tests disabled.

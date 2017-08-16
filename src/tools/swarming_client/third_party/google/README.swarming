@@ -1,3 +1,16 @@
+
+Name: Google Authentication
+Short Name: google-auth
+Version: 1.0.1
+Revision: 9bea1b15105d6851b315bd622702e0b201e4e874 (presumed; this is release 1.0.1)
+Home-page: https://github.com/GoogleCloudPlatform/google-auth-library-python
+License: Apache 2.0
+
+Local modifications: none beyond removing .pyc files and the modifications made
+for protobufs shown below (e.g. adding this file).
+
+----
+
 Name: Protocol Buffers
 Short Name: protobuf
 Version: 3.1.0

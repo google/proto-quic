@@ -27,7 +27,7 @@ state of the host to tasks. It is written to by the swarming bot's
 on_before_task() hook in the swarming server's custom bot_config.py.
 """
 
-__version__ = '0.9.1'
+__version__ = '0.9.2'
 
 import argparse
 import base64
@@ -51,6 +51,8 @@ from utils import on_error
 from utils import subprocess42
 from utils import tools
 from utils import zip_package
+
+from libs import luci_context
 
 import auth
 import cipd
@@ -198,6 +200,54 @@ def change_tree_read_only(rootdir, read_only):
         (rootdir, read_only, read_only))
 
 
+@contextlib.contextmanager
+def set_luci_context_account(account, tmp_dir):
+  """Sets LUCI_CONTEXT account to be used by the task.
+
+  If 'account' is None or '', does nothing at all. This happens when
+  run_isolated.py is called without '--switch-to-account' flag. In this case,
+  if run_isolated.py is running in some LUCI_CONTEXT environment, the task will
+  just inherit whatever account is already set. This may happen is users invoke
+  run_isolated.py explicitly from their code.
+
+  If the requested account is not defined in the context, switches to
+  non-authenticated access. This happens for Swarming tasks that don't use
+  'task' service accounts.
+
+  If not using LUCI_CONTEXT-based auth, does nothing.
+  If already running as requested account, does nothing.
+  """
+  if not account:
+    # Not actually switching.
+    yield
+    return
+
+  local_auth = luci_context.read('local_auth')
+  if not local_auth:
+    # Not using LUCI_CONTEXT auth at all.
+    yield
+    return
+
+  # See LUCI_CONTEXT.md for the format of 'local_auth'.
+  if local_auth.get('default_account_id') == account:
+    # Already set, no need to switch.
+    yield
+    return
+
+  available = {a['id'] for a in local_auth.get('accounts') or []}
+  if account in available:
+    logging.info('Switching default LUCI_CONTEXT account to %r', account)
+    local_auth['default_account_id'] = account
+  else:
+    logging.warning(
+        'Requested LUCI_CONTEXT account %r is not available (have only %r), '
+        'disabling authentication', account, sorted(available))
+    local_auth.pop('default_account_id', None)
+
+  with luci_context.write(_tmpdir=tmp_dir, local_auth=local_auth):
+    yield
+
+
 def process_command(command, out_dir, bot_file):
   """Replaces variables in a command line.
 
@@ -317,7 +367,7 @@ def run_command(command, cwd, env, hard_timeout, grace_period):
             # - processed exited late, exit code will be -9 on posix.
             logging.warning('Grace exhausted; sending SIGKILL')
             proc.kill()
-      logging.info('Waiting for proces exit')
+      logging.info('Waiting for process exit')
       exit_code = proc.wait()
     except OSError:
       # This is not considered to be an internal error. The executable simply
@@ -441,7 +491,8 @@ def delete_and_upload(storage, out_dir, leak_temp_dir):
 def map_and_run(
     command, isolated_hash, storage, isolate_cache, outputs,
     install_named_caches, leak_temp_dir, root_dir, hard_timeout, grace_period,
-    bot_file, install_packages_fn, use_symlinks, constant_run_path):
+    bot_file, switch_to_account, install_packages_fn, use_symlinks,
+    constant_run_path):
   """Runs a command with optional isolated input/output.
 
   See run_tha_test for argument documentation.
@@ -548,9 +599,12 @@ def map_and_run(
         sys.stdout.flush()
         start = time.time()
         try:
-          result['exit_code'], result['had_hard_timeout'] = run_command(
-              command, cwd, get_command_env(tmp_dir, cipd_info),
-              hard_timeout, grace_period)
+          # Need to switch the default account before 'get_command_env' call,
+          # so it can grab correct value of LUCI_CONTEXT env var.
+          with set_luci_context_account(switch_to_account, tmp_dir):
+            result['exit_code'], result['had_hard_timeout'] = run_command(
+                command, cwd, get_command_env(tmp_dir, cipd_info),
+                hard_timeout, grace_period)
         finally:
           result['duration'] = max(time.time() - start, 0)
   except Exception as e:
@@ -617,7 +671,8 @@ def map_and_run(
 def run_tha_test(
     command, isolated_hash, storage, isolate_cache, outputs,
     install_named_caches, leak_temp_dir, result_json, root_dir, hard_timeout,
-    grace_period, bot_file, install_packages_fn, use_symlinks):
+    grace_period, bot_file, switch_to_account, install_packages_fn,
+    use_symlinks):
   """Runs an executable and records execution metadata.
 
   Either command or isolated_hash must be specified.
@@ -644,8 +699,10 @@ def run_tha_test(
     isolate_cache: an isolateserver.LocalCache to keep from retrieving the
                    same objects constantly by caching the objects retrieved.
                    Can be on-disk or in-memory.
+    outputs: list of paths relative to root_dir to put into the output isolated
+             bundle upon task completion (see link_outputs_to_outdir).
     install_named_caches: a function (run_dir) => context manager that installs
-                            named caches into |run_dir|.
+                          named caches into |run_dir|.
     leak_temp_dir: if true, the temporary directory will be deliberately leaked
                    for later examination.
     result_json: file path to dump result metadata into. If set, the process
@@ -655,8 +712,11 @@ def run_tha_test(
     hard_timeout: kills the process if it lasts more than this amount of
                   seconds.
     grace_period: number of seconds to wait between SIGTERM and SIGKILL.
+    bot_file: path to a file with bot state, used in place of
+              ${SWARMING_BOT_FILE} task command line argument.
+    switch_to_account: a logical account to switch LUCI_CONTEXT into.
     install_packages_fn: context manager dir => CipdInfo, see
-      install_client_and_packages.
+                         install_client_and_packages.
     use_symlinks: create tree with symlinks instead of hardlinks.
 
   Returns:
@@ -677,7 +737,7 @@ def run_tha_test(
   result = map_and_run(
       command, isolated_hash, storage, isolate_cache, outputs,
       install_named_caches, leak_temp_dir, root_dir, hard_timeout, grace_period,
-      bot_file, install_packages_fn, use_symlinks, True)
+      bot_file, switch_to_account, install_packages_fn, use_symlinks, True)
   logging.info('Result:\n%s', tools.format_json(result, dense=True))
 
   if result_json:
@@ -918,6 +978,10 @@ def create_option_parser():
       help='Path to a file describing the state of the host. The content is '
            'defined by on_before_task() in bot_config.')
   parser.add_option(
+      '--switch-to-account',
+      help='If given, switches LUCI_CONTEXT to given logical service account '
+           '(e.g. "task" or "system") before launching the isolated process.')
+  parser.add_option(
       '--output', action='append',
       help='Specifies an output to return. If no outputs are specified, all '
            'files located in $(ISOLATED_OUTDIR) will be returned; '
@@ -1053,9 +1117,19 @@ def main(args):
     try:
       yield
     finally:
+      # Uninstall each named cache, returning it to the cache pool. If an
+      # uninstall fails for a given cache, it will remain in the task's
+      # temporary space, get cleaned up by the Swarming bot, and be lost.
+      #
+      # If the Swarming bot cannot clean up the cache, it will handle it like
+      # any other bot file that could not be removed.
       with named_cache_manager.open():
         for path, name in caches:
-          named_cache_manager.uninstall(path, name)
+          try:
+            named_cache_manager.uninstall(path, name)
+          except named_cache.Error:
+            logging.exception('Error while removing named cache %r at %r. '
+                              'The cache will be lost.', path, name)
 
   try:
     if options.isolate_server:
@@ -1076,6 +1150,7 @@ def main(args):
             options.hard_timeout,
             options.grace_period,
             options.bot_file,
+            options.switch_to_account,
             install_packages_fn,
             options.use_symlinks)
     return run_tha_test(
@@ -1091,6 +1166,7 @@ def main(args):
         options.hard_timeout,
         options.grace_period,
         options.bot_file,
+        options.switch_to_account,
         install_packages_fn,
         options.use_symlinks)
   except (cipd.Error, named_cache.Error) as ex:

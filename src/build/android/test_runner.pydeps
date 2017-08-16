@@ -71,6 +71,7 @@
 ../../third_party/catapult/devil/devil/utils/host_utils.py
 ../../third_party/catapult/devil/devil/utils/lazy/__init__.py
 ../../third_party/catapult/devil/devil/utils/lazy/weak_constant.py
+../../third_party/catapult/devil/devil/utils/logging_common.py
 ../../third_party/catapult/devil/devil/utils/lsusb.py
 ../../third_party/catapult/devil/devil/utils/parallelizer.py
 ../../third_party/catapult/devil/devil/utils/reraiser_thread.py
@@ -113,8 +114,15 @@
 ../../tools/swarming_client/libs/logdog/stream.py
 ../../tools/swarming_client/libs/logdog/streamname.py
 ../../tools/swarming_client/libs/logdog/varint.py
+../gn_helpers.py
+../util/lib/common/chrome_test_server_spawner.py
 ../util/lib/common/unittest_util.py
 devil_chromium.py
+gyp/util/__init__.py
+gyp/util/build_utils.py
+gyp/util/md5_check.py
+incremental_install/__init__.py
+incremental_install/installer.py
 pylib/__init__.py
 pylib/android/__init__.py
 pylib/android/logdog_logcat_monitor.py
@@ -129,7 +137,6 @@ pylib/base/test_instance_factory.py
 pylib/base/test_run.py
 pylib/base/test_run_factory.py
 pylib/base/test_server.py
-pylib/chrome_test_server_spawner.py
 pylib/constants/__init__.py
 pylib/constants/host_paths.py
 pylib/gtest/__init__.py
@@ -179,6 +186,7 @@ pylib/utils/logging_utils.py
 pylib/utils/proguard.py
 pylib/utils/repo_utils.py
 pylib/utils/shared_preference_utils.py
+pylib/utils/time_profile.py
 pylib/valgrind_tools.py
 test_runner.py
 tombstones.py

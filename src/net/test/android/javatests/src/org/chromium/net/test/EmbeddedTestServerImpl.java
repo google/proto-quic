@@ -61,10 +61,11 @@ public class EmbeddedTestServerImpl extends IEmbeddedTestServerImpl.Stub {
 
     /** Initialize the native EmbeddedTestServer object.
      *
+     *  @param https True if the server should use HTTPS, and false otherwise.
      *  @return Whether the native object was successfully initialized.
      */
     @Override
-    public boolean initializeNative() {
+    public boolean initializeNative(final boolean https) {
         // This is necessary as EmbeddedTestServerImpl is in a different process than the tests
         // using it, so it needs to initialize its own application context.
         ContextUtils.initApplicationContext(mContext.getApplicationContext());
@@ -82,7 +83,9 @@ public class EmbeddedTestServerImpl extends IEmbeddedTestServerImpl.Stub {
         runOnHandlerThread(new Callable<Void>() {
             @Override
             public Void call() {
-                if (mNativeEmbeddedTestServer == 0) nativeInit(UrlUtils.getIsolatedTestRoot());
+                if (mNativeEmbeddedTestServer == 0) {
+                    nativeInit(UrlUtils.getIsolatedTestRoot(), https);
+                }
                 assert mNativeEmbeddedTestServer != 0;
                 return null;
             }
@@ -107,6 +110,20 @@ public class EmbeddedTestServerImpl extends IEmbeddedTestServerImpl.Stub {
         });
     }
 
+    /** Returns the path to a PEM file containing the server's root certificate.
+     *
+     *  @return The path to a PEM file containing the server's root certificate.
+     */
+    @Override
+    public String getRootCertPemPath() {
+        return runOnHandlerThread(new Callable<String>() {
+            @Override
+            public String call() {
+                return nativeGetRootCertPemPath(mNativeEmbeddedTestServer);
+            }
+        });
+    }
+
     /** Add the default handlers and serve files from the provided directory relative to the
      *  external storage directory.
      *
@@ -119,6 +136,21 @@ public class EmbeddedTestServerImpl extends IEmbeddedTestServerImpl.Stub {
             @Override
             public Void call() {
                 nativeAddDefaultHandlers(mNativeEmbeddedTestServer, directoryPath);
+                return null;
+            }
+        });
+    }
+
+    /** Configure the server to use a particular type of SSL certificate.
+     *
+     * @param serverCertificate The type of certificate the server should use.
+     */
+    @Override
+    public void setSSLConfig(final int serverCertificate) {
+        runOnHandlerThread(new Callable<Void>() {
+            @Override
+            public Void call() {
+                nativeSetSSLConfig(mNativeEmbeddedTestServer, serverCertificate);
                 return null;
             }
         });
@@ -263,12 +295,15 @@ public class EmbeddedTestServerImpl extends IEmbeddedTestServerImpl.Stub {
         mNativeEmbeddedTestServer = 0;
     }
 
-    private native void nativeInit(String testDataDir);
+    private native void nativeInit(String testDataDir, boolean https);
     private native void nativeDestroy(long nativeEmbeddedTestServerAndroid);
     private native boolean nativeStart(long nativeEmbeddedTestServerAndroid);
+    private native String nativeGetRootCertPemPath(long nativeEmbeddedTestServerAndroid);
     private native boolean nativeShutdownAndWaitUntilComplete(long nativeEmbeddedTestServerAndroid);
     private native void nativeAddDefaultHandlers(
             long nativeEmbeddedTestServerAndroid, String directoryPath);
+    private native void nativeSetSSLConfig(
+            long nativeEmbeddedTestServerAndroid, int serverCertificate);
     private native void nativeRegisterRequestHandler(
             long nativeEmbeddedTestServerAndroid, long handler);
     private native String nativeGetURL(long nativeEmbeddedTestServerAndroid, String relativeUrl);

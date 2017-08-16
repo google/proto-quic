@@ -28,20 +28,8 @@ from utils import authenticators
 from utils import oauth
 from utils import tools
 
-
-# TODO(vadimsh): Remove this once we don't have to support python 2.6 anymore.
-def monkey_patch_httplib():
-  """Patch httplib.HTTPConnection to have '_tunnel_host' attribute.
-
-  'requests' library (>= v2) accesses 'HTTPConnection._tunnel_host' attribute
-  added only in python 2.6.3. This function patches HTTPConnection to have it
-  on python 2.6.2 as well.
-  """
-  conn = httplib.HTTPConnection('example.com')
-  if not hasattr(conn, '_tunnel_host'):
-    httplib.HTTPConnection._tunnel_host = None
-monkey_patch_httplib()
-
+# TODO(vadimsh): Refactor this stuff to be less magical, less global and less
+# bad.
 
 # Default maximum number of attempts to trying opening a url before aborting.
 URL_OPEN_MAX_ATTEMPTS = 30
@@ -259,6 +247,16 @@ def get_http_service(urlhost, allow_cached=True):
       service = new_service()
       _http_services[urlhost] = service
     return service
+
+
+def disable_oauth_config():
+  """Disables OAuth-based authentication performed by this module.
+
+  With disabled OAuth config callers of url_open (and other functions) are
+  supposed to prepare auth headers themselves and pass them via 'headers'
+  argument.
+  """
+  set_oauth_config(oauth.DISABLED_OAUTH_CONFIG)
 
 
 def set_oauth_config(config):

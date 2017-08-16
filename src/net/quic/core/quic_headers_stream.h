@@ -80,6 +80,15 @@ class QUIC_EXPORT_PRIVATE QuicHeadersStream : public QuicStream {
   // Returns true if the session is still connected.
   bool IsConnected();
 
+  // Override to store mapping from offset, length to ack_listener. This
+  // ack_listener is notified once data within [offset, offset + length] is
+  // acked or retransmitted.
+  void OnDataBuffered(
+      QuicStreamOffset offset,
+      QuicByteCount data_length,
+      const QuicReferenceCountedPointer<QuicAckListenerInterface>& ack_listener)
+      override;
+
   QuicSpdySession* spdy_session_;
 
   // Headers that have not been fully acked.

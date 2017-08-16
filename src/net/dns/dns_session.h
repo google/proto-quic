@@ -36,7 +36,7 @@ class StreamSocket;
 // Ref-counted so that DnsClient::Request can keep working in absence of
 // DnsClient. A DnsSession must be recreated when DnsConfig changes.
 class NET_EXPORT_PRIVATE DnsSession
-    : NON_EXPORTED_BASE(public base::RefCounted<DnsSession>),
+    : public base::RefCounted<DnsSession>,
       public NetworkChangeNotifier::ConnectionTypeObserver {
  public:
   typedef base::Callback<int()> RandCallback;

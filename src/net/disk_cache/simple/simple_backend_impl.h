@@ -29,7 +29,6 @@
 #include "net/disk_cache/simple/simple_index_delegate.h"
 
 namespace base {
-class SingleThreadTaskRunner;
 class SequencedTaskRunner;
 class TaskRunner;
 }
@@ -48,6 +47,7 @@ namespace disk_cache {
 // The non-static functions below must be called on the IO thread unless
 // otherwise stated.
 
+class BackendCleanupTracker;
 class SimpleEntryImpl;
 class SimpleIndex;
 
@@ -57,6 +57,7 @@ class NET_EXPORT_PRIVATE SimpleBackendImpl : public Backend,
  public:
   SimpleBackendImpl(
       const base::FilePath& path,
+      scoped_refptr<BackendCleanupTracker> cleanup_tracker,
       int max_bytes,
       net::CacheType cache_type,
       const scoped_refptr<base::SingleThreadTaskRunner>& cache_thread,
@@ -213,6 +214,9 @@ class NET_EXPORT_PRIVATE SimpleBackendImpl : public Backend,
   void DoomEntriesComplete(std::unique_ptr<std::vector<uint64_t>> entry_hashes,
                            const CompletionCallback& callback,
                            int result);
+
+  // We want this destroyed after every other field.
+  scoped_refptr<BackendCleanupTracker> cleanup_tracker_;
 
   const base::FilePath path_;
   const net::CacheType cache_type_;

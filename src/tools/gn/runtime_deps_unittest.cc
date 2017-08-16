@@ -165,6 +165,46 @@ TEST(RuntimeDeps, ExeDataDep) {
       << GetVectorDescription(result);
 }
 
+TEST(RuntimeDeps, ActionSharedLib) {
+  TestWithScope setup;
+  Err err;
+
+  // Dependency hierarchy: main(exe) -> action -> datadep(shared library)
+  //                                           -> dep(shared library)
+  // Datadep should be included, dep should not be.
+
+  Target dep(setup.settings(), Label(SourceDir("//"), "dep"), {});
+  InitTargetWithType(setup, &dep, Target::SHARED_LIBRARY);
+  ASSERT_TRUE(dep.OnResolved(&err));
+
+  Target datadep(setup.settings(), Label(SourceDir("//"), "datadep"), {});
+  InitTargetWithType(setup, &datadep, Target::SHARED_LIBRARY);
+  ASSERT_TRUE(datadep.OnResolved(&err));
+
+  Target action(setup.settings(), Label(SourceDir("//"), "action"), {});
+  InitTargetWithType(setup, &action, Target::ACTION);
+  action.private_deps().push_back(LabelTargetPair(&dep));
+  action.data_deps().push_back(LabelTargetPair(&datadep));
+  action.action_values().outputs() =
+      SubstitutionList::MakeForTest("//action.output");
+  ASSERT_TRUE(action.OnResolved(&err));
+
+  Target main(setup.settings(), Label(SourceDir("//"), "main"), {});
+  InitTargetWithType(setup, &main, Target::EXECUTABLE);
+  main.private_deps().push_back(LabelTargetPair(&action));
+  ASSERT_TRUE(main.OnResolved(&err));
+
+  std::vector<std::pair<OutputFile, const Target*>> result =
+      ComputeRuntimeDeps(&main);
+
+  // The result should have deps of main and data_dep.
+  ASSERT_EQ(2u, result.size()) << GetVectorDescription(result);
+
+  // The first one should always be the main exe.
+  EXPECT_TRUE(MakePair("./main", &main) == result[0]);
+  EXPECT_TRUE(MakePair("./libdatadep.so", &datadep) == result[1]);
+}
+
 // Tests that action and copy outputs are considered if they're data deps, but
 // not if they're regular deps. Action and copy "data" files are always
 // included.

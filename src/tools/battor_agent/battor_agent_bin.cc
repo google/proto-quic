@@ -50,6 +50,7 @@
 #include "base/task_scheduler/task_scheduler.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_task_runner_handle.h"
+#include "build/build_config.h"
 #include "tools/battor_agent/battor_agent.h"
 #include "tools/battor_agent/battor_error.h"
 #include "tools/battor_agent/battor_finder.h"
@@ -122,6 +123,11 @@ class BattOrAgentBin : public BattOrAgent::Listener {
     std::string path = BattOrFinder::FindBattOr();
     if (path.empty()) {
       std::cout << "Unable to find a BattOr." << endl;
+#if defined(OS_WIN)
+      std::cout << "Try \"--battor-path=<path>\" to specify the COM port where "
+                   "the BattOr can be found, typically COM3."
+                << endl;
+#endif
       exit(1);
     }
 

@@ -15,7 +15,11 @@
 {% endif %}
 {% if variables.android_project_deps is defined %}
 {% for proj in variables.android_project_deps %}
+{% if canary %}
+    {{ prefix }} project(path: ":{{ proj }}")
+{% else %}
     {{ prefix }} project(path: ":{{ proj }}", configuration: "debug")
+{% endif %}
 {% endfor %}
 {% endif %}
 {% endif %}

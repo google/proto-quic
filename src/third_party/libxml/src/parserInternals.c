@@ -435,8 +435,6 @@ xmlNextChar(xmlParserCtxtPtr ctxt)
 
     if ((*ctxt->input->cur == 0) &&
         (xmlParserInputGrow(ctxt->input, INPUT_CHUNK) <= 0)) {
-        if ((ctxt->instate != XML_PARSER_COMMENT))
-            xmlPopInput(ctxt);
         return;
     }
 
@@ -523,8 +521,6 @@ xmlNextChar(xmlParserCtxtPtr ctxt)
             ctxt->input->cur++;
 
         ctxt->nbChars++;
-        if (*ctxt->input->cur == 0)
-            xmlParserInputGrow(ctxt->input, INPUT_CHUNK);
     } else {
         /*
          * Assume it's a fixed length encoding (1) with
@@ -538,14 +534,9 @@ xmlNextChar(xmlParserCtxtPtr ctxt)
             ctxt->input->col++;
         ctxt->input->cur++;
         ctxt->nbChars++;
-        if (*ctxt->input->cur == 0)
-            xmlParserInputGrow(ctxt->input, INPUT_CHUNK);
     }
-    if ((*ctxt->input->cur == '%') && (!ctxt->html))
-        xmlParserHandlePEReference(ctxt);
-    if ((*ctxt->input->cur == 0) &&
-        (xmlParserInputGrow(ctxt->input, INPUT_CHUNK) <= 0))
-        xmlPopInput(ctxt);
+    if (*ctxt->input->cur == 0)
+        xmlParserInputGrow(ctxt->input, INPUT_CHUNK);
     return;
 encoding_error:
     /*
@@ -1244,11 +1235,7 @@ xmlSwitchInputEncodingInt(xmlParserCtxtPtr ctxt, xmlParserInputPtr input,
 	    input->buf->rawconsumed += use - xmlBufUse(input->buf->raw);
         }
         return (0);
-    } else if (input->length == 0) {
-	/*
-	 * When parsing a static memory array one must know the
-	 * size to be able to convert the buffer.
-	 */
+    } else {
 	xmlErrInternal(ctxt, "switching encoding : no input\n", NULL);
 	return (-1);
     }

@@ -13,6 +13,7 @@
 #include "base/memory/ref_counted.h"
 #include "base/message_loop/message_loop.h"
 #include "base/threading/thread_checker.h"
+#include "base/timer/timer.h"
 #include "net/base/address_family.h"
 #include "net/base/completion_callback.h"
 #include "net/base/io_buffer.h"
@@ -33,6 +34,48 @@ struct NetLogSource;
 
 class NET_EXPORT UDPSocketPosix {
  public:
+  // Performance helper for NetworkActivityMonitor, it batches
+  // throughput samples, subject to a byte limit threshold (64 KB) or
+  // timer (100 ms), whichever comes first.  The batching is subject
+  // to a minimum number of samples (2) required by NQE to update its
+  // throughput estimate.
+  class ActivityMonitor {
+   public:
+    ActivityMonitor() : bytes_(0), increments_(0) {}
+    virtual ~ActivityMonitor() {}
+    // Provided by sent/received subclass.
+    // Update throughput, but batch to limit overhead of NetworkActivityMonitor.
+    void Increment(uint32_t bytes);
+    // For flushing cached values.
+    void OnClose();
+
+   private:
+    virtual void NetworkActivityMonitorIncrement(uint32_t bytes) = 0;
+    void Update();
+    void OnTimerFired();
+
+    uint32_t bytes_;
+    uint32_t increments_;
+    base::RepeatingTimer timer_;
+    DISALLOW_COPY_AND_ASSIGN(ActivityMonitor);
+  };
+
+  class SentActivityMonitor : public ActivityMonitor {
+   public:
+    ~SentActivityMonitor() override {}
+
+   private:
+    void NetworkActivityMonitorIncrement(uint32_t bytes) override;
+  };
+
+  class ReceivedActivityMonitor : public ActivityMonitor {
+   public:
+    ~ReceivedActivityMonitor() override {}
+
+   private:
+    void NetworkActivityMonitorIncrement(uint32_t bytes) override;
+  };
+
   UDPSocketPosix(DatagramSocket::BindType bind_type,
                  const RandIntCallback& rand_int_cb,
                  net::NetLog* net_log,
@@ -241,9 +284,11 @@ class NET_EXPORT UDPSocketPosix {
   // success, or the net error code on failure. On success, LogRead takes in a
   // sockaddr and its length, which are mandatory, while LogWrite takes in an
   // optional IPEndPoint.
-  void LogRead(int result, const char* bytes, socklen_t addr_len,
-               const sockaddr* addr) const;
-  void LogWrite(int result, const char* bytes, const IPEndPoint* address) const;
+  void LogRead(int result,
+               const char* bytes,
+               socklen_t addr_len,
+               const sockaddr* addr);
+  void LogWrite(int result, const char* bytes, const IPEndPoint* address);
 
   // Same as SendTo(), except that address is passed by pointer
   // instead of by reference. It is called from Write() with |address|
@@ -320,6 +365,10 @@ class NET_EXPORT UDPSocketPosix {
 
   // Network that this socket is bound to via BindToNetwork().
   NetworkChangeNotifier::NetworkHandle bound_network_;
+
+  // These are used to lower the overhead updating activity monitor.
+  SentActivityMonitor sent_activity_monitor_;
+  ReceivedActivityMonitor received_activity_monitor_;
 
   THREAD_CHECKER(thread_checker_);
 

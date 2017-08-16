@@ -86,9 +86,13 @@ struct IsValueInRangeFastOp<
 // for the destination type.
 template <typename Dst, typename Src>
 constexpr bool IsValueInRangeForNumericType(Src value) {
-  return internal::IsValueInRangeFastOp<Dst, Src>::is_supported
-             ? internal::IsValueInRangeFastOp<Dst, Src>::Do(value)
-             : internal::DstRangeRelationToSrcRange<Dst>(value).IsValid();
+  using SrcType = typename internal::UnderlyingType<Src>::type;
+  return internal::IsValueInRangeFastOp<Dst, SrcType>::is_supported
+             ? internal::IsValueInRangeFastOp<Dst, SrcType>::Do(
+                   static_cast<SrcType>(value))
+             : internal::DstRangeRelationToSrcRange<Dst>(
+                   static_cast<SrcType>(value))
+                   .IsValid();
 }
 
 // checked_cast<> is analogous to static_cast<> for numeric types,
@@ -101,8 +105,7 @@ constexpr Dst checked_cast(Src value) {
   // This throws a compile-time error on evaluating the constexpr if it can be
   // determined at compile-time as failing, otherwise it will CHECK at runtime.
   using SrcType = typename internal::UnderlyingType<Src>::type;
-  return BASE_NUMERICS_LIKELY(
-             (IsValueInRangeForNumericType<Dst, SrcType>(value)))
+  return BASE_NUMERICS_LIKELY((IsValueInRangeForNumericType<Dst>(value)))
              ? static_cast<Dst>(static_cast<SrcType>(value))
              : CheckHandler::template HandleFailure<Dst>();
 }
@@ -192,11 +195,11 @@ constexpr Dst saturated_cast(Src value) {
                  SaturateFastOp<Dst, SrcType>::is_supported &&
                  std::is_same<SaturationHandler<Dst>,
                               SaturationDefaultLimits<Dst>>::value
-             ? SaturateFastOp<Dst, SrcType>::Do(value)
+             ? SaturateFastOp<Dst, SrcType>::Do(static_cast<SrcType>(value))
              : saturated_cast_impl<Dst, SaturationHandler, SrcType>(
-                   value,
+                   static_cast<SrcType>(value),
                    DstRangeRelationToSrcRange<Dst, SaturationHandler, SrcType>(
-                       value));
+                       static_cast<SrcType>(value)));
 }
 
 // strict_cast<> is analogous to static_cast<> for numeric types, except that

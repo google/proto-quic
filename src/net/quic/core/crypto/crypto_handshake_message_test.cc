@@ -6,6 +6,7 @@
 
 #include "net/quic/core/crypto/crypto_handshake.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
+#include "net/quic/platform/api/quic_endian.h"
 #include "net/quic/platform/api/quic_test.h"
 
 namespace net {
@@ -13,6 +14,11 @@ namespace test {
 namespace {
 
 class CryptoHandshakeMessageTest : public QuicTestWithParam<Perspective> {};
+
+INSTANTIATE_TEST_CASE_P(Perspective,
+                        CryptoHandshakeMessageTest,
+                        ::testing::ValuesIn({Perspective::IS_CLIENT,
+                                             Perspective::IS_SERVER}));
 
 TEST_P(CryptoHandshakeMessageTest, DebugString) {
   const char* str = "SHLO<\n>";
@@ -99,7 +105,8 @@ TEST_P(CryptoHandshakeMessageTest, ServerDesignatedConnectionId) {
 
   CryptoHandshakeMessage message;
   message.set_tag(kSREJ);
-  message.SetValue(kRCID, UINT64_C(18364758544493064720));
+  message.SetValue(kRCID,
+                   QuicEndian::NetToHost64(UINT64_C(18364758544493064720)));
   EXPECT_EQ(str, message.DebugString(GetParam()));
 
   // Test copy

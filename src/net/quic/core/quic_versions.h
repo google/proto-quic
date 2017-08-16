@@ -33,7 +33,7 @@ enum QuicVersion {
                          // endian. Dot not ack acks. Send a connection level
                          // WINDOW_UPDATE every 20 sent packets which do not
                          // contain retransmittable frames.
-  QUIC_VERSION_40 = 40,  // RST_STREAM and STREAM_FRAME frame match IETF format.
+  QUIC_VERSION_40 = 40,  // RST_STREAM, ACK and STREAM frames match IETF format.
   QUIC_VERSION_41 = 41,  // Use IETF packet header format.
 
   // IMPORTANT: if you are adding to this list, follow the instructions at

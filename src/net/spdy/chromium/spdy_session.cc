@@ -1575,15 +1575,13 @@ void SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
 
   DCHECK(gurl.is_valid());
 
-  // Check that the pushed stream advertises the same origin as its associated
-  // stream. Bypass this check if and only if this session is with a SPDY proxy
-  // that is trusted explicitly as determined by the |proxy_delegate_| or if the
-  // proxy is pushing same-origin resources.
-  if (!HostPortPair::FromURL(gurl).Equals(host_port_pair())) {
+  // Cross-origin push validation.
+  GURL associated_url(associated_it->second->GetUrlFromHeaders());
+  if (associated_url.GetOrigin() != gurl.GetOrigin()) {
     if (proxy_delegate_ &&
         proxy_delegate_->IsTrustedSpdyProxy(
             ProxyServer(ProxyServer::SCHEME_HTTPS, host_port_pair()))) {
-      // Disallow pushing of HTTPS content.
+      // Disallow pushing of HTTPS content by trusted proxy.
       if (gurl.SchemeIs("https")) {
         EnqueueResetStreamFrame(
             stream_id, request_priority, ERROR_CODE_REFUSED_STREAM,
@@ -1593,29 +1591,25 @@ void SpdySession::TryCreatePushStream(SpdyStreamId stream_id,
         return;
       }
     } else {
-      GURL associated_url(associated_it->second->GetUrlFromHeaders());
-      if (associated_url.SchemeIs("https")) {
-        SSLInfo ssl_info;
-        CHECK(GetSSLInfo(&ssl_info));
-        if (!gurl.SchemeIs("https") ||
-            !CanPool(transport_security_state_, ssl_info, associated_url.host(),
-                     gurl.host())) {
-          EnqueueResetStreamFrame(
-              stream_id, request_priority, ERROR_CODE_REFUSED_STREAM,
-              SpdyStringPrintf("Rejected push stream %d on secure connection",
-                               associated_stream_id));
-          return;
-        }
-      } else {
-        // TODO(bnc): Change SpdyNetworkTransactionTests to use secure sockets.
-        if (associated_url.GetOrigin() != gurl.GetOrigin()) {
-          EnqueueResetStreamFrame(
-              stream_id, request_priority, ERROR_CODE_REFUSED_STREAM,
-              SpdyStringPrintf(
-                  "Rejected cross origin push stream %d on insecure connection",
-                  associated_stream_id));
-          return;
-        }
+      if (!gurl.SchemeIs("https") || !associated_url.SchemeIs("https")) {
+        EnqueueResetStreamFrame(
+            stream_id, request_priority, ERROR_CODE_REFUSED_STREAM,
+            SpdyStringPrintf("Rejected cross origin pushed stream %d: "
+                             "both pushed URL and associated URL "
+                             "must have https scheme.",
+                             associated_stream_id));
+        return;
+      }
+      SSLInfo ssl_info;
+      CHECK(GetSSLInfo(&ssl_info));
+      if (!CanPool(transport_security_state_, ssl_info, associated_url.host(),
+                   gurl.host())) {
+        EnqueueResetStreamFrame(
+            stream_id, request_priority, ERROR_CODE_REFUSED_STREAM,
+            SpdyStringPrintf("Rejected pushed stream %d because certificate "
+                             "does not match pushed URL.",
+                             associated_stream_id));
+        return;
       }
     }
   }

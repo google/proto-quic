@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "base/strings/string_util.h"
+#include "net/cert/internal/cert_error_params.h"
 #include "net/cert/internal/cert_errors.h"
 #include "net/der/input.h"
 #include "net/der/parse_values.h"
@@ -37,7 +38,6 @@ DEFINE_CERT_ERROR_ID(kFailedParsingVersion, "Failed parsing version");
 DEFINE_CERT_ERROR_ID(kVersionExplicitlyV1,
                      "Version explicitly V1 (should be omitted)");
 DEFINE_CERT_ERROR_ID(kFailedReadingSerialNumber, "Failed reading serialNumber");
-DEFINE_CERT_ERROR_ID(kInvalidSerialNumber, "Invalid serial number");
 DEFINE_CERT_ERROR_ID(kFailedReadingSignatureValue, "Failed reading signature");
 DEFINE_CERT_ERROR_ID(kFailedReadingIssuer, "Failed reading issuer");
 DEFINE_CERT_ERROR_ID(kFailedReadingValidity, "Failed reading validity");
@@ -62,6 +62,12 @@ DEFINE_CERT_ERROR_ID(kFailedReadingExtensions,
                      "Failed reading extensions SEQUENCE");
 DEFINE_CERT_ERROR_ID(kUnexpectedExtensions,
                      "Unexpected extensions (must be V3 certificate)");
+DEFINE_CERT_ERROR_ID(kSerialNumberIsNegative, "Serial number is negative");
+DEFINE_CERT_ERROR_ID(kSerialNumberIsZero, "Serial number is zero");
+DEFINE_CERT_ERROR_ID(kSerialNumberLengthOver20,
+                     "Serial number is longer than 20 octets");
+DEFINE_CERT_ERROR_ID(kSerialNumberNotValidInteger,
+                     "Serial number is not a valid INTEGER");
 
 // Returns true if |input| is a SEQUENCE and nothing else.
 WARN_UNUSED_RESULT bool IsSequenceTLV(const der::Input& input) {
@@ -329,14 +335,40 @@ ParsedTbsCertificate::ParsedTbsCertificate() {}
 
 ParsedTbsCertificate::~ParsedTbsCertificate() {}
 
-bool VerifySerialNumber(const der::Input& value) {
-  bool unused_negative;
-  if (!der::IsValidInteger(value, &unused_negative))
-    return false;
+bool VerifySerialNumber(const der::Input& value,
+                        bool warnings_only,
+                        CertErrors* errors) {
+  // If |warnings_only| was set to true, the exact same errors will be logged,
+  // only they will be logged with a lower severity (warning rather than error).
+  CertError::Severity error_severity =
+      warnings_only ? CertError::SEVERITY_WARNING : CertError::SEVERITY_HIGH;
 
-  // Check if the serial number is too long per RFC 5280.
-  if (value.Length() > 20)
+  bool negative;
+  if (!der::IsValidInteger(value, &negative)) {
+    errors->Add(error_severity, kSerialNumberNotValidInteger, nullptr);
     return false;
+  }
+
+  // RFC 5280 section 4.1.2.2:
+  //
+  //    Note: Non-conforming CAs may issue certificates with serial numbers
+  //    that are negative or zero.  Certificate users SHOULD be prepared to
+  //    gracefully handle such certificates.
+  if (negative)
+    errors->AddWarning(kSerialNumberIsNegative);
+  if (value.Length() == 1 && value.UnsafeData()[0] == 0)
+    errors->AddWarning(kSerialNumberIsZero);
+
+  // RFC 5280 section 4.1.2.2:
+  //
+  //    Certificate users MUST be able to handle serialNumber values up to 20
+  //    octets. Conforming CAs MUST NOT use serialNumber values longer than 20
+  //    octets.
+  if (value.Length() > 20) {
+    errors->Add(error_severity, kSerialNumberLengthOver20,
+                CreateCertErrorParams1SizeT("length", value.Length()));
+    return false;
+  }
 
   return true;
 }
@@ -464,13 +496,12 @@ bool ParseTbsCertificate(const der::Input& tbs_tlv,
     errors->AddError(kFailedReadingSerialNumber);
     return false;
   }
-  if (!VerifySerialNumber(out->serial_number)) {
-    if (options.allow_invalid_serial_numbers) {
-      errors->AddWarning(kInvalidSerialNumber);
-    } else {
-      errors->AddError(kInvalidSerialNumber);
+  if (!VerifySerialNumber(out->serial_number,
+                          options.allow_invalid_serial_numbers, errors)) {
+    // Invalid serial numbers are only considered fatal failures if
+    // |!allow_invalid_serial_numbers|.
+    if (!options.allow_invalid_serial_numbers)
       return false;
-    }
   }
 
   //        signature            AlgorithmIdentifier,

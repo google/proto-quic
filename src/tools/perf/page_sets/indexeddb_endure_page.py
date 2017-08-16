@@ -45,8 +45,3 @@ class IndexedDBEndurePageSet(story.StorySet):
     ]
     for test in tests:
       self.AddStory(IndexedDBEndurePage(test, self))
-
-
-class IndexedDBEndureStoryExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    pass # Nothing disabled.

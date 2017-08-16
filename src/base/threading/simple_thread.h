@@ -42,12 +42,12 @@
 
 #include <stddef.h>
 
-#include <queue>
 #include <string>
 #include <vector>
 
 #include "base/base_export.h"
 #include "base/compiler_specific.h"
+#include "base/containers/queue.h"
 #include "base/macros.h"
 #include "base/synchronization/lock.h"
 #include "base/synchronization/waitable_event.h"
@@ -187,7 +187,7 @@ class BASE_EXPORT DelegateSimpleThreadPool
   const std::string name_prefix_;
   int num_threads_;
   std::vector<DelegateSimpleThread*> threads_;
-  std::queue<Delegate*> delegates_;
+  base::queue<Delegate*> delegates_;
   base::Lock lock_;            // Locks delegates_
   WaitableEvent dry_;    // Not signaled when there is no work to do.
 

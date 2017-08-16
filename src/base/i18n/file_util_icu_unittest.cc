@@ -23,7 +23,7 @@ class FileUtilICUTest : public PlatformTest {
 
 #if defined(OS_POSIX) && !defined(OS_MACOSX)
 
-// Linux disallows some evil ASCII characters, but passes all non-ASCII.
+// On linux, file path is parsed and filtered as UTF-8.
 static const struct GoodBadPairLinux {
   const char* bad_name;
   const char* good_name;
@@ -82,7 +82,7 @@ static const struct goodbad_pair {
     {L".    ", L"-   -"}
 };
 
-#if defined(OS_WIN) || defined(OS_MACOSX)
+#if defined(OS_WIN) || defined(OS_MACOSX) || defined(OS_POSIX)
 
 TEST_F(FileUtilICUTest, ReplaceIllegalCharactersInPathTest) {
   for (size_t i = 0; i < arraysize(kIllegalCharacterCases); ++i) {
@@ -90,7 +90,7 @@ TEST_F(FileUtilICUTest, ReplaceIllegalCharactersInPathTest) {
     std::wstring bad_name(kIllegalCharacterCases[i].bad_name);
     ReplaceIllegalCharactersInPath(&bad_name, '-');
     EXPECT_EQ(kIllegalCharacterCases[i].good_name, bad_name);
-#elif defined(OS_MACOSX)
+#else
     std::string bad_name(WideToUTF8(kIllegalCharacterCases[i].bad_name));
     ReplaceIllegalCharactersInPath(&bad_name, '-');
     EXPECT_EQ(WideToUTF8(kIllegalCharacterCases[i].good_name), bad_name);

@@ -409,7 +409,7 @@ std::unique_ptr<base::Value> TracedValue::ToBaseValue() const {
         bool value;
         CHECK(it.ReadBool(&value));
         if (cur_dict) {
-          cur_dict->SetBooleanWithoutPathExpansion(ReadKeyName(it), value);
+          cur_dict->SetKey(ReadKeyName(it), Value(value));
         } else {
           cur_list->AppendBoolean(value);
         }
@@ -419,7 +419,7 @@ std::unique_ptr<base::Value> TracedValue::ToBaseValue() const {
         int value;
         CHECK(it.ReadInt(&value));
         if (cur_dict) {
-          cur_dict->SetIntegerWithoutPathExpansion(ReadKeyName(it), value);
+          cur_dict->SetKey(ReadKeyName(it), Value(value));
         } else {
           cur_list->AppendInteger(value);
         }

@@ -115,7 +115,7 @@ class WebSocketStreamRequestImpl : public WebSocketStreamRequest {
       const GURL& url,
       const URLRequestContext* context,
       const url::Origin& origin,
-      const GURL& first_party_for_cookies,
+      const GURL& site_for_cookies,
       const std::string& additional_headers,
       std::unique_ptr<WebSocketStream::ConnectDelegate> connect_delegate,
       std::unique_ptr<WebSocketHandshakeStreamCreateHelper> create_helper)
@@ -138,7 +138,7 @@ class WebSocketStreamRequestImpl : public WebSocketStreamRequest {
 
     url_request_->SetExtraRequestHeaders(headers);
     url_request_->set_initiator(origin);
-    url_request_->set_first_party_for_cookies(first_party_for_cookies);
+    url_request_->set_site_for_cookies(site_for_cookies);
 
     url_request_->SetUserData(
         WebSocketHandshakeStreamBase::CreateHelper::DataKey(),
@@ -399,16 +399,16 @@ std::unique_ptr<WebSocketStreamRequest> WebSocketStream::CreateAndConnectStream(
     const GURL& socket_url,
     std::unique_ptr<WebSocketHandshakeStreamCreateHelper> create_helper,
     const url::Origin& origin,
-    const GURL& first_party_for_cookies,
+    const GURL& site_for_cookies,
     const std::string& additional_headers,
     URLRequestContext* url_request_context,
     const NetLogWithSource& net_log,
     std::unique_ptr<ConnectDelegate> connect_delegate) {
   std::unique_ptr<WebSocketStreamRequestImpl> request(
-      new WebSocketStreamRequestImpl(
-          socket_url, url_request_context, origin, first_party_for_cookies,
-          additional_headers, std::move(connect_delegate),
-          std::move(create_helper)));
+      new WebSocketStreamRequestImpl(socket_url, url_request_context, origin,
+                                     site_for_cookies, additional_headers,
+                                     std::move(connect_delegate),
+                                     std::move(create_helper)));
   request->Start(std::unique_ptr<base::Timer>(new base::Timer(false, false)));
   return std::move(request);
 }
@@ -418,17 +418,17 @@ WebSocketStream::CreateAndConnectStreamForTesting(
     const GURL& socket_url,
     std::unique_ptr<WebSocketHandshakeStreamCreateHelper> create_helper,
     const url::Origin& origin,
-    const GURL& first_party_for_cookies,
+    const GURL& site_for_cookies,
     const std::string& additional_headers,
     URLRequestContext* url_request_context,
     const NetLogWithSource& net_log,
     std::unique_ptr<WebSocketStream::ConnectDelegate> connect_delegate,
     std::unique_ptr<base::Timer> timer) {
   std::unique_ptr<WebSocketStreamRequestImpl> request(
-      new WebSocketStreamRequestImpl(
-          socket_url, url_request_context, origin, first_party_for_cookies,
-          additional_headers, std::move(connect_delegate),
-          std::move(create_helper)));
+      new WebSocketStreamRequestImpl(socket_url, url_request_context, origin,
+                                     site_for_cookies, additional_headers,
+                                     std::move(connect_delegate),
+                                     std::move(create_helper)));
   request->Start(std::move(timer));
   return std::move(request);
 }

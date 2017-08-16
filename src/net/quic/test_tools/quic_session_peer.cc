@@ -77,9 +77,9 @@ const QuicSession::ClosedStreams& QuicSessionPeer::closed_streams(
 }
 
 // static
-const QuicSession::ZombieStreamMap& QuicSessionPeer::zombie_streams(
+QuicSession::ZombieStreamMap& QuicSessionPeer::zombie_streams(
     QuicSession* session) {
-  return session->zombie_streams();
+  return session->zombie_streams_;
 }
 
 // static
@@ -122,6 +122,11 @@ bool QuicSessionPeer::IsStreamUncreated(QuicSession* session, QuicStreamId id) {
     // peer-created stream.
     return id > session->largest_peer_created_stream_id_;
   }
+}
+
+// static
+QuicStream* QuicSessionPeer::GetStream(QuicSession* session, QuicStreamId id) {
+  return session->GetStream(id);
 }
 
 }  // namespace test

@@ -43,6 +43,7 @@
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/win/registry.h"
+#include "base/win/scoped_co_mem.h"
 #include "base/win/scoped_comptr.h"
 #include "base/win/scoped_handle.h"
 #include "base/win/scoped_propvariant.h"
@@ -63,7 +64,19 @@ bool SetPropVariantValueForPropertyStore(
   HRESULT result = property_store->SetValue(property_key, property_value.get());
   if (result == S_OK)
     result = property_store->Commit();
-  return SUCCEEDED(result);
+  if (SUCCEEDED(result))
+    return true;
+#if DCHECK_IS_ON()
+  ScopedCoMem<OLECHAR> guidString;
+  ::StringFromCLSID(property_key.fmtid, &guidString);
+  if (HRESULT_FACILITY(result) == FACILITY_WIN32)
+    ::SetLastError(HRESULT_CODE(result));
+  // See third_party/perl/c/i686-w64-mingw32/include/propkey.h for GUID and
+  // PID definitions.
+  DPLOG(ERROR) << "Failed to set property with GUID " << guidString << " PID "
+               << property_key.pid;
+#endif
+  return false;
 }
 
 void __cdecl ForceCrashOnSigAbort(int) {

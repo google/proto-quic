@@ -5,6 +5,8 @@
 #include "net/spdy/chromium/multiplexed_http_stream.h"
 
 #include "base/logging.h"
+#include "net/http/http_raw_request_headers.h"
+#include "net/spdy/core/spdy_header_block.h"
 
 namespace net {
 
@@ -55,6 +57,21 @@ void MultiplexedHttpStream::SetConnectionReused() {}
 bool MultiplexedHttpStream::CanReuseConnection() const {
   // Multiplexed streams aren't considered reusable.
   return false;
+}
+
+void MultiplexedHttpStream::SetRequestHeadersCallback(
+    RequestHeadersCallback callback) {
+  request_headers_callback_ = std::move(callback);
+}
+
+void MultiplexedHttpStream::DispatchRequestHeadersCallback(
+    const SpdyHeaderBlock& spdy_headers) {
+  if (!request_headers_callback_)
+    return;
+  HttpRawRequestHeaders raw_headers;
+  for (const auto& entry : spdy_headers)
+    raw_headers.Add(entry.first, entry.second);
+  request_headers_callback_.Run(std::move(raw_headers));
 }
 
 }  // namespace net

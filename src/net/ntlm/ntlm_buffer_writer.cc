@@ -10,13 +10,13 @@
 #include "base/strings/utf_string_conversions.h"
 #include "build/build_config.h"
 
+template class std::basic_string<uint8_t>;
+
 namespace net {
 namespace ntlm {
 
 NtlmBufferWriter::NtlmBufferWriter(size_t buffer_len)
-    : buffer_len_(buffer_len), cursor_(0) {
-  buffer_.reset(new uint8_t[buffer_len]());
-}
+    : buffer_(buffer_len, 0), cursor_(0) {}
 
 NtlmBufferWriter::~NtlmBufferWriter() {}
 

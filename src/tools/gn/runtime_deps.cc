@@ -117,6 +117,13 @@ void RecursiveCollectRuntimeDeps(const Target* target,
   for (const auto& dep_pair : target->GetDeps(Target::DEPS_LINKED)) {
     if (dep_pair.ptr->output_type() == Target::EXECUTABLE)
       continue;  // Skip executables that aren't data deps.
+    if (dep_pair.ptr->output_type() == Target::SHARED_LIBRARY &&
+        (target->output_type() == Target::ACTION ||
+         target->output_type() == Target::ACTION_FOREACH)) {
+      // Skip shared libraries that action depends on,
+      // unless it were listed in data deps.
+      continue;
+    }
     RecursiveCollectRuntimeDeps(dep_pair.ptr, false,
                                 deps, seen_targets, found_files);
   }

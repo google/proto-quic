@@ -3,4 +3,4 @@
 # that can be found in the LICENSE file.
 
 # pylint: disable=relative-import
-from luci_context import read_full, read, write
+from luci_context import read_full, read, write, stage

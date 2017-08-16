@@ -111,7 +111,7 @@ typedef struct memnod {
 
 #define MAX_SIZE_T ((size_t)-1)
 
-#define CLIENT_2_HDR(a) ((MEMHDR *) (((char *) (a)) - RESERVE_SIZE))
+#define CLIENT_2_HDR(a) ((void *) (((char *) (a)) - RESERVE_SIZE))
 #define HDR_2_CLIENT(a)    ((void *) (((char *) (a)) + RESERVE_SIZE))
 
 

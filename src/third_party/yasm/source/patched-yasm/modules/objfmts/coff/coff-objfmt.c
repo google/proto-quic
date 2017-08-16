@@ -524,12 +524,9 @@ coff_objfmt_output_value(yasm_value *value, unsigned char *buf,
         if (vis & YASM_SYM_COMMON) {
             /* In standard COFF, COMMON symbols have their length added in */
             if (!objfmt_coff->win32) {
-                /*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
                 /*@dependent@*/ /*@null@*/ yasm_expr **csize_expr;
                 /*@dependent@*/ /*@null@*/ yasm_intnum *common_size;
 
-                csymd = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
-                assert(csymd != NULL);
                 csize_expr = yasm_symrec_get_common_size(sym);
                 assert(csize_expr != NULL);
                 common_size = yasm_expr_get_intnum(csize_expr, 1);
@@ -988,9 +985,20 @@ coff_objfmt_output_sym(yasm_symrec *sym, /*@null@*/ void *d)
     yasm_sym_vis vis = yasm_symrec_get_visibility(sym);
     int is_abs = yasm_symrec_is_abs(sym);
     /*@dependent@*/ /*@null@*/ coff_symrec_data *csymd;
+    yasm_valparamhead *objext_valparams =
+        yasm_symrec_get_objext_valparams(sym);
     csymd = yasm_symrec_get_data(sym, &coff_symrec_data_cb);
 
     assert(info != NULL);
+
+    /* Look for "function" flag on global syms */
+    if (csymd && csymd->type == 0 && (vis & YASM_SYM_GLOBAL) != 0) {
+        if (objext_valparams) {
+            const char *id = yasm_vp_id(yasm_vps_first(objext_valparams));
+            if (yasm__strcasecmp(id, "function") == 0)
+                csymd->type = 0x20;
+        }
+    }
 
     /* Don't output local syms unless outputting all syms */
     if (info->all_syms || vis != YASM_SYM_LOCAL || is_abs ||
@@ -1356,6 +1364,7 @@ coff_helper_gasflags(void *obj, yasm_valparam *vp, unsigned long line, void *d,
                 datasect = 1;
                 load = 1;
                 readonly = 0;
+                break;
             case 'x':
                 code = 1;
                 load = 1;

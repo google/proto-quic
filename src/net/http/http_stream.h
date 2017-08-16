@@ -22,6 +22,7 @@
 #include "net/base/net_errors.h"
 #include "net/base/net_export.h"
 #include "net/base/request_priority.h"
+#include "net/http/http_raw_request_headers.h"
 #include "net/ssl/token_binding.h"
 
 namespace crypto {
@@ -193,6 +194,8 @@ class NET_EXPORT_PRIVATE HttpStream {
   // from the previous request is drained before calling this method.  If the
   // subclass does not support renewing the stream, NULL is returned.
   virtual HttpStream* RenewStreamForAuth() = 0;
+
+  virtual void SetRequestHeadersCallback(RequestHeadersCallback callback) = 0;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(HttpStream);

@@ -70,7 +70,9 @@ void PostDelayedTaskWithTraits(const tracked_objects::Location& from_here,
                                OnceClosure task,
                                TimeDelta delay) {
   DCHECK(TaskScheduler::GetInstance())
-      << "Ref. Prerequisite section of post_task.h";
+      << "Ref. Prerequisite section of post_task.h.\n\n"
+         "Hint: if this is in a unit test, you're likely merely missing a "
+         "base::test::ScopedTaskEnvironment member in your fixture.\n";
   TaskScheduler::GetInstance()->PostDelayedTaskWithTraits(
       from_here, GetTaskTraitsWithExplicitPriority(traits), std::move(task),
       std::move(delay));
@@ -86,7 +88,9 @@ void PostTaskWithTraitsAndReply(const tracked_objects::Location& from_here,
 
 scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(const TaskTraits& traits) {
   DCHECK(TaskScheduler::GetInstance())
-      << "Ref. Prerequisite section of post_task.h";
+      << "Ref. Prerequisite section of post_task.h.\n\n"
+         "Hint: if this is in a unit test, you're likely merely missing a "
+         "base::test::ScopedTaskEnvironment member in your fixture.\n";
   return TaskScheduler::GetInstance()->CreateTaskRunnerWithTraits(
       GetTaskTraitsWithExplicitPriority(traits));
 }
@@ -94,7 +98,9 @@ scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(const TaskTraits& traits) {
 scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunnerWithTraits(
     const TaskTraits& traits) {
   DCHECK(TaskScheduler::GetInstance())
-      << "Ref. Prerequisite section of post_task.h";
+      << "Ref. Prerequisite section of post_task.h.\n\n"
+         "Hint: if this is in a unit test, you're likely merely missing a "
+         "base::test::ScopedTaskEnvironment member in your fixture.\n";
   return TaskScheduler::GetInstance()->CreateSequencedTaskRunnerWithTraits(
       GetTaskTraitsWithExplicitPriority(traits));
 }
@@ -103,7 +109,9 @@ scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunnerWithTraits(
     const TaskTraits& traits,
     SingleThreadTaskRunnerThreadMode thread_mode) {
   DCHECK(TaskScheduler::GetInstance())
-      << "Ref. Prerequisite section of post_task.h";
+      << "Ref. Prerequisite section of post_task.h.\n\n"
+         "Hint: if this is in a unit test, you're likely merely missing a "
+         "base::test::ScopedTaskEnvironment member in your fixture.\n";
   return TaskScheduler::GetInstance()->CreateSingleThreadTaskRunnerWithTraits(
       GetTaskTraitsWithExplicitPriority(traits), thread_mode);
 }
@@ -113,7 +121,9 @@ scoped_refptr<SingleThreadTaskRunner> CreateCOMSTATaskRunnerWithTraits(
     const TaskTraits& traits,
     SingleThreadTaskRunnerThreadMode thread_mode) {
   DCHECK(TaskScheduler::GetInstance())
-      << "Ref. Prerequisite section of post_task.h";
+      << "Ref. Prerequisite section of post_task.h.\n\n"
+         "Hint: if this is in a unit test, you're likely merely missing a "
+         "base::test::ScopedTaskEnvironment member in your fixture.\n";
   return TaskScheduler::GetInstance()->CreateCOMSTATaskRunnerWithTraits(
       GetTaskTraitsWithExplicitPriority(traits), thread_mode);
 }

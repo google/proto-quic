@@ -173,12 +173,11 @@ bool NetworkDelegate::CanAccessFile(const URLRequest& request,
   return OnCanAccessFile(request, original_path, absolute_path);
 }
 
-bool NetworkDelegate::CanEnablePrivacyMode(
-    const GURL& url,
-    const GURL& first_party_for_cookies) const {
+bool NetworkDelegate::CanEnablePrivacyMode(const GURL& url,
+                                           const GURL& site_for_cookies) const {
   TRACE_EVENT0(kNetTracingCategory, "NetworkDelegate::CanEnablePrivacyMode");
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
-  return OnCanEnablePrivacyMode(url, first_party_for_cookies);
+  return OnCanEnablePrivacyMode(url, site_for_cookies);
 }
 
 bool NetworkDelegate::AreExperimentalCookieFeaturesEnabled() const {

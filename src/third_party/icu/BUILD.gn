@@ -549,6 +549,12 @@ component("icui18n") {
 
   configs += [ ":icu_code" ]
   public_configs = [ ":icu_config" ]
+
+  if (is_fuchsia) {
+    # Fuchsia puts its own libicui18n.so in /system/lib where we need to put our
+    # .so when doing component builds, so we need to give this a different name.
+    output_name = "icui18n_cr"
+  }
 }
 
 component("icuuc") {
@@ -960,6 +966,12 @@ component("icuuc") {
   if (is_win || icu_use_data_file) {
     sources += [ "source/stubdata/stubdata.cpp" ]
     defines += [ "U_ICUDATAENTRY_IN_COMMON" ]
+  }
+
+  if (is_fuchsia) {
+    # Fuchsia puts its own libicuuc.so in /system/lib where we need to put our
+    # .so when doing component builds, so we need to give this a different name.
+    output_name = "icuuc_cr"
   }
 }
 

@@ -13,6 +13,7 @@
 #include "crypto/nss_util.h"
 #include "crypto/scoped_nss_types.h"
 #include "net/cert/cert_type.h"
+#include "net/cert/x509_util_nss.h"
 
 namespace net {
 
@@ -42,7 +43,8 @@ bool ImportSensitiveKeyFromFile(const base::FilePath& dir,
 
 bool ImportClientCertToSlot(const scoped_refptr<X509Certificate>& cert,
                             PK11SlotInfo* slot) {
-  std::string nickname = cert->GetDefaultNickname(USER_CERT);
+  std::string nickname = x509_util::GetDefaultUniqueNickname(
+      cert->os_cert_handle(), USER_CERT, slot);
   SECStatus rv = PK11_ImportCert(slot, cert->os_cert_handle(),
                                  CK_INVALID_HANDLE, nickname.c_str(), PR_FALSE);
   if (rv != SECSuccess) {

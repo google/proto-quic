@@ -86,6 +86,8 @@ namespace base {
 //   pair<iterator, bool> insert(key_type&&);
 //   void                 insert(InputIterator first, InputIterator last,
 //                               FlatContainerDupes);
+//   iterator             insert(const_iterator hint, const key_type&);
+//   iterator             insert(const_iterator hint, key_type&&);
 //   pair<iterator, bool> emplace(Args&&...);
 //   iterator             emplace_hint(const_iterator, Args&&...);
 //

@@ -15,6 +15,7 @@ _BLACKLIST = [
   re.compile(r'.*Mojo.*manifest\.json'),  # Some source_set()s pull these in.
   re.compile(r'.*\.py'),  # Some test_support targets include python deps.
   re.compile(r'.*\.stamp'),  # Stamp files should never be included.
+  re.compile(r'.*\.apk'),  # Should be installed separately.
 
   # Chrome external extensions config file.
   re.compile(r'.*external_extensions\.json'),
@@ -98,5 +99,7 @@ def GetDataDependencies(runtime_deps_path):
   filtered_abs_host_files = [
       host_file for host_file in abs_host_files
       if not any(blacklist_re.match(host_file) for blacklist_re in _BLACKLIST)]
+  # TODO(crbug.com/752610): Filter out host executables, and investigate
+  # whether other files could be filtered as well.
   return [(f, DevicePathComponentsFor(f, output_directory))
           for f in filtered_abs_host_files]

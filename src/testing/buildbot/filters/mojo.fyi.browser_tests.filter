@@ -1,8 +1,3 @@
-BrowserTest.*
-
-# Failing test
--BrowserTest.FullscreenBookmarkBar
-
 # Trying to whitelist
 BrowserDialogTest.Invoke
 CastSessionBrowserTest.CreateAndDestroy
@@ -13,10 +8,6 @@ ChromeRenderViewTest.ImagesAllowedByDefault
 ChromeRenderViewTest.ImagesBlockedByDefault
 ChromeRenderViewTest.JSBlockSentAfterPageLoad
 ChromeRenderViewTest.PluginsTemporarilyAllowed
-CreateNewFolder/FileManagerBrowserTest.Test/0
-CreateNewFolder/FileManagerBrowserTest.Test/1
-CreateNewFolder/FileManagerBrowserTest.Test/2
-CreateNewFolder/FileManagerBrowserTest.Test/3
 DeviceStatusCollectorNetworkInterfacesTest.NetworkInterfaces
 DeviceStatusCollectorNetworkInterfacesTest.ReportIfPublicSession
 DeviceStatusCollectorTest.ActivityCrossingMidnight
@@ -56,7 +47,6 @@ FormAutocompleteTest.AjaxSucceeded_NoFormInteractionInvisible
 FormAutocompleteTest.AjaxSucceeded_NoLongerVisible
 FormAutocompleteTest.AjaxSucceeded_NoLongerVisible_DifferentActionsSameData
 FormAutocompleteTest.AjaxSucceeded_NoLongerVisible_NoAction
-FormAutocompleteTest.AjaxSucceeded_StillVisible
 FormAutocompleteTest.AutoCompleteOffFormSubmit
 FormAutocompleteTest.AutoCompleteOffInputSubmit
 FormAutocompleteTest.CollectFormlessElements

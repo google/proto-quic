@@ -342,23 +342,13 @@ TEST(ToolsSanityTest, AtomicsAreIgnored) {
   EXPECT_EQ(kMagicValue, shared);
 }
 
-#if defined(CFI_ENFORCEMENT)
-// TODO(krasin): remove CFI_CAST_CHECK, see https://crbug.com/626794.
-#if defined(CFI_CAST_CHECK)
-TEST(ToolsSanityTest, BadCast) {
-  class A {
-    virtual void f() {}
-  };
+#if defined(CFI_ENFORCEMENT_TRAP)
+#define CFI_ERROR_MSG "ILL_ILLOPN"
+#elif defined(CFI_ENFORCEMENT_DIAGNOSTIC)
+#define CFI_ERROR_MSG "runtime error: control flow integrity check"
+#endif // CFI_ENFORCEMENT_TRAP || CFI_ENFORCEMENT_DIAGNOSTIC
 
-  class B {
-    virtual void f() {}
-  };
-
-  A a;
-  EXPECT_DEATH((void)(B*)&a, "ILL_ILLOPN");
-}
-#endif // CFI_CAST_CHECK
-
+#if defined(CFI_ERROR_MSG)
 class A {
  public:
   A(): n_(0) {}
@@ -372,17 +362,56 @@ class B: public A {
   void f() override { n_--; }
 };
 
+class C: public B {
+ public:
+  void f() override { n_ += 2; }
+};
+
 NOINLINE void KillVptrAndCall(A *obj) {
   *reinterpret_cast<void **>(obj) = 0;
   obj->f();
 }
 
-TEST(ToolsSanityTest, BadVirtualCall) {
+TEST(ToolsSanityTest, BadVirtualCallNull) {
   A a;
   B b;
-  EXPECT_DEATH({ KillVptrAndCall(&a); KillVptrAndCall(&b); }, "ILL_ILLOPN");
+  EXPECT_DEATH({ KillVptrAndCall(&a); KillVptrAndCall(&b); }, CFI_ERROR_MSG);
 }
 
-#endif // CFI_ENFORCEMENT
+NOINLINE void OverwriteVptrAndCall(B *obj, A *vptr) {
+  *reinterpret_cast<void **>(obj) = *reinterpret_cast<void **>(vptr);
+  obj->f();
+}
+
+TEST(ToolsSanityTest, BadVirtualCallWrongType) {
+  A a;
+  B b;
+  C c;
+  EXPECT_DEATH({ OverwriteVptrAndCall(&b, &a); OverwriteVptrAndCall(&b, &c); },
+               CFI_ERROR_MSG);
+}
+
+// TODO(pcc): remove CFI_CAST_CHECK, see https://crbug.com/626794.
+#if defined(CFI_CAST_CHECK)
+TEST(ToolsSanityTest, BadDerivedCast) {
+  A a;
+  EXPECT_DEATH((void)(B*)&a, CFI_ERROR_MSG);
+}
+
+TEST(ToolsSanityTest, BadUnrelatedCast) {
+  class A {
+    virtual void f() {}
+  };
+
+  class B {
+    virtual void f() {}
+  };
+
+  A a;
+  EXPECT_DEATH((void)(B*)&a, CFI_ERROR_MSG);
+}
+#endif // CFI_CAST_CHECK
+
+#endif // CFI_ERROR_MSG
 
 }  // namespace base

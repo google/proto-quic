@@ -24,16 +24,12 @@ public class SecureRandomInitializer {
      * Safely initializes the random number generator, by seeding it with data from /dev/urandom.
      */
     public static void initialize(SecureRandom generator) throws IOException {
-        FileInputStream fis = null;
-        try {
+        try (FileInputStream fis = new FileInputStream("/dev/urandom")) {
             byte[] seedBytes = new byte[NUM_RANDOM_BYTES];
-            fis = new FileInputStream("/dev/urandom");
             if (fis.read(seedBytes) != seedBytes.length) {
                 throw new IOException("Failed to get enough random data.");
             }
             generator.setSeed(seedBytes);
-        } finally {
-            StreamUtil.closeQuietly(fis);
         }
     }
 }

@@ -46,6 +46,8 @@
 
 #include <stdint.h>
 
+#include "net/base/net_export.h"
+
 namespace net {
 namespace weak_crypto {
 
@@ -66,7 +68,9 @@ namespace weak_crypto {
  * interface would make more sense if that were a requirement.  Currently, this
  * is good enough for the applications we care about.
  */
-void MD4Sum(const uint8_t* input, uint32_t inputLen, uint8_t* result);
+NET_EXPORT_PRIVATE void MD4Sum(const uint8_t* input,
+                               uint32_t inputLen,
+                               uint8_t* result);
 
 }  // namespace weak_crypto
 }  // namespace net

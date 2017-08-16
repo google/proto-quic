@@ -114,14 +114,12 @@ class QUIC_EXPORT_PRIVATE QuicStream : public StreamNotifierInterface {
   bool fin_received() { return fin_received_; }
   bool fin_sent() { return fin_sent_; }
 
-  uint64_t queued_data_bytes() const { return queued_data_bytes_; }
+  // TODO(fayang): Rename this function to BufferedDataBytes() when
+  // deprecating quic_reloadable_flag_quic_save_data_before_consumption2.
+  uint64_t queued_data_bytes() const;
 
   uint64_t stream_bytes_read() const { return stream_bytes_read_; }
   uint64_t stream_bytes_written() const { return stream_bytes_written_; }
-  // For tests that override WritevData.
-  void set_stream_bytes_written(uint64_t bytes_written) {
-    stream_bytes_written_ = bytes_written;
-  }
 
   size_t busy_counter() const { return busy_counter_; }
   void set_busy_counter(size_t busy_counter) { busy_counter_ = busy_counter; }
@@ -197,12 +195,6 @@ class QUIC_EXPORT_PRIVATE QuicStream : public StreamNotifierInterface {
   // Adds random padding after the fin is consumed for this stream.
   void AddRandomPaddingAfterFin();
 
-  // Save |data_length| of data starts at |iov_offset| in |iov| to send buffer.
-  void SaveStreamData(QuicIOVector iov,
-                      size_t iov_offset,
-                      QuicStreamOffset offset,
-                      QuicByteCount data_length);
-
   // Write |data_length| of data starts at |offset| from send buffer.
   bool WriteStreamData(QuicStreamOffset offset,
                        QuicByteCount data_length,
@@ -216,10 +208,17 @@ class QUIC_EXPORT_PRIVATE QuicStream : public StreamNotifierInterface {
 
  protected:
   // Sends as many bytes in the first |count| buffers of |iov| to the connection
-  // as the connection will consume.
+  // as the connection will consume. If FIN is consumed, the write side is
+  // immediately closed.
   // If |ack_listener| is provided, then it will be notified once all
   // the ACKs for this write have been received.
   // Returns the number of bytes consumed by the connection.
+  // Please note: when quic_reloadable_flag_quic_save_data_before_consumption2
+  // is true, returned consumed data is the amount of data saved in send buffer.
+  // The data is not necessarily consumed by the connection. So write side is
+  // closed when FIN is sent.
+  // TODO(fayang): Let WritevData return boolean when deprecating
+  // quic_reloadable_flag_quic_save_data_before_consumption2.
   QuicConsumedData WritevData(
       const struct iovec* iov,
       int iov_count,
@@ -244,6 +243,20 @@ class QUIC_EXPORT_PRIVATE QuicStream : public StreamNotifierInterface {
   // if expecting a FIN. Can be used directly by subclasses if not expecting a
   // FIN.
   void CloseReadSide();
+
+  // Called when data of [offset, offset + data_length] is buffered in send
+  // buffer.
+  virtual void OnDataBuffered(
+      QuicStreamOffset offset,
+      QuicByteCount data_length,
+      const QuicReferenceCountedPointer<QuicAckListenerInterface>&
+          ack_listener) {}
+
+  // True if buffered data in send buffer is below buffered_data_threshold_.
+  bool CanWriteNewData() const;
+
+  // Called when upper layer can write new data.
+  virtual void OnCanWriteNewData() {}
 
   bool fin_buffered() const { return fin_buffered_; }
 
@@ -290,8 +303,15 @@ class QUIC_EXPORT_PRIVATE QuicStream : public StreamNotifierInterface {
   // controller, marks this stream as connection-level write blocked.
   void MaybeSendBlocked();
 
+  // Write buffered data in send buffer. TODO(fayang): Consider combine
+  // WriteOrBufferData, Writev and WriteBufferedData when deprecating
+  // quic_reloadable_flag_quic_save_data_before_consumption2.
+  void WriteBufferedData();
+
   std::list<PendingData> queued_data_;
   // How many bytes are queued?
+  // TODO(fayang): Remove this variable when deprecating
+  // quic_reloadable_flag_quic_save_data_before_consumption2.
   uint64_t queued_data_bytes_;
 
   QuicStreamSequencer sequencer_;
@@ -367,6 +387,9 @@ class QUIC_EXPORT_PRIVATE QuicStream : public StreamNotifierInterface {
   // Send buffer of this stream. Send buffer is cleaned up when data gets acked
   // or discarded.
   QuicStreamSendBuffer send_buffer_;
+
+  // Latched value of FLAGS_quic_buffered_data_threshold.
+  const QuicByteCount buffered_data_threshold_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicStream);
 };

@@ -312,9 +312,9 @@ def main(argv):
   parser.add_option('--apk-path', help='Path to the target\'s apk output.')
   parser.add_option('--incremental-apk-path',
                     help="Path to the target's incremental apk output.")
-  parser.add_option('--incremental-install-script-path',
+  parser.add_option('--incremental-install-json-path',
                     help="Path to the target's generated incremental install "
-                    "script.")
+                    "json.")
 
   parser.add_option('--tested-apk-config',
       help='Path to the build config of the tested apk (for an instrumentation '
@@ -472,8 +472,8 @@ def main(argv):
     if options.type == 'android_apk':
       deps_info['apk_path'] = options.apk_path
       deps_info['incremental_apk_path'] = options.incremental_apk_path
-      deps_info['incremental_install_script_path'] = (
-          options.incremental_install_script_path)
+      deps_info['incremental_install_json_path'] = (
+          options.incremental_install_json_path)
       deps_info['enable_relocation_packing'] = options.enable_relocation_packing
 
   if options.type in ('java_binary', 'java_library', 'android_apk', 'dist_jar'):

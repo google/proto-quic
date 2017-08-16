@@ -14,7 +14,7 @@
 #include <ostream>
 
 #include "base/macros.h"
-#include "net/http2/hpack/huffman/http2_hpack_huffman_decoder.h"
+#include "net/http2/hpack/huffman/hpack_huffman_decoder.h"
 #include "net/http2/platform/api/http2_export.h"
 #include "net/http2/platform/api/http2_string.h"
 #include "net/http2/platform/api/http2_string_piece.h"

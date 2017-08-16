@@ -361,21 +361,10 @@ base::Optional<EffectiveConnectionType> GetForcedEffectiveConnectionType(
     const std::map<std::string, std::string>& params) {
   std::string forced_value = GetStringValueForVariationParamWithDefaultValue(
       params, kForceEffectiveConnectionType, "");
-  if (forced_value.empty())
-    return base::Optional<EffectiveConnectionType>();
-
-  EffectiveConnectionType forced_effective_connection_type =
-      EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
-
-  bool effective_connection_type_available = GetEffectiveConnectionTypeForName(
-      forced_value, &forced_effective_connection_type);
-
-  DCHECK(effective_connection_type_available);
-
-  // Silence unused variable warning in release builds.
-  (void)effective_connection_type_available;
-
-  return forced_effective_connection_type;
+  base::Optional<EffectiveConnectionType> ect =
+      GetEffectiveConnectionTypeForName(forced_value);
+  DCHECK(forced_value.empty() || ect);
+  return ect;
 }
 
 }  // namespace
@@ -403,9 +392,27 @@ NetworkQualityEstimatorParams::NetworkQualityEstimatorParams(
       persistent_cache_reading_enabled_(
           GetPersistentCacheReadingEnabled(params_)),
       min_socket_watcher_notification_interval_(
-          GetMinSocketWatcherNotificationInterval(params_)) {
+          GetMinSocketWatcherNotificationInterval(params_)),
+      lower_bound_http_rtt_transport_rtt_multiplier_(
+          GetDoubleValueForVariationParamWithDefaultValue(
+              params_,
+              "lower_bound_http_rtt_transport_rtt_multiplier",
+              -1)),
+      upper_bound_http_rtt_transport_rtt_multiplier_(
+          GetDoubleValueForVariationParamWithDefaultValue(
+              params_,
+              "upper_bound_http_rtt_transport_rtt_multiplier",
+              -1)) {
   DCHECK_LE(0.0, correlation_uma_logging_probability_);
   DCHECK_GE(1.0, correlation_uma_logging_probability_);
+  DCHECK(lower_bound_http_rtt_transport_rtt_multiplier_ == -1 ||
+         lower_bound_http_rtt_transport_rtt_multiplier_ > 0);
+  DCHECK(upper_bound_http_rtt_transport_rtt_multiplier_ == -1 ||
+         upper_bound_http_rtt_transport_rtt_multiplier_ > 0);
+  DCHECK(lower_bound_http_rtt_transport_rtt_multiplier_ == -1 ||
+         upper_bound_http_rtt_transport_rtt_multiplier_ == -1 ||
+         lower_bound_http_rtt_transport_rtt_multiplier_ <
+             upper_bound_http_rtt_transport_rtt_multiplier_);
 
   const auto algorithm_it = params_.find("effective_connection_type_algorithm");
   effective_connection_type_algorithm_ =

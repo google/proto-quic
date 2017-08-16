@@ -20,9 +20,11 @@
 #include "net/quic/platform/api/quic_containers.h"
 #include "net/tools/epoll_server/epoll_server.h"
 #include "net/tools/quic/quic_client_base.h"
-#include "net/tools/quic/quic_client_session.h"
+#include "net/tools/quic/quic_client_epoll_network_helper.h"
 #include "net/tools/quic/quic_packet_reader.h"
 #include "net/tools/quic/quic_process_packet_interface.h"
+#include "net/tools/quic/quic_spdy_client_base.h"
+#include "net/tools/quic/quic_spdy_client_session.h"
 
 namespace net {
 
@@ -32,92 +34,39 @@ namespace test {
 class QuicClientPeer;
 }  // namespace test
 
-class QuicClient : public QuicClientBase,
-                   public EpollCallbackInterface,
-                   public ProcessPacketInterface {
+class QuicClient : public QuicSpdyClientBase {
  public:
-  // Create a quic client, which will have events managed by an externally owned
-  // EpollServer.
+  // This will create its own QuicClientEpollNetworkHelper.
   QuicClient(QuicSocketAddress server_address,
              const QuicServerId& server_id,
              const QuicVersionVector& supported_versions,
              EpollServer* epoll_server,
+             std::unique_ptr<ProofVerifier> proof_verifier);
+  // This will take ownership of a passed in network primitive.
+  QuicClient(QuicSocketAddress server_address,
+             const QuicServerId& server_id,
+             const QuicVersionVector& supported_versions,
+             EpollServer* epoll_server,
+             std::unique_ptr<QuicClientEpollNetworkHelper> network_helper,
              std::unique_ptr<ProofVerifier> proof_verifier);
   QuicClient(QuicSocketAddress server_address,
              const QuicServerId& server_id,
              const QuicVersionVector& supported_versions,
              const QuicConfig& config,
              EpollServer* epoll_server,
+             std::unique_ptr<QuicClientEpollNetworkHelper> network_helper,
              std::unique_ptr<ProofVerifier> proof_verifier);
 
   ~QuicClient() override;
 
-  // From EpollCallbackInterface
-  void OnRegistration(EpollServer* eps, int fd, int event_mask) override {}
-  void OnModification(int fd, int event_mask) override {}
-  void OnEvent(int fd, EpollEvent* event) override;
-  // |fd_| can be unregistered without the client being disconnected. This
-  // happens in b3m QuicProber where we unregister |fd_| to feed in events to
-  // the client from the SelectServer.
-  void OnUnregistration(int fd, bool replaced) override {}
-  void OnShutdown(EpollServer* eps, int fd) override {}
+  // Exposed for the quic client test.
+  int GetLatestFD() const { return epoll_network_helper()->GetLatestFD(); }
 
-  // If the client has at least one UDP socket, return the latest created one.
-  // Otherwise, return -1.
-  int GetLatestFD() const;
-
-  // From QuicClientBase
-  QuicSocketAddress GetLatestClientAddress() const override;
-
-  // Implements ProcessPacketInterface. This will be called for each received
-  // packet.
-  void ProcessPacket(const QuicSocketAddress& self_address,
-                     const QuicSocketAddress& peer_address,
-                     const QuicReceivedPacket& packet) override;
-
- protected:
-  // From QuicClientBase
-  QuicPacketWriter* CreateQuicPacketWriter() override;
-  void RunEventLoop() override;
-  bool CreateUDPSocketAndBind(QuicSocketAddress server_address,
-                              QuicIpAddress bind_to_address,
-                              int bind_to_port) override;
-  void CleanUpAllUDPSockets() override;
-
-  // If |fd| is an open UDP socket, unregister and close it. Otherwise, do
-  // nothing.
-  virtual void CleanUpUDPSocket(int fd);
-
-  EpollServer* epoll_server() { return epoll_server_; }
-
-  const QuicLinkedHashMap<int, QuicSocketAddress>& fd_address_map() const {
-    return fd_address_map_;
-  }
+  QuicClientEpollNetworkHelper* epoll_network_helper();
+  const QuicClientEpollNetworkHelper* epoll_network_helper() const;
 
  private:
   friend class test::QuicClientPeer;
-
-  // Actually clean up |fd|.
-  void CleanUpUDPSocketImpl(int fd);
-
-  // Listens for events on the client socket.
-  EpollServer* epoll_server_;
-
-  // Map mapping created UDP sockets to their addresses. By using linked hash
-  // map, the order of socket creation can be recorded.
-  QuicLinkedHashMap<int, QuicSocketAddress> fd_address_map_;
-
-  // If overflow_supported_ is true, this will be the number of packets dropped
-  // during the lifetime of the server.
-  QuicPacketCount packets_dropped_;
-
-  // True if the kernel supports SO_RXQ_OVFL, the number of packets dropped
-  // because the socket would otherwise overflow.
-  bool overflow_supported_;
-
-  // Point to a QuicPacketReader object on the heap. The reader allocates more
-  // space than allowed on the stack.
-  std::unique_ptr<QuicPacketReader> packet_reader_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicClient);
 };

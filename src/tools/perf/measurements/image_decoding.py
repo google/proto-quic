@@ -47,14 +47,6 @@ class ImageDecoding(legacy_page_test.LegacyPageTest):
     config.enable_chrome_trace = True
     tab.browser.platform.tracing_controller.StartTracing(config)
 
-  def StopBrowserAfterPage(self, browser, page):
-    del page  # unused
-    return not browser.tabs[0].ExecuteJavaScript("""
-        window.chrome &&
-            chrome.gpuBenchmarking &&
-            chrome.gpuBenchmarking.clearImageCache;
-        """)
-
   def ValidateAndMeasurePage(self, page, tab, results):
     timeline_data = tab.browser.platform.tracing_controller.StopTracing()
     timeline_model = model.TimelineModel(timeline_data)

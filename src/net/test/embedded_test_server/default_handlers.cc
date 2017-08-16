@@ -10,6 +10,7 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "base/base64.h"
 #include "base/bind.h"
@@ -28,6 +29,7 @@
 #include "base/time/time.h"
 #include "net/base/escape.h"
 #include "net/base/url_util.h"
+#include "net/filter/filter_source_stream_test_util.h"
 #include "net/test/embedded_test_server/http_request.h"
 #include "net/test/embedded_test_server/http_response.h"
 #include "net/test/embedded_test_server/request_handler_util.h"
@@ -640,6 +642,30 @@ std::unique_ptr<HttpResponse> HandleHungAfterHeadersResponse(
   return base::MakeUnique<HungAfterHeadersHttpResponse>();
 }
 
+// /gzip-body?<body>
+// Returns a response with a gzipped body of "<body>". Attempts to allocate
+// enough memory to contain the body, but DCHECKs if that fails.
+std::unique_ptr<HttpResponse> HandleGzipBody(const HttpRequest& request) {
+  std::string uncompressed_body = request.GetURL().query();
+  // Attempt to pick size that's large enough even in the worst case (deflate
+  // block headers should be shorter than 512 bytes, and deflating should never
+  // double size of data, modulo headers).
+  // TODO(mmenke): This is rather awkward. Worth improving CompressGzip?
+  std::vector<char> compressed_body(uncompressed_body.size() * 2 + 512);
+  size_t compressed_size = compressed_body.size();
+  CompressGzip(uncompressed_body.c_str(), uncompressed_body.size(),
+               compressed_body.data(), &compressed_size,
+               true /* gzip_framing */);
+  // CompressGzip should DCHECK itself if this fails, anyways.
+  DCHECK_GE(compressed_body.size(), compressed_size);
+
+  std::unique_ptr<BasicHttpResponse> http_response(new BasicHttpResponse);
+  http_response->set_content(
+      std::string(compressed_body.data(), compressed_size));
+  http_response->AddCustomHeader("Content-Encoding", "gzip");
+  return std::move(http_response);
+}
+
 }  // anonymous namespace
 
 #define PREFIXED_HANDLER(prefix, handler) \
@@ -687,6 +713,8 @@ void RegisterDefaultHandlers(EmbeddedTestServer* server) {
       PREFIXED_HANDLER("/hung", &HandleHungResponse));
   server->RegisterDefaultHandler(
       PREFIXED_HANDLER("/hung-after-headers", &HandleHungAfterHeadersResponse));
+  server->RegisterDefaultHandler(
+      PREFIXED_HANDLER("/gzip-body", &HandleGzipBody));
 
   // TODO(svaldez): HandleDownload
   // TODO(svaldez): HandleDownloadFinish

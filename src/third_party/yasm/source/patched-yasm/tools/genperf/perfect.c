@@ -563,7 +563,7 @@ static int perfect(
         if (!augment(tabb, tabh, tabq, blen, scramble, smax, &tabb[i], nkeys, 
                      i+1, form))
         {
-          fprintf(stderr, "fail to map group of size %ld for tab size %ld\n", j, blen);
+          /* Do not print an error. The caller may retry with a larger table. */
           return FALSE;
         }
 
@@ -750,6 +750,7 @@ static void initalen(
     case 0:
       *alen = 1;
       *blen = 1;
+      break;
     case 1: case 2: case 3: case 4: case 5: case 6: case 7: case 8:
       *alen = (form->perfect == NORMAL_HP) ? *smax : *smax/2;
       *blen = *smax/2;

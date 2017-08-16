@@ -101,17 +101,22 @@ class QUIC_EXPORT_PRIVATE QuicPacketGenerator {
       QuicIOVector iov,
       QuicStreamOffset offset,
       StreamSendingState state,
-      QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
+      QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener,
+      bool flag_run_fast_path);
 
   // Sends as many data only packets as allowed by the send algorithm and the
   // available iov.
-  // This path does not support FEC, padding, or bundling pending frames.
+  // This path does not support padding, or bundling pending frames.
+  // In case we access this method from ConsumeData, total_bytes_consumed
+  // keeps track of how many bytes have already been consumed.
   QuicConsumedData ConsumeDataFastPath(
       QuicStreamId id,
       const QuicIOVector& iov,
       QuicStreamOffset offset,
       bool fin,
-      QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
+      size_t total_bytes_consumed,
+      const QuicReferenceCountedPointer<QuicAckListenerInterface>&
+          ack_listener);
 
   // Generates an MTU discovery packet of specified size.
   void GenerateMtuDiscoveryPacket(

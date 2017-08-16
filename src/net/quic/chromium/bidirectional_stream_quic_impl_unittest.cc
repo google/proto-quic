@@ -2120,6 +2120,34 @@ TEST_P(BidirectionalStreamQuicImplTest, DeleteStreamDuringOnTrailersReceived) {
   EXPECT_EQ(0, delegate->on_data_sent_count());
 }
 
+// Tests that if QuicChromiumClientSession is closed after
+// BidirectionalStreamQuicImpl::OnStreamReady() but before
+// QuicChromiumClientSession::Handle::ReleaseStream() is called, there is no
+// crash. Regression test for crbug.com/754823.
+TEST_P(BidirectionalStreamQuicImplTest, ReleaseStreamFails) {
+  SetRequest("GET", "/", DEFAULT_PRIORITY);
+  Initialize();
+
+  BidirectionalStreamRequestInfo request;
+  request.method = "GET";
+  request.url = GURL("http://www.google.com/");
+  request.end_stream_on_headers = true;
+  request.priority = DEFAULT_PRIORITY;
+
+  scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
+  std::unique_ptr<TestDelegateBase> delegate(
+      new TestDelegateBase(read_buffer.get(), kReadBufferSize));
+  delegate->set_trailers_expected(true);
+  // QuicChromiumClientSession::Handle::RequestStream() returns OK synchronously
+  // because Initialize() has established a Session.
+  delegate->Start(&request, net_log().bound(), session()->CreateHandle());
+  // Now closes the underlying session.
+  session_->CloseSessionOnError(ERR_ABORTED, QUIC_INTERNAL_ERROR);
+  delegate->WaitUntilNextCallback(kOnFailed);
+
+  EXPECT_THAT(delegate->error(), IsError(ERR_CONNECTION_CLOSED));
+}
+
 }  // namespace test
 
 }  // namespace net

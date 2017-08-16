@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "base/bind.h"
+#include "base/optional.h"
 #include "base/rand_util.h"
 #include "base/sequenced_task_runner.h"
 #include "base/threading/thread_checker.h"
@@ -41,18 +42,16 @@ ParsedPrefs ConvertDictionaryValueToMap(const base::DictionaryValue* value) {
         nqe::internal::NetworkID::FromString(it.key());
 
     std::string effective_connection_type_string;
-    bool effective_connection_type_available =
+    const bool effective_connection_type_available =
         it.value().GetAsString(&effective_connection_type_string);
     DCHECK(effective_connection_type_available);
 
-    EffectiveConnectionType effective_connection_type =
-        EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
-    effective_connection_type_available = GetEffectiveConnectionTypeForName(
-        effective_connection_type_string, &effective_connection_type);
-    DCHECK(effective_connection_type_available);
+    base::Optional<EffectiveConnectionType> effective_connection_type =
+        GetEffectiveConnectionTypeForName(effective_connection_type_string);
+    DCHECK(effective_connection_type.has_value());
 
     nqe::internal::CachedNetworkQuality cached_network_quality(
-        effective_connection_type);
+        effective_connection_type.value_or(EFFECTIVE_CONNECTION_TYPE_UNKNOWN));
     read_prefs[network_id] = cached_network_quality;
   }
   return read_prefs;

@@ -46,9 +46,9 @@ void BufferedSpdyFramer::set_debug_visitor(
   spdy_framer_.set_debug_visitor(debug_visitor);
 }
 
-void BufferedSpdyFramer::OnError(SpdyFramer* spdy_framer) {
-  DCHECK(spdy_framer);
-  visitor_->OnError(spdy_framer->spdy_framer_error());
+void BufferedSpdyFramer::OnError(
+    SpdyFramer::SpdyFramerError spdy_framer_error) {
+  visitor_->OnError(spdy_framer_error);
 }
 
 void BufferedSpdyFramer::OnHeaders(SpdyStreamId stream_id,

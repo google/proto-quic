@@ -125,6 +125,9 @@ class NET_EXPORT HttpNetworkSession : public base::MemoryCoordinatorClient {
     std::set<HostPortPair> origins_to_force_quic_on;
     // Set of QUIC tags to send in the handshake's connection options.
     QuicTagVector quic_connection_options;
+    // Set of QUIC tags to send in the handshake's connection options that only
+    // affect the client.
+    QuicTagVector quic_client_connection_options;
 
     // Active QUIC experiments
 

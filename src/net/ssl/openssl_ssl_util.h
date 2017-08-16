@@ -78,6 +78,13 @@ NetLogParametersCallback CreateNetLogOpenSSLErrorCallback(
 // this SSL connection.
 int GetNetSSLVersion(SSL* ssl);
 
+// Configures |ssl| to send the specified certificate and either |pkey| or
+// |custom_key|. This is a wrapper over |SSL_set_chain_and_key|.
+bool SetSSLChainAndKey(SSL* ssl,
+                       X509Certificate* cert,
+                       EVP_PKEY* pkey,
+                       const SSL_PRIVATE_KEY_METHOD* custom_key);
+
 }  // namespace net
 
 #endif  // NET_SSL_OPENSSL_SSL_UTIL_H_

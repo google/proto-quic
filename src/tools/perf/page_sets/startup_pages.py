@@ -44,20 +44,3 @@ class StartupPagesPageSet(story.StorySet):
     self.AddStory(StartedPage('http://bbc.co.uk', self))
     # Horribly complex page - stress test!
     self.AddStory(StartedPage('http://kapook.com', self))
-
-
-# TODO(rnephew): Test if kapook.com fails on both or just one of the configs.
-class WarmStartupStoryExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    self.PermanentlyDisableBenchmark(
-        [story.expectations.ALL_DESKTOP], 'Mobile benchmark')
-    self.DisableStory(
-        'http://kapook.com', [story.expectations.ALL], 'crbug.com/667470')
-
-
-class ColdStartupStoryExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    self.PermanentlyDisableBenchmark(
-        [story.expectations.ALL_DESKTOP], 'Mobile benchmark')
-    self.DisableStory(
-        'http://kapook.com', [story.expectations.ALL], 'crbug.com/667470')

@@ -103,6 +103,11 @@ NET_EXPORT bssl::UniquePtr<CRYPTO_BUFFER> CreateCryptoBuffer(
 NET_EXPORT bssl::UniquePtr<CRYPTO_BUFFER> CreateCryptoBuffer(
     const char* invalid_data);
 
+// Creates a new X509Certificate from the chain in |buffers|, which must have at
+// least one element.
+scoped_refptr<X509Certificate> CreateX509CertificateFromBuffers(
+    STACK_OF(CRYPTO_BUFFER) * buffers);
+
 } // namespace x509_util
 
 } // namespace net

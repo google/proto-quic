@@ -148,8 +148,6 @@ class QUIC_EXPORT_PRIVATE QuicSpdySession : public QuicSession {
   // aggressively.
   virtual bool ShouldReleaseHeadersStreamSequencerBuffer();
 
-  SpdyFramer* spdy_framer() { return &spdy_framer_; }
-
   void CloseConnectionWithDetails(QuicErrorCode error,
                                   const std::string& details);
 

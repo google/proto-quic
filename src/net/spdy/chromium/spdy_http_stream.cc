@@ -280,6 +280,7 @@ int SpdyHttpStream::SendRequest(const HttpRequestHeaders& request_headers,
   stream_->net_log().AddEvent(
       NetLogEventType::HTTP_TRANSACTION_HTTP2_SEND_REQUEST_HEADERS,
       base::Bind(&SpdyHeaderBlockNetLogCallback, &headers));
+  DispatchRequestHeadersCallback(headers);
   result = stream_->SendRequestHeaders(
       std::move(headers),
       HasUploadData() ? MORE_DATA_TO_SEND : NO_MORE_DATA_TO_SEND);

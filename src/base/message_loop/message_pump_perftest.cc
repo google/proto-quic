@@ -285,6 +285,7 @@ class PostTaskTest : public testing::Test {
         (now - start).InMicroseconds() / static_cast<double>(num_posted),
         "us/task",
         true);
+    queue->WillDestroyCurrentMessageLoop();
   }
 };
 

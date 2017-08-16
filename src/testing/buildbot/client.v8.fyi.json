@@ -255,7 +255,8 @@
               "device_type": "bullhead",
               "os": "Android"
             }
-          ]
+          ],
+          "shards": 6
         }
       }
     ]

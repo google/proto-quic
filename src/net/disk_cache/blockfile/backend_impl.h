@@ -35,6 +35,7 @@ class NetLog;
 
 namespace disk_cache {
 
+class BackendCleanupTracker;
 struct Index;
 
 enum BackendFlags {
@@ -55,13 +56,16 @@ class NET_EXPORT_PRIVATE BackendImpl : public Backend {
   friend class Eviction;
  public:
   BackendImpl(const base::FilePath& path,
+              scoped_refptr<BackendCleanupTracker> cleanup_tracker,
               const scoped_refptr<base::SingleThreadTaskRunner>& cache_thread,
               net::NetLog* net_log);
+
   // mask can be used to limit the usable size of the hash table, for testing.
   BackendImpl(const base::FilePath& path,
               uint32_t mask,
               const scoped_refptr<base::SingleThreadTaskRunner>& cache_thread,
               net::NetLog* net_log);
+
   ~BackendImpl() override;
 
   // Performs general initialization for this current instance of the cache.
@@ -381,6 +385,9 @@ class NET_EXPORT_PRIVATE BackendImpl : public Backend {
 
   // Returns the maximum total memory for the memory buffers.
   int MaxBuffersSize();
+
+  // We want this destroyed after every other field.
+  scoped_refptr<BackendCleanupTracker> cleanup_tracker_;
 
   InFlightBackendIO background_queue_;  // The controller of pending operations.
   scoped_refptr<MappedFile> index_;  // The main cache index.

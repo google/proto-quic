@@ -6,8 +6,17 @@
 buildscript {
     repositories {
         jcenter()
+{% if canary %}
+        maven {
+            url 'https://maven.google.com'
+        }
+{% endif %}
     }
     dependencies {
+{% if canary %}
+        classpath "com.android.tools.build:gradle:3.0.0-beta1"
+{% else %}
         classpath "com.android.tools.build:gradle:2.3.3"
+{% endif %}
     }
 }

@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "net/quic/core/quic_client_session_base.h"
+#include "net/quic/core/quic_spdy_client_session_base.h"
 #include "net/quic/core/quic_types.h"
 #include "net/quic/platform/api/quic_export.h"
 

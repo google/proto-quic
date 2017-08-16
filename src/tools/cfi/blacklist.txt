@@ -1,3 +1,6 @@
+# TODO(thakis): Remove clang is past r310132, works around r309617.
+type:std::*
+
 # e.g. RolloverProtectedTickClock
 fun:*MutableInstance*
 

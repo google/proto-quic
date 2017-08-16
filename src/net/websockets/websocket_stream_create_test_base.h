@@ -42,7 +42,7 @@ class WebSocketStreamCreateTestBase {
   void CreateAndConnectStream(const GURL& socket_url,
                               const std::vector<std::string>& sub_protocols,
                               const url::Origin& origin,
-                              const GURL& first_party_for_cookies,
+                              const GURL& site_for_cookies,
                               const std::string& additional_headers,
                               std::unique_ptr<base::Timer> timer);
 

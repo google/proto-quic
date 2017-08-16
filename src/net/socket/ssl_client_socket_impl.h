@@ -192,8 +192,8 @@ class SSLClientSocketImpl : public SSLClientSocket,
   // the |ssl_info|.signed_certificate_timestamps list.
   void AddCTInfoToSSLInfo(SSLInfo* ssl_info) const;
 
-  // Returns a unique key string for the SSL session cache for
-  // this socket.
+  // Returns a unique key string for the SSL session cache for this socket. This
+  // must not be called if |ssl_session_cache_shard_| is empty.
   std::string GetSessionCacheKey() const;
 
   // Returns true if renegotiations are allowed.

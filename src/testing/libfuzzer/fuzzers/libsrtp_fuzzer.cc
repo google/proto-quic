@@ -23,15 +23,34 @@ namespace LibSrtpFuzzer {
 enum CryptoPolicy {
   NONE,
   LIKE_WEBRTC,
+  LIKE_WEBRTC_SHORT_AUTH,
   LIKE_WEBRTC_WITHOUT_AUTH,
-  AES_GCM,
+  AES_128_GCM,
+  AES_256_GCM,
   NUMBER_OF_POLICIES,
 };
 }
 
+static size_t GetKeyLength(LibSrtpFuzzer::CryptoPolicy crypto_policy) {
+  switch (crypto_policy) {
+    case LibSrtpFuzzer::NUMBER_OF_POLICIES:
+    case LibSrtpFuzzer::NONE:
+      return 0;
+    case LibSrtpFuzzer::LIKE_WEBRTC:
+    case LibSrtpFuzzer::LIKE_WEBRTC_SHORT_AUTH:
+    case LibSrtpFuzzer::LIKE_WEBRTC_WITHOUT_AUTH:
+      return SRTP_AES_ICM_128_KEY_LEN_WSALT;
+    case LibSrtpFuzzer::AES_128_GCM:
+      return SRTP_AES_GCM_128_KEY_LEN_WSALT;
+    case LibSrtpFuzzer::AES_256_GCM:
+      return SRTP_AES_GCM_256_KEY_LEN_WSALT;
+  }
+}
+
 struct Environment {
   srtp_policy_t GetCryptoPolicy(LibSrtpFuzzer::CryptoPolicy crypto_policy,
-                                const unsigned char* replacement_key) {
+                                const unsigned char* replacement_key,
+                                size_t key_length) {
     switch (crypto_policy) {
       case LibSrtpFuzzer::NUMBER_OF_POLICIES:
       case LibSrtpFuzzer::NONE:
@@ -42,18 +61,29 @@ struct Environment {
         srtp_crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy.rtp);
         srtp_crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy.rtcp);
         break;
+      case LibSrtpFuzzer::LIKE_WEBRTC_SHORT_AUTH:
+        srtp_crypto_policy_set_aes_cm_128_hmac_sha1_32(&policy.rtp);
+        srtp_crypto_policy_set_aes_cm_128_hmac_sha1_32(&policy.rtcp);
+        break;
       case LibSrtpFuzzer::LIKE_WEBRTC_WITHOUT_AUTH:
         srtp_crypto_policy_set_aes_cm_128_null_auth(&policy.rtp);
         srtp_crypto_policy_set_aes_cm_128_null_auth(&policy.rtcp);
         break;
-      case LibSrtpFuzzer::AES_GCM:
+      case LibSrtpFuzzer::AES_128_GCM:
         // There was a security bug in the GCM mode in libsrtp 1.5.2.
-        srtp_crypto_policy_set_aes_gcm_128_8_auth(&policy.rtp);
-        srtp_crypto_policy_set_aes_gcm_128_8_auth(&policy.rtcp);
+        srtp_crypto_policy_set_aes_gcm_128_16_auth(&policy.rtp);
+        srtp_crypto_policy_set_aes_gcm_128_16_auth(&policy.rtcp);
+        break;
+      case LibSrtpFuzzer::AES_256_GCM:
+        // WebRTC uses AES-256-GCM by default if GCM ciphers are enabled.
+        srtp_crypto_policy_set_aes_gcm_256_16_auth(&policy.rtp);
+        srtp_crypto_policy_set_aes_gcm_256_16_auth(&policy.rtcp);
         break;
     }
 
-    memcpy(key, replacement_key, SRTP_MASTER_KEY_LEN);
+    assert(static_cast<size_t>(policy.rtp.cipher_key_len) == key_length);
+    assert(static_cast<size_t>(policy.rtcp.cipher_key_len) == key_length);
+    memcpy(key, replacement_key, key_length);
     return policy;
   };
 
@@ -72,7 +102,7 @@ struct Environment {
 
  private:
   srtp_policy_t policy;
-  unsigned char key[SRTP_MASTER_KEY_LEN] = {0};
+  unsigned char key[SRTP_MAX_KEY_LEN] = {0};
 
   static void srtp_crypto_policy_set_null_cipher_null_auth(
       srtp_crypto_policy_t* p) {
@@ -96,7 +126,7 @@ Environment* env = new Environment();
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   // Read one byte and use it to choose a crypto policy.
-  if (size <= 1)
+  if (size <= 2 + SRTP_MAX_KEY_LEN)
     return 0;
   LibSrtpFuzzer::CryptoPolicy policy = static_cast<LibSrtpFuzzer::CryptoPolicy>(
       data[0] % LibSrtpFuzzer::NUMBER_OF_POLICIES);
@@ -104,14 +134,33 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   size -= 1;
 
   // Read some more bytes to use as a key.
-  if (size <= SRTP_MASTER_KEY_LEN)
-    return 0;
-  srtp_policy_t srtp_policy = env->GetCryptoPolicy(policy, data);
-  data += SRTP_MASTER_KEY_LEN;
-  size -= SRTP_MASTER_KEY_LEN;
+  size_t key_length = GetKeyLength(policy);
+  srtp_policy_t srtp_policy = env->GetCryptoPolicy(policy, data, key_length);
+  data += SRTP_MAX_KEY_LEN;
+  size -= SRTP_MAX_KEY_LEN;
+
+  // Read one byte and use as number of encrypted header extensions.
+  uint8_t num_encrypted_headers = data[0];
+  data += 1;
+  size -= 1;
+  if (num_encrypted_headers > 0) {
+    // Use next bytes as extension ids.
+    if (size <= num_encrypted_headers)
+      return 0;
+    srtp_policy.enc_xtn_hdr_count = static_cast<int>(num_encrypted_headers);
+    srtp_policy.enc_xtn_hdr =
+        static_cast<int*>(malloc(srtp_policy.enc_xtn_hdr_count * sizeof(int)));
+    assert(srtp_policy.enc_xtn_hdr);
+    for (int i = 0; i < srtp_policy.enc_xtn_hdr_count; ++i) {
+      srtp_policy.enc_xtn_hdr[i] = static_cast<int>(data[i]);
+    }
+    data += srtp_policy.enc_xtn_hdr_count;
+    size -= srtp_policy.enc_xtn_hdr_count;
+  }
 
   srtp_t session;
   srtp_err_status_t error = srtp_create(&session, &srtp_policy);
+  free(srtp_policy.enc_xtn_hdr);
   if (error != srtp_err_status_ok) {
     assert(false);
     return 0;

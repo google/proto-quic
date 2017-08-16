@@ -12,6 +12,8 @@
 // TODO(amistry): Resolve the conflict between these two sets of definitions.
 module net.interfaces;
 
+import "net/interfaces/ip_endpoint.mojom";
+
 // Mirror of net::AddressFamily.
 enum AddressFamily {
   UNSPECIFIED,
@@ -25,14 +27,6 @@ struct HostResolverRequestInfo {
   uint16 port;
   AddressFamily address_family;
   bool is_my_ip_address;
-};
-
-// Mirror of net::IPEndPoint.
-struct IPEndPoint {
-  // IP address as a numeric value from most to least significant byte.
-  // Will be of length 4 for IPv4 addresses and 16 for IPv6.
-  array<uint8> address;
-  uint16 port;
 };
 
 // Mirror of net::AddressList.

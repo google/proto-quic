@@ -35,9 +35,4 @@ function createNewWebSocket()
 for (var i = 0; i < PARALLELISM; ++i) {
   createNewWebSocket();
 }
-
-setTimeout(function() {
-  console.log("Got stuck after " + connected + " socket(s) connected");
-  document.title = "FAIL";
-}, 11000);
 </script>

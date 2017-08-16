@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "net/http/http_raw_request_headers.h"
 #include "net/http/http_request_info.h"
 #include "net/http/http_response_body_drainer.h"
 #include "net/http/http_stream_parser.h"
@@ -34,8 +35,15 @@ int HttpBasicStream::SendRequest(const HttpRequestHeaders& headers,
                                  HttpResponseInfo* response,
                                  const CompletionCallback& callback) {
   DCHECK(parser());
-  return parser()->SendRequest(
-      state_.GenerateRequestLine(), headers, response, callback);
+  if (request_headers_callback_) {
+    HttpRawRequestHeaders raw_headers;
+    raw_headers.set_request_line(state_.GenerateRequestLine());
+    for (net::HttpRequestHeaders::Iterator it(headers); it.GetNext();)
+      raw_headers.Add(it.name(), it.value());
+    request_headers_callback_.Run(std::move(raw_headers));
+  }
+  return parser()->SendRequest(state_.GenerateRequestLine(), headers, response,
+                               callback);
 }
 
 int HttpBasicStream::ReadResponseHeaders(const CompletionCallback& callback) {
@@ -141,6 +149,11 @@ void HttpBasicStream::PopulateNetErrorDetails(NetErrorDetails* details) {
 
 void HttpBasicStream::SetPriority(RequestPriority priority) {
   // TODO(akalin): Plumb this through to |connection_|.
+}
+
+void HttpBasicStream::SetRequestHeadersCallback(
+    RequestHeadersCallback callback) {
+  request_headers_callback_ = std::move(callback);
 }
 
 }  // namespace net

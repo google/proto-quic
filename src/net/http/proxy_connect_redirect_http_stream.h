@@ -70,6 +70,7 @@ class ProxyConnectRedirectHttpStream : public HttpStream {
   void SetPriority(RequestPriority priority) override;
 
   HttpStream* RenewStreamForAuth() override;
+  void SetRequestHeadersCallback(RequestHeadersCallback callback) override {}
 
  private:
   bool has_load_timing_info_;

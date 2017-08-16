@@ -116,17 +116,25 @@ class BASE_EXPORT SysInfo {
   static bool GetLsbReleaseValue(const std::string& key, std::string* value);
 
   // Convenience function for GetLsbReleaseValue("CHROMEOS_RELEASE_BOARD",...).
-  // Returns "unknown" if CHROMEOS_RELEASE_BOARD is not set. Otherwise returns
-  // the full name of the board. WARNING: the returned value often differs in
-  // developer built system compared to devices that use the official version.
-  // E.g. for developer built version, the function could return 'glimmer' while
-  // for officially used versions it would be like 'glimmer-signed-mp-v4keys'.
-  // Use GetStrippedReleaseBoard() function if you need only the short name of
-  // the board (would be 'glimmer' in the case described above).
+  // Returns "unknown" if CHROMEOS_RELEASE_BOARD is not set. Otherwise, returns
+  // the full name of the board. Note that the returned value often differs
+  // between developers' systems and devices that use official builds. E.g. for
+  // a developer-built image, the function could return 'glimmer', while in an
+  // official build, it may be something like 'glimmer-signed-mp-v4keys'.
+  //
+  // NOTE: Strings returned by this function should be treated as opaque values
+  // within Chrome (e.g. for reporting metrics elsewhere). If you need to make
+  // Chrome behave differently for different Chrome OS devices, either directly
+  // check for the hardware feature that you care about (preferred) or add a
+  // command-line flag to Chrome and pass it from session_manager (based on
+  // whether a USE flag is set or not). See https://goo.gl/BbBkzg for more
+  // details.
   static std::string GetLsbReleaseBoard();
 
+  // DEPRECATED: Please see GetLsbReleaseBoard's comment.
   // Convenience function for GetLsbReleaseBoard() removing trailing "-signed-*"
   // if present. Returns "unknown" if CHROMEOS_RELEASE_BOARD is not set.
+  // TODO(derat): Delete this after October 2017.
   static std::string GetStrippedReleaseBoard();
 
   // Returns the creation time of /etc/lsb-release. (Used to get the date and

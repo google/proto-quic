@@ -436,8 +436,8 @@ def load_isolated(content, algo):
   """
   try:
     data = json.loads(content)
-  except ValueError:
-    raise IsolatedError('Failed to parse: %s...' % content[:100])
+  except ValueError as v:
+    raise IsolatedError('Failed to parse (%s): %s...' % (v, content[:100]))
 
   if not isinstance(data, dict):
     raise IsolatedError('Expected dict, got %r' % data)

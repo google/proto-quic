@@ -5,6 +5,7 @@
 import base64
 import collections
 import copy
+import httplib
 import json
 import logging
 import os
@@ -338,8 +339,12 @@ class InstrumentedHttp(httplib2.Http):
     except (socket.error, socket.herror, socket.gaierror):
       self._update_metrics(http_metrics.STATUS_ERROR, start_time)
       raise
-    except httplib2.HttpLib2Error:
-      self._update_metrics(http_metrics.STATUS_EXCEPTION, start_time)
+    except (httplib.HTTPException, httplib2.HttpLib2Error) as ex:
+      status = http_metrics.STATUS_EXCEPTION
+      if 'Deadline exceeded while waiting for HTTP response' in str(ex):
+        # Raised on Appengine (gae_override/httplib.py).
+        status = http_metrics.STATUS_TIMEOUT
+      self._update_metrics(status, start_time)
       raise
     http_metrics.response_bytes.add(len(content), fields=self.fields)
 

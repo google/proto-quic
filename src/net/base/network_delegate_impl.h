@@ -93,9 +93,8 @@ class NET_EXPORT NetworkDelegateImpl : public NetworkDelegate {
                        const base::FilePath& original_path,
                        const base::FilePath& absolute_path) const override;
 
-  bool OnCanEnablePrivacyMode(
-      const GURL& url,
-      const GURL& first_party_for_cookies) const override;
+  bool OnCanEnablePrivacyMode(const GURL& url,
+                              const GURL& site_for_cookies) const override;
 
   bool OnAreExperimentalCookieFeaturesEnabled() const override;
 

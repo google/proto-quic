@@ -1237,6 +1237,14 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="Android.ChromeHome.OpenedByStartup">
+  <owner>thildebr@chromium.org</owner>
+  <description>
+    The Chrome Home bottom sheet was automatically opened on startup after a
+    period of inactivity.
+  </description>
+</action>
+
 <action name="Android.ChromeHome.OpenedBySwipe">
   <owner>mdjones@chromium.org</owner>
   <owner>twellington@chromium.org</owner>
@@ -2116,6 +2124,11 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="BadMessageTerminate_BPGM">
+  <obsolete>
+    Deprecated 8/2017. Replaced by the histograms
+    Stability.BadMessageTerminated.GuestView and
+    Stability.BadMessageTerminated.Extensions.
+  </obsolete>
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
 </action>
@@ -13843,6 +13856,16 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="Overscroll_Cancelled.Reload">
+  <owner>mohsen@chromium.org</owner>
+  <description>
+    When vertical overscroll corresponding to the RELOAD navigation is cancelled
+    - either because the user performed an interfering action such as pressing a
+    key, or because the user ended the drag before the navigation threshold was
+    passed.
+  </description>
+</action>
+
 <action name="Overscroll_Navigated.Back">
   <owner>mfomitchev@chromium.org</owner>
   <description>
@@ -13854,6 +13877,13 @@ should be able to be added at any place in this file.
   <owner>mfomitchev@chromium.org</owner>
   <description>
     When horizontal overscroll initiates a FORWARD navigation in the browser.
+  </description>
+</action>
+
+<action name="Overscroll_Navigated.Reload">
+  <owner>mohsen@chromium.org</owner>
+  <description>
+    When vertical overscroll initiates a RELOAD navigation in the browser.
   </description>
 </action>
 

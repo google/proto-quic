@@ -173,11 +173,11 @@ class BASE_EXPORT Histogram : public HistogramBase {
   //----------------------------------------------------------------------------
   // Accessors for factory construction, serialization and testing.
   //----------------------------------------------------------------------------
+  const BucketRanges* bucket_ranges() const;
   Sample declared_min() const;
   Sample declared_max() const;
   virtual Sample ranges(uint32_t i) const;
   virtual uint32_t bucket_count() const;
-  const BucketRanges* bucket_ranges() const { return bucket_ranges_; }
 
   // This function validates histogram construction arguments. It returns false
   // if some of the arguments are bad but also corrects them so they should
@@ -311,14 +311,18 @@ class BASE_EXPORT Histogram : public HistogramBase {
                              int64_t* sum,
                              ListValue* buckets) const override;
 
-  // Does not own this object. Should get from StatisticsRecorder.
-  const BucketRanges* bucket_ranges_;
+  // This is a dummy field placed where corruption is frequently seen on
+  // current Android builds. The hope is that it will mitigate the problem
+  // sufficiently to continue with the M61 beta branch while investigation
+  // into the true problem continues.
+  // TODO(bcwhite): Remove this once crbug/736675 is fixed.
+  const uintptr_t dummy_;
 
   // Samples that have not yet been logged with SnapshotDelta().
-  std::unique_ptr<HistogramSamples> unlogged_samples_;
+  std::unique_ptr<SampleVectorBase> unlogged_samples_;
 
   // Accumulation of all samples that have been logged with SnapshotDelta().
-  std::unique_ptr<HistogramSamples> logged_samples_;
+  std::unique_ptr<SampleVectorBase> logged_samples_;
 
 #if DCHECK_IS_ON()  // Don't waste memory if it won't be used.
   // Flag to indicate if PrepareFinalDelta has been previously called. It is

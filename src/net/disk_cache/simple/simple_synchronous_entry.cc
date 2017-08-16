@@ -22,6 +22,7 @@
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
 #include "net/disk_cache/simple/simple_backend_version.h"
+#include "net/disk_cache/simple/simple_histogram_enums.h"
 #include "net/disk_cache/simple/simple_histogram_macros.h"
 #include "net/disk_cache/simple/simple_util.h"
 #include "third_party/zlib/zlib.h"
@@ -30,54 +31,9 @@ using base::File;
 using base::FilePath;
 using base::Time;
 
+namespace disk_cache {
+
 namespace {
-
-// Used in histograms, please only add entries at the end.
-enum OpenEntryResult {
-  OPEN_ENTRY_SUCCESS = 0,
-  OPEN_ENTRY_PLATFORM_FILE_ERROR = 1,
-  OPEN_ENTRY_CANT_READ_HEADER = 2,
-  OPEN_ENTRY_BAD_MAGIC_NUMBER = 3,
-  OPEN_ENTRY_BAD_VERSION = 4,
-  OPEN_ENTRY_CANT_READ_KEY = 5,
-  OPEN_ENTRY_KEY_MISMATCH = 6,
-  OPEN_ENTRY_KEY_HASH_MISMATCH = 7,
-  OPEN_ENTRY_SPARSE_OPEN_FAILED = 8,
-  OPEN_ENTRY_INVALID_FILE_LENGTH = 9,
-  OPEN_ENTRY_MAX = 10,
-};
-
-// Used in histograms, please only add entries at the end.
-enum WriteResult {
-  WRITE_RESULT_SUCCESS = 0,
-  WRITE_RESULT_PRETRUNCATE_FAILURE,
-  WRITE_RESULT_WRITE_FAILURE,
-  WRITE_RESULT_TRUNCATE_FAILURE,
-  WRITE_RESULT_LAZY_STREAM_ENTRY_DOOMED,
-  WRITE_RESULT_LAZY_CREATE_FAILURE,
-  WRITE_RESULT_LAZY_INITIALIZE_FAILURE,
-  WRITE_RESULT_MAX,
-};
-
-// Used in histograms, please only add entries at the end.
-enum CheckEOFResult {
-  CHECK_EOF_RESULT_SUCCESS,
-  CHECK_EOF_RESULT_READ_FAILURE,
-  CHECK_EOF_RESULT_MAGIC_NUMBER_MISMATCH,
-  CHECK_EOF_RESULT_CRC_MISMATCH,
-  CHECK_EOF_RESULT_KEY_SHA256_MISMATCH,
-  CHECK_EOF_RESULT_MAX,
-};
-
-// Used in histograms, please only add entries at the end.
-enum CloseResult {
-  CLOSE_RESULT_SUCCESS,
-  CLOSE_RESULT_WRITE_FAILURE,
-  CLOSE_RESULT_MAX,
-};
-
-// Used in histograms, please only add entries at the end.
-enum class KeySHA256Result { NOT_PRESENT, MATCHED, NO_MATCH, MAX };
 
 void RecordSyncOpenResult(net::CacheType cache_type,
                           OpenEntryResult result,
@@ -96,9 +52,9 @@ void RecordSyncOpenResult(net::CacheType cache_type,
   }
 }
 
-void RecordWriteResult(net::CacheType cache_type, WriteResult result) {
-  SIMPLE_CACHE_UMA(ENUMERATION,
-                   "SyncWriteResult", cache_type, result, WRITE_RESULT_MAX);
+void RecordWriteResult(net::CacheType cache_type, SyncWriteResult result) {
+  SIMPLE_CACHE_UMA(ENUMERATION, "SyncWriteResult", cache_type, result,
+                   SYNC_WRITE_RESULT_MAX);
 }
 
 void RecordCheckEOFResult(net::CacheType cache_type, CheckEOFResult result) {
@@ -120,8 +76,8 @@ void RecordKeySHA256Result(net::CacheType cache_type, KeySHA256Result result) {
 
 bool CanOmitEmptyFile(int file_index) {
   DCHECK_GE(file_index, 0);
-  DCHECK_LT(file_index, disk_cache::kSimpleEntryFileCount);
-  return file_index == disk_cache::simple_util::GetFileIndexFromStreamIndex(2);
+  DCHECK_LT(file_index, kSimpleEntryFileCount);
+  return file_index == simple_util::GetFileIndexFromStreamIndex(2);
 }
 
 bool TruncatePath(const FilePath& filename_to_truncate) {
@@ -145,8 +101,6 @@ void CalculateSHA256OfKey(const std::string& key,
 }
 
 }  // namespace
-
-namespace disk_cache {
 
 using simple_util::GetEntryHashKey;
 using simple_util::GetFilenameFromEntryHashAndFileIndex;
@@ -419,20 +373,21 @@ void SimpleSynchronousEntry::WriteData(const EntryOperationData& in_entry_op,
     if (doomed) {
       DLOG(WARNING) << "Rejecting write to lazily omitted stream "
                     << in_entry_op.index << " of doomed cache entry.";
-      RecordWriteResult(cache_type_, WRITE_RESULT_LAZY_STREAM_ENTRY_DOOMED);
+      RecordWriteResult(cache_type_,
+                        SYNC_WRITE_RESULT_LAZY_STREAM_ENTRY_DOOMED);
       *out_result = net::ERR_CACHE_WRITE_FAILURE;
       return;
     }
     File::Error error;
     if (!MaybeCreateFile(file_index, FILE_REQUIRED, &error)) {
-      RecordWriteResult(cache_type_, WRITE_RESULT_LAZY_CREATE_FAILURE);
+      RecordWriteResult(cache_type_, SYNC_WRITE_RESULT_LAZY_CREATE_FAILURE);
       Doom();
       *out_result = net::ERR_CACHE_WRITE_FAILURE;
       return;
     }
     CreateEntryResult result;
     if (!InitializeCreatedFile(file_index, &result)) {
-      RecordWriteResult(cache_type_, WRITE_RESULT_LAZY_INITIALIZE_FAILURE);
+      RecordWriteResult(cache_type_, SYNC_WRITE_RESULT_LAZY_INITIALIZE_FAILURE);
       Doom();
       *out_result = net::ERR_CACHE_WRITE_FAILURE;
       return;
@@ -445,7 +400,7 @@ void SimpleSynchronousEntry::WriteData(const EntryOperationData& in_entry_op,
     const int64_t file_eof_offset =
         out_entry_stat->GetEOFOffsetInFile(key_.size(), index);
     if (!files_[file_index].SetLength(file_eof_offset)) {
-      RecordWriteResult(cache_type_, WRITE_RESULT_PRETRUNCATE_FAILURE);
+      RecordWriteResult(cache_type_, SYNC_WRITE_RESULT_PRETRUNCATE_FAILURE);
       Doom();
       *out_result = net::ERR_CACHE_WRITE_FAILURE;
       return;
@@ -454,7 +409,7 @@ void SimpleSynchronousEntry::WriteData(const EntryOperationData& in_entry_op,
   if (buf_len > 0) {
     if (files_[file_index].Write(file_offset, in_buf->data(), buf_len) !=
         buf_len) {
-      RecordWriteResult(cache_type_, WRITE_RESULT_WRITE_FAILURE);
+      RecordWriteResult(cache_type_, SYNC_WRITE_RESULT_WRITE_FAILURE);
       Doom();
       *out_result = net::ERR_CACHE_WRITE_FAILURE;
       return;
@@ -468,7 +423,7 @@ void SimpleSynchronousEntry::WriteData(const EntryOperationData& in_entry_op,
     int file_eof_offset =
         out_entry_stat->GetLastEOFOffsetInFile(key_.size(), index);
     if (!files_[file_index].SetLength(file_eof_offset)) {
-      RecordWriteResult(cache_type_, WRITE_RESULT_TRUNCATE_FAILURE);
+      RecordWriteResult(cache_type_, SYNC_WRITE_RESULT_TRUNCATE_FAILURE);
       Doom();
       *out_result = net::ERR_CACHE_WRITE_FAILURE;
       return;
@@ -477,7 +432,7 @@ void SimpleSynchronousEntry::WriteData(const EntryOperationData& in_entry_op,
 
   SIMPLE_CACHE_UMA(TIMES, "DiskWriteLatency", cache_type_,
                    write_time.Elapsed());
-  RecordWriteResult(cache_type_, WRITE_RESULT_SUCCESS);
+  RecordWriteResult(cache_type_, SYNC_WRITE_RESULT_SUCCESS);
   base::Time modification_time = Time::Now();
   out_entry_stat->set_last_used(modification_time);
   out_entry_stat->set_last_modified(modification_time);

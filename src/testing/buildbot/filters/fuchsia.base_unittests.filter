@@ -1,8 +1,5 @@
 # TODO(fuchsia): Being ported, see https://crbug.com/706592.
 
--ActivityTrackerTest.CreateWithFileTest
--ActivityTrackerTest.ProcessDeathTest
--ActivityTrackerTest.ThreadDeathTest
 -FilePathWatcherTest.DeleteAndRecreate
 -FilePathWatcherTest.DeleteDuringNotify
 -FilePathWatcherTest.DeletedFile
@@ -18,46 +15,26 @@
 -FilePathWatcherTest.NonExistentDirectory
 -FilePathWatcherTest.RecursiveWatch
 -FilePathWatcherTest.WatchDirectory
--FilePersistentMemoryAllocatorTest.AcceptableTest
--FilePersistentMemoryAllocatorTest.CreationTest
--FilePersistentMemoryAllocatorTest.ExtendTest
 -FileProxyTest.SetTimes
 -FileUtilProxyTest.Touch
 -FileUtilTest.FileToFILE
--LoggingTest.CheckCausesDistinctBreakpoints
 -NativeLibraryTest.LoadLibrary
 -NativeLibraryTest.LoadLibraryPreferOwnSymbols
--PartitionAllocTest.Basic
--PartitionAllocTest.DumpMemoryStats
--PartitionAllocTest.FreeCache
--PartitionAllocTest.FreePageListPageTransitions
--PartitionAllocTest.GenericAlloc
--PartitionAllocTest.GenericAllocGetSize
--PartitionAllocTest.GenericAllocSizes
--PartitionAllocTest.LostFreePagesBug
--PartitionAllocTest.MappingCollision
--PartitionAllocTest.MultiAlloc
--PartitionAllocTest.MultiPageAllocs
--PartitionAllocTest.MultiPages
--PartitionAllocTest.PageRefilling
--PartitionAllocTest.PageTransitions
--PartitionAllocTest.PartialPageFreelists
--PartitionAllocTest.PartialPages
--PartitionAllocTest.PreferActiveOverEmpty
--PartitionAllocTest.Purge
--PartitionAllocTest.PurgeDiscardable
--PartitionAllocTest.Realloc
--PartitionAllocTest.ReallocMovesCookies
 -PathServiceTest.Get
--PersistentHistogramAllocatorTest.CreateSpareFile
--PersistentHistogramAllocatorTest.CreateWithFile
--PersistentHistogramAllocatorTest.RangesDeDuplication
--PersistentHistogramAllocatorTest.StatisticsRecorderMerge
 -PlatformThreadTest.ThreadPriorityCurrentThread
 -ProcessMemoryDumpTest.CountResidentBytes
 -ProcessMemoryDumpTest.CountResidentBytesInSharedMemory
 -ProcessMemoryDumpTest.TakeAllDumpsFrom
--ProcessTest.Move
+-SysInfoTest.AmountOfFreeDiskSpace
+-SysInfoTest.AmountOfMem
+-SysInfoTest.AmountOfTotalDiskSpace
+
+# CancelableSyncSocket tests fail: https://crbug.com/741783
+-CancelableSyncSocket*
+
+# These tests all rely on being able to set the exit code of an externally
+# terminated process, which mx_task_kill() does not support.
+# https://crbug.com/753490.
 -ProcessTest.Terminate
 -ProcessTest.TerminateCurrentProcessImmediatelyWithNonZeroExitCode
 -ProcessTest.TerminateCurrentProcessImmediatelyWithZeroExitCode
@@ -65,18 +42,6 @@
 -ProcessUtilTest.GetTerminationStatusCrash
 -ProcessUtilTest.GetTerminationStatusSigKill
 -ProcessUtilTest.GetTerminationStatusSigTerm
--SysInfoTest.AmountOfFreeDiskSpace
--SysInfoTest.AmountOfMem
--SysInfoTest.AmountOfTotalDiskSpace
--TrackedObjectsTest.ReuseRetiredThreadData
--VerifyPathControlledByUserTest.BadPaths
--VerifyPathControlledByUserTest.GroupWriteTest
--VerifyPathControlledByUserTest.OwnershipChecks
--VerifyPathControlledByUserTest.Symlinks
--VerifyPathControlledByUserTest.WriteBitChecks
-
-# CancelableSyncSocket tests fail: http://crbug.com/741783
--CancelableSyncSocket*
 
 # These tests are occasionally flaking. See https://crbug.com/738275. Please be
 # pretty confident you've fixed their rarely-flakiness before re-enabling.

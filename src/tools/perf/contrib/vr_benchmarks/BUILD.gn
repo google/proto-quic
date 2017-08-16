@@ -10,9 +10,11 @@ group("vr_perf_tests") {
     "./__init__.py",
     "./run_benchmark",
     "./vr_config.py",
-    "benchmarks/",
+    "./vr_benchmarks/",
+    "./vr_page_sets/",
     "//chrome/android/shared_preference_files/test/",
     "//third_party/gvr-android-sdk/test-apks/vr_services/vr_services_current.apk",
+    "//chrome/test/data/vr/webvr_info/samples/",
   ]
   data_deps = [
     "//chrome/android:vr_nfc_simulator_apk",

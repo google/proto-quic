@@ -204,12 +204,12 @@ done:
   return ret;
 }
 
-int ssl_client_hello_init(SSL *ssl, SSL_CLIENT_HELLO *out, const uint8_t *in,
-                          size_t in_len) {
+int ssl_client_hello_init(SSL *ssl, SSL_CLIENT_HELLO *out,
+                          const SSLMessage &msg) {
   OPENSSL_memset(out, 0, sizeof(*out));
   out->ssl = ssl;
-  out->client_hello = in;
-  out->client_hello_len = in_len;
+  out->client_hello = CBS_data(&msg.body);
+  out->client_hello_len = CBS_len(&msg.body);
 
   CBS client_hello, random, session_id;
   CBS_init(&client_hello, out->client_hello, out->client_hello_len);
@@ -2795,7 +2795,6 @@ static int ssl_scan_clienthello_tlsext(SSL_HANDSHAKE *hs,
 
   hs->extensions.received = 0;
   hs->custom_extensions.received = 0;
-
   CBS extensions;
   CBS_init(&extensions, client_hello->extensions, client_hello->extensions_len);
   while (CBS_len(&extensions) != 0) {
@@ -2919,6 +2918,7 @@ static int ssl_scan_serverhello_tlsext(SSL_HANDSHAKE *hs, CBS *cbs,
         tls_extension_find(&ext_index, type);
 
     if (ext == NULL) {
+      hs->received_custom_extension = 1;
       if (!custom_ext_parse_serverhello(hs, out_alert, type, &extension)) {
         return 0;
       }
@@ -3123,11 +3123,11 @@ static enum ssl_ticket_aead_result_t ssl_decrypt_ticket_with_method(
 }
 
 enum ssl_ticket_aead_result_t ssl_process_ticket(
-    SSL *ssl, SSL_SESSION **out_session, int *out_renew_ticket,
+    SSL *ssl, UniquePtr<SSL_SESSION> *out_session, int *out_renew_ticket,
     const uint8_t *ticket, size_t ticket_len, const uint8_t *session_id,
     size_t session_id_len) {
   *out_renew_ticket = 0;
-  *out_session = NULL;
+  out_session->reset();
 
   if ((SSL_get_options(ssl) & SSL_OP_NO_TICKET) ||
       session_id_len > SSL_MAX_SSL_SESSION_ID_LENGTH) {
@@ -3150,11 +3150,11 @@ enum ssl_ticket_aead_result_t ssl_process_ticket(
   }
 
   /* Decode the session. */
-  SSL_SESSION *session =
-      SSL_SESSION_from_bytes(plaintext, plaintext_len, ssl->ctx);
+  UniquePtr<SSL_SESSION> session(
+      SSL_SESSION_from_bytes(plaintext, plaintext_len, ssl->ctx));
   OPENSSL_free(plaintext);
 
-  if (session == NULL) {
+  if (!session) {
     ERR_clear_error(); /* Don't leave an error on the queue. */
     return ssl_ticket_aead_ignore_ticket;
   }
@@ -3164,7 +3164,7 @@ enum ssl_ticket_aead_result_t ssl_process_ticket(
   OPENSSL_memcpy(session->session_id, session_id, session_id_len);
   session->session_id_length = session_id_len;
 
-  *out_session = session;
+  *out_session = std::move(session);
   return ssl_ticket_aead_success;
 }
 
@@ -3276,14 +3276,12 @@ int tls1_choose_signature_algorithm(SSL_HANDSHAKE *hs, uint16_t *out) {
   return 0;
 }
 
-int tls1_verify_channel_id(SSL_HANDSHAKE *hs) {
+int tls1_verify_channel_id(SSL_HANDSHAKE *hs, const SSLMessage &msg) {
   SSL *const ssl = hs->ssl;
-  uint16_t extension_type;
-  CBS extension, channel_id;
-
   /* A Channel ID handshake message is structured to contain multiple
    * extensions, but the only one that can be present is Channel ID. */
-  CBS_init(&channel_id, ssl->init_msg, ssl->init_num);
+  uint16_t extension_type;
+  CBS channel_id = msg.body, extension;
   if (!CBS_get_u16(&channel_id, &extension_type) ||
       !CBS_get_u16_length_prefixed(&channel_id, &extension) ||
       CBS_len(&channel_id) != 0 ||

@@ -60,8 +60,3 @@ class KeyNoOpCasesPageSet(story.StorySet):
     # Why: Feeding a stream of touch events to a no-op handler should be cheap.
     self.AddStory(NoOpTouchScrollPage(
         'file://key_noop_cases/no_op_touch_handler.html', self))
-
-
-class KeyNoOpCasesStoryExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    pass

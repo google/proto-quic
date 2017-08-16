@@ -82,5 +82,10 @@ EncryptionLevel QuicPacketCreatorPeer::GetEncryptionLevel(
   return creator->packet_.encryption_level;
 }
 
+// static
+QuicFramer* QuicPacketCreatorPeer::framer(QuicPacketCreator* creator) {
+  return creator->framer_;
+}
+
 }  // namespace test
 }  // namespace net

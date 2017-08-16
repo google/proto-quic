@@ -2,9 +2,53 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import time
+
 from devil.android import forwarder
-from pylib import chrome_test_server_spawner
+from devil.android import ports
 from pylib.base import test_server
+from pylib.constants import host_paths
+
+with host_paths.SysPath(host_paths.BUILD_COMMON_PATH):
+  import chrome_test_server_spawner
+
+def _WaitUntil(predicate, max_attempts=5):
+  """Blocks until the provided predicate (function) is true.
+
+  Returns:
+    Whether the provided predicate was satisfied once (before the timeout).
+  """
+  sleep_time_sec = 0.025
+  for _ in xrange(1, max_attempts):
+    if predicate():
+      return True
+    time.sleep(sleep_time_sec)
+    sleep_time_sec = min(1, sleep_time_sec * 2)  # Don't wait more than 1 sec.
+  return False
+
+
+class PortForwarderAndroid(chrome_test_server_spawner.PortForwarder):
+  def __init__(self, device, tool):
+    self.device = device
+    self.tool = tool
+
+  def Map(self, port_pairs):
+    forwarder.Forwarder.Map(port_pairs, self.device, self.tool)
+
+  def GetDevicePortForHostPort(self, host_port):
+    return forwarder.Forwarder.DevicePortForHostPort(host_port)
+
+  def WaitHostPortAvailable(self, port):
+    return _WaitUntil(lambda: ports.IsHostPortAvailable(port))
+
+  def WaitPortNotAvailable(self, port):
+    return _WaitUntil(lambda: not ports.IsHostPortAvailable(port))
+
+  def WaitDevicePortReady(self, port):
+    return _WaitUntil(lambda: ports.IsDevicePortUsed(self.device, port))
+
+  def Unmap(self, device_port):
+    forwarder.Forwarder.UnmapDevicePort(device_port, self.device)
 
 
 class LocalTestServerSpawner(test_server.TestServer):
@@ -13,7 +57,7 @@ class LocalTestServerSpawner(test_server.TestServer):
     super(LocalTestServerSpawner, self).__init__()
     self._device = device
     self._spawning_server = chrome_test_server_spawner.SpawningServer(
-        port, device, tool)
+        port, PortForwarderAndroid(device, tool))
     self._tool = tool
 
   @property

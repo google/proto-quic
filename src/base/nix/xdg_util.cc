@@ -59,6 +59,8 @@ DesktopEnvironment GetDesktopEnvironment(Environment* env) {
   if (env->GetVar("XDG_CURRENT_DESKTOP", &xdg_current_desktop)) {
     // Not all desktop environments set this env var as of this writing.
     if (base::StartsWith(xdg_current_desktop, "Unity",
+                         base::CompareCase::SENSITIVE) ||
+        base::StartsWith(xdg_current_desktop, "Pantheon",
                          base::CompareCase::SENSITIVE)) {
       // gnome-fallback sessions set XDG_CURRENT_DESKTOP to Unity
       // DESKTOP_SESSION can be gnome-fallback or gnome-fallback-compiz

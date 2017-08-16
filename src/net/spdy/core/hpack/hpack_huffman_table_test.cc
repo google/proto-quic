@@ -11,10 +11,10 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "net/http2/hpack/huffman/http2_hpack_huffman_decoder.h"
+#include "net/http2/hpack/huffman/hpack_huffman_decoder.h"
 #include "net/spdy/core/hpack/hpack_constants.h"
 #include "net/spdy/core/hpack/hpack_output_stream.h"
-#include "net/spdy/core/spdy_test_utils.h"
+#include "net/spdy/platform/api/spdy_string_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -224,13 +224,13 @@ TEST_F(HpackHuffmanTableTest, InitializeHpackCode) {
 TEST_F(HpackHuffmanTableTest, SpecRequestExamples) {
   SpdyString buffer;
   SpdyString test_table[] = {
-      a2b_hex("f1e3c2e5f23a6ba0ab90f4ff"),
+      SpdyHexDecode("f1e3c2e5f23a6ba0ab90f4ff"),
       "www.example.com",
-      a2b_hex("a8eb10649cbf"),
+      SpdyHexDecode("a8eb10649cbf"),
       "no-cache",
-      a2b_hex("25a849e95ba97d7f"),
+      SpdyHexDecode("25a849e95ba97d7f"),
       "custom-key",
-      a2b_hex("25a849e95bb8e8b4bf"),
+      SpdyHexDecode("25a849e95bb8e8b4bf"),
       "custom-value",
   };
   // Round-trip each test example.
@@ -247,19 +247,19 @@ TEST_F(HpackHuffmanTableTest, SpecRequestExamples) {
 TEST_F(HpackHuffmanTableTest, SpecResponseExamples) {
   SpdyString buffer;
   SpdyString test_table[] = {
-      a2b_hex("6402"),
+      SpdyHexDecode("6402"),
       "302",
-      a2b_hex("aec3771a4b"),
+      SpdyHexDecode("aec3771a4b"),
       "private",
-      a2b_hex("d07abe941054d444a8200595040b8166"
-              "e082a62d1bff"),
+      SpdyHexDecode("d07abe941054d444a8200595040b8166"
+                    "e082a62d1bff"),
       "Mon, 21 Oct 2013 20:13:21 GMT",
-      a2b_hex("9d29ad171863c78f0b97c8e9ae82ae43"
-              "d3"),
+      SpdyHexDecode("9d29ad171863c78f0b97c8e9ae82ae43"
+                    "d3"),
       "https://www.example.com",
-      a2b_hex("94e7821dd7f2e6c7b335dfdfcd5b3960"
-              "d5af27087f3672c1ab270fb5291f9587"
-              "316065c003ed4ee5b1063d5007"),
+      SpdyHexDecode("94e7821dd7f2e6c7b335dfdfcd5b3960"
+                    "d5af27087f3672c1ab270fb5291f9587"
+                    "316065c003ed4ee5b1063d5007"),
       "foo=ASDJKHQKBZXOQWEOPIUAXQWEOIU; max-age=3600; version=1",
   };
   // Round-trip each test example.

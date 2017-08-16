@@ -219,8 +219,6 @@ class TestSession : public QuicSpdySession {
       consumed = QuicSession::WritevData(stream, id, data, offset, state,
                                          std::move(ack_listener));
     }
-    stream->set_stream_bytes_written(stream->stream_bytes_written() +
-                                     consumed.bytes_consumed);
     if (fin && consumed.fin_consumed) {
       stream->set_fin_sent(true);
     }
@@ -237,6 +235,10 @@ class TestSession : public QuicSpdySession {
     struct iovec iov;
     if (stream->id() != kCryptoStreamId) {
       this->connection()->SetDefaultEncryptionLevel(ENCRYPTION_FORWARD_SECURE);
+    }
+    if (save_data_before_consumption()) {
+      QuicStreamPeer::SendBuffer(stream).SaveStreamData(
+          MakeIOVector("not empty", &iov), 0, 9);
     }
     QuicConsumedData consumed = WritevData(
         stream, stream->id(), MakeIOVector("not empty", &iov), 0, FIN, nullptr);

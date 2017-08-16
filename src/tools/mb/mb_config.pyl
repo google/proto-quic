@@ -103,6 +103,7 @@
       'Browser Side Navigation Linux': 'release_bot',
       'CFI Linux CF': 'cfi_full_cfi_diag_recover_release_static',
       'CFI Linux ToT': 'clang_tot_cfi_full_cfi_diag_thin_lto_release_static_dcheck_always_on',
+      'ChromeOS amd64 Chromium Goma Canary': 'cros_chrome_sdk',
       'Chromium Linux Goma Canary': 'release_bot',
       'Chromium Linux Goma Canary': 'release_bot',
       'Chromium Linux Goma Canary (clobber)': 'release_bot',
@@ -118,8 +119,8 @@
       'Chromium Mac 10.9 Goma Canary (dbg)': 'debug_bot',
       'Chromium Mac 10.9 Goma Canary (dbg)(clobber)': 'debug_bot',
       'Chromium Mac Goma Canary LocalOutputCache': 'release_bot',
-      'Chromium Win 10 GCE Tests (Win 7 Build)': 'release_bot_x86_minimal_symbols',
-      'Chromium Win 10 GCE Tests (Win 10 Build)': 'release_bot_x86_minimal_symbols',
+      'Chromium Win 10 GCE Tests (Win 7 Build)': 'release_bot_minimal_symbols',
+      'Chromium Win 10 GCE Tests (Win 10 Build)': 'release_bot_minimal_symbols',
       'Chromium Win PGO Builder': {
         '1': 'official_optimize_chrome_pgo_phase_1_x86',
         '2': 'official_optimize_chrome_pgo_phase_2_x86',
@@ -178,6 +179,7 @@
       'EarlGreyiOS': 'ios',
       'Fuchsia': 'release_bot_fuchsia',
       'Fuchsia (dbg)': 'debug_bot_fuchsia',
+      'Fuchsia Compile': 'release_bot_fuchsia',
       'GomaCanaryiOS': 'ios',
       'ios-simulator': 'ios',
       'Headless Linux (dbg)': 'headless_linux_debug_bot',
@@ -205,6 +207,10 @@
       'Mojo Linux': 'release_trybot',
       'Mojo Windows': 'release_bot_x86_minimal_symbols',
       'Ozone Linux': 'ozone_linux_release_bot',
+      'Out of Process Profiling Android': 'release_bot_out_of_process_profiling',
+      'Out of Process Profiling Linux': 'release_bot_out_of_process_profiling',
+      'Out of Process Profiling Mac': 'release_bot_out_of_process_profiling',
+      'Out of Process Profiling Windows': 'release_bot_out_of_process_profiling',
       'Site Isolation Android': 'android_release_bot_minimal_symbols_arm64',
       'Site Isolation Linux': 'release_trybot',
       'Site Isolation Win': 'release_trybot_x86',
@@ -519,8 +525,10 @@
       'cast_shell_audio_linux': 'cast_audio_release_trybot',
       'chromeos_amd64-generic_chromium_compile_only_ng': 'cros_chrome_sdk',
       'chromeos_daisy_chromium_compile_only_ng': 'cros_chrome_sdk',
+      'chromium_presubmit': 'presubmit',
       'closure_compilation': 'closure_compilation',
       'fuchsia': 'release_trybot_fuchsia',
+      'fuchsia_compile': 'release_trybot_fuchsia',
       # TODO(kjellander): Remove linux_arm after tryserver restart.
       'linux_arm': 'release_trybot_arm',
       'linux_arm_dbg': 'debug_trybot_arm',
@@ -638,6 +646,7 @@
     'tryserver.chromium.win': {
       'win10_chromium_x64_rel_ng': 'release_trybot',
       'win10_chromium_x64_rel_ng_exp': 'release_trybot',
+      'win10_gce_x64_rel': 'release_bot_minimal_symbols',
       'win8_chromium_gn_upload': 'release_bot_x86_minimal_symbols',
       'win_x64_archive': 'release_trybot',
       'win_archive': 'release_trybot_x86',
@@ -1407,6 +1416,11 @@
       'ozone_linux', 'release_trybot',
     ],
 
+    'presubmit': [
+      # The chromium_presubmit bot does not use mb.
+      'error',
+    ],
+
     'release_afl_asan': [
       'release', 'afl', 'asan', 'chromeos_codecs', 'pdf_xfa', 'disable_nacl',
     ],
@@ -1437,6 +1451,10 @@
 
     'release_bot_mac_strip': [
       'release_bot', 'mac_strip',
+    ],
+
+    'release_bot_out_of_process_profiling': [
+      'release_bot', 'out_of_process_profiling',
     ],
 
     'release_bot_x86': [
@@ -1870,6 +1888,10 @@
       'gn_args': 'optimize_for_fuzzing=true',
     },
 
+    'out_of_process_profiling': {
+      'gn_args': 'enable_oop_heap_profiling=true',
+    },
+
     'ozone_linux': {
       'gn_args': ('ozone_auto_platforms=false ozone_platform_wayland=true '
                   'ozone_platform="x11" '
@@ -1978,5 +2000,9 @@
     'x86': {
       'gn_args': 'target_cpu="x86"',
     },
+  },
+
+  'luci_tryservers': {
+    'chromium.try': [ 'LUCI linux_chromium_rel_ng' ],
   },
 }

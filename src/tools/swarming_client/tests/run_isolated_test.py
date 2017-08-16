@@ -29,6 +29,7 @@ import named_cache
 import run_isolated
 from depot_tools import auto_stub
 from depot_tools import fix_encoding
+from libs import luci_context
 from utils import file_path
 from utils import fs
 from utils import large
@@ -112,6 +113,7 @@ class StorageFake(object):
 class RunIsolatedTestBase(auto_stub.TestCase):
   def setUp(self):
     super(RunIsolatedTestBase, self).setUp()
+    os.environ.pop('LUCI_CONTEXT', None)
     self.tempdir = tempfile.mkdtemp(prefix=u'run_isolated_test')
     logging.debug(self.tempdir)
     self.mock(run_isolated, 'make_temp_dir', self.fake_make_temp_dir)
@@ -159,6 +161,7 @@ class RunIsolatedTest(RunIsolatedTestBase):
     self.popen_calls = []
 
     self.capture_popen_env = False
+    self.capture_luci_ctx = False
 
     # pylint: disable=no-self-argument
     class Popen(object):
@@ -166,6 +169,9 @@ class RunIsolatedTest(RunIsolatedTestBase):
         kwargs.pop('cwd', None)
         if not self.capture_popen_env:
           kwargs.pop('env', None)
+        if self.capture_luci_ctx:
+          with open(os.environ['LUCI_CONTEXT']) as f:
+            kwargs['luci_ctx'] = json.load(f)
         self2.returncode = None
         self2.args = args
         self2.kwargs = kwargs
@@ -259,6 +265,7 @@ class RunIsolatedTest(RunIsolatedTestBase):
         None,
         init_named_caches_stub,
         False,
+        None,
         None,
         None,
         None,
@@ -383,6 +390,7 @@ class RunIsolatedTest(RunIsolatedTestBase):
       '--no-log',
       '--cache', self.tempdir,
       '--named-cache-root', os.path.join(self.tempdir, 'c'),
+      '--',
       '/bin/echo',
       'hello',
       'world',
@@ -394,6 +402,58 @@ class RunIsolatedTest(RunIsolatedTestBase):
         [([u'/bin/echo', u'hello', u'world'], {'detached': True})],
         self.popen_calls)
 
+  def test_main_naked_with_account_switch(self):
+    self.capture_luci_ctx = True
+    self.mock_popen_with_oserr()
+    cmd = [
+      '--no-log',
+      '--cache', self.tempdir,
+      '--named-cache-root', os.path.join(self.tempdir, 'c'),
+      '--switch-to-account', 'task',
+      '--',
+      '/bin/echo',
+      'hello',
+      'world',
+    ]
+    root_ctx = {
+      'accounts': [{'id': 'bot'}, {'id': 'task'}],
+      'default_account_id' : 'bot',
+      'secret': 'sekret',
+      'rpc_port': 12345,
+    }
+    with luci_context.write(local_auth=root_ctx):
+      run_isolated.main(cmd)
+    # Switched default account to task.
+    task_ctx = root_ctx.copy()
+    task_ctx['default_account_id'] = 'task'
+    self.assertEqual(task_ctx, self.popen_calls[0][1]['luci_ctx']['local_auth'])
+
+  def test_main_naked_with_account_pop(self):
+    self.capture_luci_ctx = True
+    self.mock_popen_with_oserr()
+    cmd = [
+      '--no-log',
+      '--cache', self.tempdir,
+      '--named-cache-root', os.path.join(self.tempdir, 'c'),
+      '--switch-to-account', 'task',
+      '--',
+      '/bin/echo',
+      'hello',
+      'world',
+    ]
+    root_ctx = {
+      'accounts': [{'id': 'bot'}],  # only 'bot', there's no 'task'
+      'default_account_id' : 'bot',
+      'secret': 'sekret',
+      'rpc_port': 12345,
+    }
+    with luci_context.write(local_auth=root_ctx):
+      run_isolated.main(cmd)
+    # Unset default account, since 'task' account is not defined.
+    task_ctx = root_ctx.copy()
+    task_ctx.pop('default_account_id')
+    self.assertEqual(task_ctx, self.popen_calls[0][1]['luci_ctx']['local_auth'])
+
   def test_main_naked_leaking(self):
     workdir = tempfile.mkdtemp()
     try:
@@ -403,6 +463,7 @@ class RunIsolatedTest(RunIsolatedTestBase):
         '--root-dir', workdir,
         '--leak-temp-dir',
         '--named-cache-root', os.path.join(self.tempdir, 'c'),
+        '--',
         '/bin/echo',
         'hello',
         'world',
@@ -729,6 +790,7 @@ class RunIsolatedTestRun(RunIsolatedTestBase):
           None,
           None,
           None,
+          None,
           run_isolated.noop_install_packages,
           False)
       self.assertEqual(0, ret)
@@ -812,6 +874,7 @@ class RunIsolatedTestOutputFiles(RunIsolatedTestBase):
           ['foo', 'foodir/foo2'],
           init_named_caches_stub,
           False,
+          None,
           None,
           None,
           None,

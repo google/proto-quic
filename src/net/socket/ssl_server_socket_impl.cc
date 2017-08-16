@@ -23,46 +23,19 @@
 #include "net/ssl/ssl_connection_status_flags.h"
 #include "net/ssl/ssl_info.h"
 #include "third_party/boringssl/src/include/openssl/err.h"
+#include "third_party/boringssl/src/include/openssl/pool.h"
 #include "third_party/boringssl/src/include/openssl/ssl.h"
-#include "third_party/boringssl/src/include/openssl/x509.h"
 
 #define GotoState(s) next_handshake_state_ = s
 
 namespace net {
 
-namespace {
-
-// Creates an X509Certificate out of the concatenation of |cert|, if non-null,
-// with |chain|.
-scoped_refptr<X509Certificate> CreateX509Certificate(X509* cert,
-                                                     STACK_OF(X509) * chain) {
-  std::vector<base::StringPiece> der_chain;
-  base::StringPiece der_cert;
-  scoped_refptr<X509Certificate> client_cert;
-  if (cert) {
-    if (!x509_util::GetDER(cert, &der_cert))
-      return nullptr;
-    der_chain.push_back(der_cert);
-  }
-
-  for (size_t i = 0; i < sk_X509_num(chain); ++i) {
-    X509* x = sk_X509_value(chain, i);
-    if (!x509_util::GetDER(x, &der_cert))
-      return nullptr;
-    der_chain.push_back(der_cert);
-  }
-
-  return X509Certificate::CreateFromDERCertChain(der_chain);
-}
-
-class SSLServerSocketImpl : public SSLServerSocket,
-                            public SocketBIOAdapter::Delegate {
+class SSLServerContextImpl::SocketImpl : public SSLServerSocket,
+                                         public SocketBIOAdapter::Delegate {
  public:
-  // See comments on CreateSSLServerSocket for details of how these
-  // parameters are used.
-  SSLServerSocketImpl(std::unique_ptr<StreamSocket> socket,
-                      bssl::UniquePtr<SSL> ssl);
-  ~SSLServerSocketImpl() override;
+  SocketImpl(SSLServerContextImpl* context,
+             std::unique_ptr<StreamSocket> socket);
+  ~SocketImpl() override;
 
   // SSLServerSocket interface.
   int Handshake(const CompletionCallback& callback) override;
@@ -102,7 +75,8 @@ class SSLServerSocketImpl : public SSLServerSocket,
   void ClearConnectionAttempts() override {}
   void AddConnectionAttempts(const ConnectionAttempts& attempts) override {}
   int64_t GetTotalReceivedBytes() const override;
-  static int CertVerifyCallback(X509_STORE_CTX* store_ctx, void* arg);
+  static ssl_verify_result_t CertVerifyCallback(SSL* ssl, uint8_t* out_alert);
+  ssl_verify_result_t CertVerifyCallbackImpl(uint8_t* out_alert);
 
   // SocketBIOAdapter::Delegate implementation.
   void OnReadReady() override;
@@ -127,6 +101,8 @@ class SSLServerSocketImpl : public SSLServerSocket,
 
   int Init();
   void ExtractClientCert();
+
+  SSLServerContextImpl* context_;
 
   NetLogWithSource net_log_;
 
@@ -155,20 +131,23 @@ class SSLServerSocketImpl : public SSLServerSocket,
   State next_handshake_state_;
   bool completed_handshake_;
 
-  DISALLOW_COPY_AND_ASSIGN(SSLServerSocketImpl);
+  DISALLOW_COPY_AND_ASSIGN(SocketImpl);
 };
 
-SSLServerSocketImpl::SSLServerSocketImpl(
-    std::unique_ptr<StreamSocket> transport_socket,
-    bssl::UniquePtr<SSL> ssl)
-    : user_read_buf_len_(0),
+SSLServerContextImpl::SocketImpl::SocketImpl(
+    SSLServerContextImpl* context,
+    std::unique_ptr<StreamSocket> transport_socket)
+    : context_(context),
+      user_read_buf_len_(0),
       user_write_buf_len_(0),
-      ssl_(std::move(ssl)),
       transport_socket_(std::move(transport_socket)),
       next_handshake_state_(STATE_NONE),
-      completed_handshake_(false) {}
+      completed_handshake_(false) {
+  ssl_.reset(SSL_new(context_->ssl_ctx_.get()));
+  SSL_set_app_data(ssl_.get(), this);
+}
 
-SSLServerSocketImpl::~SSLServerSocketImpl() {
+SSLServerContextImpl::SocketImpl::~SocketImpl() {
   if (ssl_) {
     // Calling SSL_shutdown prevents the session from being marked as
     // unresumable.
@@ -177,7 +156,8 @@ SSLServerSocketImpl::~SSLServerSocketImpl() {
   }
 }
 
-int SSLServerSocketImpl::Handshake(const CompletionCallback& callback) {
+int SSLServerContextImpl::SocketImpl::Handshake(
+    const CompletionCallback& callback) {
   net_log_.BeginEvent(NetLogEventType::SSL_SERVER_HANDSHAKE);
 
   // Set up new ssl object.
@@ -204,11 +184,12 @@ int SSLServerSocketImpl::Handshake(const CompletionCallback& callback) {
   return rv > OK ? OK : rv;
 }
 
-int SSLServerSocketImpl::ExportKeyingMaterial(const base::StringPiece& label,
-                                              bool has_context,
-                                              const base::StringPiece& context,
-                                              unsigned char* out,
-                                              unsigned int outlen) {
+int SSLServerContextImpl::SocketImpl::ExportKeyingMaterial(
+    const base::StringPiece& label,
+    bool has_context,
+    const base::StringPiece& context,
+    unsigned char* out,
+    unsigned int outlen) {
   if (!IsConnected())
     return ERR_SOCKET_NOT_CONNECTED;
 
@@ -228,9 +209,9 @@ int SSLServerSocketImpl::ExportKeyingMaterial(const base::StringPiece& label,
   return OK;
 }
 
-int SSLServerSocketImpl::Read(IOBuffer* buf,
-                              int buf_len,
-                              const CompletionCallback& callback) {
+int SSLServerContextImpl::SocketImpl::Read(IOBuffer* buf,
+                                           int buf_len,
+                                           const CompletionCallback& callback) {
   DCHECK(user_read_callback_.is_null());
   DCHECK(user_handshake_callback_.is_null());
   DCHECK(!user_read_buf_);
@@ -253,9 +234,10 @@ int SSLServerSocketImpl::Read(IOBuffer* buf,
   return rv;
 }
 
-int SSLServerSocketImpl::Write(IOBuffer* buf,
-                               int buf_len,
-                               const CompletionCallback& callback) {
+int SSLServerContextImpl::SocketImpl::Write(
+    IOBuffer* buf,
+    int buf_len,
+    const CompletionCallback& callback) {
   DCHECK(user_write_callback_.is_null());
   DCHECK(!user_write_buf_);
   DCHECK(!callback.is_null());
@@ -274,72 +256,75 @@ int SSLServerSocketImpl::Write(IOBuffer* buf,
   return rv;
 }
 
-int SSLServerSocketImpl::SetReceiveBufferSize(int32_t size) {
+int SSLServerContextImpl::SocketImpl::SetReceiveBufferSize(int32_t size) {
   return transport_socket_->SetReceiveBufferSize(size);
 }
 
-int SSLServerSocketImpl::SetSendBufferSize(int32_t size) {
+int SSLServerContextImpl::SocketImpl::SetSendBufferSize(int32_t size) {
   return transport_socket_->SetSendBufferSize(size);
 }
 
-int SSLServerSocketImpl::Connect(const CompletionCallback& callback) {
+int SSLServerContextImpl::SocketImpl::Connect(
+    const CompletionCallback& callback) {
   NOTIMPLEMENTED();
   return ERR_NOT_IMPLEMENTED;
 }
 
-void SSLServerSocketImpl::Disconnect() {
+void SSLServerContextImpl::SocketImpl::Disconnect() {
   transport_socket_->Disconnect();
 }
 
-bool SSLServerSocketImpl::IsConnected() const {
+bool SSLServerContextImpl::SocketImpl::IsConnected() const {
   // TODO(wtc): Find out if we should check transport_socket_->IsConnected()
   // as well.
   return completed_handshake_;
 }
 
-bool SSLServerSocketImpl::IsConnectedAndIdle() const {
+bool SSLServerContextImpl::SocketImpl::IsConnectedAndIdle() const {
   return completed_handshake_ && transport_socket_->IsConnectedAndIdle();
 }
 
-int SSLServerSocketImpl::GetPeerAddress(IPEndPoint* address) const {
+int SSLServerContextImpl::SocketImpl::GetPeerAddress(
+    IPEndPoint* address) const {
   if (!IsConnected())
     return ERR_SOCKET_NOT_CONNECTED;
   return transport_socket_->GetPeerAddress(address);
 }
 
-int SSLServerSocketImpl::GetLocalAddress(IPEndPoint* address) const {
+int SSLServerContextImpl::SocketImpl::GetLocalAddress(
+    IPEndPoint* address) const {
   if (!IsConnected())
     return ERR_SOCKET_NOT_CONNECTED;
   return transport_socket_->GetLocalAddress(address);
 }
 
-const NetLogWithSource& SSLServerSocketImpl::NetLog() const {
+const NetLogWithSource& SSLServerContextImpl::SocketImpl::NetLog() const {
   return net_log_;
 }
 
-void SSLServerSocketImpl::SetSubresourceSpeculation() {
+void SSLServerContextImpl::SocketImpl::SetSubresourceSpeculation() {
   transport_socket_->SetSubresourceSpeculation();
 }
 
-void SSLServerSocketImpl::SetOmniboxSpeculation() {
+void SSLServerContextImpl::SocketImpl::SetOmniboxSpeculation() {
   transport_socket_->SetOmniboxSpeculation();
 }
 
-bool SSLServerSocketImpl::WasEverUsed() const {
+bool SSLServerContextImpl::SocketImpl::WasEverUsed() const {
   return transport_socket_->WasEverUsed();
 }
 
-bool SSLServerSocketImpl::WasAlpnNegotiated() const {
+bool SSLServerContextImpl::SocketImpl::WasAlpnNegotiated() const {
   NOTIMPLEMENTED();
   return false;
 }
 
-NextProto SSLServerSocketImpl::GetNegotiatedProtocol() const {
+NextProto SSLServerContextImpl::SocketImpl::GetNegotiatedProtocol() const {
   // ALPN is not supported by this class.
   return kProtoUnknown;
 }
 
-bool SSLServerSocketImpl::GetSSLInfo(SSLInfo* ssl_info) {
+bool SSLServerContextImpl::SocketImpl::GetSSLInfo(SSLInfo* ssl_info) {
   ssl_info->Reset();
   if (!completed_handshake_)
     return false;
@@ -363,15 +348,16 @@ bool SSLServerSocketImpl::GetSSLInfo(SSLInfo* ssl_info) {
   return true;
 }
 
-void SSLServerSocketImpl::GetConnectionAttempts(ConnectionAttempts* out) const {
+void SSLServerContextImpl::SocketImpl::GetConnectionAttempts(
+    ConnectionAttempts* out) const {
   out->clear();
 }
 
-int64_t SSLServerSocketImpl::GetTotalReceivedBytes() const {
+int64_t SSLServerContextImpl::SocketImpl::GetTotalReceivedBytes() const {
   return transport_socket_->GetTotalReceivedBytes();
 }
 
-void SSLServerSocketImpl::OnReadReady() {
+void SSLServerContextImpl::SocketImpl::OnReadReady() {
   if (next_handshake_state_ == STATE_HANDSHAKE) {
     // In handshake phase. The parameter to OnHandshakeIOComplete is unused.
     OnHandshakeIOComplete(OK);
@@ -388,7 +374,7 @@ void SSLServerSocketImpl::OnReadReady() {
     DoReadCallback(rv);
 }
 
-void SSLServerSocketImpl::OnWriteReady() {
+void SSLServerContextImpl::SocketImpl::OnWriteReady() {
   if (next_handshake_state_ == STATE_HANDSHAKE) {
     // In handshake phase. The parameter to OnHandshakeIOComplete is unused.
     OnHandshakeIOComplete(OK);
@@ -405,7 +391,7 @@ void SSLServerSocketImpl::OnWriteReady() {
     DoWriteCallback(rv);
 }
 
-void SSLServerSocketImpl::OnHandshakeIOComplete(int result) {
+void SSLServerContextImpl::SocketImpl::OnHandshakeIOComplete(int result) {
   int rv = DoHandshakeLoop(result);
   if (rv == ERR_IO_PENDING)
     return;
@@ -415,8 +401,7 @@ void SSLServerSocketImpl::OnHandshakeIOComplete(int result) {
     DoHandshakeCallback(rv);
 }
 
-
-int SSLServerSocketImpl::DoPayloadRead() {
+int SSLServerContextImpl::SocketImpl::DoPayloadRead() {
   DCHECK(completed_handshake_);
   DCHECK_EQ(STATE_NONE, next_handshake_state_);
   DCHECK(user_read_buf_);
@@ -438,7 +423,7 @@ int SSLServerSocketImpl::DoPayloadRead() {
   return net_error;
 }
 
-int SSLServerSocketImpl::DoPayloadWrite() {
+int SSLServerContextImpl::SocketImpl::DoPayloadWrite() {
   DCHECK(completed_handshake_);
   DCHECK_EQ(STATE_NONE, next_handshake_state_);
   DCHECK(user_write_buf_);
@@ -459,7 +444,7 @@ int SSLServerSocketImpl::DoPayloadWrite() {
   return net_error;
 }
 
-int SSLServerSocketImpl::DoHandshakeLoop(int last_io_result) {
+int SSLServerContextImpl::SocketImpl::DoHandshakeLoop(int last_io_result) {
   int rv = last_io_result;
   do {
     // Default to STATE_NONE for next state.
@@ -483,21 +468,17 @@ int SSLServerSocketImpl::DoHandshakeLoop(int last_io_result) {
   return rv;
 }
 
-int SSLServerSocketImpl::DoHandshake() {
+int SSLServerContextImpl::SocketImpl::DoHandshake() {
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
   int net_error = OK;
   int rv = SSL_do_handshake(ssl_.get());
 
   if (rv == 1) {
     completed_handshake_ = true;
-    // The results of SSL_get_peer_certificate() must be explicitly freed.
-    bssl::UniquePtr<X509> cert(SSL_get_peer_certificate(ssl_.get()));
-    if (cert) {
-      // The caller does not take ownership of SSL_get_peer_cert_chain's
-      // results.
-      STACK_OF(X509)* chain = SSL_get_peer_cert_chain(ssl_.get());
-      client_cert_ = CreateX509Certificate(cert.get(), chain);
-      if (!client_cert_.get())
+    STACK_OF(CRYPTO_BUFFER)* certs = SSL_get0_peer_certificates(ssl_.get());
+    if (certs) {
+      client_cert_ = x509_util::CreateX509CertificateFromBuffers(certs);
+      if (!client_cert_)
         return ERR_SSL_CLIENT_AUTH_CERT_BAD_FORMAT;
     }
   } else {
@@ -527,12 +508,12 @@ int SSLServerSocketImpl::DoHandshake() {
   return net_error;
 }
 
-void SSLServerSocketImpl::DoHandshakeCallback(int rv) {
+void SSLServerContextImpl::SocketImpl::DoHandshakeCallback(int rv) {
   DCHECK_NE(rv, ERR_IO_PENDING);
   base::ResetAndReturn(&user_handshake_callback_).Run(rv > OK ? OK : rv);
 }
 
-void SSLServerSocketImpl::DoReadCallback(int rv) {
+void SSLServerContextImpl::SocketImpl::DoReadCallback(int rv) {
   DCHECK(rv != ERR_IO_PENDING);
   DCHECK(!user_read_callback_.is_null());
 
@@ -541,7 +522,7 @@ void SSLServerSocketImpl::DoReadCallback(int rv) {
   base::ResetAndReturn(&user_read_callback_).Run(rv);
 }
 
-void SSLServerSocketImpl::DoWriteCallback(int rv) {
+void SSLServerContextImpl::SocketImpl::DoWriteCallback(int rv) {
   DCHECK(rv != ERR_IO_PENDING);
   DCHECK(!user_write_callback_.is_null());
 
@@ -550,13 +531,21 @@ void SSLServerSocketImpl::DoWriteCallback(int rv) {
   base::ResetAndReturn(&user_write_callback_).Run(rv);
 }
 
-int SSLServerSocketImpl::Init() {
+int SSLServerContextImpl::SocketImpl::Init() {
   static const int kBufferSize = 17 * 1024;
 
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
   if (!ssl_)
     return ERR_UNEXPECTED;
+
+  // Set certificate and private key.
+  DCHECK(context_->cert_->os_cert_handle());
+  DCHECK(context_->key_->key());
+  if (!SetSSLChainAndKey(ssl_.get(), context_->cert_.get(),
+                         context_->key_->key(), nullptr)) {
+    return ERR_UNEXPECTED;
+  }
 
   transport_adapter_.reset(new SocketBIOAdapter(
       transport_socket_.get(), kBufferSize, kBufferSize, this));
@@ -572,36 +561,42 @@ int SSLServerSocketImpl::Init() {
 }
 
 // static
-int SSLServerSocketImpl::CertVerifyCallback(X509_STORE_CTX* store_ctx,
-                                            void* arg) {
-  ClientCertVerifier* verifier = reinterpret_cast<ClientCertVerifier*>(arg);
+ssl_verify_result_t SSLServerContextImpl::SocketImpl::CertVerifyCallback(
+    SSL* ssl,
+    uint8_t* out_alert) {
+  SocketImpl* socket = reinterpret_cast<SocketImpl*>(SSL_get_app_data(ssl));
+  return socket->CertVerifyCallbackImpl(out_alert);
+}
+
+ssl_verify_result_t SSLServerContextImpl::SocketImpl::CertVerifyCallbackImpl(
+    uint8_t* out_alert) {
+  ClientCertVerifier* verifier =
+      context_->ssl_server_config_.client_cert_verifier;
   // If a verifier was not supplied, all certificates are accepted.
   if (!verifier)
-    return 1;
-  STACK_OF(X509)* chain = store_ctx->untrusted;
-  scoped_refptr<X509Certificate> client_cert(
-      CreateX509Certificate(nullptr, chain));
-  if (!client_cert.get()) {
-    X509_STORE_CTX_set_error(store_ctx, X509_V_ERR_CERT_REJECTED);
-    return 0;
+    return ssl_verify_ok;
+
+  scoped_refptr<X509Certificate> client_cert =
+      x509_util::CreateX509CertificateFromBuffers(
+          SSL_get0_peer_certificates(ssl_.get()));
+  if (!client_cert) {
+    *out_alert = SSL_AD_BAD_CERTIFICATE;
+    return ssl_verify_invalid;
   }
-  // Asynchronous completion of Verify is currently not supported.
-  // http://crbug.com/347402
-  // The API for Verify supports the parts needed for async completion
-  // but is currently expected to complete synchronously.
+
+  // TODO(davidben): Support asynchronous verifiers. http://crbug.com/347402
   std::unique_ptr<ClientCertVerifier::Request> ignore_async;
   int res =
       verifier->Verify(client_cert.get(), CompletionCallback(), &ignore_async);
   DCHECK_NE(res, ERR_IO_PENDING);
 
   if (res != OK) {
-    X509_STORE_CTX_set_error(store_ctx, X509_V_ERR_CERT_REJECTED);
-    return 0;
+    // TODO(davidben): Map from certificate verification failure to alert.
+    *out_alert = SSL_AD_CERTIFICATE_UNKNOWN;
+    return ssl_verify_invalid;
   }
-  return 1;
+  return ssl_verify_ok;
 }
-
-}  // namespace
 
 std::unique_ptr<SSLServerContext> CreateSSLServerContext(
     X509Certificate* certificate,
@@ -620,7 +615,7 @@ SSLServerContextImpl::SSLServerContextImpl(
       key_(key.Copy()) {
   CHECK(key_);
   crypto::EnsureOpenSSLInit();
-  ssl_ctx_.reset(SSL_CTX_new(TLS_method()));
+  ssl_ctx_.reset(SSL_CTX_new(TLS_with_buffers_method()));
   SSL_CTX_set_session_cache_mode(ssl_ctx_.get(), SSL_SESS_CACHE_SERVER);
   uint8_t session_ctx_id = 0;
   SSL_CTX_set_session_id_context(ssl_ctx_.get(), &session_ctx_id,
@@ -635,37 +630,12 @@ SSLServerContextImpl::SSLServerContextImpl(
     // Fall-through
     case SSLServerConfig::ClientCertType::OPTIONAL_CLIENT_CERT:
       verify_mode |= SSL_VERIFY_PEER;
-      SSL_CTX_set_verify(ssl_ctx_.get(), verify_mode, nullptr);
-      SSL_CTX_set_cert_verify_callback(ssl_ctx_.get(),
-                                       SSLServerSocketImpl::CertVerifyCallback,
-                                       ssl_server_config_.client_cert_verifier);
+      SSL_CTX_set_custom_verify(ssl_ctx_.get(), verify_mode,
+                                SocketImpl::CertVerifyCallback);
       break;
     case SSLServerConfig::ClientCertType::NO_CLIENT_CERT:
       break;
   }
-
-  // Set certificate and private key.
-  DCHECK(cert_->os_cert_handle());
-  DCHECK(key_->key());
-#if BUILDFLAG(USE_BYTE_CERTS)
-  // On success, SSL_CTX_set_chain_and_key acquires a reference to
-  // |cert_->os_cert_handle()| and |key_->key()|.
-  CRYPTO_BUFFER* cert_buffers[] = {cert_->os_cert_handle()};
-  CHECK(SSL_CTX_set_chain_and_key(ssl_ctx_.get(), cert_buffers,
-                                  arraysize(cert_buffers), key_->key(),
-                                  nullptr /* privkey_method */));
-#elif defined(USE_OPENSSL_CERTS)
-  CHECK(SSL_CTX_use_certificate(ssl_ctx_.get(), cert_->os_cert_handle()));
-  CHECK(SSL_CTX_use_PrivateKey(ssl_ctx_.get(), key_->key()));
-#else
-  std::string der_string;
-  CHECK(X509Certificate::GetDEREncoded(cert_->os_cert_handle(), &der_string));
-  CHECK(SSL_CTX_use_certificate_ASN1(
-      ssl_ctx_.get(), der_string.length(),
-      reinterpret_cast<const unsigned char*>(der_string.data())));
-  // On success, SSL_CTX_use_PrivateKey acquires a reference to |key_->key()|.
-  CHECK(SSL_CTX_use_PrivateKey(ssl_ctx_.get(), key_->key()));
-#endif  // USE_OPENSSL_CERTS && !USE_BYTE_CERTS
 
   DCHECK_LT(SSL3_VERSION, ssl_server_config_.version_min);
   DCHECK_LT(SSL3_VERSION, ssl_server_config_.version_max);
@@ -713,16 +683,12 @@ SSLServerContextImpl::SSLServerContextImpl(
   if (ssl_server_config_.client_cert_type !=
           SSLServerConfig::ClientCertType::NO_CLIENT_CERT &&
       !ssl_server_config_.cert_authorities_.empty()) {
-    bssl::UniquePtr<STACK_OF(X509_NAME)> stack(sk_X509_NAME_new_null());
+    bssl::UniquePtr<STACK_OF(CRYPTO_BUFFER)> stack(sk_CRYPTO_BUFFER_new_null());
     for (const auto& authority : ssl_server_config_.cert_authorities_) {
-      const uint8_t* name = reinterpret_cast<const uint8_t*>(authority.c_str());
-      const uint8_t* name_start = name;
-      bssl::UniquePtr<X509_NAME> subj(
-          d2i_X509_NAME(nullptr, &name, authority.length()));
-      CHECK(subj && name == name_start + authority.length());
-      sk_X509_NAME_push(stack.get(), subj.release());
+      sk_CRYPTO_BUFFER_push(stack.get(),
+                            x509_util::CreateCryptoBuffer(authority).release());
     }
-    SSL_CTX_set_client_CA_list(ssl_ctx_.get(), stack.release());
+    SSL_CTX_set0_client_CAs(ssl_ctx_.get(), stack.release());
   }
 }
 
@@ -730,9 +696,8 @@ SSLServerContextImpl::~SSLServerContextImpl() {}
 
 std::unique_ptr<SSLServerSocket> SSLServerContextImpl::CreateSSLServerSocket(
     std::unique_ptr<StreamSocket> socket) {
-  bssl::UniquePtr<SSL> ssl(SSL_new(ssl_ctx_.get()));
   return std::unique_ptr<SSLServerSocket>(
-      new SSLServerSocketImpl(std::move(socket), std::move(ssl)));
+      new SocketImpl(this, std::move(socket)));
 }
 
 }  // namespace net

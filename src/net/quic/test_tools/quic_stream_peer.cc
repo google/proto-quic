@@ -7,6 +7,7 @@
 #include <list>
 
 #include "net/quic/core/quic_stream.h"
+#include "net/quic/test_tools/quic_stream_send_buffer_peer.h"
 
 namespace net {
 namespace test {
@@ -22,6 +23,8 @@ void QuicStreamPeer::SetStreamBytesWritten(
     QuicStream* stream) {
   stream->stream_bytes_written_ = stream_bytes_written;
   stream->stream_bytes_outstanding_ = stream_bytes_written;
+  QuicStreamSendBufferPeer::SetStreamOffset(&stream->send_buffer_,
+                                            stream_bytes_written);
 }
 
 // static
@@ -46,14 +49,7 @@ bool QuicStreamPeer::RstSent(QuicStream* stream) {
 
 // static
 uint32_t QuicStreamPeer::SizeOfQueuedData(QuicStream* stream) {
-  uint32_t total = 0;
-  std::list<QuicStream::PendingData>::iterator it =
-      stream->queued_data_.begin();
-  while (it != stream->queued_data_.end()) {
-    total += it->data.size();
-    ++it;
-  }
-  return total;
+  return stream->queued_data_bytes();
 }
 
 // static
@@ -84,6 +80,13 @@ QuicSession* QuicStreamPeer::session(QuicStream* stream) {
 // static
 QuicStreamSendBuffer& QuicStreamPeer::SendBuffer(QuicStream* stream) {
   return stream->send_buffer_;
+}
+
+// static
+void QuicStreamPeer::set_ack_listener(
+    QuicStream* stream,
+    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
+  stream->set_ack_listener(std::move(ack_listener));
 }
 
 }  // namespace test

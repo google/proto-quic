@@ -2099,6 +2099,14 @@ int HostResolverImpl::ResolveHelper(const RequestInfo& info,
     MakeNotStale(stale_info);
     return net_error;
   }
+
+  // Special-case localhost names, as per the recommendations in
+  // https://tools.ietf.org/html/draft-west-let-localhost-be-localhost.
+  if (ServeLocalhost(*key, info, addresses)) {
+    MakeNotStale(stale_info);
+    return OK;
+  }
+
   if (ServeFromCache(*key, info, &net_error, addresses, allow_stale,
                      stale_info)) {
     source_net_log.AddEvent(NetLogEventType::HOST_RESOLVER_IMPL_CACHE_HIT,
@@ -2106,16 +2114,12 @@ int HostResolverImpl::ResolveHelper(const RequestInfo& info,
     // |ServeFromCache()| will set |*stale_info| as needed.
     return net_error;
   }
+
   // TODO(szym): Do not do this if nsswitch.conf instructs not to.
   // http://crbug.com/117655
   if (ServeFromHosts(*key, info, addresses)) {
     source_net_log.AddEvent(NetLogEventType::HOST_RESOLVER_IMPL_HOSTS_HIT,
                             addresses->CreateNetLogCallback());
-    MakeNotStale(stale_info);
-    return OK;
-  }
-
-  if (ServeLocalhost(*key, info, addresses)) {
     MakeNotStale(stale_info);
     return OK;
   }

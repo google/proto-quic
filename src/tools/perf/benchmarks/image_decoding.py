@@ -4,6 +4,7 @@
 
 from core import perf_benchmark
 from telemetry import benchmark
+from telemetry import story
 
 from measurements import image_decoding
 import page_sets
@@ -25,7 +26,10 @@ class ImageDecodingToughImageCases(perf_benchmark.PerfBenchmark):
     return possible_browser.platform.GetDeviceTypeName() == 'Nexus 7'
 
   def GetExpectations(self):
-    return page_sets.ImageDecodingMeasurementStoryExpectations()
+    class StoryExpectations(story.expectations.StoryExpectations):
+      def SetExpectations(self):
+        pass # Nothing disabled.
+    return StoryExpectations()
 
   def SetExtraBrowserOptions(self, options):
     options.AppendExtraBrowserArgs([

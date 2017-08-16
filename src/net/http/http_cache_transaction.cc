@@ -549,6 +549,12 @@ void HttpCache::Transaction::SetBeforeHeadersSentCallback(
   before_headers_sent_callback_ = callback;
 }
 
+void HttpCache::Transaction::SetRequestHeadersCallback(
+    RequestHeadersCallback callback) {
+  DCHECK(!network_trans_);
+  request_headers_callback_ = std::move(callback);
+}
+
 int HttpCache::Transaction::ResumeNetworkStart() {
   if (network_trans_)
     return network_trans_->ResumeNetworkStart();
@@ -1494,6 +1500,7 @@ int HttpCache::Transaction::DoSendRequest() {
   }
   network_trans_->SetBeforeNetworkStartCallback(before_network_start_callback_);
   network_trans_->SetBeforeHeadersSentCallback(before_headers_sent_callback_);
+  network_trans_->SetRequestHeadersCallback(request_headers_callback_);
 
   // Old load timing information, if any, is now obsolete.
   old_network_trans_load_timing_.reset();
@@ -2051,9 +2058,18 @@ int HttpCache::Transaction::DoCacheReadDataComplete(int result) {
   if (result > 0) {
     read_offset_ += result;
   } else if (result == 0) {  // End of file.
-    RecordHistograms();
-    cache_->DoneReadingFromEntry(entry_, this);
-    entry_ = NULL;
+    // TODO(shivanisha@), ideally it should not happen that |this| is not a
+    // reader but referenced from entry in another field, but it seems to be
+    // happening in some edge case (crbug.com/752774). Thus not invoking
+    // DoneReadingFromEntry here.
+    if (entry_->writer == this) {
+      DoneWritingToEntry(true);
+    } else {
+      RecordHistograms();
+      cache_->DoneWithEntry(entry_, this, false /* process_cancel */,
+                            partial_ != nullptr);
+      entry_ = NULL;
+    }
   } else {
     return OnCacheReadError(result, false);
   }

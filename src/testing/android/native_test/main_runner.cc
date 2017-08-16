@@ -14,10 +14,6 @@ extern int main(int argc, char** argv);
 namespace testing {
 namespace android {
 
-bool RegisterMainRunnerJni(JNIEnv* env) {
-  return RegisterNativesImpl(env);
-}
-
 static jint RunMain(
     JNIEnv* env,
     const base::android::JavaParamRef<jclass>& jcaller,

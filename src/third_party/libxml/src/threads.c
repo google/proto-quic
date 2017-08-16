@@ -50,43 +50,23 @@ static int libxml_is_threaded = -1;
 #if defined(__GNUC__) && defined(__GLIBC__)
 #ifdef linux
 #if (__GNUC__ == 3 && __GNUC_MINOR__ >= 3) || (__GNUC__ > 3)
-extern int pthread_once (pthread_once_t *__once_control,
-                         void (*__init_routine) (void))
-	   __attribute((weak));
-extern void *pthread_getspecific (pthread_key_t __key)
-	   __attribute((weak));
-extern int pthread_setspecific (pthread_key_t __key,
-                                __const void *__pointer)
-	   __attribute((weak));
-extern int pthread_key_create (pthread_key_t *__key,
-                               void (*__destr_function) (void *))
-	   __attribute((weak));
-extern int pthread_key_delete (pthread_key_t __key)
-	   __attribute((weak));
-extern int pthread_mutex_init ()
-	   __attribute((weak));
-extern int pthread_mutex_destroy ()
-	   __attribute((weak));
-extern int pthread_mutex_lock ()
-	   __attribute((weak));
-extern int pthread_mutex_unlock ()
-	   __attribute((weak));
-extern int pthread_cond_init ()
-	   __attribute((weak));
-extern int pthread_cond_destroy ()
-	   __attribute((weak));
-extern int pthread_cond_wait ()
-	   __attribute((weak));
-extern int pthread_equal ()
-	   __attribute((weak));
-extern pthread_t pthread_self ()
-	   __attribute((weak));
-extern int pthread_key_create ()
-	   __attribute((weak));
-extern int pthread_key_delete ()
-	   __attribute((weak));
-extern int pthread_cond_signal ()
-	   __attribute((weak));
+#pragma weak pthread_once
+#pragma weak pthread_getspecific
+#pragma weak pthread_setspecific
+#pragma weak pthread_key_create
+#pragma weak pthread_key_delete
+#pragma weak pthread_mutex_init
+#pragma weak pthread_mutex_destroy
+#pragma weak pthread_mutex_lock
+#pragma weak pthread_mutex_unlock
+#pragma weak pthread_cond_init
+#pragma weak pthread_cond_destroy
+#pragma weak pthread_cond_wait
+#pragma weak pthread_equal
+#pragma weak pthread_self
+#pragma weak pthread_key_create
+#pragma weak pthread_key_delete
+#pragma weak pthread_cond_signal
 #endif
 #endif /* linux */
 #endif /* defined(__GNUC__) && defined(__GLIBC__) */

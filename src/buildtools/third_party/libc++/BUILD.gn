@@ -10,11 +10,7 @@ import("//build/toolchain/toolchain.gni")
 config("config") {
   defines = [ "LIBCXX_BUILDING_LIBCXXABI" ]
   if (libcpp_is_static) {
-    # Don't leak any symbols on a static build.
     defines += [
-      "_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
-      "_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
-
       # This resets the visibility to default only for the various
       # flavors of operator new and operator delete.  These symbols
       # are weak and get overriden by Chromium-provided ones, but if

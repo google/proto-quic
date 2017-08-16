@@ -32,16 +32,18 @@ import net_utils
 
 
 def global_test_setup():
-  # Terminate HTTP server in tests 50x faster. Impacts performance though.
+  # Terminate HTTP server in tests 50x faster. Impacts performance though so
+  # do it only in tests.
   auth_server._HTTPServer.poll_interval = 0.01
 
 
-def call_rpc(scopes):
+def call_rpc(account_id, scopes):
   ctx = luci_context.read('local_auth')
   r = requests.post(
       url='http://127.0.0.1:%d/rpc/LuciLocalAuthService.GetOAuthToken' %
           ctx['rpc_port'],
       data=json.dumps({
+        'account_id': account_id,
         'scopes': scopes,
         'secret': ctx['secret'],
       }),
@@ -50,14 +52,17 @@ def call_rpc(scopes):
 
 
 @contextlib.contextmanager
-def local_auth_server(token_cb, **overrides):
+def local_auth_server(token_cb, default_account_id, **overrides):
   class MockedProvider(object):
-    def generate_token(self, scopes):
-      return token_cb(scopes)
+    def generate_token(self, account_id, scopes):
+      return token_cb(account_id, scopes)
 
   s = auth_server.LocalAuthServer()
   try:
-    local_auth = s.start(MockedProvider())
+    local_auth = s.start(
+        token_provider=MockedProvider(),
+        accounts=('acc_1', 'acc_2', 'acc_3'),
+        default_account_id=default_account_id)
     local_auth.update(overrides)
     with luci_context.write(local_auth=local_auth):
       yield
@@ -77,73 +82,69 @@ class LocalAuthServerTest(auto_stub.TestCase):
 
   def test_works(self):
     calls = []
-    def token_gen(scopes):
-      calls.append(scopes)
-      return auth_server.AccessToken('tok', time.time() + 300)
+    def token_gen(account_id, scopes):
+      calls.append((account_id, scopes))
+      return auth_server.AccessToken('tok_%s' % account_id, time.time() + 300)
 
-    with local_auth_server(token_gen):
+    with local_auth_server(token_gen, 'acc_1'):
       # Grab initial token.
-      resp = call_rpc(['B', 'B', 'A', 'C'])
+      resp = call_rpc('acc_1', ['B', 'B', 'A', 'C'])
       self.assertEqual(
-          {u'access_token': u'tok', u'expiry': self.epoch + 300}, resp)
-      self.assertEqual([('A', 'B', 'C')], calls)
+          {u'access_token': u'tok_acc_1', u'expiry': self.epoch + 300}, resp)
+      self.assertEqual([('acc_1', ('A', 'B', 'C'))], calls)
       del calls[:]
 
       # Reuses cached token until it is close to expiration.
       self.mock_time(60)
-      resp = call_rpc(['B', 'A', 'C'])
+      resp = call_rpc('acc_1', ['B', 'A', 'C'])
       self.assertEqual(
-          {u'access_token': u'tok', u'expiry': self.epoch + 300}, resp)
+          {u'access_token': u'tok_acc_1', u'expiry': self.epoch + 300}, resp)
       self.assertFalse(calls)
 
-      # Expired. Generated new one.
-      self.mock_time(300)
-      resp = call_rpc(['A', 'B', 'C'])
+      # Asking for different account gives another token.
+      resp = call_rpc('acc_2', ['B', 'B', 'A', 'C'])
       self.assertEqual(
-          {u'access_token': u'tok', u'expiry': self.epoch + 600}, resp)
-      self.assertEqual([('A', 'B', 'C')], calls)
+          {u'access_token': u'tok_acc_2', u'expiry': self.epoch + 360}, resp)
+      self.assertEqual([('acc_2', ('A', 'B', 'C'))], calls)
+      del calls[:]
+
+      # First token has expired. Generated new one.
+      self.mock_time(300)
+      resp = call_rpc('acc_1', ['A', 'B', 'C'])
+      self.assertEqual(
+          {u'access_token': u'tok_acc_1', u'expiry': self.epoch + 600}, resp)
+      self.assertEqual([('acc_1', ('A', 'B', 'C'))], calls)
 
   def test_handles_token_errors(self):
-    fatal = False
-    code = 123
-    def token_gen(_scopes):
-      raise auth_server.TokenError(code, 'error message', fatal=fatal)
+    calls = []
+    def token_gen(_account_id, _scopes):
+      calls.append(1)
+      raise auth_server.TokenError(123, 'error message')
 
-    with local_auth_server(token_gen):
+    with local_auth_server(token_gen, 'acc_1'):
       self.assertEqual(
           {u'error_code': 123, u'error_message': u'error message'},
-          call_rpc(['B', 'B', 'A', 'C']))
+          call_rpc('acc_1', ['B', 'B', 'A', 'C']))
+      self.assertEqual(1, len(calls))
 
-      # Non-fatal errors aren't cached.
-      code = 456
+      # Errors are cached. Same error is returned.
       self.assertEqual(
-          {u'error_code': 456, u'error_message': u'error message'},
-          call_rpc(['B', 'B', 'A', 'C']))
-
-      # Fatal errors are cached.
-      fatal = True
-      code = 789
-      self.assertEqual(
-          {u'error_code': 789, u'error_message': u'error message'},
-          call_rpc(['B', 'B', 'A', 'C']))
-
-      # Same cached error.
-      code = 111
-      self.assertEqual(
-          {u'error_code': 789, u'error_message': u'error message'},
-          call_rpc(['B', 'B', 'A', 'C']))
+          {u'error_code': 123, u'error_message': u'error message'},
+          call_rpc('acc_1', ['B', 'B', 'A', 'C']))
+      self.assertEqual(1, len(calls))
 
   def test_http_level_errors(self):
-    def token_gen(_scopes):
+    def token_gen(_account_id, _scopes):
       self.fail('must not be called')
 
-    with local_auth_server(token_gen):
+    with local_auth_server(token_gen, 'acc_1'):
       # Wrong URL.
       ctx = luci_context.read('local_auth')
       r = requests.post(
           url='http://127.0.0.1:%d/blah/LuciLocalAuthService.GetOAuthToken' %
               ctx['rpc_port'],
           data=json.dumps({
+            'account_id': 'acc_1',
             'scopes': ['A', 'B', 'C'],
             'secret': ctx['secret'],
           }),
@@ -155,6 +156,7 @@ class LocalAuthServerTest(auto_stub.TestCase):
           url='http://127.0.0.1:%d/rpc/LuciLocalAuthService.GetOAuthToken' %
               ctx['rpc_port'],
           data=json.dumps({
+            'account_id': 'acc_1',
             'scopes': ['A', 'B', 'C'],
             'secret': ctx['secret'],
           }),
@@ -166,6 +168,7 @@ class LocalAuthServerTest(auto_stub.TestCase):
           url='http://127.0.0.1:%d/rpc/LuciLocalAuthService.GetOAuthToken' %
               ctx['rpc_port'],
           data=json.dumps({
+            'account_id': 'acc_1',
             'scopes': ['A', 'B', 'C'],
             'secret': ctx['secret'],
           }),
@@ -181,12 +184,13 @@ class LocalAuthServerTest(auto_stub.TestCase):
       self.assertEqual(400, r.status_code)
 
   def test_validation(self):
-    def token_gen(_scopes):
+    def token_gen(_account_id, _scopes):
       self.fail('must not be called')
 
-    with local_auth_server(token_gen):
-      def must_fail(err, body, code=400):
-        ctx = luci_context.read('local_auth')
+    with local_auth_server(token_gen, 'acc_1'):
+      ctx = luci_context.read('local_auth')
+
+      def must_fail(body, err, code):
         r = requests.post(
             url='http://127.0.0.1:%d/rpc/LuciLocalAuthService.GetOAuthToken' %
                 ctx['rpc_port'],
@@ -195,18 +199,47 @@ class LocalAuthServerTest(auto_stub.TestCase):
         self.assertEqual(code, r.status_code)
         self.assertIn(err, r.text)
 
-      must_fail('"scopes" is required', {})
-      must_fail('"scopes" is required', {'scopes': []})
-      must_fail('"scopes" must be a list of strings', {'scopes': 'abc'})
-      must_fail('"scopes" must be a list of strings', {'scopes': [1]})
+      cases = [
+        # account_id
+        ({}, '"account_id" is required', 400),
+        ({'account_id': 123}, '"account_id" must be a string', 400),
 
-      must_fail('"secret" is required', {'scopes': ['a']})
-      must_fail('"secret" must be a string', {'scopes': ['a'], 'secret': 123})
+        # scopes
+        ({'account_id': 'acc_1'}, '"scopes" is required', 400),
+        ({'account_id': 'acc_1', 'scopes': []}, '"scopes" is required', 400),
+        (
+          {'account_id': 'acc_1', 'scopes': 'abc'},
+          '"scopes" must be a list of strings',
+          400,
+        ),
+        (
+          {'account_id': 'acc_1', 'scopes': [1]},
+          '"scopes" must be a list of strings',
+          400,
+        ),
 
-      must_fail(
+        # secret
+        ({'account_id': 'acc_1', 'scopes': ['a']}, '"secret" is required', 400),
+        (
+          {'account_id': 'acc_1', 'scopes': ['a'], 'secret': 123},
+          '"secret" must be a string',
+          400,
+        ),
+        (
+          {'account_id': 'acc_1', 'scopes': ['a'], 'secret': 'abc'},
           'Invalid "secret"',
-          {'scopes': ['a'], 'secret': 'abc'},
-          code=403)
+          403,
+        ),
+
+        # The account is known.
+        (
+          {'account_id': 'zzz', 'scopes': ['a'], 'secret': ctx['secret']},
+          'Unrecognized account ID',
+          404,
+        ),
+      ]
+      for body, err, code in cases:
+        must_fail(body, err, code)
 
 
 class LocalAuthHttpServiceTest(auto_stub.TestCase):
@@ -247,7 +280,8 @@ class LocalAuthHttpServiceTest(auto_stub.TestCase):
     response = 'True'
     token = 'notasecret'
 
-    def token_gen(scopes):
+    def token_gen(account_id, scopes):
+      self.assertEqual('acc_1', account_id)
       self.assertEqual(1, len(scopes))
       self.assertEqual(oauth.OAUTH_SCOPES, scopes[0])
       return auth_server.AccessToken(token, time.time() + 300)
@@ -260,7 +294,7 @@ class LocalAuthHttpServiceTest(auto_stub.TestCase):
                        request.headers['Authorization'])
       return net_utils.make_fake_response(response, request.get_full_url())
 
-    with local_auth_server(token_gen):
+    with local_auth_server(token_gen, 'acc_1'):
       service = self.mocked_http_service(perform_request=handle_request)
       self.assertEqual(service.request(request_url, data={}).read(), response)
 
@@ -269,8 +303,7 @@ class LocalAuthHttpServiceTest(auto_stub.TestCase):
     request_url = '/some_request'
     response = 'False'
 
-    def token_gen(scopes):
-      del scopes  # Unused argument
+    def token_gen(_account_id, _scopes):
       self.fail('must not be called')
 
     def handle_request(request):
@@ -280,22 +313,20 @@ class LocalAuthHttpServiceTest(auto_stub.TestCase):
       self.assertIsNone(request.headers.get('Authorization'))
       return net_utils.make_fake_response(response, request.get_full_url())
 
-    with local_auth_server(token_gen, secret='invalid'):
+    with local_auth_server(token_gen, 'acc_1', secret='invalid'):
       service = self.mocked_http_service(perform_request=handle_request)
       self.assertEqual(service.request(request_url, data={}).read(), response)
 
   def test_bad_port(self):
     request_url = '/some_request'
 
-    def token_gen(scopes):
-      del scopes  # Unused argument
+    def token_gen(_account_id, _scopes):
       self.fail('must not be called')
 
-    def handle_request(request):
-      del request  # Unused argument
+    def handle_request(_request):
       self.fail('must not be called')
 
-    # this little dance should pick an unused port, bind it and then close it,
+    # This little dance should pick an unused port, bind it and then close it,
     # trusting that the OS will not reallocate it between now and when the http
     # client attempts to use it as a local_auth service. This is better than
     # picking a static port number, as there's at least some guarantee that the
@@ -304,7 +335,7 @@ class LocalAuthHttpServiceTest(auto_stub.TestCase):
     sock.bind(('localhost', 0))
     port = sock.getsockname()[1]
     sock.close()
-    with local_auth_server(token_gen, rpc_port=port):
+    with local_auth_server(token_gen, 'acc_1', rpc_port=port):
       service = self.mocked_http_service(perform_request=handle_request)
       with self.assertRaises(socket.error):
         self.assertRaises(service.request(request_url, data={}).read())
@@ -315,7 +346,8 @@ class LocalAuthHttpServiceTest(auto_stub.TestCase):
     response = 'False'
     token = 'notasecret'
 
-    def token_gen(scopes):
+    def token_gen(account_id, scopes):
+      self.assertEqual('acc_1', account_id)
       self.assertEqual(1, len(scopes))
       self.assertEqual(oauth.OAUTH_SCOPES, scopes[0])
       return auth_server.AccessToken(token, time.time())
@@ -327,7 +359,7 @@ class LocalAuthHttpServiceTest(auto_stub.TestCase):
       self.assertIsNone(request.headers.get('Authorization'))
       return net_utils.make_fake_response(response, request.get_full_url())
 
-    with local_auth_server(token_gen):
+    with local_auth_server(token_gen, 'acc_1'):
       service = self.mocked_http_service(perform_request=handle_request)
       self.assertEqual(service.request(request_url, data={}).read(), response)
 

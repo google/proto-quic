@@ -320,10 +320,6 @@
     "label": "//:chromium_builder_perf",
     "type": "additional_compile_target",
   },
-  "chromium_swarm_tests": {
-    "label": "//:chromium_swarm_tests",
-    "type": "additional_compile_target",
-  },
   "chromiumos_preflight": {
     "label": "//:chromiumos_preflight",
     "type": "additional_compile_target",
@@ -740,7 +736,7 @@
     "type": "windowed_test_launcher",
     "executable": "browser_tests",
     "args": [
-      "--run-in-mus",
+      "--mus",
       "--service-overrides=../../chrome/app/mash/mash_service_overrides.json",
     ],
   },
@@ -873,10 +869,6 @@
   "sync_integration_tests": {
     "label": "//chrome/test:sync_integration_tests",
     "type": "windowed_test_launcher",
-  },
-  "system_webview_apk": {
-    "label": "//android_webview:system_webview_apk",
-    "type": "additional_compile_target",
   },
   "system_webview_shell_layout_test_apk": {
     "label": "//android_webview/tools/system_webview_shell:system_webview_shell_layout_test_apk",
@@ -1112,7 +1104,6 @@
       "../../third_party/WebKit/Tools/Scripts/run-webkit-tests",
       "--seed", "4",
       "--no-show-results",
-      "--full-results-html",
       "--clobber-old-results",
       "--exit-after-n-failures", "5000",
       "--exit-after-n-crashes-or-timeouts", "100",
@@ -1121,7 +1112,7 @@
     ],
   },
   "webkit_unit_tests": {
-    "label": "//third_party/WebKit/Source/web:webkit_unit_tests",
+    "label": "//third_party/WebKit/Source/controller:webkit_unit_tests",
     "type": "console_test_launcher",
   },
   "webview_instrumentation_test_apk": {

@@ -38,6 +38,7 @@ class PickleIterator;
 
 namespace disk_cache {
 
+class BackendCleanupTracker;
 class SimpleIndexDelegate;
 class SimpleIndexFile;
 struct SimpleIndexLoadResult;
@@ -106,6 +107,7 @@ class NET_EXPORT_PRIVATE SimpleIndex
   typedef std::vector<uint64_t> HashList;
 
   SimpleIndex(const scoped_refptr<base::SingleThreadTaskRunner>& io_thread,
+              scoped_refptr<BackendCleanupTracker> cleanup_tracker,
               SimpleIndexDelegate* delegate,
               net::CacheType cache_type,
               std::unique_ptr<SimpleIndexFile> simple_index_file);
@@ -204,6 +206,8 @@ class NET_EXPORT_PRIVATE SimpleIndex
   std::unique_ptr<base::android::ApplicationStatusListener>
       app_status_listener_;
 #endif
+
+  scoped_refptr<BackendCleanupTracker> cleanup_tracker_;
 
   // The owner of |this| must ensure the |delegate_| outlives |this|.
   SimpleIndexDelegate* delegate_;

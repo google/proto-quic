@@ -73,12 +73,6 @@ TEST(ProcessMemoryDumpTest, Clear) {
   pmd1->CreateAllocatorDump("mad2");
   ASSERT_FALSE(pmd1->allocator_dumps().empty());
 
-  pmd1->process_totals()->set_resident_set_bytes(42);
-  pmd1->set_has_process_totals();
-
-  pmd1->process_mmaps()->AddVMRegion(ProcessMemoryMaps::VMRegion());
-  pmd1->set_has_process_mmaps();
-
   pmd1->AddOwnershipEdge(MemoryAllocatorDumpGuid(42),
                          MemoryAllocatorDumpGuid(4242));
 
@@ -92,9 +86,6 @@ TEST(ProcessMemoryDumpTest, Clear) {
   ASSERT_TRUE(pmd1->allocator_dumps_edges_for_testing().empty());
   ASSERT_EQ(nullptr, pmd1->GetAllocatorDump("mad1"));
   ASSERT_EQ(nullptr, pmd1->GetAllocatorDump("mad2"));
-  ASSERT_FALSE(pmd1->has_process_totals());
-  ASSERT_FALSE(pmd1->has_process_mmaps());
-  ASSERT_TRUE(pmd1->process_mmaps()->vm_regions().empty());
   ASSERT_EQ(nullptr, pmd1->GetSharedGlobalAllocatorDump(shared_mad_guid1));
   ASSERT_EQ(nullptr, pmd1->GetSharedGlobalAllocatorDump(shared_mad_guid2));
 

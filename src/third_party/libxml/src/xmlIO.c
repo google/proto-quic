@@ -1286,7 +1286,7 @@ xmlGzfileOpenW (const char *filename, int compression) {
  *
  * Read @len bytes to @buffer from the compressed I/O channel.
  *
- * Returns the number of bytes written
+ * Returns the number of bytes read.
  */
 static int
 xmlGzfileRead (void * context, char * buffer, int len) {
@@ -1876,7 +1876,7 @@ xmlIOHTTPOpen (const char *filename) {
  */
 
 void *
-xmlIOHTTPOpenW(const char *post_uri, int compression)
+xmlIOHTTPOpenW(const char *post_uri, int compression ATTRIBUTE_UNUSED)
 {
 
     xmlIOHTTPWriteCtxtPtr ctxt = NULL;

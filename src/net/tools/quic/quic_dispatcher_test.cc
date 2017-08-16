@@ -2152,6 +2152,37 @@ TEST_F(AsyncGetProofTest, TimeWaitTimeout) {
   EXPECT_FALSE(time_wait_list_manager_->IsConnectionIdInTimeWait(conn_id));
 }
 
+// Regression test for
+// https://bugs.chromium.org/p/chromium/issues/detail?id=748289
+TEST_F(AsyncGetProofTest, DispatcherFailedToPickUpVersionForAsyncProof) {
+  // This test mimics the scenario that dispatcher's framer can have different
+  // version when async proof returns.
+  // When dispatcher sends SREJ, the SREJ frame can be serialized in
+  // different endianness which causes the client to close the connection
+  // because of QUIC_INVALID_STREAM_DATA.
+
+  // Send a CHLO with v39. Dispatcher framer's version is set to v39.
+  ProcessPacket(client_addr_, 1, true, QUIC_VERSION_39, SerializeCHLO(),
+                PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER, 1);
+
+  // Send another CHLO with v37. Dispatcher framer's version is set to v37.
+  ProcessPacket(client_addr_, 2, true, QUIC_VERSION_37, SerializeCHLO(),
+                PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER, 1);
+  ASSERT_EQ(GetFakeProofSource()->NumPendingCallbacks(), 2);
+
+  // Complete the ProofSource::GetProof call for v39. This would cause the
+  // version mismatch between the CHLO packet and the dispatcher.
+  if (FLAGS_quic_reloadable_flag_quic_set_version_on_async_get_proof_returns) {
+    GetFakeProofSource()->InvokePendingCallback(0);
+  } else {
+    EXPECT_QUIC_BUG(
+        GetFakeProofSource()->InvokePendingCallback(0),
+        "SREJ: Client's version: QUIC_VERSION_39 is different "
+        "from current dispatcher framer's version: QUIC_VERSION_37");
+  }
+  ASSERT_EQ(GetFakeProofSource()->NumPendingCallbacks(), 1);
+}
+
 }  // namespace
 }  // namespace test
 }  // namespace net

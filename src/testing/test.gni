@@ -235,6 +235,7 @@ template("test") {
                                "data_deps",
                                "deps",
                                "public_deps",
+                               "use_test_server",
                              ])
       test_name = _output_name
     }

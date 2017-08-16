@@ -92,17 +92,13 @@ class SchedulerWorkerDelegate : public SchedulerWorker::Delegate {
 
   TimeDelta GetSleepTimeout() override { return TimeDelta::Max(); }
 
-  bool CanDetach(SchedulerWorker* worker) override { return false; }
-
-  void OnDetach() override { NOTREACHED(); }
-
   bool RunsTasksInCurrentSequence() {
     // We check the thread ref instead of the sequence for the benefit of COM
     // callbacks which may execute without a sequence context.
     return thread_ref_checker_.IsCurrentThreadSameAsSetThread();
   }
 
-  void OnMainExit() override {
+  void OnMainExit(SchedulerWorker* /* worker */) override {
     // Move |sequence_| to |local_sequence| so that if we have the last
     // reference to the sequence we don't destroy it (and its tasks) within
     // |sequence_lock_|.
@@ -186,7 +182,9 @@ class SchedulerWorkerCOMDelegate : public SchedulerWorkerDelegate {
     return sequence;
   }
 
-  void OnMainExit() override { scoped_com_initializer_.reset(); }
+  void OnMainExit(SchedulerWorker* /* worker */) override {
+    scoped_com_initializer_.reset();
+  }
 
   void WaitForWork(WaitableEvent* wake_up_event) override {
     DCHECK(wake_up_event);

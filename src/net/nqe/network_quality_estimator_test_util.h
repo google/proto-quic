@@ -60,6 +60,9 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
       bool suppress_notifications_for_testing,
       std::unique_ptr<BoundTestNetLog> net_log);
 
+  explicit TestNetworkQualityEstimator(
+      std::unique_ptr<NetworkQualityEstimatorParams> params);
+
   ~TestNetworkQualityEstimator() override;
 
   // Runs one URL request to completion.
@@ -232,6 +235,10 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
    public:
     explicit LocalHttpTestServer(const base::FilePath& document_root);
   };
+
+  TestNetworkQualityEstimator(
+      std::unique_ptr<NetworkQualityEstimatorParams> params,
+      std::unique_ptr<BoundTestNetLog> net_log);
 
   // NetworkQualityEstimator implementation that returns the overridden
   // network

@@ -42,8 +42,7 @@ class NET_EXPORT StaticCookiePolicy {
 
   // Consults the user's third-party cookie blocking preferences to determine
   // whether the URL's cookies can be accessed (i.e., can be get or set).
-  int CanAccessCookies(const GURL& url,
-                       const GURL& first_party_for_cookies) const;
+  int CanAccessCookies(const GURL& url, const GURL& site_for_cookies) const;
 
  private:
   Type type_;

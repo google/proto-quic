@@ -15,7 +15,6 @@
 #include "net/base/ip_address.h"
 #include "net/cert/x509_util_ios.h"
 #include "net/cert/x509_util_openssl.h"
-#include "net/ssl/openssl_ssl_util.h"
 #include "third_party/boringssl/src/include/openssl/x509.h"
 #include "third_party/boringssl/src/include/openssl/x509v3.h"
 

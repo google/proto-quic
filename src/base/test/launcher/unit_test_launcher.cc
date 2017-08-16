@@ -373,16 +373,29 @@ bool ProcessTestResults(
     fflush(stdout);
 
     // We do not have reliable details about test results (parsing test
-    // stdout is known to be unreliable), apply the executable exit code
-    // to all tests.
-    // TODO(phajdan.jr): Be smarter about this, e.g. retry each test
-    // individually.
-    for (size_t i = 0; i < test_names.size(); i++) {
+    // stdout is known to be unreliable).
+    if (test_names.size() == 1) {
+      // There is only one test. Try to determine status by exit code.
+      const std::string& test_name = test_names.front();
       TestResult test_result;
-      test_result.full_name = test_names[i];
-      test_result.status = TestResult::TEST_UNKNOWN;
+      test_result.full_name = test_name;
+
+      if (was_timeout) {
+        test_result.status = TestResult::TEST_TIMEOUT;
+      } else if (exit_code != 0) {
+        test_result.status = TestResult::TEST_FAILURE;
+      } else {
+        // It's strange case when test executed successfully,
+        // but we failed to read machine-readable report for it.
+        test_result.status = TestResult::TEST_UNKNOWN;
+      }
+
       test_launcher->OnTestFinished(test_result);
       called_any_callback = true;
+    } else {
+      // There is more than one test. Retry them individually.
+      for (const std::string& test_name : test_names)
+        tests_to_relaunch->push_back(test_name);
     }
   }
 

@@ -87,6 +87,10 @@ android_library("net_java_test_support_provider") {
     "//base:base_java",
     "//base:base_java_test_support",
   ]
+
+  data_deps = [
+    "//net:test_support",
+  ]
 }
 
 source_set("java_test_native_support") {
@@ -173,6 +177,7 @@ java_cpp_template("net_errors_java") {
 
 java_cpp_enum("net_java_test_support_enums_srcjar") {
   sources = [
+    "../test/embedded_test_server/embedded_test_server.h",
     "../test/url_request/url_request_failed_job.h",
   ]
 }

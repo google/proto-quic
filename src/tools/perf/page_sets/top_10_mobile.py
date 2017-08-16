@@ -65,8 +65,3 @@ class Top10MobilePageSet(story.StorySet):
     for url in URL_LIST:
       for temp in cache_temperatures:
         self.AddStory(Top10MobilePage(url, self, cache_temperature=temp))
-
-
-class Top10MobileStoryExpectations(story.expectations.StoryExpectations):
-  def SetExpectations(self):
-    pass

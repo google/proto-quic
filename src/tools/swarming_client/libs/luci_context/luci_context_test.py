@@ -3,7 +3,6 @@
 # Use of this source code is governed under the Apache License, Version 2.0
 # that can be found in the LICENSE file.
 
-import contextlib
 import logging
 import os
 import sys
@@ -110,6 +109,14 @@ class TestLuciContext(unittest.TestCase):
 
     self.assertIsNone(r('other'))
     self.assertIsNone(r('something'))
+
+  def test_stage(self):
+    path = None
+    with luci_context.stage(something={'data': True}) as path:
+      with open(path, 'r') as f:
+        self.assertEqual('{"something": {"data": true}}', f.read())
+    # The file is gone outside 'with' block.
+    self.assertFalse(os.path.exists(path))
 
 
 if __name__ == '__main__':
