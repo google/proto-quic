@@ -37,6 +37,8 @@ Building on Linux
 2. Build the QUIC client, server, and tests:
    ```
    cd src
+   gn args out/Default
+     Add "use_custom_libcxx = true" to the file
    gn gen out/Default && ninja -C out/Default quic_client quic_server net_unittests
    ```
 
