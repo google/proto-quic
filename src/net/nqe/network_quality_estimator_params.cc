@@ -402,7 +402,23 @@ NetworkQualityEstimatorParams::NetworkQualityEstimatorParams(
           GetDoubleValueForVariationParamWithDefaultValue(
               params_,
               "upper_bound_http_rtt_transport_rtt_multiplier",
-              -1)) {
+              -1)),
+      increase_in_transport_rtt_logging_interval_(
+          base::TimeDelta::FromMillisecondsD(
+              GetDoubleValueForVariationParamWithDefaultValue(
+                  params_,
+                  "increase_in_transport_rtt_logging_interval",
+                  10000))),
+      recent_time_threshold_(base::TimeDelta::FromMillisecondsD(
+          GetDoubleValueForVariationParamWithDefaultValue(
+              params_,
+              "recent_time_threshold",
+              5000))),
+      historical_time_threshold_(base::TimeDelta::FromMillisecondsD(
+          GetDoubleValueForVariationParamWithDefaultValue(
+              params_,
+              "historical_time_threshold",
+              60000))) {
   DCHECK_LE(0.0, correlation_uma_logging_probability_);
   DCHECK_GE(1.0, correlation_uma_logging_probability_);
   DCHECK(lower_bound_http_rtt_transport_rtt_multiplier_ == -1 ||

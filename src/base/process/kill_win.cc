@@ -40,22 +40,24 @@ const DWORD kProcessKilledExitCode = 1;
 }  // namespace
 
 TerminationStatus GetTerminationStatus(ProcessHandle handle, int* exit_code) {
+  DCHECK(exit_code);
+
   DWORD tmp_exit_code = 0;
 
   if (!::GetExitCodeProcess(handle, &tmp_exit_code)) {
     DPLOG(FATAL) << "GetExitCodeProcess() failed";
-    if (exit_code) {
-      // This really is a random number.  We haven't received any
-      // information about the exit code, presumably because this
-      // process doesn't have permission to get the exit code, or
-      // because of some other cause for GetExitCodeProcess to fail
-      // (MSDN docs don't give the possible failure error codes for
-      // this function, so it could be anything).  But we don't want
-      // to leave exit_code uninitialized, since that could cause
-      // random interpretations of the exit code.  So we assume it
-      // terminated "normally" in this case.
-      *exit_code = kNormalTerminationExitCode;
-    }
+
+    // This really is a random number.  We haven't received any
+    // information about the exit code, presumably because this
+    // process doesn't have permission to get the exit code, or
+    // because of some other cause for GetExitCodeProcess to fail
+    // (MSDN docs don't give the possible failure error codes for
+    // this function, so it could be anything).  But we don't want
+    // to leave exit_code uninitialized, since that could cause
+    // random interpretations of the exit code.  So we assume it
+    // terminated "normally" in this case.
+    *exit_code = kNormalTerminationExitCode;
+
     // Assume the child has exited normally if we can't get the exit
     // code.
     return TERMINATION_STATUS_NORMAL_TERMINATION;
@@ -63,8 +65,7 @@ TerminationStatus GetTerminationStatus(ProcessHandle handle, int* exit_code) {
   if (tmp_exit_code == STILL_ACTIVE) {
     DWORD wait_result = WaitForSingleObject(handle, 0);
     if (wait_result == WAIT_TIMEOUT) {
-      if (exit_code)
-        *exit_code = wait_result;
+      *exit_code = wait_result;
       return TERMINATION_STATUS_STILL_RUNNING;
     }
 
@@ -80,8 +81,7 @@ TerminationStatus GetTerminationStatus(ProcessHandle handle, int* exit_code) {
     return TERMINATION_STATUS_ABNORMAL_TERMINATION;
   }
 
-  if (exit_code)
-    *exit_code = tmp_exit_code;
+  *exit_code = tmp_exit_code;
 
   switch (tmp_exit_code) {
     case kNormalTerminationExitCode:

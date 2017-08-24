@@ -27,10 +27,15 @@ In particular, ~ at the start of a string means it's a regex.
   -->
   <Bug pattern="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED" />
 
-  <!-- Ignore unused public Rule in instrumentation tests -->
+  <!-- Ignore unused public Rule and RuleChain in instrumentation tests -->
   <Match>
     <Class name="~.*\.*Test" />
     <Field type="android.support.test.rule.UiThreadTestRule" />
+    <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD" />
+  </Match>
+  <Match>
+    <Class name="~.*\.*Test" />
+    <Field type="org.junit.rules.RuleChain" />
     <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD" />
   </Match>
 

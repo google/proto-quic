@@ -69,7 +69,7 @@ RepeatingCallback<void(Args...)> AdaptCallbackForRepeating(
     OnceCallback<void(Args...)> callback) {
   using Helper = internal::AdaptCallbackForRepeatingHelper<Args...>;
   return base::BindRepeating(&Helper::Run,
-                             base::MakeUnique<Helper>(std::move(callback)));
+                             std::make_unique<Helper>(std::move(callback)));
 }
 
 // ScopedClosureRunner is akin to std::unique_ptr<> for Closures. It ensures

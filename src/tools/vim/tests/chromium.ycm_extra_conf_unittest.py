@@ -190,7 +190,7 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('flags' in result)
     self.assertEquals(
         self.NormalizeStringsInList(result['flags']), [
-            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-DUSE_CLANG_COMPLETER', '-std=c++14', '-x', 'c++', '-I[SRC]',
             '-Wno-unknown-warning-option', '-I[OUT]/a', '-I[OUT]/tag-one'
         ])
 
@@ -203,7 +203,7 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('flags' in result)
     self.assertEquals(
         self.NormalizeStringsInList(result['flags']), [
-            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-DUSE_CLANG_COMPLETER', '-std=c++14', '-x', 'c++', '-I[SRC]',
             '-Wno-unknown-warning-option', '-I[OUT]/a', '-I[OUT]/tag-default'
         ])
 
@@ -216,7 +216,7 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('flags' in result)
     self.assertEquals(
         self.NormalizeStringsInList(result['flags']), [
-            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-DUSE_CLANG_COMPLETER', '-std=c++14', '-x', 'c++', '-I[SRC]',
             '-Wno-unknown-warning-option', '-I[OUT]/a', '-I[OUT]/tag-default'
         ])
 
@@ -241,7 +241,7 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('flags' in result)
     self.assertEquals(
         self.NormalizeStringsInList(result['flags']), [
-            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-DUSE_CLANG_COMPLETER', '-std=c++14', '-x', 'c++', '-I[SRC]',
             '-Wno-unknown-warning-option', '-I[OUT]/a', '-I[OUT]/tag-default'
         ])
 
@@ -254,7 +254,7 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('flags' in result)
     self.assertEquals(
         self.NormalizeStringsInList(result['flags']), [
-            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-DUSE_CLANG_COMPLETER', '-std=c++14', '-x', 'c++', '-I[SRC]',
             '-Wno-unknown-warning-option', '-I[OUT]/a',
             '-I[OUT]/tag-default-test'
         ])
@@ -268,7 +268,7 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('flags' in result)
     self.assertEquals(
         self.NormalizeStringsInList(result['flags']), [
-            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-DUSE_CLANG_COMPLETER', '-std=c++14', '-x', 'c++', '-I[SRC]',
             '-Wno-unknown-warning-option', '-I[OUT]/a',
             '-I[OUT]/tag-default-test'
         ])
@@ -282,7 +282,7 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('flags' in result)
     self.assertEquals(
         self.NormalizeStringsInList(result['flags']), [
-            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-DUSE_CLANG_COMPLETER', '-std=c++14', '-x', 'c++', '-I[SRC]',
             '-Wno-unknown-warning-option', '-I[OUT]/a', '-I[OUT]/tag-three'
         ])
 
@@ -309,7 +309,7 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('flags' in result)
     self.assertEquals(
         self.NormalizeStringsInList(result['flags']), [
-            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-DUSE_CLANG_COMPLETER', '-std=c++14', '-x', 'c++', '-I[SRC]',
             '-Wno-unknown-warning-option', '-I[OUT]/a', '-I[OUT]/tag-four'
         ])
 
@@ -322,7 +322,7 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertTrue('flags' in result)
     self.assertEquals(
         self.NormalizeStringsInList(result['flags']), [
-            '-DUSE_CLANG_COMPLETER', '-std=c++11', '-x', 'c++', '-I[SRC]',
+            '-DUSE_CLANG_COMPLETER', '-std=c++14', '-x', 'c++', '-I[SRC]',
             '-Wno-unknown-warning-option', '-I[OUT]/a', '-I[OUT]/tag-default'
         ])
 
@@ -336,7 +336,7 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertEquals(
         self.NormalizeStringsInList(result['flags']), [
             '-DUSE_CLANG_COMPLETER',
-            '-std=c++11',
+            '-std=c++14',
             '-x',
             'c++',
             '-I[SRC]',
@@ -357,7 +357,7 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
     self.assertEquals(
         self.NormalizeStringsInList(result['flags']), [
             '-DUSE_CLANG_COMPLETER',
-            '-std=c++11',
+            '-std=c++14',
             '-x',
             'c++',
             '-I[SRC]',

@@ -356,14 +356,20 @@ bool NSSCertDatabase::IsUntrusted(const X509Certificate* cert) const {
   return false;
 }
 
-bool NSSCertDatabase::SetCertTrust(const X509Certificate* cert,
-                                CertType type,
-                                TrustBits trust_bits) {
+bool NSSCertDatabase::SetCertTrust(CERTCertificate* cert,
+                                   CertType type,
+                                   TrustBits trust_bits) {
   bool success = psm::SetCertTrust(cert, type, trust_bits);
   if (success)
     NotifyObserversCertDBChanged();
 
   return success;
+}
+
+bool NSSCertDatabase::SetCertTrust(const X509Certificate* cert,
+                                   CertType type,
+                                   TrustBits trust_bits) {
+  return SetCertTrust(cert->os_cert_handle(), type, trust_bits);
 }
 
 bool NSSCertDatabase::DeleteCertAndKey(X509Certificate* cert) {

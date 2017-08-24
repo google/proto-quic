@@ -9,8 +9,9 @@ class SystemHealthDesktopCommonExpectations(expectations.StoryExpectations):
     self.DisableStory('browse:news:hackernews',
                       [expectations.ALL_WIN, expectations.ALL_MAC],
                       'crbug.com/676336')
-    self.DisableStory('browse:search:google', [expectations.ALL_WIN],
-                      'crbug.com/673775')
+    self.DisableStory('browse:search:google',
+                      [expectations.ALL_WIN],
+                      'win:crbug.com/673775, mac:crbug.com/756027')
     self.DisableStory('browse:tools:maps', [expectations.ALL],
                       'crbug.com/712694')
     self.DisableStory('browse:tools:earth', [expectations.ALL],
@@ -84,6 +85,8 @@ class SystemHealthMobileCommonExpectations(expectations.StoryExpectations):
     self.DisableStory('long_running:tools:gmail-background',
                       [expectations.ANDROID_WEBVIEW],
                       'Webview does not have tabs')
+    self.DisableStory('browse:shopping:avito',
+                      [expectations.ANDROID_NEXUS6], 'crbug.com/736497')
     self.DisableStory('browse:social:pinterest_infinite_scroll',
                       [expectations.ANDROID_WEBVIEW], 'crbug.com/728528')
 
@@ -137,6 +140,7 @@ class V8BrowsingDesktopExpecations(expectations.StoryExpectations):
     self.DisableStory('browse:news:cnn',
                       [expectations.ALL_MAC], 'crbug.com/728576')
 
+
 # Should only include browse:*:* stories.
 class V8BrowsingMobileExpecations(expectations.StoryExpectations):
   def SetExpectations(self):
@@ -160,4 +164,4 @@ class V8BrowsingMobileExpecations(expectations.StoryExpectations):
 
 class SystemHealthWebviewStartupExpectations(expectations.StoryExpectations):
   def SetExpectations(self):
-    pass # Nothing is disabled at this time.
+    pass

@@ -182,17 +182,20 @@ def _ParseManifestAttributes(apk_path):
   m = re.search(r'android:minSdkVersion\(\w+\)=\(type \w+\)(\w+)\n', output)
   sdk_version = int(m.group(1), 16)
   # Pre-L: Dalvik - .odex file is simply decompressed/optimized dex file (~1x).
-  # L, M: ART - .odex file is compiled version of the dex file (~3x).
+  # L, M: ART - .odex file is compiled version of the dex file (~4x).
   # N: ART - Uses Dalvik-like JIT for normal apps (~1x), full compilation for
-  #    shared apps (~3x).
+  #    shared apps (~4x).
+  # Actual multipliers calculated using "apk_operations.py disk-usage".
+  # Will need to update multipliers once apk obfuscation is enabled.
+  # E.g. with obfuscation, the 4.04 changes to 4.46.
   if sdk_version < 21:
-    dex_multiplier = 1
+    dex_multiplier = 1.16
   elif sdk_version < 24:
-    dex_multiplier = 3
+    dex_multiplier = 4.04
   elif 'Monochrome' in apk_path or 'WebView' in apk_path:
-    dex_multiplier = 3
+    dex_multiplier = 4.04  # compilation_filter=speed
   else:
-    dex_multiplier = 1
+    dex_multiplier = 1.17  # compilation_filter=speed-profile
 
   return dex_multiplier, skip_extract_lib
 
@@ -486,11 +489,11 @@ def PrintApkAnalysis(apk_filename, tool_prefix, chartjson=None):
 
   # Main metric that we want to monitor for jumps.
   normalized_apk_size = total_apk_size
-  # Always look at uncompressed .dex & .so.
-  normalized_apk_size -= java_code.ComputeZippedSize()
-  normalized_apk_size += java_code.ComputeUncompressedSize()
+  # Always look at uncompressed .so.
   normalized_apk_size -= native_code.ComputeZippedSize()
   normalized_apk_size += native_code.ComputeUncompressedSize()
+  # Always include odex size to optimize for actual disk footprint.
+  normalized_apk_size += java_code.ComputeExtractedSize()
   # Avoid noise caused when strings change and translations haven't yet been
   # updated.
   num_translations = translations.GetNumEntries()

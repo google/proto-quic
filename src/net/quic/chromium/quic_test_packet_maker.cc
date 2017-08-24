@@ -86,6 +86,21 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndRstPacket(
     QuicPacketNumber smallest_received,
     QuicPacketNumber least_unacked,
     bool send_feedback) {
+  return MakeAckAndRstPacket(num, include_version, stream_id, error_code,
+                             largest_received, smallest_received, least_unacked,
+                             send_feedback, 0);
+}
+
+std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndRstPacket(
+    QuicPacketNumber num,
+    bool include_version,
+    QuicStreamId stream_id,
+    QuicRstStreamErrorCode error_code,
+    QuicPacketNumber largest_received,
+    QuicPacketNumber smallest_received,
+    QuicPacketNumber least_unacked,
+    bool send_feedback,
+    size_t bytes_written) {
   QuicPacketHeader header;
   header.public_header.connection_id = connection_id_;
   header.public_header.reset_flag = false;
@@ -110,7 +125,7 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndRstPacket(
   frames.push_back(QuicFrame(&stop_waiting));
   DVLOG(1) << "Adding frame: " << frames[1];
 
-  QuicRstStreamFrame rst(stream_id, error_code, 0);
+  QuicRstStreamFrame rst(stream_id, error_code, bytes_written);
   frames.push_back(QuicFrame(&rst));
   DVLOG(1) << "Adding frame: " << frames[2];
 

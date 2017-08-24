@@ -600,7 +600,7 @@ const size_t kDiskWeightedIOTime = 13;
 }  // namespace
 
 std::unique_ptr<Value> SystemMemoryInfoKB::ToValue() const {
-  auto res = base::MakeUnique<DictionaryValue>();
+  auto res = std::make_unique<DictionaryValue>();
   res->SetInteger("total", total);
   res->SetInteger("free", free);
   res->SetInteger("available", available);
@@ -795,7 +795,7 @@ SystemDiskInfo::SystemDiskInfo() {
 SystemDiskInfo::SystemDiskInfo(const SystemDiskInfo& other) = default;
 
 std::unique_ptr<Value> SystemDiskInfo::ToValue() const {
-  auto res = base::MakeUnique<DictionaryValue>();
+  auto res = std::make_unique<DictionaryValue>();
 
   // Write out uint64_t variables as doubles.
   // Note: this may discard some precision, but for JS there's no other option.
@@ -924,7 +924,7 @@ TimeDelta GetUserCpuTimeSinceBoot() {
 
 #if defined(OS_CHROMEOS)
 std::unique_ptr<Value> SwapInfo::ToValue() const {
-  auto res = base::MakeUnique<DictionaryValue>();
+  auto res = std::make_unique<DictionaryValue>();
 
   // Write out uint64_t variables as doubles.
   // Note: this may discard some precision, but for JS there's no other option.

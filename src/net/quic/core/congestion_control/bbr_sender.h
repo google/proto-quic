@@ -98,6 +98,7 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   // Start implementation of SendAlgorithmInterface.
   bool InSlowStart() const override;
   bool InRecovery() const override;
+  bool IsProbingForMoreBandwidth() const override;
 
   void SetFromConfig(const QuicConfig& config,
                      Perspective perspective) override;
@@ -108,7 +109,7 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   void OnCongestionEvent(bool rtt_updated,
                          QuicByteCount prior_in_flight,
                          QuicTime event_time,
-                         const CongestionVector& acked_packets,
+                         const AckedPacketVector& acked_packets,
                          const CongestionVector& lost_packets) override;
   bool OnPacketSent(QuicTime sent_time,
                     QuicByteCount bytes_in_flight,
@@ -174,7 +175,7 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   // Updates the current bandwidth and min_rtt estimate based on the samples for
   // the received acknowledgements.  Returns true if min_rtt has expired.
   bool UpdateBandwidthAndMinRtt(QuicTime now,
-                                const CongestionVector& acked_packets);
+                                const AckedPacketVector& acked_packets);
   // Updates the current gain used in PROBE_BW mode.
   void UpdateGainCyclePhase(QuicTime now,
                             QuicByteCount prior_in_flight,

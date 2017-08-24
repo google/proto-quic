@@ -846,7 +846,7 @@ TYPED_TEST(BindVariantsTest, ReturnValues) {
       .WillOnce(Return(41337))
       .WillOnce(Return(51337));
   EXPECT_CALL(has_ref, UniquePtrMethod0())
-      .WillOnce(Return(ByMove(MakeUnique<int>(42))));
+      .WillOnce(Return(ByMove(std::make_unique<int>(42))));
 
   CallbackType<TypeParam, int()> normal_cb = TypeParam::Bind(&IntFunc0);
   CallbackType<TypeParam, int()> method_cb =
@@ -1370,8 +1370,9 @@ TEST_F(BindTest, OnceCallback) {
 
   cb = std::move(cb2);
 
-  OnceCallback<void(int)> cb4 = BindOnce(
-      &VoidPolymorphic<std::unique_ptr<int>, int>::Run, MakeUnique<int>(0));
+  OnceCallback<void(int)> cb4 =
+      BindOnce(&VoidPolymorphic<std::unique_ptr<int>, int>::Run,
+               std::make_unique<int>(0));
   BindOnce(std::move(cb4), 1).Run();
 }
 

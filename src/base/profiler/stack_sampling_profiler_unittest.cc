@@ -422,7 +422,7 @@ std::vector<std::unique_ptr<TestProfilerInfo>> CreateProfilers(
   std::vector<std::unique_ptr<TestProfilerInfo>> profilers;
   for (size_t i = 0; i < params.size(); ++i) {
     profilers.push_back(
-        MakeUnique<TestProfilerInfo>(target_thread_id, params[i]));
+        std::make_unique<TestProfilerInfo>(target_thread_id, params[i]));
   }
 
   return profilers;

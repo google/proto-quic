@@ -5,6 +5,8 @@
 #ifndef BASE_BIND_H_
 #define BASE_BIND_H_
 
+#include <utility>
+
 #include "base/bind_internal.h"
 
 // -----------------------------------------------------------------------------
@@ -55,7 +57,7 @@ template <size_t... Ns,
           typename... Args,
           typename... Unwrapped,
           typename... Params>
-struct AssertBindArgsValidity<IndexSequence<Ns...>,
+struct AssertBindArgsValidity<std::index_sequence<Ns...>,
                               TypeList<Args...>,
                               TypeList<Unwrapped...>,
                               TypeList<Params...>>
@@ -69,14 +71,14 @@ struct TransformToUnwrappedTypeImpl;
 
 template <typename T>
 struct TransformToUnwrappedTypeImpl<RepeatMode::Once, T> {
-  using StoredType = typename std::decay<T>::type;
+  using StoredType = std::decay_t<T>;
   using ForwardType = StoredType&&;
   using Unwrapped = decltype(Unwrap(std::declval<ForwardType>()));
 };
 
 template <typename T>
 struct TransformToUnwrappedTypeImpl<RepeatMode::Repeating, T> {
-  using StoredType = typename std::decay<T>::type;
+  using StoredType = std::decay_t<T>;
   using ForwardType = const StoredType&;
   using Unwrapped = decltype(Unwrap(std::declval<ForwardType>()));
 };
@@ -124,12 +126,11 @@ using MakeUnwrappedTypeList =
 template <typename Functor, typename... Args>
 inline OnceCallback<MakeUnboundRunType<Functor, Args...>>
 BindOnce(Functor&& functor, Args&&... args) {
-  static_assert(
-      !internal::IsOnceCallback<typename std::decay<Functor>::type>() ||
-          (std::is_rvalue_reference<Functor&&>() &&
-           !std::is_const<typename std::remove_reference<Functor>::type>()),
-      "BindOnce requires non-const rvalue for OnceCallback binding."
-      " I.e.: base::BindOnce(std::move(callback)).");
+  static_assert(!internal::IsOnceCallback<std::decay_t<Functor>>() ||
+                    (std::is_rvalue_reference<Functor&&>() &&
+                     !std::is_const<std::remove_reference_t<Functor>>()),
+                "BindOnce requires non-const rvalue for OnceCallback binding."
+                " I.e.: base::BindOnce(std::move(callback)).");
 
   // This block checks if each |args| matches to the corresponding params of the
   // target function. This check does not affect the behavior of Bind, but its
@@ -141,11 +142,10 @@ BindOnce(Functor&& functor, Args&&... args) {
       internal::MakeUnwrappedTypeList<internal::RepeatMode::Once,
                                       FunctorTraits::is_method, Args&&...>;
   using BoundParamsList = typename Helper::BoundParamsList;
-  static_assert(
-      internal::AssertBindArgsValidity<MakeIndexSequence<Helper::num_bounds>,
-                                       BoundArgsList, UnwrappedArgsList,
-                                       BoundParamsList>::ok,
-      "The bound args need to be convertible to the target params.");
+  static_assert(internal::AssertBindArgsValidity<
+                    std::make_index_sequence<Helper::num_bounds>, BoundArgsList,
+                    UnwrappedArgsList, BoundParamsList>::ok,
+                "The bound args need to be convertible to the target params.");
 
   using BindState = internal::MakeBindStateType<Functor, Args...>;
   using UnboundRunType = MakeUnboundRunType<Functor, Args...>;
@@ -170,7 +170,7 @@ template <typename Functor, typename... Args>
 inline RepeatingCallback<MakeUnboundRunType<Functor, Args...>>
 BindRepeating(Functor&& functor, Args&&... args) {
   static_assert(
-      !internal::IsOnceCallback<typename std::decay<Functor>::type>(),
+      !internal::IsOnceCallback<std::decay_t<Functor>>(),
       "BindRepeating cannot bind OnceCallback. Use BindOnce with std::move().");
 
   // This block checks if each |args| matches to the corresponding params of the
@@ -183,11 +183,10 @@ BindRepeating(Functor&& functor, Args&&... args) {
       internal::MakeUnwrappedTypeList<internal::RepeatMode::Repeating,
                                       FunctorTraits::is_method, Args&&...>;
   using BoundParamsList = typename Helper::BoundParamsList;
-  static_assert(
-      internal::AssertBindArgsValidity<MakeIndexSequence<Helper::num_bounds>,
-                                       BoundArgsList, UnwrappedArgsList,
-                                       BoundParamsList>::ok,
-      "The bound args need to be convertible to the target params.");
+  static_assert(internal::AssertBindArgsValidity<
+                    std::make_index_sequence<Helper::num_bounds>, BoundArgsList,
+                    UnwrappedArgsList, BoundParamsList>::ok,
+                "The bound args need to be convertible to the target params.");
 
   using BindState = internal::MakeBindStateType<Functor, Args...>;
   using UnboundRunType = MakeUnboundRunType<Functor, Args...>;
@@ -215,6 +214,23 @@ inline Callback<MakeUnboundRunType<Functor, Args...>>
 Bind(Functor&& functor, Args&&... args) {
   return BindRepeating(std::forward<Functor>(functor),
                        std::forward<Args>(args)...);
+}
+
+// Special cases for binding to a base::Callback without extra bound arguments.
+template <typename Signature>
+OnceCallback<Signature> BindOnce(OnceCallback<Signature> closure) {
+  return closure;
+}
+
+template <typename Signature>
+RepeatingCallback<Signature> BindRepeating(
+    RepeatingCallback<Signature> closure) {
+  return closure;
+}
+
+template <typename Signature>
+Callback<Signature> Bind(Callback<Signature> closure) {
+  return closure;
 }
 
 }  // namespace base

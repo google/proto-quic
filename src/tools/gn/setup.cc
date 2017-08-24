@@ -281,7 +281,7 @@ Setup::Setup()
       root_build_file_("//BUILD.gn"),
       check_public_headers_(false),
       dotfile_settings_(&build_settings_, std::string()),
-      dotfile_scope_(&dotfile_settings_, {}),
+      dotfile_scope_(&dotfile_settings_),
       default_args_(nullptr),
       fill_arguments_(true) {
   dotfile_settings_.set_toolchain_label(Label());
@@ -471,7 +471,7 @@ bool Setup::FillArgsFromArgsInputFile() {
     return false;
   }
 
-  Scope arg_scope(&dotfile_settings_, {args_input_file_.get()});
+  Scope arg_scope(&dotfile_settings_);
   // Set soure dir so relative imports in args work.
   SourceDir root_source_dir =
       SourceDirForCurrentDirectory(build_settings_.root_path());
@@ -668,7 +668,6 @@ bool Setup::RunConfigFile() {
     scheduler_.Log("Got dotfile", FilePathToUTF8(dotfile_name_));
 
   dotfile_input_file_.reset(new InputFile(SourceFile("//.gn")));
-  dotfile_scope_.AddInputFile(dotfile_input_file_.get());
   if (!dotfile_input_file_->Load(dotfile_name_)) {
     Err(Location(), "Could not load dotfile.",
         "The file \"" + FilePathToUTF8(dotfile_name_) + "\" couldn't be loaded")

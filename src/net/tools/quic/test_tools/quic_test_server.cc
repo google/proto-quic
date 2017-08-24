@@ -38,7 +38,6 @@ class CustomStreamSession : public QuicSimpleServerSession {
         crypto_stream_factory_(crypto_stream_factory) {}
 
   QuicSpdyStream* CreateIncomingDynamicStream(QuicStreamId id) override {
-    DCHECK(!FLAGS_quic_reloadable_flag_quic_refactor_stream_creation);
     if (!ShouldCreateIncomingDynamicStream(id)) {
       return nullptr;
     }
@@ -49,14 +48,6 @@ class CustomStreamSession : public QuicSimpleServerSession {
       return stream;
     }
     return QuicSimpleServerSession::CreateIncomingDynamicStream(id);
-  }
-
-  std::unique_ptr<QuicStream> CreateStream(QuicStreamId id) override {
-    if (stream_factory_) {
-      return QuicWrapUnique<QuicSpdyStream>(
-          stream_factory_->CreateStream(id, this, response_cache()));
-    }
-    return QuicSimpleServerSession::CreateStream(id);
   }
 
   QuicCryptoServerStreamBase* CreateQuicCryptoServerStream(

@@ -358,15 +358,7 @@ class BlinkPerfBindings(_BlinkPerfBenchmark):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        self.DisableStory('structured-clone-long-string-deserialize.html',
-            [story.expectations.ALL_ANDROID], 'crbug.com/733655')
-        self.DisableStory('structured-clone-long-string-serialize.html',
-            [story.expectations.ALL_ANDROID], 'crbug.com/733655')
-        self.DisableStory('structured-clone-json-deserialize.html',
-            [story.expectations.ANDROID_ONE], 'crbug.com/733655')
-        self.DisableStory('structured-clone-json-serialize.html',
-            [story.expectations.ANDROID_ONE], 'crbug.com/733655')
-
+        pass # Nothing disabled.
     return StoryExpectations()
 
 

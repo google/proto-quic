@@ -48,8 +48,8 @@ class TaskSchedulerDelayedTaskManagerTest : public testing::Test {
 
  protected:
   std::unique_ptr<Task> CreateTask(TimeDelta delay) {
-    auto task =
-        MakeUnique<Task>(FROM_HERE, BindOnce(&DoNothing), TaskTraits(), delay);
+    auto task = std::make_unique<Task>(FROM_HERE, BindOnce(&DoNothing),
+                                       TaskTraits(), delay);
 
     // The constructor of Task computes |delayed_run_time| by adding |delay| to
     // the real time. Recompute it by adding |delay| to the mock time.
@@ -165,16 +165,16 @@ TEST_F(TaskSchedulerDelayedTaskManagerTest, DelayedTaskRunsAfterDelay) {
 // they are ripe for execution.
 TEST_F(TaskSchedulerDelayedTaskManagerTest, DelayedTasksRunAfterDelay) {
   delayed_task_manager_.Start(service_thread_task_runner_);
-  auto task_a = MakeUnique<Task>(FROM_HERE, BindOnce(&DoNothing), TaskTraits(),
-                                 TimeDelta::FromHours(1));
+  auto task_a = std::make_unique<Task>(FROM_HERE, BindOnce(&DoNothing),
+                                       TaskTraits(), TimeDelta::FromHours(1));
   const Task* task_a_raw = task_a.get();
 
-  auto task_b = MakeUnique<Task>(FROM_HERE, BindOnce(&DoNothing), TaskTraits(),
-                                 TimeDelta::FromHours(2));
+  auto task_b = std::make_unique<Task>(FROM_HERE, BindOnce(&DoNothing),
+                                       TaskTraits(), TimeDelta::FromHours(2));
   const Task* task_b_raw = task_b.get();
 
-  auto task_c = MakeUnique<Task>(FROM_HERE, BindOnce(&DoNothing), TaskTraits(),
-                                 TimeDelta::FromHours(1));
+  auto task_c = std::make_unique<Task>(FROM_HERE, BindOnce(&DoNothing),
+                                       TaskTraits(), TimeDelta::FromHours(1));
   const Task* task_c_raw = task_c.get();
 
   // Send tasks to the DelayedTaskManager.

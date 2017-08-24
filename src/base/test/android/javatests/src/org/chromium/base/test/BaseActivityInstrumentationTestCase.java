@@ -5,6 +5,7 @@
 package org.chromium.base.test;
 
 import android.app.Activity;
+import android.support.annotation.CallSuper;
 import android.test.ActivityInstrumentationTestCase2;
 
 /**
@@ -21,5 +22,15 @@ public class BaseActivityInstrumentationTestCase<T extends Activity>
      */
     public BaseActivityInstrumentationTestCase(Class<T> activityClass) {
         super(activityClass);
+    }
+
+    @CallSuper
+    protected void setUp() throws Exception {
+        super.setUp();
+    }
+
+    @CallSuper
+    protected void tearDown() throws Exception {
+        super.tearDown();
     }
 }

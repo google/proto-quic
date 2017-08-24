@@ -125,6 +125,15 @@ class NET_EXPORT_PRIVATE ConnectJob {
 
   const NetLogWithSource& net_log() const { return net_log_; }
 
+  // TODO(mmenke):  Remove when https://crbug.com/756993 is figured out.
+
+  // Checks that |group_name_| and |group_name_copy_| are the same. If not,
+  // crashes.
+  void CheckGroupName() const;
+
+  // Copies |group_name_| and |group_name_copy_| to the stack and crashes.
+  void LogGroupNameAndCrash() const;
+
  protected:
   RequestPriority priority() const { return priority_; }
   ClientSocketPool::RespectLimits respect_limits() const {
@@ -148,6 +157,8 @@ class NET_EXPORT_PRIVATE ConnectJob {
   void OnTimeout();
 
   const std::string group_name_;
+  // TODO(mmenke):  Remove when https://crbug.com/756993 is figured out.
+  const std::string group_name_copy_;
   const base::TimeDelta timeout_duration_;
   // TODO(akalin): Support reprioritization.
   const RequestPriority priority_;

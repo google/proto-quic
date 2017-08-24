@@ -15,7 +15,7 @@ TEST(NinjaBundleDataTargetWriter, Run) {
   Err err;
   TestWithScope setup;
 
-  Target bundle_data(setup.settings(), Label(SourceDir("//foo/"), "data"), {});
+  Target bundle_data(setup.settings(), Label(SourceDir("//foo/"), "data"));
   bundle_data.set_output_type(Target::BUNDLE_DATA);
   bundle_data.sources().push_back(SourceFile("//foo/input1.txt"));
   bundle_data.sources().push_back(SourceFile("//foo/input2.txt"));

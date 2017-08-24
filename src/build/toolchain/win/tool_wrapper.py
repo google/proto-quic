@@ -111,6 +111,9 @@ class WinTool(object):
       shutil.copytree(source, dest)
     else:
       shutil.copy2(source, dest)
+      # Try to diagnose crbug.com/741603
+      if not os.path.exists(dest):
+        raise Exception("Copying of %s to %s failed" % (source, dest))
 
   def ExecLinkWrapper(self, arch, use_separate_mspdbsrv, *args):
     """Filter diagnostic output from link that looks like:

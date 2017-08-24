@@ -20,7 +20,6 @@ import find_depot_tools
 find_depot_tools.add_depot_tools_to_path()
 import rietveld
 import roll_dep_svn
-from gclient import GClientKeywords
 from third_party import upload
 
 # Avoid depot_tools/third_party/upload.py print verbose messages.
@@ -62,6 +61,10 @@ CommitInfo = collections.namedtuple('CommitInfo', ['commit_position',
 CLInfo = collections.namedtuple('CLInfo', ['issue', 'url', 'rietveld_server'])
 
 
+def _VarLookup(local_scope):
+  return lambda var_name: local_scope['vars'][var_name]
+
+
 def _PosixPath(path):
   """Convert a possibly-Windows path to a posix-style path."""
   (_, path) = os.path.splitdrive(path)
@@ -94,9 +97,8 @@ def _ParseDepsFile(filename):
 
 def _ParseDepsDict(deps_content):
   local_scope = {}
-  var = GClientKeywords.VarImpl({}, local_scope)
   global_scope = {
-    'Var': var.Lookup,
+    'Var': _VarLookup(local_scope),
     'deps_os': {},
   }
   exec(deps_content, global_scope, local_scope)

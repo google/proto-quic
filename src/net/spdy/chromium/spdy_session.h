@@ -91,7 +91,7 @@ class TransportSecurityState;
 // NOTE: There's an enum of the same name (also with numeric suffixes)
 // in histograms.xml. Be sure to add new values there also.
 enum SpdyProtocolErrorDetails {
-  // SpdyFramer::SpdyFramerError mappings.
+  // Http2DecoderAdapter::SpdyFramerError mappings.
   SPDY_ERROR_NO_ERROR = 0,
   SPDY_ERROR_INVALID_STREAM_ID = 38,
   SPDY_ERROR_INVALID_CONTROL_FRAME = 1,
@@ -142,16 +142,16 @@ enum SpdyProtocolErrorDetails {
   NUM_SPDY_PROTOCOL_ERROR_DETAILS = 43,
 };
 SpdyProtocolErrorDetails NET_EXPORT_PRIVATE
-MapFramerErrorToProtocolError(SpdyFramer::SpdyFramerError error);
+MapFramerErrorToProtocolError(Http2DecoderAdapter::SpdyFramerError error);
 Error NET_EXPORT_PRIVATE
-MapFramerErrorToNetError(SpdyFramer::SpdyFramerError error);
+MapFramerErrorToNetError(Http2DecoderAdapter::SpdyFramerError error);
 SpdyProtocolErrorDetails NET_EXPORT_PRIVATE
 MapRstStreamStatusToProtocolError(SpdyErrorCode error_code);
 SpdyErrorCode NET_EXPORT_PRIVATE MapNetErrorToGoAwayStatus(Error err);
 
 // If these compile asserts fail then SpdyProtocolErrorDetails needs
 // to be updated with new values, as do the mapping functions above.
-static_assert(17 == SpdyFramer::LAST_ERROR,
+static_assert(17 == Http2DecoderAdapter::LAST_ERROR,
               "SpdyProtocolErrorDetails / Spdy Errors mismatch");
 static_assert(13 == SpdyErrorCode::ERROR_CODE_MAX,
               "SpdyProtocolErrorDetails / SpdyErrorCode mismatch");
@@ -846,7 +846,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   void DeleteExpiredPushedStreams();
 
   // BufferedSpdyFramerVisitorInterface:
-  void OnError(SpdyFramer::SpdyFramerError spdy_framer_error) override;
+  void OnError(Http2DecoderAdapter::SpdyFramerError spdy_framer_error) override;
   void OnStreamError(SpdyStreamId stream_id,
                      const SpdyString& description) override;
   void OnPing(SpdyPingId unique_id, bool is_ack) override;

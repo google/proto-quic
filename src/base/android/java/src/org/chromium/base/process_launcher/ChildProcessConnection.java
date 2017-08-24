@@ -20,6 +20,7 @@ import org.chromium.base.TraceEvent;
 import org.chromium.base.VisibleForTesting;
 import org.chromium.base.metrics.CachedMetrics;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -172,11 +173,11 @@ public class ChildProcessConnection {
 
     private static class ConnectionParams {
         final Bundle mConnectionBundle;
-        final IBinder mCallback;
+        final List<IBinder> mClientInterfaces;
 
-        ConnectionParams(Bundle connectionBundle, IBinder callback) {
+        ConnectionParams(Bundle connectionBundle, List<IBinder> clientInterfaces) {
             mConnectionBundle = connectionBundle;
-            mCallback = callback;
+            mClientInterfaces = clientInterfaces;
         }
     }
 
@@ -228,8 +229,9 @@ public class ChildProcessConnection {
     // to start() and stop().
     private final ChildServiceConnection mWaivedBinding;
 
-    // Incremented on addStrongBinding(), decremented on removeStrongBinding().
+    // Refcount of bindings.
     private int mStrongBindingCount;
+    private int mModerateBindingCount;
 
     // Indicates whether the connection only has the waived binding (if the connection is unbound,
     // it contains the state at time of unbinding).
@@ -366,12 +368,12 @@ public class ChildProcessConnection {
      * Sets-up the connection after it was started with start().
      * @param connectionBundle a bundle passed to the service that can be used to pass various
      *         parameters to the service
-     * @param callback optional client specified callbacks that the child can use to communicate
-     *                 with the parent process
+     * @param clientInterfaces optional client specified interfaces that the child can use to
+     *         communicate with the parent process
      * @param connectionCallback will be called exactly once after the connection is set up or the
      *                           setup fails
      */
-    public void setupConnection(Bundle connectionBundle, @Nullable IBinder callback,
+    public void setupConnection(Bundle connectionBundle, @Nullable List<IBinder> clientInterfaces,
             ConnectionCallback connectionCallback) {
         assert isRunningOnLauncherThread();
         assert mConnectionParams == null;
@@ -383,7 +385,7 @@ public class ChildProcessConnection {
         try {
             TraceEvent.begin("ChildProcessConnection.setupConnection");
             mConnectionCallback = connectionCallback;
-            mConnectionParams = new ConnectionParams(connectionBundle, callback);
+            mConnectionParams = new ConnectionParams(connectionBundle, clientInterfaces);
             // Run the setup if the service is already connected. If not, doConnectionSetup() will
             // be called from onServiceConnected().
             if (mServiceConnectComplete) {
@@ -508,7 +510,7 @@ public class ChildProcessConnection {
             };
             try {
                 mService.setupConnection(mConnectionParams.mConnectionBundle, pidCallback,
-                        mConnectionParams.mCallback);
+                        mConnectionParams.mClientInterfaces);
             } catch (RemoteException re) {
                 Log.e(TAG, "Failed to setup connection.", re);
             }
@@ -571,17 +573,6 @@ public class ChildProcessConnection {
         updateWaivedBoundOnlyState();
     }
 
-    public void dropOomBindings() {
-        assert isRunningOnLauncherThread();
-        mInitialBinding.unbind();
-
-        mStrongBindingCount = 0;
-        mStrongBinding.unbind();
-        updateWaivedBoundOnlyState();
-
-        mModerateBinding.unbind();
-    }
-
     public void addStrongBinding() {
         assert isRunningOnLauncherThread();
         if (!isConnected()) {
@@ -620,8 +611,11 @@ public class ChildProcessConnection {
             Log.w(TAG, "The connection is not bound for %d", getPid());
             return;
         }
-        mModerateBinding.bind();
-        updateWaivedBoundOnlyState();
+        if (mModerateBindingCount == 0) {
+            mModerateBinding.bind();
+            updateWaivedBoundOnlyState();
+        }
+        mModerateBindingCount++;
     }
 
     public void removeModerateBinding() {
@@ -630,8 +624,12 @@ public class ChildProcessConnection {
             Log.w(TAG, "The connection is not bound for %d", getPid());
             return;
         }
-        mModerateBinding.unbind();
-        updateWaivedBoundOnlyState();
+        assert mModerateBindingCount > 0;
+        mModerateBindingCount--;
+        if (mModerateBindingCount == 0) {
+            mModerateBinding.unbind();
+            updateWaivedBoundOnlyState();
+        }
     }
 
     /**

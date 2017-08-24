@@ -68,12 +68,14 @@ class NET_EXPORT_PRIVATE StreamSocket : public Socket {
   virtual void Disconnect() = 0;
 
   // Called to test if the connection is still alive.  Returns false if a
-  // connection wasn't established or the connection is dead.
+  // connection wasn't established or the connection is dead.  True is returned
+  // if the connection was terminated, but there is unread data in the incoming
+  // buffer.
   virtual bool IsConnected() const = 0;
 
   // Called to test if the connection is still alive and idle.  Returns false
-  // if a connection wasn't established, the connection is dead, or some data
-  // have been received.
+  // if a connection wasn't established, the connection is dead, or there is
+  // unread data in the incoming buffer.
   virtual bool IsConnectedAndIdle() const = 0;
 
   // Copies the peer address to |address| and returns a network error code.

@@ -85,10 +85,6 @@ class Setup {
   Builder& builder() { return builder_; }
   LoaderImpl* loader() { return loader_.get(); }
 
-  const InputFile* dotfile_input_file() const {
-    return dotfile_input_file_.get();
-  }
-
   // Name of the file in the root build directory that contains the build
   // arguements.
   static const char kBuildArgFileName[];

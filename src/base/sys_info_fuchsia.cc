@@ -27,4 +27,9 @@ int SysInfo::NumberOfProcessors() {
   return mx_system_get_num_cpus();
 }
 
+// static
+int64_t SysInfo::AmountOfVirtualMemory() {
+  return 0;
+}
+
 }  // namespace base

@@ -183,6 +183,7 @@ bool AllocationContextTracker::GetContextSnapshot(AllocationContext* ctx) {
 
   switch (mode) {
     case CaptureMode::DISABLED:
+    case CaptureMode::NO_STACK:
       {
         break;
       }

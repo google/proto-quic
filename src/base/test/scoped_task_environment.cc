@@ -106,7 +106,7 @@ ScopedTaskEnvironment::ScopedTaskEnvironment(
   const TimeDelta kSuggestedReclaimTime = TimeDelta::Max();
   const SchedulerWorkerPoolParams worker_pool_params(kMaxThreads,
                                                      kSuggestedReclaimTime);
-  TaskScheduler::SetInstance(MakeUnique<internal::TaskSchedulerImpl>(
+  TaskScheduler::SetInstance(std::make_unique<internal::TaskSchedulerImpl>(
       "ScopedTaskEnvironment", WrapUnique(task_tracker_)));
   task_scheduler_ = TaskScheduler::GetInstance();
   TaskScheduler::GetInstance()->Start({worker_pool_params, worker_pool_params,

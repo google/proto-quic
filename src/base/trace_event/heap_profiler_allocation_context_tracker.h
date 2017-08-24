@@ -23,10 +23,11 @@ namespace trace_event {
 // details.
 class BASE_EXPORT AllocationContextTracker {
  public:
-  enum class CaptureMode: int32_t {
-    DISABLED,       // Don't capture anything
-    PSEUDO_STACK,   // GetContextSnapshot() returns pseudo stack trace
-    NATIVE_STACK    // GetContextSnapshot() returns native (real) stack trace
+  enum class CaptureMode : int32_t {
+    DISABLED,      // Don't capture anything
+    PSEUDO_STACK,  // GetContextSnapshot() returns pseudo stack trace
+    NATIVE_STACK,  // GetContextSnapshot() returns native (real) stack trace
+    NO_STACK,  // GetContextSnapshot() returns thread names and task contexts.
   };
 
   // Stack frame constructed from trace events in codebase.

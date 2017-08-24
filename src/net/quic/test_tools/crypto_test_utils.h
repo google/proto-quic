@@ -51,8 +51,6 @@ class TestChannelIDKey : public ChannelIDKey {
 
   std::string SerializeKey() const override;
 
-  const EVP_PKEY* get_evp_pkey() const { return ecdsa_key_.get(); }
-
  private:
   bssl::UniquePtr<EVP_PKEY> ecdsa_key_;
 };

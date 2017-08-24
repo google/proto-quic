@@ -46,8 +46,11 @@ class TestNoBenchmarkNamesDuplication(unittest.TestCase):
                         'Multiple benchmarks with the same name %s are '
                         'found: %s' % (n, str(names_to_benchmarks[n])))
 
+
 class TestBenchmarkNamingMobile(unittest.TestCase):
 
+  # TODO(rnephew): This needs to be fixed after we move to CanRunOnBrowser.
+  @decorators.Disabled('all')
   def runTest(self):
     all_benchmarks = _GetAllPerfBenchmarks()
     names_to_benchmarks = defaultdict(list)

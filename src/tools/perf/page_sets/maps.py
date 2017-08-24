@@ -9,16 +9,44 @@ from page_sets import webgl_supported_shared_state
 
 
 class MapsPage(page_module.Page):
+  """Google Maps benchmarks and pixel tests.
+
+  The Maps team gave us a build of their test. The only modification
+  to the test was to config.js, where the width and height query args
+  were set to 800 by 600. The WPR was recorded with:
+
+  tools/perf/record_wpr smoothness_maps --browser=system
+
+  This produced maps_???.wpr, maps_???.wpr.sha1 and maps.json.
+
+  It's worth noting that telemetry no longer allows replaying a URL that
+  refers to localhost. If the recording was created for the locahost URL, one
+  can update the host name by running:
+
+    web-page-replay/httparchive.py remap-host maps_004.wpr \
+    localhost:8000 map-test
+
+  (web-page-replay/ can be found in third_party/catapult/telemetry/third_party/)
+
+  After updating the host name in the WPR archive, or recording a
+  newly-numbered WPR archive, please remember to update
+  content/test/gpu/gpu_tests/maps_integration_test.py (and potentially
+  its pixel expectations) as well.
+
+  To upload the maps_???.wpr to cloud storage, one would run:
+
+    depot_tools/upload_to_google_storage.py --bucket=chromium-telemetry \
+    maps_???.wpr
+  """
 
   def __init__(self, page_set):
-    url = 'http://localhost:8000/performance.html'
+    url = 'http://map-test/performance.html'
     super(MapsPage, self).__init__(
       url=url,
       page_set=page_set,
       shared_page_state_class=(
           webgl_supported_shared_state.WebGLSupportedSharedState),
       name=url)
-    self.archive_data_file = 'data/maps.json'
 
   @property
   def skipped_gpus(self):

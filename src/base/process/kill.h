@@ -70,9 +70,8 @@ BASE_EXPORT bool KillProcessGroup(ProcessHandle process_group_id);
 
 // Get the termination status of the process by interpreting the
 // circumstances of the child process' death. |exit_code| is set to
-// the status returned by waitpid() on POSIX, and from
-// GetExitCodeProcess() on Windows.  |exit_code| may be NULL if the
-// caller is not interested in it.  Note that on Linux, this function
+// the status returned by waitpid() on POSIX, and from GetExitCodeProcess() on
+// Windows, and may not be null.  Note that on Linux, this function
 // will only return a useful result the first time it is called after
 // the child exits (because it will reap the child and the information
 // will no longer be available).

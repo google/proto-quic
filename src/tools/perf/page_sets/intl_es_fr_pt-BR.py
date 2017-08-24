@@ -16,7 +16,6 @@ class IntlEsFrPtBrPage(page_cycler_story.PageCyclerStory):
         shared_page_state_class=shared_page_state.SharedDesktopPageState,
         cache_temperature=cache_temperature,
         name=url)
-    self.archive_data_file = 'data/intl_es_fr_pt-BR.json'
 
 
 class IntlEsFrPtBrPageSet(story.StorySet):

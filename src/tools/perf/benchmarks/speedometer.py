@@ -18,6 +18,7 @@ engine, CSS style resolution, layout, and other technologies.
 
 import os
 
+from core import path_util
 from core import perf_benchmark
 
 from telemetry import benchmark
@@ -29,6 +30,10 @@ from telemetry.value import list_of_scalar_values
 from metrics import keychain_metric
 
 
+_SPEEDOMETER_DIR = os.path.join(path_util.GetChromiumSrcDir(),
+    'third_party', 'WebKit', 'PerformanceTests', 'Speedometer')
+
+
 class SpeedometerMeasurement(legacy_page_test.LegacyPageTest):
   enabled_suites = [
       'VanillaJS-TodoMVC',
@@ -37,7 +42,7 @@ class SpeedometerMeasurement(legacy_page_test.LegacyPageTest):
       'jQuery-TodoMVC',
       'AngularJS-TodoMVC',
       'React-TodoMVC',
-      'FlightJS-TodoMVC'
+      'Flight-TodoMVC'
   ]
 
   def __init__(self):
@@ -98,18 +103,14 @@ class Speedometer(perf_benchmark.PerfBenchmark):
     return 'speedometer'
 
   def CreateStorySet(self, options):
-    ps = story.StorySet(
-        base_dir=os.path.dirname(os.path.abspath(__file__)),
-        archive_data_file='../page_sets/data/speedometer.json',
-        cloud_storage_bucket=story.PUBLIC_BUCKET)
+    ps = story.StorySet(base_dir=_SPEEDOMETER_DIR,
+        serving_dirs=[_SPEEDOMETER_DIR])
     ps.AddStory(page_module.Page(
-        'http://browserbench.org/Speedometer/', ps, ps.base_dir,
-        make_javascript_deterministic=False,
-        name='http://browserbench.org/Speedometer/'))
+        'file://index.html', ps, ps.base_dir, name='Speedometer'))
     return ps
 
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # http://browserbench.org/Speedometer/ not disabled.
+        pass # Speedometer1.0 not disabled.
     return StoryExpectations()

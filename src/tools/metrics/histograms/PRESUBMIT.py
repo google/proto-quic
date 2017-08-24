@@ -20,15 +20,26 @@ def ValidationNeeded(input_api):
 
 def CheckChange(input_api, output_api):
   """Checks that histograms.xml is pretty-printed and well-formatted."""
+  results = []
   if ValidationNeeded(input_api):
     cwd = input_api.PresubmitLocalPath()
+
+    exit_code = input_api.subprocess.call(
+        ['python', 'pretty_print.py', '--presubmit', '--non-interactive'],
+        cwd=cwd)
+    if exit_code != 0:
+      results.append(output_api.PresubmitError(
+          'histograms.xml is not formatted correctly; please run '
+          'git cl format %s to fix.' % cwd))
+
     exit_code = input_api.subprocess.call(
         ['python', 'validate_format.py'], cwd=cwd)
     if exit_code != 0:
-      return [output_api.PresubmitError(
+      results.append(output_api.PresubmitError(
           'histograms.xml is not well formatted; run %s/validate_format.py '
-          'and fix the reported errors' % cwd)]
-  return []
+          'and fix the reported errors.' % cwd))
+
+  return results
 
 
 def CheckChangeOnUpload(input_api, output_api):

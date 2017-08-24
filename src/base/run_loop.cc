@@ -244,10 +244,40 @@ void RunLoop::QuitCurrentWhenIdleDeprecated() {
   tls_delegate.Get().Get()->active_run_loops_.top()->QuitWhenIdle();
 }
 
+#if DCHECK_IS_ON()
+RunLoop::ScopedDisallowRunningForTesting::ScopedDisallowRunningForTesting()
+    : current_delegate_(tls_delegate.Get().Get()),
+      previous_run_allowance_(
+          current_delegate_ ? current_delegate_->allow_running_for_testing_
+                            : false) {
+  if (current_delegate_)
+    current_delegate_->allow_running_for_testing_ = false;
+}
+
+RunLoop::ScopedDisallowRunningForTesting::~ScopedDisallowRunningForTesting() {
+  DCHECK_EQ(current_delegate_, tls_delegate.Get().Get());
+  if (current_delegate_)
+    current_delegate_->allow_running_for_testing_ = previous_run_allowance_;
+}
+#else   // DCHECK_IS_ON()
+// Defined out of line so that the compiler doesn't inline these and realize
+// the scope has no effect and then throws an "unused variable" warning in
+// non-dcheck builds.
+RunLoop::ScopedDisallowRunningForTesting::ScopedDisallowRunningForTesting() =
+    default;
+RunLoop::ScopedDisallowRunningForTesting::~ScopedDisallowRunningForTesting() =
+    default;
+#endif  // DCHECK_IS_ON()
+
 bool RunLoop::BeforeRun() {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
 #if DCHECK_IS_ON()
+  DCHECK(delegate_->allow_running_for_testing_)
+      << "RunLoop::Run() isn't allowed in the scope of a "
+         "ScopedDisallowRunningForTesting. Hint: if mixing "
+         "TestMockTimeTaskRunners on same thread, use TestMockTimeTaskRunner's "
+         "API instead of RunLoop to drive individual task runners.";
   DCHECK(!run_called_);
   run_called_ = true;
 #endif  // DCHECK_IS_ON()

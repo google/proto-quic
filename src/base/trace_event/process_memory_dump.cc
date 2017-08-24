@@ -184,6 +184,7 @@ base::Optional<size_t> ProcessMemoryDump::CountResidentBytesInSharedMemory(
 
 #endif  // defined(COUNT_RESIDENT_BYTES_SUPPORTED)
 
+ProcessMemoryDump::ProcessMemoryDump() {}
 ProcessMemoryDump::ProcessMemoryDump(
     scoped_refptr<HeapProfilerSerializationState>
         heap_profiler_serialization_state,
@@ -197,14 +198,14 @@ ProcessMemoryDump::~ProcessMemoryDump() {}
 MemoryAllocatorDump* ProcessMemoryDump::CreateAllocatorDump(
     const std::string& absolute_name) {
   return AddAllocatorDumpInternal(
-      MakeUnique<MemoryAllocatorDump>(absolute_name, this));
+      std::make_unique<MemoryAllocatorDump>(absolute_name, this));
 }
 
 MemoryAllocatorDump* ProcessMemoryDump::CreateAllocatorDump(
     const std::string& absolute_name,
     const MemoryAllocatorDumpGuid& guid) {
   return AddAllocatorDumpInternal(
-      MakeUnique<MemoryAllocatorDump>(absolute_name, this, guid));
+      std::make_unique<MemoryAllocatorDump>(absolute_name, this, guid));
 }
 
 MemoryAllocatorDump* ProcessMemoryDump::AddAllocatorDumpInternal(
@@ -391,27 +392,23 @@ void ProcessMemoryDump::AddOverridableOwnershipEdge(
 
 void ProcessMemoryDump::CreateSharedMemoryOwnershipEdge(
     const MemoryAllocatorDumpGuid& client_local_dump_guid,
-    const MemoryAllocatorDumpGuid& client_global_dump_guid,
     const UnguessableToken& shared_memory_guid,
     int importance) {
-  CreateSharedMemoryOwnershipEdgeInternal(
-      client_local_dump_guid, client_global_dump_guid, shared_memory_guid,
-      importance, false /*is_weak*/);
+  CreateSharedMemoryOwnershipEdgeInternal(client_local_dump_guid,
+                                          shared_memory_guid, importance,
+                                          false /*is_weak*/);
 }
 
 void ProcessMemoryDump::CreateWeakSharedMemoryOwnershipEdge(
     const MemoryAllocatorDumpGuid& client_local_dump_guid,
-    const MemoryAllocatorDumpGuid& client_global_dump_guid,
     const UnguessableToken& shared_memory_guid,
     int importance) {
   CreateSharedMemoryOwnershipEdgeInternal(
-      client_local_dump_guid, client_global_dump_guid, shared_memory_guid,
-      importance, true /*is_weak*/);
+      client_local_dump_guid, shared_memory_guid, importance, true /*is_weak*/);
 }
 
 void ProcessMemoryDump::CreateSharedMemoryOwnershipEdgeInternal(
     const MemoryAllocatorDumpGuid& client_local_dump_guid,
-    const MemoryAllocatorDumpGuid& client_global_dump_guid,
     const UnguessableToken& shared_memory_guid,
     int importance,
     bool is_weak) {
@@ -421,8 +418,8 @@ void ProcessMemoryDump::CreateSharedMemoryOwnershipEdgeInternal(
 
   // The guid of the local dump created by SharedMemoryTracker for the memory
   // segment.
-  auto local_shm_guid =
-      SharedMemoryTracker::GetDumpIdForTracing(shared_memory_guid);
+  auto local_shm_guid = MemoryAllocatorDump::GetDumpIdFromName(
+      SharedMemoryTracker::GetDumpNameForTracing(shared_memory_guid));
 
   // The dump guid of the global dump created by the tracker for the memory
   // segment.

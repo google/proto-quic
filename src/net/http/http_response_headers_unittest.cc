@@ -2044,28 +2044,6 @@ INSTANTIATE_TEST_CASE_P(HttpResponseHeaders,
                         UpdateWithNewRangeTest,
                         testing::ValuesIn(update_range_tests));
 
-TEST(HttpResponseHeadersTest, ToNetLogParamAndBackAgain) {
-  std::string headers("HTTP/1.1 404\n"
-                      "Content-Length: 450\n"
-                      "Connection: keep-alive\n");
-  HeadersToRaw(&headers);
-  scoped_refptr<HttpResponseHeaders> parsed(new HttpResponseHeaders(headers));
-
-  std::unique_ptr<base::Value> event_param(parsed->NetLogCallback(
-      NetLogCaptureMode::IncludeCookiesAndCredentials()));
-  scoped_refptr<HttpResponseHeaders> recreated;
-
-  ASSERT_TRUE(
-      HttpResponseHeaders::FromNetLogParam(event_param.get(), &recreated));
-  ASSERT_TRUE(recreated.get());
-  EXPECT_EQ(parsed->GetHttpVersion(), recreated->GetHttpVersion());
-  EXPECT_EQ(parsed->response_code(), recreated->response_code());
-  EXPECT_EQ(parsed->GetContentLength(), recreated->GetContentLength());
-  EXPECT_EQ(parsed->IsKeepAlive(), recreated->IsKeepAlive());
-
-  EXPECT_EQ(ToSimpleString(parsed), ToSimpleString(parsed));
-}
-
 TEST_F(HttpResponseHeadersCacheControlTest, AbsentMaxAgeReturnsFalse) {
   InitializeHeadersWithCacheControl("nocache");
   EXPECT_FALSE(headers()->GetMaxAgeValue(TimeDeltaPointer()));

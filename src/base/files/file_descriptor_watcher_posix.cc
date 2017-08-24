@@ -164,7 +164,7 @@ FileDescriptorWatcher::Controller::Controller(MessageLoopForIO::Mode mode,
       weak_factory_(this) {
   DCHECK(!callback_.is_null());
   DCHECK(message_loop_for_io_task_runner_);
-  watcher_ = MakeUnique<Watcher>(weak_factory_.GetWeakPtr(), mode, fd);
+  watcher_ = std::make_unique<Watcher>(weak_factory_.GetWeakPtr(), mode, fd);
   StartWatching();
 }
 

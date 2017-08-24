@@ -7,7 +7,6 @@
 
 #include <string>
 
-#include "base/containers/flat_set.h"
 #include "base/files/file_path.h"
 #include "base/logging.h"
 #include "base/macros.h"
@@ -62,7 +61,5 @@ class InputFile {
 
   DISALLOW_COPY_AND_ASSIGN(InputFile);
 };
-
-using InputFileSet = base::flat_set<const InputFile*>;
 
 #endif  // TOOLS_GN_INPUT_FILE_H_

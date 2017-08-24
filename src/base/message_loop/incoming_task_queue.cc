@@ -86,11 +86,6 @@ bool IncomingTaskQueue::AddToIncomingQueue(
   return PostPendingTask(&pending_task);
 }
 
-bool IncomingTaskQueue::HasHighResolutionTasks() {
-  AutoLock lock(incoming_queue_lock_);
-  return high_res_task_count_ > 0;
-}
-
 bool IncomingTaskQueue::IsIdleForTesting() {
   AutoLock lock(incoming_queue_lock_);
   return incoming_queue_.empty();

@@ -103,19 +103,6 @@ TEST(SpdyHeaderBlockTest, CopyBlocks) {
   EXPECT_EQ(block1, block3);
 }
 
-TEST(SpdyHeaderBlockTest, ToNetLogParamAndBackAgain) {
-  SpdyHeaderBlock headers;
-  headers["A"] = "a";
-  headers["B"] = "b";
-
-  std::unique_ptr<base::Value> event_param(SpdyHeaderBlockNetLogCallback(
-      &headers, NetLogCaptureMode::IncludeCookiesAndCredentials()));
-
-  SpdyHeaderBlock headers2;
-  ASSERT_TRUE(SpdyHeaderBlockFromNetLogParam(event_param.get(), &headers2));
-  EXPECT_EQ(headers, headers2);
-}
-
 TEST(SpdyHeaderBlockTest, Equality) {
   // Test equality and inequality operators.
   SpdyHeaderBlock block1;

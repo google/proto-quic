@@ -80,58 +80,72 @@ base::Optional<int32_t> ObservationBuffer::GetPercentile(
   return weighted_observations.at(weighted_observations.size() - 1).value;
 }
 
-base::Optional<int32_t> ObservationBuffer::GetWeightedAverage(
+void ObservationBuffer::GetPercentileForEachHostWithCounts(
     base::TimeTicks begin_timestamp,
-    const base::Optional<int32_t>& current_signal_strength,
+    int percentile,
     const std::vector<NetworkQualityObservationSource>&
-        disallowed_observation_sources) const {
-  // Stores weighted observations in increasing order by value.
-  std::vector<WeightedObservation> weighted_observations;
+        disallowed_observation_sources,
+    const base::Optional<std::set<IPHash>>& host_filter,
+    std::map<IPHash, int32_t>* host_keyed_percentiles,
+    std::map<IPHash, size_t>* host_keyed_counts) const {
+  DCHECK_GE(Capacity(), Size());
+  DCHECK_LE(0, percentile);
+  DCHECK_GE(100, percentile);
 
-  // Total weight of all observations in |weighted_observations|.
-  double total_weight = 0.0;
+  host_keyed_percentiles->clear();
+  host_keyed_counts->clear();
 
-  ComputeWeightedObservations(begin_timestamp, current_signal_strength,
-                              &weighted_observations, &total_weight,
-                              disallowed_observation_sources);
-  if (weighted_observations.empty())
-    return base::nullopt;
+  // Filter the observations based on timestamp, disallowed sources and the
+  // presence of a valid host tag. Split the observations into a map keyed by
+  // the remote host to make it easy to calculate percentiles for each host.
+  std::map<IPHash, std::vector<int32_t>> host_keyed_observations;
+  for (const auto& observation : observations_) {
+    // Look at only those observations which have a |host|.
+    if (!observation.host)
+      continue;
 
-  // Weighted average is the sum of observations times their respective
-  // weights, divided by the sum of the weights of all observations.
-  double total_weight_times_value = 0.0;
-  for (const auto& weighted_observation : weighted_observations) {
-    total_weight_times_value +=
-        (weighted_observation.weight * weighted_observation.value);
+    IPHash host = observation.host.value();
+    if (host_filter && (host_filter->find(host) == host_filter->end()))
+      continue;
+
+    // Filter the observations recorded before |begin_timestamp|.
+    if (observation.timestamp < begin_timestamp)
+      continue;
+
+    // If the source of the observation is in the list of disallowed sources,
+    // skip that observation.
+    bool disallowed = false;
+    for (const auto& disallowed_source : disallowed_observation_sources) {
+      if (disallowed_source == observation.source)
+        disallowed = true;
+    }
+    if (disallowed)
+      continue;
+
+    // Skip 0 values of RTT.
+    if (observation.value < 1)
+      continue;
+
+    // Create the map entry if it did not already exist. Does nothing if
+    // |host| was seen before.
+    host_keyed_observations.emplace(host, std::vector<int32_t>());
+    host_keyed_observations[host].push_back(observation.value);
   }
 
-  return static_cast<int32_t>(total_weight_times_value / total_weight);
-}
+  if (host_keyed_observations.empty())
+    return;
 
-base::Optional<int32_t> ObservationBuffer::GetUnweightedAverage(
-    base::TimeTicks begin_timestamp,
-    const base::Optional<int32_t>& current_signal_strength,
-    const std::vector<NetworkQualityObservationSource>&
-        disallowed_observation_sources) const {
-  // Stores weighted observations in increasing order by value.
-  std::vector<WeightedObservation> weighted_observations;
-
-  // Total weight of all observations in |weighted_observations|.
-  double total_weight = 0.0;
-
-  ComputeWeightedObservations(begin_timestamp, current_signal_strength,
-                              &weighted_observations, &total_weight,
-                              disallowed_observation_sources);
-  if (weighted_observations.empty())
-    return base::nullopt;
-
-  // The unweighted average is the sum of all observations divided by the
-  // number of observations.
-  double total_value = 0.0;
-  for (const auto& weighted_observation : weighted_observations)
-    total_value += weighted_observation.value;
-
-  return total_value / weighted_observations.size();
+  // Calculate the percentile values for each host.
+  for (auto& host_observations : host_keyed_observations) {
+    IPHash host = host_observations.first;
+    auto& observations = host_observations.second;
+    std::sort(observations.begin(), observations.end());
+    size_t count = observations.size();
+    DCHECK_GT(count, 0u);
+    (*host_keyed_counts)[host] = count;
+    int percentile_index = ((count - 1) * percentile) / 100;
+    (*host_keyed_percentiles)[host] = observations[percentile_index];
+  }
 }
 
 void ObservationBuffer::ComputeWeightedObservations(

@@ -48,7 +48,7 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
     std::unique_ptr<win::ScopedCOMInitializer> com_initializer;
     if (outer_->backward_compatibility_ ==
         SchedulerBackwardCompatibility::INIT_COM_STA) {
-      com_initializer = MakeUnique<win::ScopedCOMInitializer>();
+      com_initializer = std::make_unique<win::ScopedCOMInitializer>();
     }
 #endif
 

@@ -14,7 +14,6 @@ class KeyMobileSitesPage(page_module.Page):
         url=url, page_set=page_set, name=name,
         shared_page_state_class=shared_page_state.SharedMobilePageState,
         credentials_path='data/credentials.json', tags=tags)
-    self.archive_data_file = 'data/key_mobile_sites.json'
 
 
 class CapitolVolkswagenPage(KeyMobileSitesPage):

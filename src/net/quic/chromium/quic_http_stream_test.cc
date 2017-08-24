@@ -1014,10 +1014,9 @@ TEST_P(QuicHttpStreamTest, LogGranularQuicConnectionError) {
   EXPECT_EQ(QUIC_PEER_GOING_AWAY, details.quic_connection_error);
 }
 
-TEST_P(QuicHttpStreamTest, DoNotLogGranularQuicErrorIfHandshakeNotConfirmed) {
+TEST_P(QuicHttpStreamTest, LogGranularQuicErrorIfHandshakeNotConfirmed) {
   // By default the test setup defaults handshake to be confirmed. Manually set
   // it to be not confirmed.
-  // Granular errors shouldn't be reported if handshake not confirmed.
   crypto_client_stream_factory_.set_handshake_mode(
       MockCryptoClientStream::ZERO_RTT);
 
@@ -1049,9 +1048,8 @@ TEST_P(QuicHttpStreamTest, DoNotLogGranularQuicErrorIfHandshakeNotConfirmed) {
   session_->connection()->OnConnectionCloseFrame(frame);
 
   NetErrorDetails details;
-  EXPECT_EQ(QUIC_NO_ERROR, details.quic_connection_error);
   stream_->PopulateNetErrorDetails(&details);
-  EXPECT_EQ(QUIC_NO_ERROR, details.quic_connection_error);
+  EXPECT_EQ(QUIC_PEER_GOING_AWAY, details.quic_connection_error);
 }
 
 // Regression test for http://crbug.com/409871

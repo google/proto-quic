@@ -88,7 +88,7 @@ TEST_F(SequenceLocalStorageSlotTest, GetReferenceModifiable) {
 
 // Verify that a move-only type can be stored in sequence local storage.
 TEST_F(SequenceLocalStorageSlotTest, SetGetWithMoveOnlyType) {
-  std::unique_ptr<int> int_unique_ptr = MakeUnique<int>(5);
+  std::unique_ptr<int> int_unique_ptr = std::make_unique<int>(5);
 
   SequenceLocalStorageSlot<std::unique_ptr<int>> slot;
   slot.Set(std::move(int_unique_ptr));

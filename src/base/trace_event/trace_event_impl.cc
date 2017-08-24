@@ -454,7 +454,7 @@ namespace trace_event_internal {
 
 std::unique_ptr<base::trace_event::ConvertableToTraceFormat>
 TraceID::AsConvertableToTraceFormat() const {
-  auto value = base::MakeUnique<base::trace_event::TracedValue>();
+  auto value = std::make_unique<base::trace_event::TracedValue>();
 
   if (scope_ != kGlobalScope)
     value->SetString("scope", scope_);

@@ -35,11 +35,11 @@ class _OopifBase(perf_benchmark.PerfBenchmark):
     return False
 
 
-@benchmark.Disabled('reference', 'android')
 @benchmark.Owner(emails=['nasko@chromium.org'])
 class PageCyclerV2BasicOopifIsolated(_OopifBase):
   """ A benchmark measuring performance of out-of-process iframes. """
   page_set = page_sets.OopifBasicPageSet
+  SUPPORTED_PLATFORMS = [story.expectations.ALL_DESKTOP]
 
   @classmethod
   def Name(cls):
@@ -55,16 +55,16 @@ class PageCyclerV2BasicOopifIsolated(_OopifBase):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # No tests disabled.
+        pass
     return StoryExpectations()
 
 
-@benchmark.Disabled('android')
 @benchmark.Owner(emails=['nasko@chromium.org'])
 class PageCyclerV2BasicOopif(_OopifBase):
   """ A benchmark measuring performance of the out-of-process iframes page
   set, without running in out-of-process iframes mode.. """
   page_set = page_sets.OopifBasicPageSet
+  SUPPORTED_PLATFORMS = [story.expectations.ALL_DESKTOP]
 
   @classmethod
   def Name(cls):
@@ -77,5 +77,5 @@ class PageCyclerV2BasicOopif(_OopifBase):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # No tests disabled.
+        pass
     return StoryExpectations()

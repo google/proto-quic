@@ -98,6 +98,7 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
     // stream, since the HttpStreamRequest may have modified the configuration
     // during stream processing.
     virtual void OnStreamFailed(int status,
+                                const NetErrorDetails& net_error_details,
                                 const SSLConfig& used_ssl_config) = 0;
 
     // Called when we have a certificate error for the request.

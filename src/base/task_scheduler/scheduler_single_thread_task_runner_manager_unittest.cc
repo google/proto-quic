@@ -42,7 +42,7 @@ class TaskSchedulerSingleThreadTaskRunnerManagerTest : public testing::Test {
     service_thread_.Start();
     delayed_task_manager_.Start(service_thread_.task_runner());
     single_thread_task_runner_manager_ =
-        MakeUnique<SchedulerSingleThreadTaskRunnerManager>(
+        std::make_unique<SchedulerSingleThreadTaskRunnerManager>(
             &task_tracker_, &delayed_task_manager_);
     StartSingleThreadTaskRunnerManagerFromSetUp();
   }

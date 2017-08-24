@@ -74,7 +74,7 @@ Value ParseValueOrScope(const Settings* settings,
   if (!parse_root)
     return Value();
 
-  std::unique_ptr<Scope> scope(new Scope(settings, {input_file}));
+  std::unique_ptr<Scope> scope(new Scope(settings));
   Value result = parse_root->Execute(scope.get(), err);
   if (err->has_error())
     return Value();

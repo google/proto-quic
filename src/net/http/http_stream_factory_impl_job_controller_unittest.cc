@@ -329,7 +329,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, ProxyResolutionFailsSync) {
   Initialize(request_info);
 
   EXPECT_CALL(request_delegate_,
-              OnStreamFailed(ERR_MANDATORY_PROXY_CONFIGURATION_FAILED, _))
+              OnStreamFailed(ERR_MANDATORY_PROXY_CONFIGURATION_FAILED, _, _))
       .Times(1);
   request_ =
       job_controller_->Start(&request_delegate_, nullptr, net_log_.bound(),
@@ -374,7 +374,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, ProxyResolutionFailsAsync) {
             job_controller_->GetLoadState());
 
   EXPECT_CALL(request_delegate_,
-              OnStreamFailed(ERR_MANDATORY_PROXY_CONFIGURATION_FAILED, _))
+              OnStreamFailed(ERR_MANDATORY_PROXY_CONFIGURATION_FAILED, _, _))
       .Times(1);
   proxy_resolver_factory->pending_requests()[0]->CompleteNowWithForwarder(
       ERR_FAILED, &resolver);
@@ -393,7 +393,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, NoSupportedProxies) {
 
   Initialize(request_info);
 
-  EXPECT_CALL(request_delegate_, OnStreamFailed(ERR_NO_SUPPORTED_PROXIES, _))
+  EXPECT_CALL(request_delegate_, OnStreamFailed(ERR_NO_SUPPORTED_PROXIES, _, _))
       .Times(1);
   request_ =
       job_controller_->Start(&request_delegate_, nullptr, net_log_.bound(),
@@ -586,7 +586,7 @@ TEST_P(JobControllerReconsiderProxyAfterErrorTest,
       CreateJobController(request_info);
   ASSERT_EQ(1u, proxy_resolver_factory->pending_requests().size());
 
-  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _)).Times(0);
+  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _, _)).Times(0);
   EXPECT_EQ(
       pac_url,
       proxy_resolver_factory->pending_requests()[0]->script_data()->url());
@@ -645,7 +645,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
 
   // There's no other alternative job. Thus when stream failed, it should
   // notify Request of the stream failure.
-  EXPECT_CALL(request_delegate_, OnStreamFailed(ERR_FAILED, _)).Times(1);
+  EXPECT_CALL(request_delegate_, OnStreamFailed(ERR_FAILED, _, _)).Times(1);
   base::RunLoop().RunUntilIdle();
 }
 
@@ -758,7 +758,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, OnStreamFailedForBothJobs) {
 
   // The failure of second Job should be reported to Request as there's no more
   // pending Job to serve the Request.
-  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _)).Times(1);
+  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _, _)).Times(1);
   base::RunLoop().RunUntilIdle();
   VerifyBrokenAlternateProtocolMapping(request_info, false);
   request_.reset();
@@ -798,7 +798,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   EXPECT_CALL(request_delegate_, OnStreamReadyImpl(_, _, _));
   // JobController shouldn't report the status of second job as request
   // is already successfully served.
-  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _)).Times(0);
+  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _, _)).Times(0);
 
   base::RunLoop().RunUntilIdle();
 
@@ -966,7 +966,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   SetAlternativeService(request_info, alternative_service);
 
   // |main_job| fails but should not report status to Request.
-  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _)).Times(0);
+  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _, _)).Times(0);
 
   request_ =
       job_controller_->Start(&request_delegate_, nullptr, net_log_.bound(),
@@ -1019,7 +1019,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   EXPECT_TRUE(job_controller_->alternative_job());
 
   // |alternative_job| fails but should not report status to Request.
-  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _)).Times(0);
+  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _, _)).Times(0);
   // |main_job| succeeds and should report status to Request.
   EXPECT_CALL(request_delegate_, OnStreamReadyImpl(_, _, _));
 
@@ -1062,7 +1062,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   EXPECT_TRUE(job_controller_->alternative_job());
 
   // |alternative_job| fails but should not report status to Request.
-  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _)).Times(0);
+  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _, _)).Times(0);
   // |main_job| succeeds and should report status to Request.
   EXPECT_CALL(request_delegate_, OnStreamReadyImpl(_, _, _));
   base::RunLoop().RunUntilIdle();
@@ -1104,7 +1104,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, GetLoadStateAfterMainJobFailed) {
 
   // |main_job| fails but should not report status to Request.
   // The alternative job will mark the main job complete.
-  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _)).Times(0);
+  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _, _)).Times(0);
 
   base::RunLoop().RunUntilIdle();
 
@@ -1223,7 +1223,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCP) {
   EXPECT_TRUE(job_controller_->alternative_job());
 
   // |alternative_job| fails but should not report status to Request.
-  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _)).Times(0);
+  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _, _)).Times(0);
 
   EXPECT_FALSE(JobControllerPeer::main_job_is_blocked(job_controller_));
   // OnStreamFailed will post a task to resume the main job immediately but
@@ -1341,7 +1341,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   EXPECT_EQ(1u, test_task_runner->GetPendingTaskCount());
 
   // |alternative_job| fails but should not report status to Request.
-  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _)).Times(0);
+  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _, _)).Times(0);
   // Now unblock Resolver to fail the alternate job.
   session_deps_.host_resolver->ResolveAllPending();
   EXPECT_EQ(2u, test_task_runner->GetPendingTaskCount());
@@ -1558,7 +1558,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
 
   // JobController shouldn't report the status of alternative server job as
   // request is already successfully served.
-  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _)).Times(0);
+  EXPECT_CALL(request_delegate_, OnStreamFailed(_, _, _)).Times(0);
   job_controller_->OnStreamFailed(job_factory_.alternative_job(), ERR_FAILED,
                                   SSLConfig());
 

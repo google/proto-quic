@@ -258,6 +258,8 @@ class HttpStreamFactoryImpl::Job {
   // longer needed.
   void LogHistograms() const;
 
+  NetErrorDetails* net_error_details() { return &net_error_details_; }
+
  private:
   friend class test::HttpStreamFactoryImplJobPeer;
 
@@ -500,6 +502,8 @@ class HttpStreamFactoryImpl::Job {
 
   // Whether Job has continued to DoInitConnection().
   bool init_connection_already_resumed_;
+
+  NetErrorDetails net_error_details_;
 
   base::WeakPtrFactory<Job> ptr_factory_;
 

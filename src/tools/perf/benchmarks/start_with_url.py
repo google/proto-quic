@@ -31,13 +31,13 @@ class _StartupPerfBenchmark(perf_benchmark.PerfBenchmark):
     return options
 
 
-@benchmark.Enabled('has tabs')
 @benchmark.Owner(emails=['pasko@chromium.org'])
 class StartWithUrlColdTBM(_StartupPerfBenchmark):
   """Measures time to start Chrome cold with startup URLs."""
 
   page_set = page_sets.StartupPagesPageSet
   options = {'pageset_repeat': 5}
+  SUPPORTED_PLATFORMS = [story.expectations.ANDROID_NOT_WEBVIEW]
 
   def SetExtraBrowserOptions(self, options):
     options.clear_sytem_cache_for_browser_and_profile_on_start = True
@@ -56,20 +56,18 @@ class StartWithUrlColdTBM(_StartupPerfBenchmark):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        self.PermanentlyDisableBenchmark(
-            [story.expectations.ALL_DESKTOP], 'Mobile benchmark')
         self.DisableStory(
             'http://kapook.com', [story.expectations.ALL], 'crbug.com/667470')
     return StoryExpectations()
 
 
-@benchmark.Enabled('has tabs')
 @benchmark.Owner(emails=['pasko@chromium.org'])
 class StartWithUrlWarmTBM(_StartupPerfBenchmark):
   """Measures stimetime to start Chrome warm with startup URLs."""
 
   page_set = page_sets.StartupPagesPageSet
   options = {'pageset_repeat': 11}
+  SUPPORTED_PLATFORMS = [story.expectations.ANDROID_NOT_WEBVIEW]
 
   @classmethod
   def Name(cls):
@@ -86,8 +84,6 @@ class StartWithUrlWarmTBM(_StartupPerfBenchmark):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        self.PermanentlyDisableBenchmark(
-            [story.expectations.ALL_DESKTOP], 'Mobile benchmark')
         self.DisableStory(
             'http://kapook.com', [story.expectations.ALL], 'crbug.com/667470')
     return StoryExpectations()

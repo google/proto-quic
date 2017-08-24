@@ -14,15 +14,21 @@ import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
 import org.chromium.base.annotations.MainDex;
 /**
- * Java mirror of Chrome trace event API. See base/trace_event/trace_event.h. Unlike the native
- * version, Java does not have stack objects, so a TRACE_EVENT() which does both TRACE_EVENT_BEGIN()
- * and TRACE_EVENT_END() in ctor/dtor is not possible.
+ * Java mirror of Chrome trace event API. See base/trace_event/trace_event.h.
+ *
+ * To get scoped trace events, use the "try with resource" construct, for instance:
+ * <pre>{@code
+ * try (TraceEvent e = TraceEvent.scoped("MyTraceEvent")) {
+ *   // code.
+ * }
+ * }</pre>
+ *
  * It is OK to use tracing before the native library has loaded, in a slightly restricted fashion.
  * @see EarlyTraceEvent for details.
  */
 @JNINamespace("base::android")
 @MainDex
-public class TraceEvent {
+public class TraceEvent implements AutoCloseable {
     private static volatile boolean sEnabled;
     private static volatile boolean sATraceEnabled; // True when taking an Android systrace.
 
@@ -194,6 +200,33 @@ public class TraceEvent {
                 ? new IdleTracingLooperMonitor() : new BasicLooperMonitor();
     }
 
+    private final String mName;
+
+    /**
+     * Constructor used to support the "try with resource" construct.
+     */
+    private TraceEvent(String name) {
+        mName = name;
+        begin(name);
+    }
+
+    @Override
+    public void close() {
+        end(mName);
+    }
+
+    /**
+     * Factory used to support the "try with resource" construct.
+     *
+     * Note that if tracing is not enabled, this will not result in allocating an object.
+     *
+     * @param name Trace event name.
+     * @return a TraceEvent, or null if tracing is not enabled.
+     */
+    public static TraceEvent scoped(String name) {
+        if (!(EarlyTraceEvent.enabled() || enabled())) return null;
+        return new TraceEvent(name);
+    }
 
     /**
      * Register an enabled observer, such that java traces are always enabled with native.

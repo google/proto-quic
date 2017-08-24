@@ -18,7 +18,7 @@ TEST(ScopePerFileProvider, Expected) {
 
   // Test the default toolchain.
   {
-    Scope scope(test.settings(), {});
+    Scope scope(test.settings());
     scope.set_source_dir(SourceDir("//source/"));
     ScopePerFileProvider provider(&scope, true);
 
@@ -36,10 +36,10 @@ TEST(ScopePerFileProvider, Expected) {
   // Test some with an alternate toolchain.
   {
     Settings settings(test.build_settings(), "tc/");
-    Toolchain toolchain(&settings, Label(SourceDir("//toolchain/"), "tc"), {});
+    Toolchain toolchain(&settings, Label(SourceDir("//toolchain/"), "tc"));
     settings.set_toolchain_label(toolchain.label());
 
-    Scope scope(&settings, {});
+    Scope scope(&settings);
     scope.set_source_dir(SourceDir("//source/"));
     ScopePerFileProvider provider(&scope, true);
 

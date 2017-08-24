@@ -21,6 +21,11 @@
 #include "net/base/sockaddr_storage.h"
 #include "net/base/trace_constants.h"
 
+#if defined(OS_FUCHSIA)
+#include <poll.h>
+#include <sys/ioctl.h>
+#endif  // OS_FUCHSIA
+
 namespace net {
 
 namespace {
@@ -229,6 +234,7 @@ bool SocketPosix::IsConnected() const {
   if (socket_fd_ == kInvalidSocket || waiting_connect_)
     return false;
 
+#if !defined(OS_FUCHSIA)
   // Checks if connection is alive.
   char c;
   int rv = HANDLE_EINTR(recv(socket_fd_, &c, 1, MSG_PEEK));
@@ -238,6 +244,31 @@ bool SocketPosix::IsConnected() const {
     return false;
 
   return true;
+
+#else   // OS_FUCHSIA
+  // Fuchsia currently doesn't support MSG_PEEK flag in recv(), so the code
+  // above doesn't work on Fuchsia. IsConnected() must return true if the
+  // connection is alive or if it was terminated but there is still data pending
+  // in the incoming buffer.
+  //   1. Check if the connection is alive using poll(POLLRDHUP).
+  //   2. If closed, then use ioctl(FIONREAD) to check if there is data to be
+  //   read.
+  // TODO(bug 738275): Remove once MSG_PEEK is implemented on Fuchsia.
+  struct pollfd pollfd;
+  pollfd.fd = socket_fd_;
+  pollfd.events = POLLRDHUP;
+  pollfd.revents = 0;
+  const int poll_result = HANDLE_EINTR(poll(&pollfd, 1, 0));
+
+  if (poll_result == 1) {
+    int bytes_available;
+    int ioctl_result =
+        HANDLE_EINTR(ioctl(socket_fd_, FIONREAD, &bytes_available));
+    return ioctl_result == 0 && bytes_available > 0;
+  }
+
+  return poll_result == 0;
+#endif  // OS_FUCHSIA
 }
 
 bool SocketPosix::IsConnectedAndIdle() const {
@@ -246,6 +277,7 @@ bool SocketPosix::IsConnectedAndIdle() const {
   if (socket_fd_ == kInvalidSocket || waiting_connect_)
     return false;
 
+#if !defined(OS_FUCHSIA)
   // Check if connection is alive and we haven't received any data
   // unexpectedly.
   char c;
@@ -256,6 +288,21 @@ bool SocketPosix::IsConnectedAndIdle() const {
     return false;
 
   return true;
+
+#else   // OS_FUCHSIA
+  // Fuchsia currently doesn't support MSG_PEEK flag in recv(), so the code
+  // above doesn't work on Fuchsia. Use poll(POLLIN) to check state of the
+  // socket. POLLIN is signaled if the socket is readable or if it was closed by
+  // the peer, i.e. the socket is connected and idle if and only if POLLIN is
+  // not signaled.
+  // TODO(bug 738275): Remove once MSG_PEEK is implemented.
+  struct pollfd pollfd;
+  pollfd.fd = socket_fd_;
+  pollfd.events = POLLIN;
+  pollfd.revents = 0;
+  const int poll_result = HANDLE_EINTR(poll(&pollfd, 1, 0));
+  return poll_result == 0;
+#endif  // OS_FUCHSIA
 }
 
 int SocketPosix::Read(IOBuffer* buf,

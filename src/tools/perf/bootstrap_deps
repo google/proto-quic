@@ -6,6 +6,7 @@
 # deps are used by chromeos, so please do not remove them: crbug.com/651219.
 
 deps = {
+    "src/build/android": "",
     "src/chrome/test/data/perf/canvas_bench": "",
     "src/chrome/test/data/third_party/spaceport": "",
     "src/tools/json_comment_eater": "",

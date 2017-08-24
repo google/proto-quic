@@ -46,7 +46,6 @@ QuicSession::QuicSession(QuicConnection* connection,
                        perspective() == Perspective::IS_SERVER,
                        nullptr),
       currently_writing_stream_id_(0),
-      respect_goaway_(true),
       use_stream_notifier_(
           FLAGS_quic_reloadable_flag_quic_use_stream_notifier2),
       save_data_before_consumption_(
@@ -745,11 +744,6 @@ QuicStream* QuicSession::GetOrCreateDynamicStream(
   if (!MaybeIncreaseLargestPeerStreamId(stream_id)) {
     return nullptr;
   }
-
-  if (FLAGS_quic_reloadable_flag_quic_refactor_stream_creation) {
-    return MaybeCreateIncomingDynamicStream(stream_id);
-  }
-
   // Check if the new number of open streams would cause the number of
   // open streams to exceed the limit.
   if (GetNumOpenIncomingStreams() >= max_open_incoming_streams()) {
@@ -894,78 +888,6 @@ size_t QuicSession::MaxAvailableStreams() const {
 
 bool QuicSession::IsIncomingStream(QuicStreamId id) const {
   return id % 2 != next_outgoing_stream_id_ % 2;
-}
-
-bool QuicSession::ShouldCreateIncomingDynamicStream2(QuicStreamId id) {
-  DCHECK(FLAGS_quic_reloadable_flag_quic_refactor_stream_creation);
-  if (goaway_received() && respect_goaway_) {
-    QUIC_DLOG(INFO) << "Failed to create a new outgoing stream. "
-                    << "Already received goaway.";
-    return false;
-  }
-  if (!IsIncomingStream(id)) {
-    QUIC_DLOG(INFO) << "invalid incoming stream id: " << id;
-    return false;
-  }
-  if (!connection()->connected()) {
-    QUIC_DLOG(INFO)
-        << "ShouldCreateIncomingDynamicStream called when disconnected";
-    return false;
-  }
-  if (GetNumOpenIncomingStreams() >= max_open_incoming_streams()) {
-    DVLOG(1) << "Reset stream (refused) " << id;
-    SendRstStream(id, QUIC_REFUSED_STREAM, 0);
-    return false;
-  }
-
-  return true;
-}
-
-bool QuicSession::ShouldCreateOutgoingDynamicStream2() {
-  DCHECK(FLAGS_quic_reloadable_flag_quic_refactor_stream_creation);
-  if (!connection()->connected()) {
-    QUIC_DLOG(INFO)
-        << "ShouldCreateOutgoingDynamicStream called when disconnected";
-    return false;
-  }
-  if (!IsEncryptionEstablished()) {
-    QUIC_DLOG(INFO) << "Encryption not established so no outgoing stream "
-                    << "created.";
-    return false;
-  }
-  if (goaway_received() && respect_goaway_) {
-    QUIC_DLOG(INFO) << "Failed to create a new outgoing stream. "
-                    << "Already received goaway.";
-    return false;
-  }
-  if (GetNumOpenOutgoingStreams() >= max_open_outgoing_streams()) {
-    QUIC_DLOG(INFO) << "Failed to create a new outgoing stream. "
-                    << "Already " << GetNumOpenOutgoingStreams() << " open.";
-    return false;
-  }
-  return true;
-}
-
-QuicStream* QuicSession::MaybeCreateIncomingDynamicStream(QuicStreamId id) {
-  if (!ShouldCreateIncomingDynamicStream2(id)) {
-    return nullptr;
-  }
-  return CreateAndActivateStream(id);
-}
-
-QuicStream* QuicSession::MaybeCreateOutgoingDynamicStream(
-    SpdyPriority priority) {
-  if (!ShouldCreateOutgoingDynamicStream2()) {
-    return nullptr;
-  }
-  return CreateAndActivateStream(GetNextOutgoingStreamId());
-}
-
-QuicStream* QuicSession::CreateAndActivateStream(QuicStreamId id) {
-  std::unique_ptr<QuicStream> stream = CreateStream(id);
-  QuicStream* stream_ptr = stream.get();
-  ActivateStream(std::move(stream));
-  return stream_ptr;
 }
 
 void QuicSession::OnStreamDoneWaitingForAcks(QuicStreamId id) {

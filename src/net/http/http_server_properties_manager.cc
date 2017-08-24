@@ -89,10 +89,9 @@ void AddAlternativeServiceFieldsToDictionaryValue(
 }
 
 std::unique_ptr<base::Value> NetLogCallback(
-    const base::DictionaryValue& http_server_properties_dict,
+    const base::Value& http_server_properties_dict,
     NetLogCaptureMode capture_mode) {
-  return base::WrapUnique<base::DictionaryValue>(
-      http_server_properties_dict.DeepCopy());
+  return base::MakeUnique<base::Value>(http_server_properties_dict.Clone());
 }
 
 }  // namespace
@@ -478,8 +477,9 @@ void HttpServerPropertiesManager::UpdateCacheFromPrefsOnPrefSequence() {
   const base::DictionaryValue& http_server_properties_dict =
       pref_delegate_->GetServerProperties();
 
-  net_log_.AddEvent(NetLogEventType::HTTP_SERVER_PROPERTIES_UPDATE_CACHE,
-                    base::Bind(&NetLogCallback, http_server_properties_dict));
+  net_log_.AddEvent(
+      NetLogEventType::HTTP_SERVER_PROPERTIES_UPDATE_CACHE,
+      base::Bind(&NetLogCallback, http_server_properties_dict.Clone()));
   int version = kMissingVersion;
   if (!http_server_properties_dict.GetIntegerWithoutPathExpansion(kVersionKey,
                                                                   &version)) {
@@ -1312,8 +1312,9 @@ void HttpServerPropertiesManager::UpdatePrefsOnPrefThread(
   pref_delegate_->SetServerProperties(http_server_properties_dict);
   setting_prefs_ = false;
 
-  net_log_.AddEvent(NetLogEventType::HTTP_SERVER_PROPERTIES_UPDATE_PREFS,
-                    base::Bind(&NetLogCallback, http_server_properties_dict));
+  net_log_.AddEvent(
+      NetLogEventType::HTTP_SERVER_PROPERTIES_UPDATE_PREFS,
+      base::Bind(&NetLogCallback, http_server_properties_dict.Clone()));
   // Note that |completion| will be fired after we have written everything to
   // the Preferences, but likely before these changes are serialized to disk.
   // This is not a problem though, as JSONPrefStore guarantees that this will
@@ -1394,8 +1395,7 @@ void HttpServerPropertiesManager::SaveQuicServerInfoMapToServerPrefs(
        it != quic_server_info_map.rend(); ++it) {
     const QuicServerId& server_id = it->first;
     auto quic_server_pref_dict = base::MakeUnique<base::DictionaryValue>();
-    quic_server_pref_dict->SetStringWithoutPathExpansion(kServerInfoKey,
-                                                         it->second);
+    quic_server_pref_dict->SetKey(kServerInfoKey, base::Value(it->second));
     quic_servers_dict->SetWithoutPathExpansion(
         server_id.ToString(), std::move(quic_server_pref_dict));
   }
@@ -1449,13 +1449,13 @@ void HttpServerPropertiesManager::SaveBrokenAlternativeServicesToPrefs(
         base::DictionaryValue* entry_dict = nullptr;
         bool result = json_list->GetDictionary(json_list_index, &entry_dict);
         DCHECK(result);
-        entry_dict->SetStringWithoutPathExpansion(
-            kBrokenUntilKey, base::Int64ToString(expiration_int64));
+        entry_dict->SetKey(kBrokenUntilKey,
+                           base::Value(base::Int64ToString(expiration_int64)));
       } else {
         base::DictionaryValue entry_dict;
         AddAlternativeServiceFieldsToDictionaryValue(alt_service, &entry_dict);
-        entry_dict.SetStringWithoutPathExpansion(
-            kBrokenUntilKey, base::Int64ToString(expiration_int64));
+        entry_dict.SetKey(kBrokenUntilKey,
+                          base::Value(base::Int64ToString(expiration_int64)));
         json_list->GetList().push_back(std::move(entry_dict));
       }
     }

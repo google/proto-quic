@@ -672,7 +672,8 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="Accel_Maximize_Restore_F4">
-  <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
+  <obsolete>Unused as of 08/2017</obsolete>
+  <owner>jamescook@chromium.org</owner>
   <description>Please enter the description of this user action.</description>
 </action>
 
@@ -727,7 +728,8 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="Accel_PrevWindow_F5">
-  <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
+  <obsolete>Unused as of 08/2017</obsolete>
+  <owner>jamescook@chromium.org</owner>
   <description>Please enter the description of this user action.</description>
 </action>
 
@@ -752,6 +754,7 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="Accel_Restart_PowerButton">
+  <obsolete>Unused as of 08/2017</obsolete>
   <owner>cschuet@chromium.org</owner>
   <description>User restarted the device.</description>
 </action>
@@ -850,6 +853,9 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="Accel_Show_Message_Center_Bubble">
+  <obsolete>
+    Deprecated 08/2017. Replaced by Accel_Toggle_Message_Center_Bubble.
+  </obsolete>
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
 </action>
@@ -942,6 +948,14 @@ should be able to be added at any place in this file.
 <action name="Accel_Toggle_Maximized">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="Accel_Toggle_Message_Center_Bubble">
+  <owner>weidongg@chromium.org</owner>
+  <description>
+    Metric recorded when the user toggles the message center bubble with the
+    keyboard accelerator.
+  </description>
 </action>
 
 <action name="Accel_Toggle_Minimized">
@@ -5303,6 +5317,12 @@ should be able to be added at any place in this file.
   <description>The user triggered an event in in-product help.</description>
 </action>
 
+<action name="InProductHelp.NotifyEvent.IPH_MediaDownload">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>The user triggered an event in in-product help.</description>
+</action>
+
 <action name="InProductHelp.NotifyEvent.IPH_NewIncognitoTabTip">
   <owner>edchin@chromium.org</owner>
   <owner>gchatz@chromium.org</owner>
@@ -5362,6 +5382,12 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="InProductHelp.NotifyUsedEvent.IPH_IncognitoWindow">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>The user triggered a used event in in-product help.</description>
+</action>
+
+<action name="InProductHelp.NotifyUsedEvent.IPH_MediaDownload">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
   <description>The user triggered a used event in in-product help.</description>
@@ -5440,6 +5466,15 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="InProductHelp.ShouldTriggerHelpUI.IPH_IncognitoWindow">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    The feature engagement tracker tried to determine whether in-product help
+    should be shown to the user.
+  </description>
+</action>
+
+<action name="InProductHelp.ShouldTriggerHelpUI.IPH_MediaDownload">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
   <description>
@@ -5539,6 +5574,15 @@ should be able to be added at any place in this file.
 </action>
 
 <action
+    name="InProductHelp.ShouldTriggerHelpUIResult.NotTriggered.IPH_MediaDownload">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>
+    A user action that could have triggered In-Product Help did not.
+  </description>
+</action>
+
+<action
     name="InProductHelp.ShouldTriggerHelpUIResult.NotTriggered.IPH_NewIncognitoTabTip">
   <owner>edchin@chromium.org</owner>
   <owner>gchatz@chromium.org</owner>
@@ -5608,6 +5652,13 @@ should be able to be added at any place in this file.
 
 <action
     name="InProductHelp.ShouldTriggerHelpUIResult.Triggered.IPH_IncognitoWindow">
+  <owner>nyquist@chromium.org</owner>
+  <owner>xingliu@chromium.org</owner>
+  <description>A user action triggered In-Product Help.</description>
+</action>
+
+<action
+    name="InProductHelp.ShouldTriggerHelpUIResult.Triggered.IPH_MediaDownload">
   <owner>nyquist@chromium.org</owner>
   <owner>xingliu@chromium.org</owner>
   <description>A user action triggered In-Product Help.</description>
@@ -18029,6 +18080,13 @@ should be able to be added at any place in this file.
 <action name="WebView.WebRequest.AddListener" not_user_triggered="true">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="WebappMenuOpenInChrome">
+  <owner>piotrs@chromium.org</owner>
+  <description>
+    Tracks when Open in Chrome menu option is clicked in WebApps.
+  </description>
 </action>
 
 <action name="WebsiteSettings_CookiesDialogOpened">

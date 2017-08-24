@@ -199,10 +199,8 @@ TEST_F(SharedMemoryWinTest, LowerPermissions) {
 
   base::LaunchOptions options;
   options.as_user = lowered_process_token.Get();
-
-  base::SpawnChildResult spawn_child =
-      SpawnChildWithOptions("LowerPermissions", options);
-  ASSERT_TRUE(spawn_child.process.IsValid());
+  base::Process process = SpawnChildWithOptions("LowerPermissions", options);
+  ASSERT_TRUE(process.IsValid());
 
   SharedMemory memory;
   memory.CreateAndMapAnonymous(1001);
@@ -210,15 +208,15 @@ TEST_F(SharedMemoryWinTest, LowerPermissions) {
   // Duplicate into child process, giving only FILE_MAP_READ permissions.
   HANDLE raw_handle = nullptr;
   ::DuplicateHandle(::GetCurrentProcess(), memory.handle().GetHandle(),
-                    spawn_child.process.Handle(), &raw_handle,
+                    process.Handle(), &raw_handle,
                     FILE_MAP_READ | SECTION_QUERY, FALSE, 0);
   ASSERT_TRUE(raw_handle);
 
   WriteHandleToPipe(communication_pipe.Get(), raw_handle);
 
   int exit_code;
-  EXPECT_TRUE(spawn_child.process.WaitForExitWithTimeout(
-      TestTimeouts::action_max_timeout(), &exit_code));
+  EXPECT_TRUE(process.WaitForExitWithTimeout(TestTimeouts::action_max_timeout(),
+                                             &exit_code));
   EXPECT_EQ(0, exit_code);
 }
 

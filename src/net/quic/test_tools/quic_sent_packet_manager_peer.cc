@@ -38,12 +38,6 @@ bool QuicSentPacketManagerPeer::GetUseNewRto(
 }
 
 // static
-bool QuicSentPacketManagerPeer::GetUndoRetransmits(
-    QuicSentPacketManager* sent_packet_manager) {
-  return sent_packet_manager->undo_pending_retransmits_;
-}
-
-// static
 void QuicSentPacketManagerPeer::SetPerspective(
     QuicSentPacketManager* sent_packet_manager,
     Perspective perspective) {

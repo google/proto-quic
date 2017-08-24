@@ -1392,6 +1392,10 @@ TEST_P(QuicNetworkTransactionTest, ForceQuicWithErrorConnecting) {
     EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
     EXPECT_THAT(callback.WaitForResult(), IsError(ERR_CONNECTION_CLOSED));
     EXPECT_EQ(1 + i, test_socket_performance_watcher_factory_.watcher_count());
+
+    NetErrorDetails details;
+    trans.PopulateNetErrorDetails(&details);
+    EXPECT_EQ(QUIC_PACKET_READ_ERROR, details.quic_connection_error);
   }
 }
 
@@ -4179,6 +4183,50 @@ TEST_P(QuicNetworkTransactionTest, NoBrokenAlternateProtocolIfTcpFails) {
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   EXPECT_THAT(callback.WaitForResult(), IsError(ERR_SOCKET_NOT_CONNECTED));
   ExpectQuicAlternateProtocolMapping();
+}
+
+TEST_P(QuicNetworkTransactionTest, NetErrorDetailsSetBeforeHandshake) {
+  // Test that NetErrorDetails is correctly populated, even if the
+  // handshake has not yet been confirmed and no stream has been created.
+
+  // QUIC job will pause. When resumed, it will fail.
+  MockQuicData mock_quic_data;
+  mock_quic_data.AddRead(ASYNC, ERR_IO_PENDING);
+  mock_quic_data.AddRead(ASYNC, ERR_CONNECTION_CLOSED);
+  mock_quic_data.AddSocketDataToFactory(&socket_factory_);
+
+  // Main job will also fail.
+  MockRead http_reads[] = {
+      MockRead(ASYNC, ERR_SOCKET_NOT_CONNECTED),
+  };
+
+  StaticSocketDataProvider http_data(http_reads, arraysize(http_reads), nullptr,
+                                     0);
+  http_data.set_connect_data(MockConnect(ASYNC, ERR_SOCKET_NOT_CONNECTED));
+  socket_factory_.AddSocketDataProvider(&http_data);
+  socket_factory_.AddSSLSocketDataProvider(&ssl_data_);
+
+  AddHangingNonAlternateProtocolSocketData();
+  CreateSession();
+  // Require handshake confirmation to ensure that no QUIC streams are
+  // created, and to ensure that the TCP job does not wait for the QUIC
+  // job to fail before it starts.
+  session_->quic_stream_factory()->set_require_confirmation(true);
+
+  AddQuicAlternateProtocolMapping(MockCryptoClientStream::COLD_START);
+  HttpNetworkTransaction trans(DEFAULT_PRIORITY, session_.get());
+  TestCompletionCallback callback;
+  int rv = trans.Start(&request_, callback.callback(), net_log_.bound());
+  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
+  // Allow the TCP job to fail.
+  base::RunLoop().RunUntilIdle();
+  // Now let the QUIC job fail.
+  mock_quic_data.Resume();
+  EXPECT_THAT(callback.WaitForResult(), IsError(ERR_QUIC_PROTOCOL_ERROR));
+  ExpectQuicAlternateProtocolMapping();
+  NetErrorDetails details;
+  trans.PopulateNetErrorDetails(&details);
+  EXPECT_EQ(QUIC_PACKET_READ_ERROR, details.quic_connection_error);
 }
 
 TEST_P(QuicNetworkTransactionTest, FailedZeroRttBrokenAlternateProtocol) {

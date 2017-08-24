@@ -278,12 +278,12 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
     @local_device_environment.handle_shard_failures_with(
         on_failure=self._env.BlacklistDevice)
     @trace_event.traced
-    def individual_device_set_up(dev, host_device_tuples):
-      def install_apk(d):
+    def individual_device_set_up(device, host_device_tuples):
+      def install_apk(dev):
         # Install test APK.
-        self._delegate.Install(d)
+        self._delegate.Install(dev)
 
-      def push_test_data():
+      def push_test_data(dev):
         # Push data dependencies.
         device_root = self._delegate.GetTestDataRoot(dev)
         host_device_tuples_substituted = [
@@ -296,7 +296,7 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
           dev.RemovePath(device_root, force=True, recursive=True, rename=True)
           dev.RunShellCommand(['mkdir', '-p', device_root], check_return=True)
 
-      def init_tool_and_start_servers():
+      def init_tool_and_start_servers(dev):
         tool = self.GetTool(dev)
         tool.CopyFiles(dev)
         tool.SetupEnvironment()
@@ -310,9 +310,12 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
         for s in self._servers[str(dev)]:
           s.SetUp()
 
-      steps = (
-          lambda: crash_handler.RetryOnSystemCrash(install_apk, dev),
-          push_test_data, init_tool_and_start_servers)
+      def bind_crash_handler(step, dev):
+        return lambda: crash_handler.RetryOnSystemCrash(step, dev)
+
+      steps = [
+          bind_crash_handler(s, device)
+          for s in (install_apk, push_test_data, init_tool_and_start_servers)]
       if self._env.concurrent_adb:
         reraiser_thread.RunAsync(steps)
       else:

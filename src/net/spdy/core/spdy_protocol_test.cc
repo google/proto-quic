@@ -9,7 +9,6 @@
 #include <memory>
 
 #include "net/spdy/core/spdy_bitmasks.h"
-#include "net/spdy/core/spdy_framer.h"
 #include "net/spdy/core/spdy_test_utils.h"
 #include "net/test/gtest_util.h"
 #include "testing/gtest/include/gtest/gtest.h"

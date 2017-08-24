@@ -741,7 +741,7 @@ bool SerializeExpectStapleReport(const HostPortPair& host_port_pair,
 
 // static
 const base::Feature TransportSecurityState::kDynamicExpectCTFeature{
-    "DynamicExpectCT", base::FEATURE_DISABLED_BY_DEFAULT};
+    "DynamicExpectCT", base::FEATURE_ENABLED_BY_DEFAULT};
 
 void SetTransportSecurityStateSourceForTesting(
     const TransportSecurityStateSource* source) {

@@ -12,7 +12,6 @@
 #include <memory>
 
 #include "net/spdy/core/http2_frame_decoder_adapter.h"
-#include "net/spdy/core/spdy_framer.h"
 #include "net/spdy/core/spdy_test_utils.h"
 #include "net/spdy/platform/api/spdy_ptr_util.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
@@ -27,7 +26,7 @@ class MockSpdyFramerVisitor : public SpdyFramerVisitorInterface {
   MockSpdyFramerVisitor();
   ~MockSpdyFramerVisitor() override;
 
-  MOCK_METHOD1(OnError, void(SpdyFramer::SpdyFramerError error));
+  MOCK_METHOD1(OnError, void(Http2DecoderAdapter::SpdyFramerError error));
   MOCK_METHOD3(OnDataFrameHeader,
                void(SpdyStreamId stream_id, size_t length, bool fin));
   MOCK_METHOD3(OnStreamFrameData,

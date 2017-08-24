@@ -16,7 +16,6 @@ class IntlArFaHePage(page_cycler_story.PageCyclerStory):
         shared_page_state_class=shared_page_state.SharedDesktopPageState,
         cache_temperature=cache_temperature,
         name=url)
-    self.archive_data_file = 'data/intl_ar_fa_he.json'
 
 
 class IntlArFaHePageSet(story.StorySet):

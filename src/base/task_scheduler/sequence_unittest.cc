@@ -194,8 +194,8 @@ TEST_F(TaskSchedulerSequenceTest, GetSortKey) {
 // isn't empty.
 TEST_F(TaskSchedulerSequenceTest, PopNonEmptyFrontSlot) {
   scoped_refptr<Sequence> sequence(new Sequence);
-  sequence->PushTask(
-      MakeUnique<Task>(FROM_HERE, Bind(&DoNothing), TaskTraits(), TimeDelta()));
+  sequence->PushTask(std::make_unique<Task>(FROM_HERE, Bind(&DoNothing),
+                                            TaskTraits(), TimeDelta()));
 
   EXPECT_DCHECK_DEATH({ sequence->Pop(); });
 }
@@ -204,8 +204,8 @@ TEST_F(TaskSchedulerSequenceTest, PopNonEmptyFrontSlot) {
 // slot is empty.
 TEST_F(TaskSchedulerSequenceTest, TakeEmptyFrontSlot) {
   scoped_refptr<Sequence> sequence(new Sequence);
-  sequence->PushTask(
-      MakeUnique<Task>(FROM_HERE, Bind(&DoNothing), TaskTraits(), TimeDelta()));
+  sequence->PushTask(std::make_unique<Task>(FROM_HERE, Bind(&DoNothing),
+                                            TaskTraits(), TimeDelta()));
 
   EXPECT_TRUE(sequence->TakeTask());
   EXPECT_DCHECK_DEATH({ sequence->TakeTask(); });

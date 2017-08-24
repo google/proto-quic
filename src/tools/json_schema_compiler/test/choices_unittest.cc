@@ -87,8 +87,8 @@ TEST(JsonSchemaCompilerChoicesTest, ObjectWithChoicesParamsCreateFail) {
   {
     std::unique_ptr<base::DictionaryValue> object_param(
         new base::DictionaryValue());
-    object_param->SetStringWithoutPathExpansion("strings", "asdf");
-    object_param->SetStringWithoutPathExpansion("integers", "asdf");
+    object_param->SetKey("strings", base::Value("asdf"));
+    object_param->SetKey("integers", base::Value("asdf"));
     std::unique_ptr<base::ListValue> params_value(new base::ListValue());
     params_value->Append(std::move(object_param));
     std::unique_ptr<ObjectWithChoices::Params> params(

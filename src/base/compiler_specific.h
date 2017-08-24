@@ -55,9 +55,6 @@
 
 #endif  // COMPILER_MSVC
 
-// TODO(crbug.com/752837): Remove this, it's a no-op.
-#define NON_EXPORTED_BASE(code) code
-
 // Annotate a variable indicating it's ok if the variable is not used.
 // (Typically used to silence a compiler warning when the assignment
 // is important for some other reason.)

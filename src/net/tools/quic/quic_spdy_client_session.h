@@ -37,8 +37,6 @@ class QuicSpdyClientSession : public QuicSpdyClientSessionBase {
   // QuicSession methods:
   QuicSpdyClientStream* CreateOutgoingDynamicStream(
       SpdyPriority priority) override;
-  QuicSpdyClientStream* MaybeCreateOutgoingDynamicStream(
-      SpdyPriority priority) override;
   QuicCryptoClientStreamBase* GetMutableCryptoStream() override;
   const QuicCryptoClientStreamBase* GetCryptoStream() const override;
 
@@ -59,6 +57,10 @@ class QuicSpdyClientSession : public QuicSpdyClientSessionBase {
 
   int GetNumReceivedServerConfigUpdates() const;
 
+  void set_respect_goaway(bool respect_goaway) {
+    respect_goaway_ = respect_goaway;
+  }
+
  protected:
   // QuicSession methods:
   QuicSpdyStream* CreateIncomingDynamicStream(QuicStreamId id) override;
@@ -67,14 +69,10 @@ class QuicSpdyClientSession : public QuicSpdyClientSessionBase {
 
   // If an incoming stream can be created, return true.
   bool ShouldCreateIncomingDynamicStream(QuicStreamId id) override;
-  QuicSpdyStream* MaybeCreateIncomingDynamicStream(QuicStreamId id) override;
-  std::unique_ptr<QuicStream> CreateStream(QuicStreamId id) override;
 
   // Create the crypto stream. Called by Initialize().
   virtual std::unique_ptr<QuicCryptoClientStreamBase> CreateQuicCryptoStream();
 
-  // TODO(ckrasic) remove when
-  // quic_reloadable_flag_quic_refactor_stream_creation is deprecated.
   // Unlike CreateOutgoingDynamicStream, which applies a bunch of sanity checks,
   // this simply returns a new QuicSpdyClientStream. This may be used by
   // subclasses which want to use a subclass of QuicSpdyClientStream for streams
@@ -88,6 +86,10 @@ class QuicSpdyClientSession : public QuicSpdyClientSessionBase {
   std::unique_ptr<QuicCryptoClientStreamBase> crypto_stream_;
   QuicServerId server_id_;
   QuicCryptoClientConfig* crypto_config_;
+
+  // If this is set to false, the client will ignore server GOAWAYs and allow
+  // the creation of streams regardless of the high chance they will fail.
+  bool respect_goaway_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicSpdyClientSession);
 };

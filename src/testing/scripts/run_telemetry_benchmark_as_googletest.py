@@ -49,7 +49,10 @@ def main():
   parser.add_argument(
       '--isolated-script-test-perf-output', required=False)
   parser.add_argument('--xvfb', help='Start xvfb.', action='store_true')
+  parser.add_argument('--output-format', action='append')
   args, rest_args = parser.parse_known_args()
+  for output_format in args.output_format:
+    rest_args.append('--output-format=' + output_format)
   env = os.environ.copy()
   # Assume we want to set up the sandbox environment variables all the
   # time; doing so is harmless on non-Linux platforms and is needed
@@ -58,7 +61,7 @@ def main():
   tempfile_dir = tempfile.mkdtemp('telemetry')
   valid = True
   num_failures = 0
-  chartjson_results_present = '--output-format=chartjson' in rest_args
+  chartjson_results_present = 'chartjson' in args.output_format
   chartresults = None
   json_test_results = None
 

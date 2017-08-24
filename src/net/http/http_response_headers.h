@@ -278,15 +278,6 @@ class NET_EXPORT HttpResponseHeaders
   std::unique_ptr<base::Value> NetLogCallback(
       NetLogCaptureMode capture_mode) const;
 
-  // Takes in a Value created by the above function, and attempts to create a
-  // copy of the original headers.  Returns true on success.  On failure,
-  // clears |http_response_headers|.
-  // TODO(mmenke):  Long term, we want to remove this, and migrate external
-  //                consumers to be NetworkDelegates.
-  static bool FromNetLogParam(
-      const base::Value* event_param,
-      scoped_refptr<HttpResponseHeaders>* http_response_headers);
-
   // Returns the HTTP response code.  This is 0 if the response code text seems
   // to exist but could not be parsed.  Otherwise, it defaults to 200 if the
   // response code is not found in the raw headers.

@@ -3,12 +3,10 @@
 # found in the LICENSE file.
 import unittest
 
-from core import perf_benchmark
 from core import perf_data_generator
 from core.perf_data_generator import BenchmarkMetadata
 
 from telemetry import benchmark
-from telemetry import decorators
 from telemetry import story
 
 import mock
@@ -93,7 +91,7 @@ class PerfDataGeneratorTest(unittest.TestCase):
           'hard_timeout': 10800,
           'can_use_on_swarming_builders': True,
           'expiration': 72000,
-          'io_timeout': 3600,
+          'io_timeout': 600,
           'upload_test_results': False,
         },
         'name': 'speedometer',
@@ -117,7 +115,7 @@ class PerfDataGeneratorTest(unittest.TestCase):
           'hard_timeout': 10800,
           'can_use_on_swarming_builders': True,
           'expiration': 72000,
-          'io_timeout': 3600,
+          'io_timeout': 600,
           'upload_test_results': False,
         },
         'name': 'speedometer.reference',
@@ -166,7 +164,7 @@ class PerfDataGeneratorTest(unittest.TestCase):
           'hard_timeout': 10800,
           'can_use_on_swarming_builders': True,
           'expiration': 72000,
-          'io_timeout': 3600,
+          'io_timeout': 600,
           'upload_test_results': True,
         },
         'name': 'system_health.common_desktop',
@@ -202,49 +200,6 @@ class PerfDataGeneratorTest(unittest.TestCase):
         generated_test_names,
         {'blacklisted', 'not_blacklisted', 'not_blacklisted.reference'})
 
-  def testShouldBenchmarkBeScheduledNormal(self):
-    class bench(perf_benchmark.PerfBenchmark):
-      pass
-
-    self.assertEqual(
-        perf_data_generator.ShouldBenchmarkBeScheduled(bench(), 'win'),
-        True)
-
-  def testShouldBenchmarkBeScheduledDisabledAll(self):
-    @decorators.Disabled('all')
-    class bench(perf_benchmark.PerfBenchmark):
-      pass
-
-    self.assertEqual(
-        perf_data_generator.ShouldBenchmarkBeScheduled(bench(), 'win'),
-        False)
-
-  def testShouldBenchmarkBeScheduledOnDesktopMobileTest(self):
-    @decorators.Enabled('android')
-    class bench(perf_benchmark.PerfBenchmark):
-      pass
-
-    self.assertEqual(
-        perf_data_generator.ShouldBenchmarkBeScheduled(bench(), 'win'),
-        False)
-
-  def testShouldBenchmarkBeScheduledOnMobileMobileTest(self):
-    @decorators.Enabled('android')
-    class bench(perf_benchmark.PerfBenchmark):
-      pass
-
-    self.assertEqual(
-        perf_data_generator.ShouldBenchmarkBeScheduled(bench(), 'android'),
-        True)
-
-  def testShouldBenchmarkBeScheduledOnMobileMobileTestDisabled(self):
-    @decorators.Disabled('android')
-    class bench(perf_benchmark.PerfBenchmark):
-      pass
-
-    self.assertEqual(
-        perf_data_generator.ShouldBenchmarkBeScheduled(bench(), 'android'),
-        False)
 
   def testRemoveBlacklistedTestsNoop(self):
     tests = [{
@@ -329,17 +284,17 @@ class PerfDataGeneratorTest(unittest.TestCase):
     self.assertTrue('Mojo Linux Perf' in tests)
     self.assertFalse('comment' in tests)
 
-  def testShouldBenchmarksBeScheduledViaStoryExpectationsBadOS(self):
+  def testShouldBenchmarksBeScheduledBadOS(self):
     class RegularBenchmark(benchmark.Benchmark):
       @classmethod
       def Name(cls):
         return 'regular'
 
     with self.assertRaises(TypeError):
-      perf_data_generator.ShouldBenchmarksBeScheduledViaStoryExpectations(
+      perf_data_generator.ShouldBenchmarksBeScheduled(
           RegularBenchmark, 'bot_name', 'os_name', None)
 
-  def testShouldBenchmarksBeScheduledViaStoryExpectationsShouldRun(self):
+  def testShouldBenchmarksBeScheduledShouldRun(self):
     class RegularBenchmark(benchmark.Benchmark):
       @classmethod
       def Name(cls):
@@ -347,10 +302,10 @@ class PerfDataGeneratorTest(unittest.TestCase):
     valid_os_list = ['mac', 'android', 'windows', 'linux']
     for os in valid_os_list:
       self.assertTrue(
-          perf_data_generator.ShouldBenchmarksBeScheduledViaStoryExpectations(
+          perf_data_generator.ShouldBenchmarksBeScheduled(
               RegularBenchmark, 'bot_name', os, None))
 
-  def testShouldBenchmarksBeScheduledViaStoryExpectationsShouldntRun(self):
+  def testShouldBenchmarksBeScheduledShouldntRun(self):
     class RegularBenchmark(benchmark.Benchmark):
       @classmethod
       def Name(cls):
@@ -365,5 +320,17 @@ class PerfDataGeneratorTest(unittest.TestCase):
     valid_os_list = ['mac', 'android', 'windows', 'linux']
     for os in valid_os_list:
       self.assertFalse(
-          perf_data_generator.ShouldBenchmarksBeScheduledViaStoryExpectations(
+          perf_data_generator.ShouldBenchmarksBeScheduled(
               RegularBenchmark, 'bot_name', os, None))
+
+  def testShouldBenchmarkBeScheduledSupportedPlatform(self):
+    class RegularBenchmark(benchmark.Benchmark):
+      SUPPORTED_PLATFORMS = []
+
+      @classmethod
+      def Name(cls):
+        return 'regular'
+
+    self.assertFalse(
+        perf_data_generator.ShouldBenchmarksBeScheduled(
+            RegularBenchmark, 'bot_name', 'mac', None))

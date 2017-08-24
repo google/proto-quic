@@ -70,6 +70,12 @@ CC_FILE_END = """
 }  // namespace extensions
 """
 
+# Returns true if the list 'l' does not contain any strings that look like
+# extension ids.
+def ListDoesNotContainPlainExtensionIds(l):
+  # For now, let's just say anything 32 characters in length is an id.
+  return len(filter(lambda s: len(s) == 32, l)) == 0
+
 # A "grammar" for what is and isn't allowed in the features.json files. This
 # grammar has to list all possible keys and the requirements for each. The
 # format of each entry is:
@@ -96,6 +102,13 @@ CC_FILE_END = """
 #                assign the list of Feature::BLESSED_EXTENSION_CONTEXT,
 #                Feature::BLESSED_WEB_PAGE_CONTEXT et al for contexts. If not
 #                specified, defaults to false.
+#   'validators': A list of (function, str) pairs with a function to run on the
+#                 value for a feature. Validators allow for more flexible or
+#                 one-off style validation than just what's in the grammar (such
+#                 as validating the content of a string). The validator function
+#                 should return True if the value is valid, and False otherwise.
+#                 If the value is invalid, the specified error will be added for
+#                 that key.
 #   'values': A list of all possible allowed values for a given key.
 #   'shared': Boolean that, if set, ensures that only one of the associated
 #       features has the feature property set. Used primarily for complex
@@ -110,7 +123,13 @@ FEATURE_GRAMMAR = (
       'shared': True
     },
     'blacklist': {
-      list: {'subtype': unicode}
+      list: {
+        'subtype': unicode,
+        'validators': [
+          (ListDoesNotContainPlainExtensionIds,
+           'list should only have hex-encoded SHA1 hashes of extension ids')
+        ]
+      }
     },
     'channel': {
       unicode: {
@@ -211,7 +230,13 @@ FEATURE_GRAMMAR = (
       'shared': True
     },
     'whitelist': {
-      list: {'subtype': unicode}
+      list: {
+        'subtype': unicode,
+        'validators': [
+          (ListDoesNotContainPlainExtensionIds,
+           'list should only have hex-encoded SHA1 hashes of extension ids')
+        ]
+      }
     },
   })
 
@@ -477,6 +502,12 @@ class Feature(object):
     else:
       cpp_value = self._GetCheckedValue(key, expected_type, expected_values,
                                         enum_map, v)
+
+    if 'validators' in expected:
+      validators = expected['validators']
+      for validator, error in validators:
+        if not validator(v):
+          self._AddKeyError(key, error)
 
     if cpp_value:
       if 'shared' in grammar:

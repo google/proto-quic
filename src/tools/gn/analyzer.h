@@ -24,9 +24,7 @@ class Analyzer {
   using SourceFileSet = std::set<const SourceFile*>;
   using TargetSet = std::set<const Target*>;
 
-  Analyzer(const Builder& builder,
-           const SourceFile& build_config_file,
-           const SourceFile& dotgn_file);
+  explicit Analyzer(const Builder& builder);
   ~Analyzer();
 
   // Figures out from a Buider and a JSON-formatted string containing lists
@@ -85,8 +83,6 @@ class Analyzer {
 
   void AddAllRefsTo(const Target* target, TargetSet* matches) const;
 
-  bool WereMainGNFilesModified(const SourceFileSet& source_files) const;
-
   std::vector<const Target*> all_targets_;
   std::map<const Label, const Target*> labels_to_targets_;
   Label default_toolchain_;
@@ -94,8 +90,6 @@ class Analyzer {
 
   // Maps targets to the list of targets that depend on them.
   std::multimap<const Target*, const Target*> dep_map_;
-  SourceFile build_config_file_;
-  SourceFile dotgn_file_;
 };
 
 #endif  // TOOLS_GN_ANALYZER_H_

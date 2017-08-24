@@ -33,6 +33,8 @@ class BASE_EXPORT MemoryAllocatorDump {
     WEAK = 1 << 0,
   };
 
+  // Returns the Guid of the dump for the given |absolute_name| for the
+  // current process.
   static MemoryAllocatorDumpGuid GetDumpIdFromName(
       const std::string& absolute_name);
 

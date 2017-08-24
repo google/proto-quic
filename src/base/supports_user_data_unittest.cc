@@ -32,7 +32,7 @@ TEST(SupportsUserDataTest, ClearWorksRecursively) {
   TestSupportsUserData supports_user_data;
   char key = 0;
   supports_user_data.SetUserData(
-      &key, base::MakeUnique<UsesItself>(&supports_user_data, &key));
+      &key, std::make_unique<UsesItself>(&supports_user_data, &key));
   // Destruction of supports_user_data runs the actual test.
 }
 

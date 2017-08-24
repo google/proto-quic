@@ -167,7 +167,7 @@ using UniquePtrSet = base::flat_set<std::unique_ptr<T>, UniquePtrComparator>;
 std::vector<std::unique_ptr<int>> ptr_vec;
 ptr_vec.reserve(5);
 std::generate_n(std::back_inserter(ptr_vec), 5, []{
-  return base::MakeUnique<int>(0);
+  return std::make_unique<int>(0);
 });
 
 // Construct a set.
@@ -243,6 +243,10 @@ generally wastes a large amount of space (an Android analysis revealed more
 than 2.5MB wasted space from deque alone, resulting in some optimizations).
 libstdc++ uses an intermediate-size 512 byte buffer.
 
+Microsoft's implementation never shrinks the deque capacity, so the capacity
+will always be the maximum number of elements ever contained. libstdc++
+deallocates blocks as they are freed. libc++ keeps up to two empty blocks.
+
 ### base::circular_deque and base::queue
 
 A deque implemented as a circular buffer in an array. The underlying array will
@@ -251,9 +255,9 @@ around. The items will wrap around the underlying buffer so the storage will
 not be contiguous, but fast random access iterators are still possible.
 
 When the underlying buffer is filled, it will be reallocated and the constents
-moved (like a `std::vector`). As a result, iterators are not stable across
-mutations. Like a vector, it will not shrink its underlying storage. Consider
-calling `shrink_to_fit` if you delete many items that you don't plan to re-add.
+moved (like a `std::vector`). The underlying buffer will also be shrunk if
+there is too much wasted space. As a result, iterators are not stable across
+mutations.
 
 ## Appendix
 

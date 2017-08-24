@@ -152,7 +152,7 @@ void FileStream::Context::CheckNoAsyncInProgress() const {
     return;
   LastOperation state = last_operation_;
   base::debug::Alias(&state);
-  // TODO(xunjieli): Once https://crbug.com/487732 is fixed, use
+  // TODO(xunjieli): Once https://crbug.com/732321 is fixed, use
   // DCHECK(!async_in_progress_) directly at call places.
   CHECK(!async_in_progress_);
 }

@@ -258,7 +258,12 @@ be describing additional metrics about the same event.
   </metric>
   <metric name="IsAutofilled">
     <summary>
-      True whether field was autofilled. See |AutofillField.is_autofilled|.
+      True if the field was autofilled. See |AutofillField.is_autofilled|.
+    </summary>
+  </metric>
+  <metric name="IsEmpty">
+    <summary>
+      True if the field was empty. See |AutofillField.IsEmpty()|.
     </summary>
   </metric>
   <metric name="MillisecondsSinceFormParsed">
@@ -593,6 +598,12 @@ be describing additional metrics about the same event.
   <metric name="Malloc">
     <summary>
       Measure of memory allocated by malloc.
+    </summary>
+  </metric>
+  <metric name="NumberOfExtensions">
+    <summary>
+      The number of extensions that are served from the associated renderer
+      process.
     </summary>
   </metric>
   <metric name="PartitionAlloc">
@@ -1082,6 +1093,26 @@ be describing additional metrics about the same event.
   <metric name="Tick">
     <summary>
       Tick CPU Usage measurement was taken at.
+    </summary>
+  </metric>
+</event>
+
+<event name="TabManager.Background.FirstAudioStarts">
+  <owner>chrisha@chromium.org</owner>
+  <owner>lpy@chromium.org</owner>
+  <summary>
+    Collects the duration in MS from when the tab is backgrounded to when audio
+    starts to play. Only recorded when the tab is in the background.
+  </summary>
+  <metric name="IsMainFrame">
+    <summary>
+      Indicates whether the the audio stream belongs to the main frame.
+    </summary>
+  </metric>
+  <metric name="TimeFromBackgrounded">
+    <summary>
+      Duration in MS from when the tab is backgrounded to when audio starts to
+      play. Only recorded when the tab is in the background.
     </summary>
   </metric>
 </event>

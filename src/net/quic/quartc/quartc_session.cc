@@ -294,10 +294,6 @@ QuicStream* QuartcSession::CreateIncomingDynamicStream(QuicStreamId id) {
   return ActivateDataStream(CreateDataStream(id, kDefaultPriority));
 }
 
-std::unique_ptr<QuicStream> QuartcSession::CreateStream(QuicStreamId id) {
-  return CreateDataStream(id, kDefaultPriority);
-}
-
 std::unique_ptr<QuartcStream> QuartcSession::CreateDataStream(
     QuicStreamId id,
     SpdyPriority priority) {

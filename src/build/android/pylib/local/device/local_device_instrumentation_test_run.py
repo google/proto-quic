@@ -139,21 +139,26 @@ class LocalDeviceInstrumentationTestRun(
     @local_device_environment.handle_shard_failures_with(
         self._env.BlacklistDevice)
     @trace_event.traced
-    def individual_device_set_up(dev, host_device_tuples):
+    def individual_device_set_up(device, host_device_tuples):
       steps = []
 
       if self._test_instance.replace_system_package:
-        # We need the context manager to be applied before modifying any shared
-        # preference files in case the replacement APK needs to be set up, and
-        # it needs to be applied while the test is running. Thus, it needs to
-        # be applied early during setup, but must still be applied during
-        # _RunTest, which isn't possible using 'with' without applying the
-        # context manager up in test_runner. Instead, we manually invoke
-        # its __enter__ and __exit__ methods in setup and teardown
-        self._replace_package_contextmanager = system_app.ReplaceSystemApp(
-            dev, self._test_instance.replace_system_package.package,
-            self._test_instance.replace_system_package.replacement_apk)
-        steps.append(self._replace_package_contextmanager.__enter__)
+        @trace_event.traced
+        def replace_package(dev):
+          # We need the context manager to be applied before modifying any
+          # shared preference files in case the replacement APK needs to be
+          # set up, and it needs to be applied while the test is running.
+          # Thus, it needs to be applied early during setup, but must still be
+          # applied during _RunTest, which isn't possible using 'with' without
+          # applying the context manager up in test_runner. Instead, we
+          # manually invoke its __enter__ and __exit__ methods in setup and
+          # teardown.
+          self._replace_package_contextmanager = system_app.ReplaceSystemApp(
+              dev, self._test_instance.replace_system_package.package,
+              self._test_instance.replace_system_package.replacement_apk)
+          self._replace_package_contextmanager.__enter__()
+
+        steps.append(replace_package)
 
       def install_helper(apk, permissions):
         @instrumentation_tracing.no_tracing
@@ -161,16 +166,14 @@ class LocalDeviceInstrumentationTestRun(
         def install_helper_internal(d, apk_path=apk.path):
           # pylint: disable=unused-argument
           d.Install(apk, permissions=permissions)
-        return lambda: crash_handler.RetryOnSystemCrash(
-            install_helper_internal, dev)
+        return install_helper_internal
 
       def incremental_install_helper(apk, json_path):
         @trace_event.traced("apk_path")
         def incremental_install_helper_internal(d, apk_path=apk.path):
           # pylint: disable=unused-argument
           installer.Install(d, json_path, apk=apk)
-        return lambda: crash_handler.RetryOnSystemCrash(
-            incremental_install_helper_internal, dev)
+        return incremental_install_helper_internal
 
       if self._test_instance.apk_under_test:
         if self._test_instance.apk_under_test_incremental_install_json:
@@ -197,7 +200,7 @@ class LocalDeviceInstrumentationTestRun(
                    for apk in self._test_instance.additional_apks)
 
       @trace_event.traced
-      def set_debug_app():
+      def set_debug_app(dev):
         # Set debug app in order to enable reading command line flags on user
         # builds
         if self._test_instance.flags:
@@ -207,11 +210,11 @@ class LocalDeviceInstrumentationTestRun(
             logging.error("Couldn't set debug app: no package defined")
           else:
             dev.RunShellCommand(['am', 'set-debug-app', '--persistent',
-                                 self._test_instance.package_info.package],
-                                check_return=True)
+                               self._test_instance.package_info.package],
+                              check_return=True)
 
       @trace_event.traced
-      def edit_shared_prefs():
+      def edit_shared_prefs(dev):
         for setting in self._test_instance.edit_shared_prefs:
           shared_pref = shared_prefs.SharedPrefs(dev, setting['package'],
                                                  setting['filename'])
@@ -219,7 +222,7 @@ class LocalDeviceInstrumentationTestRun(
               shared_pref, setting)
 
       @instrumentation_tracing.no_tracing
-      def push_test_data():
+      def push_test_data(dev):
         device_root = posixpath.join(dev.GetExternalStoragePath(),
                                      'chromium_tests_root')
         host_device_tuples_substituted = [
@@ -235,7 +238,7 @@ class LocalDeviceInstrumentationTestRun(
           dev.RunShellCommand(['mkdir', '-p', device_root], check_return=True)
 
       @trace_event.traced
-      def create_flag_changer():
+      def create_flag_changer(dev):
         if self._test_instance.flags:
           if not self._test_instance.package_info:
             logging.error("Couldn't set flags: no package info")
@@ -251,12 +254,13 @@ class LocalDeviceInstrumentationTestRun(
             dev, self._test_instance.timeout_scale)
 
       @trace_event.traced
-      def setup_ui_capture_dir():
+      def setup_ui_capture_dir(dev):
         # Make sure the UI capture directory exists and is empty by deleting
         # and recreating it.
         # TODO (aberent) once DeviceTempDir exists use it here.
-        self._ui_capture_dir[dev] = posixpath.join(dev.GetExternalStoragePath(),
-                                              *UI_CAPTURE_DIRS)
+        self._ui_capture_dir[dev] = posixpath.join(
+            dev.GetExternalStoragePath(),
+            *UI_CAPTURE_DIRS)
 
         if dev.PathExists(self._ui_capture_dir[dev]):
           dev.RunShellCommand(['rm', '-rf', self._ui_capture_dir[dev]])
@@ -264,13 +268,19 @@ class LocalDeviceInstrumentationTestRun(
 
       steps += [set_debug_app, edit_shared_prefs, push_test_data,
                 create_flag_changer, setup_ui_capture_dir]
+
+      def bind_crash_handler(step, dev):
+        return lambda: crash_handler.RetryOnSystemCrash(step, dev)
+
+      steps = [bind_crash_handler(s, device) for s in steps]
+
       if self._env.concurrent_adb:
         reraiser_thread.RunAsync(steps)
       else:
         for step in steps:
           step()
       if self._test_instance.store_tombstones:
-        tombstones.ClearAllTombstones(dev)
+        tombstones.ClearAllTombstones(device)
 
     self._env.parallel_devices.pMap(
         individual_device_set_up,

@@ -10,8 +10,8 @@
 #include "base/memory/weak_ptr.h"
 #include "base/test/test_simple_task_runner.h"
 #include "base/threading/thread_task_runner_handle.h"
-#include "device/serial/serial.mojom.h"
 #include "device/serial/test_serial_io_handler.h"
+#include "services/device/public/interfaces/serial.mojom.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "tools/battor_agent/battor_protocol_types.h"
 
@@ -33,7 +33,9 @@ class TestableBattOrConnection : public BattOrConnectionImpl {
     return device::TestSerialIoHandler::Create();
   }
 
-  scoped_refptr<device::SerialIoHandler> GetIoHandler() { return io_handler_; }
+  device::TestSerialIoHandler* GetIoHandler() {
+    return reinterpret_cast<device::TestSerialIoHandler*>(io_handler_.get());
+  }
 };
 
 // BattOrConnectionImplTest provides a BattOrConnection and captures the
@@ -79,7 +81,7 @@ class BattOrConnectionImplTest : public testing::Test,
         new net::IOBuffer((size_t)bytes_to_read));
 
     connection_->GetIoHandler()->Read(base::MakeUnique<device::ReceiveBuffer>(
-        buffer, bytes_to_read, base::Bind(&NullReadCallback)));
+        buffer, bytes_to_read, base::BindOnce(&NullReadCallback)));
     task_runner_->RunUntilIdle();
 
     return buffer;
@@ -94,11 +96,17 @@ class BattOrConnectionImplTest : public testing::Test,
     task_runner_->RunUntilIdle();
   }
 
+  void ForceReadTimeout() {
+    connection_->GetIoHandler()->ForceReceiveError(
+        device::mojom::SerialReceiveError::TIMEOUT);
+    task_runner_->RunUntilIdle();
+  }
+
   // Writes the specified bytes directly to the serial connection.
   void SendBytesRaw(const char* data, uint16_t bytes_to_send) {
-    std::vector<char> data_vector(data, data + bytes_to_send);
     connection_->GetIoHandler()->Write(base::MakeUnique<device::SendBuffer>(
-        data_vector, base::Bind(&NullWriteCallback)));
+        std::vector<uint8_t>(data, data + bytes_to_send),
+        base::BindOnce(&NullWriteCallback)));
     task_runner_->RunUntilIdle();
   }
 
@@ -215,7 +223,7 @@ TEST_F(BattOrConnectionImplTest, ReadMessageInvalidType) {
   ASSERT_FALSE(GetReadSuccess());
 }
 
-TEST_F(BattOrConnectionImplTest, ReadMessageEndsMidMessageByte) {
+TEST_F(BattOrConnectionImplTest, ReadMessageEndsMidMessage) {
   OpenConnection();
   ASSERT_TRUE(GetOpenSuccess());
 
@@ -229,9 +237,14 @@ TEST_F(BattOrConnectionImplTest, ReadMessageEndsMidMessageByte) {
   SendBytesRaw(data, 5);
   ReadMessage(BATTOR_MESSAGE_TYPE_CONTROL);
 
-  // The first read should recognize that a second read is necessary, but the
-  // second read will hang because no bytes ever come in.
+  // The first read should recognize that a second read is necessary.
   ASSERT_FALSE(IsReadComplete());
+
+  ForceReadTimeout();
+
+  // The second read should fail due to the time out.
+  ASSERT_TRUE(IsReadComplete());
+  ASSERT_FALSE(GetReadSuccess());
 }
 
 TEST_F(BattOrConnectionImplTest, ReadMessageMissingEndByte) {
@@ -251,9 +264,14 @@ TEST_F(BattOrConnectionImplTest, ReadMessageMissingEndByte) {
   SendBytesRaw(data, 6);
   ReadMessage(BATTOR_MESSAGE_TYPE_CONTROL);
 
-  // The first read should recognize that a second read is necessary, but the
-  // second read will hang because no bytes ever come in.
+  // The first read should recognize that a second read is necessary.
   ASSERT_FALSE(IsReadComplete());
+
+  ForceReadTimeout();
+
+  // The second read should fail due to the time out.
+  ASSERT_TRUE(IsReadComplete());
+  ASSERT_FALSE(GetReadSuccess());
 }
 
 TEST_F(BattOrConnectionImplTest, ReadMessageWithEscapeCharacters) {

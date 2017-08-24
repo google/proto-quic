@@ -14,6 +14,12 @@ STATUS_CODE_FAILURE = -2
 # AndroidJUnitRunner would status output -3 to indicate a test is skipped
 STATUS_CODE_SKIP = -3
 
+# AndroidJUnitRunner outputs -4 to indicate a failed assumption
+# "A test for which an assumption fails should not generate a test
+# case failure"
+# http://junit.org/junit4/javadoc/4.12/org/junit/AssumptionViolatedException.html
+STATUS_CODE_ASSUMPTION_FAILURE = -4
+
 # http://developer.android.com/reference/android/app/Activity.html
 RESULT_CODE_OK = -1
 RESULT_CODE_CANCELED = 0

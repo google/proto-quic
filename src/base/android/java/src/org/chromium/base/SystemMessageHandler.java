@@ -7,7 +7,9 @@ package org.chromium.base;
 import android.annotation.SuppressLint;
 import android.os.Build;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
+import android.os.MessageQueue.IdleHandler;
 
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.MainDex;
@@ -28,9 +30,18 @@ class SystemMessageHandler extends Handler {
     private long mMessagePumpNative;
     private long mDelayedScheduledTimeTicks;
 
+    private final IdleHandler mIdleHandler = new IdleHandler() {
+        @Override
+        public boolean queueIdle() {
+            nativeDoIdleWork(mMessagePumpDelegateNative, mMessagePumpNative);
+            return true;
+        }
+    };
+
     protected SystemMessageHandler(long messagePumpDelegateNative, long messagePumpNative) {
         mMessagePumpDelegateNative = messagePumpDelegateNative;
         mMessagePumpNative = messagePumpNative;
+        Looper.myLooper().getQueue().addIdleHandler(mIdleHandler);
     }
 
     @Override
@@ -63,6 +74,7 @@ class SystemMessageHandler extends Handler {
     private void removeAllPendingMessages() {
         removeMessages(SCHEDULED_WORK);
         removeMessages(DELAYED_SCHEDULED_WORK);
+        Looper.myLooper().getQueue().removeIdleHandler(mIdleHandler);
     }
 
     private Message obtainAsyncMessage(int what) {
@@ -163,4 +175,5 @@ class SystemMessageHandler extends Handler {
 
     private native void nativeDoRunLoopOnce(
             long messagePumpDelegateNative, long messagePumpNative, long delayedScheduledTimeTicks);
+    private native void nativeDoIdleWork(long messagePumpDelegateNative, long messagePumpNative);
 }

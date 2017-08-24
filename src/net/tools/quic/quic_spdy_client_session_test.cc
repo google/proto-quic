@@ -55,22 +55,11 @@ class TestQuicSpdyClientSession : public QuicSpdyClientSession {
                                                     this);
   }
 
-  std::unique_ptr<QuicStream> CreateStream(QuicStreamId id) override {
-    return QuicMakeUnique<MockQuicSpdyClientStream>(id, this);
-  }
-
   MockQuicSpdyClientStream* CreateIncomingDynamicStream(
       QuicStreamId id) override {
     MockQuicSpdyClientStream* stream = new MockQuicSpdyClientStream(id, this);
     ActivateStream(QuicWrapUnique(stream));
     return stream;
-  }
-
-  QuicSpdyClientStream* CreateOutgoingDynamicStream(
-      SpdyPriority priority) override {
-    return FLAGS_quic_reloadable_flag_quic_refactor_stream_creation
-               ? MaybeCreateOutgoingDynamicStream(priority)
-               : QuicSpdyClientSession::CreateOutgoingDynamicStream(priority);
   }
 };
 
@@ -177,12 +166,8 @@ TEST_P(QuicSpdyClientSessionTest, NoEncryptionAfterInitialEncryption) {
             QuicPacketCreatorPeer::GetEncryptionLevel(
                 QuicConnectionPeer::GetPacketCreator(connection_)));
   // Verify that no new streams may be created.
-  if (FLAGS_quic_reloadable_flag_quic_refactor_stream_creation) {
-    EXPECT_EQ(nullptr, session_->CreateOutgoingDynamicStream(kDefaultPriority));
-  } else {
-    EXPECT_TRUE(session_->CreateOutgoingDynamicStream(kDefaultPriority) ==
-                nullptr);
-  }
+  EXPECT_TRUE(session_->CreateOutgoingDynamicStream(kDefaultPriority) ==
+              nullptr);
   // Verify that no data may be send on existing streams.
   char data[] = "hello world";
   struct iovec iov = {data, arraysize(data)};

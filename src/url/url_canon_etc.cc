@@ -46,6 +46,17 @@ const CHAR* DoRemoveURLWhitespace(const CHAR* input,
     return input;
   }
 
+  // Skip whitespace removal for `data:` URLs.
+  //
+  // TODO(mkwst): Ideally, this would use something like `base::StartsWith`, but
+  // that turns out to be difficult to do correctly given this function's
+  // character type templating.
+  if (input_len > 5 && input[0] == 'd' && input[1] == 'a' && input[2] == 't' &&
+      input[3] == 'a' && input[4] == ':') {
+    *output_len = input_len;
+    return input;
+  }
+
   // Remove the whitespace into the new buffer and return it.
   for (int i = 0; i < input_len; i++) {
     if (!IsRemovableURLWhitespace(input[i])) {

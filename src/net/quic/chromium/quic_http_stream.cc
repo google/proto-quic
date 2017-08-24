@@ -523,7 +523,8 @@ int QuicHttpStream::DoRequestStreamComplete(int rv) {
   }
 
   stream_ = quic_session()->ReleaseStream();
-  if (!stream_) {
+  DCHECK(stream_);
+  if (!stream_->IsOpen()) {
     session_error_ = ERR_CONNECTION_CLOSED;
     return GetResponseStatus();
   }

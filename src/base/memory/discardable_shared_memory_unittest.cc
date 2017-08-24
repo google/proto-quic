@@ -5,7 +5,10 @@
 #include <stdint.h>
 
 #include "base/memory/discardable_shared_memory.h"
+#include "base/memory/shared_memory_tracker.h"
 #include "base/process/process_metrics.h"
+#include "base/trace_event/memory_allocator_dump.h"
+#include "base/trace_event/process_memory_dump.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -389,6 +392,31 @@ TEST(DiscardableSharedMemoryTest, ZeroFilledPagesAfterPurge) {
   EXPECT_EQ(memcmp(memory2.memory(), expected_data, kDataSize), 0);
 }
 #endif
+
+TEST(DiscardableSharedMemoryTest, TracingOwnershipEdges) {
+  const uint32_t kDataSize = 1024;
+  TestDiscardableSharedMemory memory1;
+  bool rv = memory1.CreateAndMap(kDataSize);
+  ASSERT_TRUE(rv);
+
+  base::trace_event::MemoryDumpArgs args = {
+      base::trace_event::MemoryDumpLevelOfDetail::DETAILED};
+  trace_event::ProcessMemoryDump pmd(nullptr, args);
+  trace_event::MemoryAllocatorDump* client_dump =
+      pmd.CreateAllocatorDump("discardable_manager/map1");
+  const bool is_owned = false;
+  memory1.CreateSharedMemoryOwnershipEdge(client_dump, &pmd, is_owned);
+  const auto* shm_dump = pmd.GetAllocatorDump(
+      SharedMemoryTracker::GetDumpNameForTracing(memory1.mapped_id()));
+  EXPECT_TRUE(shm_dump);
+  EXPECT_EQ(shm_dump->GetSizeInternal(), client_dump->GetSizeInternal());
+  const auto edges = pmd.allocator_dumps_edges_for_testing();
+  EXPECT_EQ(2u, edges.size());
+  EXPECT_NE(edges.end(), edges.find(shm_dump->guid()));
+  EXPECT_NE(edges.end(), edges.find(client_dump->guid()));
+  // TODO(ssid): test for weak global dump once the
+  // CreateWeakSharedMemoryOwnershipEdge() is fixed, crbug.com/661257.
+}
 
 }  // namespace
 }  // namespace base

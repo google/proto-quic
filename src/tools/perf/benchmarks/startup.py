@@ -5,7 +5,6 @@
 from core import perf_benchmark
 from measurements import startup
 import page_sets
-from telemetry import benchmark
 from telemetry import story
 
 
@@ -41,6 +40,7 @@ class StartupColdBlankPage(_StartupCold):
   """Measures cold startup time with a clean profile."""
   tag = 'cold'
   page_set = page_sets.BlankPageSet
+  SUPPORTED_PLATFORMS = [story.expectations.ALL_DESKTOP]
 
   @classmethod
   def Name(cls):
@@ -49,8 +49,7 @@ class StartupColdBlankPage(_StartupCold):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        self.PermanentlyDisableBenchmark(
-            [story.expectations.ALL_ANDROID], 'Non Android benchmark')
+        pass
     return StoryExpectations()
 
 
@@ -58,6 +57,7 @@ class StartupWarmBlankPage(_StartupWarm):
   """Measures warm startup time with a clean profile."""
   tag = 'warm'
   page_set = page_sets.BlankPageSet
+  SUPPORTED_PLATFORMS = [story.expectations.ALL_DESKTOP]
 
   @classmethod
   def Name(cls):
@@ -66,17 +66,16 @@ class StartupWarmBlankPage(_StartupWarm):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        self.PermanentlyDisableBenchmark(
-            [story.expectations.ALL_ANDROID], 'Non Android benchmark')
+        pass
     return StoryExpectations()
 
 
-@benchmark.Disabled('content-shell')  # No pregenerated profiles.
 class StartupLargeProfileColdBlankPage(_StartupCold):
   """Measures cold startup time with a large profile."""
   tag = 'cold'
   page_set = page_sets.BlankPageSetWithLargeProfile
   options = {'pageset_repeat': 3}
+  SUPPORTED_PLATFORMS = [story.expectations.ALL_DESKTOP]
 
   def __init__(self, max_failures=None):
     super(StartupLargeProfileColdBlankPage, self).__init__(max_failures)
@@ -91,19 +90,17 @@ class StartupLargeProfileColdBlankPage(_StartupCold):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        self.PermanentlyDisableBenchmark(
-            [story.expectations.ALL_ANDROID], 'Desktop benchmark')
         self.DisableStory('blank_page.html', [story.expectations.ALL_MAC],
                           'crbug.com/747024')
     return StoryExpectations()
 
 
-@benchmark.Disabled('content-shell')  # No pregenerated profiles.
 class StartupLargeProfileWarmBlankPage(_StartupWarm):
   """Measures warm startup time with a large profile."""
   tag = 'warm'
   page_set = page_sets.BlankPageSetWithLargeProfile
   options = {'pageset_repeat': 4}
+  SUPPORTED_PLATFORMS = [story.expectations.ALL_DESKTOP]
 
   def __init__(self, max_failures=None):
     super(StartupLargeProfileWarmBlankPage, self).__init__(max_failures)
@@ -118,6 +115,5 @@ class StartupLargeProfileWarmBlankPage(_StartupWarm):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        self.PermanentlyDisableBenchmark(
-            [story.expectations.ALL_ANDROID], 'Desktop benchmark')
+        pass
     return StoryExpectations()

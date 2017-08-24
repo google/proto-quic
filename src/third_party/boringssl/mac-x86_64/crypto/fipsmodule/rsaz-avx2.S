@@ -1722,11 +1722,6 @@ L$SEH_end_rsaz_1024_gather5:
 _rsaz_avx2_eligible:
 	leaq	_OPENSSL_ia32cap_P(%rip),%rax
 	movl	8(%rax),%eax
-	movl	$524544,%ecx
-	movl	$0,%edx
-	andl	%eax,%ecx
-	cmpl	$524544,%ecx
-	cmovel	%edx,%eax
 	andl	$32,%eax
 	shrl	$5,%eax
 	.byte	0xf3,0xc3

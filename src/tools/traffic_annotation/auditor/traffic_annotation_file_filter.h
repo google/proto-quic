@@ -39,7 +39,7 @@ class TrafficAnnotationFileFilter {
 
   // Sets the path to a file that would be used to mock the output of
   // 'git ls-files' in tests.
-  void SetGitFileForTest(const base::FilePath& file_path) {
+  void SetGitFileForTesting(const base::FilePath& file_path) {
     git_file_for_test_ = file_path;
   }
 

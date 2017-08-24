@@ -41,24 +41,30 @@ bool ImportSensitiveKeyFromFile(const base::FilePath& dir,
   return !!private_key;
 }
 
-bool ImportClientCertToSlot(const scoped_refptr<X509Certificate>& cert,
-                            PK11SlotInfo* slot) {
-  std::string nickname = x509_util::GetDefaultUniqueNickname(
-      cert->os_cert_handle(), USER_CERT, slot);
-  SECStatus rv = PK11_ImportCert(slot, cert->os_cert_handle(),
-                                 CK_INVALID_HANDLE, nickname.c_str(), PR_FALSE);
+ScopedCERTCertificate ImportClientCertToSlot(
+    const scoped_refptr<X509Certificate>& cert,
+    PK11SlotInfo* slot) {
+  ScopedCERTCertificate nss_cert =
+      x509_util::CreateCERTCertificateFromX509Certificate(cert.get());
+  if (!nss_cert)
+    return nullptr;
+  std::string nickname =
+      x509_util::GetDefaultUniqueNickname(nss_cert.get(), USER_CERT, slot);
+  SECStatus rv = PK11_ImportCert(slot, nss_cert.get(), CK_INVALID_HANDLE,
+                                 nickname.c_str(), PR_FALSE);
   if (rv != SECSuccess) {
     LOG(ERROR) << "Could not import cert";
-    return false;
+    return nullptr;
   }
-  return true;
+  return nss_cert;
 }
 
 scoped_refptr<X509Certificate> ImportClientCertAndKeyFromFile(
     const base::FilePath& dir,
     const std::string& cert_filename,
     const std::string& key_filename,
-    PK11SlotInfo* slot) {
+    PK11SlotInfo* slot,
+    ScopedCERTCertificate* nss_cert) {
   if (!ImportSensitiveKeyFromFile(dir, key_filename, slot)) {
     LOG(ERROR) << "Could not import private key from file " << key_filename;
     return NULL;
@@ -71,13 +77,51 @@ scoped_refptr<X509Certificate> ImportClientCertAndKeyFromFile(
     return NULL;
   }
 
-  if (!ImportClientCertToSlot(cert, slot))
+  *nss_cert = ImportClientCertToSlot(cert, slot);
+  if (!*nss_cert)
     return NULL;
 
   // |cert| continues to point to the original X509Certificate before the
   // import to |slot|. However this should not make a difference as NSS handles
   // state globally.
   return cert;
+}
+
+scoped_refptr<X509Certificate> ImportClientCertAndKeyFromFile(
+    const base::FilePath& dir,
+    const std::string& cert_filename,
+    const std::string& key_filename,
+    PK11SlotInfo* slot) {
+  ScopedCERTCertificate nss_cert;
+  return ImportClientCertAndKeyFromFile(dir, cert_filename, key_filename, slot,
+                                        &nss_cert);
+}
+
+ScopedCERTCertificate ImportCERTCertificateFromFile(
+    const base::FilePath& certs_dir,
+    const std::string& cert_file) {
+  scoped_refptr<X509Certificate> cert =
+      ImportCertFromFile(certs_dir, cert_file);
+  if (!cert)
+    return nullptr;
+  return x509_util::CreateCERTCertificateFromX509Certificate(cert.get());
+}
+
+ScopedCERTCertificateList CreateCERTCertificateListFromFile(
+    const base::FilePath& certs_dir,
+    const std::string& cert_file,
+    int format) {
+  CertificateList certs =
+      CreateCertificateListFromFile(certs_dir, cert_file, format);
+  ScopedCERTCertificateList nss_certs;
+  for (const auto& cert : certs) {
+    ScopedCERTCertificate nss_cert =
+        x509_util::CreateCERTCertificateFromX509Certificate(cert.get());
+    if (!nss_cert)
+      return {};
+    nss_certs.push_back(std::move(nss_cert));
+  }
+  return nss_certs;
 }
 
 }  // namespace net
