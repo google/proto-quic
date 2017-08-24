@@ -1601,6 +1601,23 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>Interactions with the App Launcher promo dialog.</summary>
 </histogram>
 
+<histogram name="Apps.AppListAppLaunched" enum="BooleanEnabled">
+  <owner>newcomer@chromium.org</owner>
+  <summary>
+    The number of apps launched from the launcher. This is logged each time an
+    app is launched. The bucket denotes whether the app is suggested.
+  </summary>
+</histogram>
+
+<histogram name="Apps.AppListAppLaunchedFullscreen" enum="BooleanEnabled">
+  <owner>newcomer@chromium.org</owner>
+  <summary>
+    The number of apps launched from the fullscreen launcher. This is logged
+    each time an app is launched. The bucket denotes whether the app is
+    suggested.
+  </summary>
+</histogram>
+
 <histogram name="Apps.AppListCreationTime" units="ms">
   <owner>calamity@chromium.org</owner>
   <summary>
@@ -1640,6 +1657,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     The page that the app list goes to. This is gathered every time the user
     initiates a transition to another page in the launcher.
+  </summary>
+</histogram>
+
+<histogram name="Apps.AppListPageSwitcherSource"
+    enum="AppListPageSwitcherSource">
+  <owner>newcomer@chromium.org</owner>
+  <summary>
+    The source used to switch pages in the app list's app grid. Logged when the
+    page switch succeeds.
   </summary>
 </histogram>
 
@@ -1685,6 +1711,12 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="Apps.AppListSearchResultOpenedSource"
+    enum="ApplistSearchResultOpenedSource">
+  <owner>newcomer@chromium.org</owner>
+  <summary>The state of the app list when a search result was opened.</summary>
+</histogram>
+
 <histogram name="Apps.AppListSearchResultOpenType" enum="AppListSearchResult">
   <owner>tapted@chromium.org</owner>
   <summary>
@@ -1698,6 +1730,19 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     The number of times the different sources for showing the app list are used.
     This is logged when the app list is shown.
+  </summary>
+</histogram>
+
+<histogram name="Apps.AppListStateTransitionSource"
+    enum="AppListStateTransitionSource">
+  <owner>newcomer@chromium.org</owner>
+  <summary>
+    The number of transitions from the different AppListStates. This is gathered
+    each time the launcher transitions from various states in
+    AppListView::SetState (Peeking, Half, Fullscreen All Apps, Fullscreen
+    Search, and Closed). Not all state transitions are collected because they
+    are not meaningful in measuring user activity. This metric is only recorded
+    when the Fullscreen App List feature is enabled.
   </summary>
 </histogram>
 
@@ -2379,7 +2424,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     The number of seconds between task window activations triggered by users
     clicking or tapping on a window, as recorded by the Desktop_SwitchTask user
-    action. Recorded on ChromeOS only. Task switches from other sources are
+    action. Recorded on Chrome OS only. Task switches from other sources are
     ignored and do not affect this metric. In other words, if a user performs
     the following steps (1) click on task window 'A' (2) Alt+Tab to task 'Z'(3)
     click on task window 'B', then this will result in a sample recorded for the
@@ -2573,16 +2618,88 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="Ash.Shelf.Palette.Assistant.CircledPercentage" units="%">
+  <owner>kaznacheev@chromium.org</owner>
+  <summary>
+    The percentage of the screen area circled by the Assistant pen. Recorded
+    when the &quot;closed shape&quot; gesture is recognized.
+  </summary>
+</histogram>
+
+<histogram name="Ash.Shelf.Palette.Assistant.GestureDuration" units="ms">
+  <owner>kaznacheev@chromium.org</owner>
+  <summary>
+    The duration of an Assistant pen gesture. Recorded at the end of every
+    gesture.
+  </summary>
+</histogram>
+
+<histogram name="Ash.Shelf.Palette.Assistant.GestureInterval" units="ms">
+  <owner>kaznacheev@chromium.org</owner>
+  <summary>
+    The interval between subsequent Assistant pen gestures within a session.
+    Session is defined as the period while the Assistant tool is enabled.
+    Recorded at the end of each gesture except for the first one in the session.
+    The interval is computed excluding the gesture duration.
+  </summary>
+</histogram>
+
+<histogram name="Ash.Shelf.Palette.Assistant.GesturesPerSession">
+  <owner>kaznacheev@chromium.org</owner>
+  <summary>
+    The number of Assistant pen gestures per session. Session is defined as the
+    period while the Assistant tool is enabled. Recorded at the end of the
+    session.
+  </summary>
+</histogram>
+
+<histogram name="Ash.Shelf.Palette.Assistant.GesturesPerSession.Recognized">
+  <owner>kaznacheev@chromium.org</owner>
+  <summary>
+    The number of recognized Assistant pen gestures per session. Session is
+    defined as the period while the Assistant tool is enabled. Recorded at the
+    end of the session.
+  </summary>
+</histogram>
+
+<histogram name="Ash.Shelf.Palette.Assistant.GestureType"
+    enum="AssistantGestureType">
+  <owner>kaznacheev@chromium.org</owner>
+  <summary>
+    The type of the Assistant pen gesture. Recorded at the end of each gesture.
+  </summary>
+</histogram>
+
+<histogram name="Ash.Shelf.Palette.Assistant.HighlighterLength" units="dp">
+  <owner>kaznacheev@chromium.org</owner>
+  <summary>
+    The length of a recognized &quot;horizontal stroke&quot; Assistant pen
+    gesture. Recorded at the and of the gesture.
+  </summary>
+</histogram>
+
+<histogram name="Ash.Shelf.Palette.InAssistantMode" units="ms">
+  <owner>kaznacheev@chromium.org</owner>
+  <summary>
+    The amount of time spent in Palette Assistant mode. Recorded when the
+    Assistant mode is exited.
+  </summary>
+</histogram>
+
 <histogram name="Ash.Shelf.Palette.InLaserPointerMode" units="ms">
   <owner>xiaoyinh@chromium.org</owner>
   <summary>
-    Tracks the amount of time spend in Palette laser point mode.
+    The amount of time spend in Palette Laser pointer mode. Recorded when the
+    Laser pointer mode is exited.
   </summary>
 </histogram>
 
 <histogram name="Ash.Shelf.Palette.InMagnifyMode" units="ms">
   <owner>xiaoyinh@chromium.org</owner>
-  <summary>Tracks the amount of time spend in Palette Magnify mode.</summary>
+  <summary>
+    The amount of time spend in Palette Magnify mode. Recorded when the Magnify
+    mode is exited.
+  </summary>
 </histogram>
 
 <histogram name="Ash.Shelf.Palette.ModeCancellation"
@@ -2597,16 +2714,24 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram name="Ash.Shelf.Palette.Usage" enum="PaletteTrayOptions">
   <owner>xiaoyinh@chromium.org</owner>
   <summary>
-    Tracks the usage of each pen palette option when palette is not
-    automatically opened by a stylus eject event.
+    Recorded every time that the palette option has been selected from the
+    palette that has been opened manually (not via a stylus eject event).
   </summary>
 </histogram>
 
 <histogram name="Ash.Shelf.Palette.Usage.AutoOpened" enum="PaletteTrayOptions">
   <owner>xiaoyinh@chromium.org</owner>
   <summary>
-    Tracks the usage of each pen palette option when palette is automatically
-    opened by a stylus eject event.
+    Recorded every time that the palette option has been selected from the
+    palette that has been opened automatically (by a stylus eject event).
+  </summary>
+</histogram>
+
+<histogram name="Ash.Shelf.Palette.Usage.Shortcut" enum="PaletteTrayOptions">
+  <owner>kaznacheev@chromium.org</owner>
+  <summary>
+    Recorded every time that the palette option has been selected by means other
+    that the palette menu (e.g. stylus barrel button or a keyboard accelerator).
   </summary>
 </histogram>
 
@@ -2956,6 +3081,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     frames per second is achieved during the animations. 0% should not happen.
     This metric is recorded exactly once when SetBoundsDirectCrossFade is
     called, such as when window is maximized.
+  </summary>
+</histogram>
+
+<histogram name="Ash.Window.AnimationSmoothness.Hide" units="%">
+  <owner>wutao@chromium.org</owner>
+  <summary>
+    Relative smoothness of hiding window animation. 100% represents ideally
+    smooth 60 frames per second. 50% represents when only 30 frames per second
+    is achieved during the animations. 0% should not happen. This metric is
+    recorded exactly once when AnimateHideWindowCommon is called, such as when
+    window is closed.
   </summary>
 </histogram>
 
@@ -5789,6 +5925,14 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>Gamma properties of image color space.</summary>
 </histogram>
 
+<histogram base="true" name="Blink.Compositing.LayerPromotionCount">
+  <owner>paint-dev@chromium.org</owner>
+  <summary>
+    Number of composited layers based on various reasons. Recorded when a page
+    finishes its layer updates.
+  </summary>
+</histogram>
+
 <histogram name="Blink.Compositing.UpdateTime" units="microseconds">
   <owner>paint-dev@chromium.org</owner>
   <summary>
@@ -5912,6 +6056,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
 <histogram name="Blink.MediaDocument.DownloadButton"
     enum="MediaDocumentDownloadButtonType">
+  <obsolete>
+    Deprecated 08/2017 as it is integrated into media controller.
+  </obsolete>
   <owner>qinmin@chromium.org</owner>
   <summary>
     Records how the download button on the MediaDocument is used.
@@ -7187,7 +7334,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>oshima@chromium.org</owner>
   <summary>
     Out of BrowserRenderProcessHost.ChildKills, numer of kills due to SIGKILL,
-    which is a strong signal of out of memory on ChromeOS, grouped by renderer
+    which is a strong signal of out of memory on Chrome OS, grouped by renderer
     type.
   </summary>
 </histogram>
@@ -7212,6 +7359,14 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     Count of renderer process crashes that we miscounted because we took the
     exit code too early. Grouped by type.
+  </summary>
+</histogram>
+
+<histogram name="BrowserRenderProcessHost.KeepAliveDuration" units="ms">
+  <owner>horo@chromium.org</owner>
+  <summary>
+    How long a render process is kept alive by additional customers such as
+    shared workers and service workers.
   </summary>
 </histogram>
 
@@ -7908,7 +8063,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>oshima@chromium.org</owner>
   <summary>
     Out of ChildProcess.Killled, number of kills due to SIGKILL, which is a
-    strong signal of out of memory on ChromeOS, grouped by process type.
+    strong signal of out of memory on Chrome OS, grouped by process type.
   </summary>
 </histogram>
 
@@ -8246,10 +8401,13 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="ChromeOS.Display.ColorProfile" enum="ChromeOSColorProfile">
+  <obsolete>
+    Deprecated 8/2017.
+  </obsolete>
   <owner>xiaowenx@chromium.org</owner>
   <owner>mukai@chromium.org</owner>
   <summary>
-    The name of the current color calibration of the display on ChromeOS. This
+    The name of the current color calibration of the display on Chrome OS. This
     value is sent when the color calibration is changed by the user.
   </summary>
 </histogram>
@@ -8265,7 +8423,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram name="ChromeOS.MachineIdRegen.AgeSeconds" units="seconds">
   <owner>zeuthen@chromium.org</owner>
   <summary>
-    The number of seconds of uptime since the last time the ChromeOS machine-id
+    The number of seconds of uptime since the last time the Chrome OS machine-id
     was regenerated. This is reported every time the machine-id is regenerated
     except for the first time since reboot.
   </summary>
@@ -8274,7 +8432,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram name="ChromeOS.MachineIdRegen.Reason" enum="ChromeOSMachineIdReason">
   <owner>zeuthen@chromium.org</owner>
   <summary>
-    The reason why the ChromeOS machine-id was regenerated. This is reported
+    The reason why the Chrome OS machine-id was regenerated. This is reported
     when the machine-id is re-generated.
   </summary>
 </histogram>
@@ -8282,7 +8440,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram name="ChromeOS.MemoryPressureLevel" enum="MemoryPressureLevel">
   <owner>xdai@chromium.org</owner>
   <summary>
-    The memory pressure level in ChromeOS, which is recorded periodically (once
+    The memory pressure level in Chrome OS, which is recorded periodically (once
     per second). This is used to show the relative frequency of the system being
     in a critical vs relaxed memory pressure state.
   </summary>
@@ -13218,6 +13376,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="Dialog.DialogDelegate.Duration" units="ms">
+  <owner>pdyson@chromium.org</owner>
+  <summary>
+    How long dialog boxes are open, for dialog boxes created using the parent
+    class DialogDelegate. This will include bubbles that use
+    BubbleDialogDelegateView as a parent class, and dialogs that use
+    DialogDelegateView as a parent class. This is logged on delegate
+    destruction.
+  </summary>
+</histogram>
+
 <histogram name="DirectWrite.Fonts.BuildCache.File.Size" units="KB">
   <owner>shrikant@chromium.org</owner>
   <summary>
@@ -14948,11 +15117,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
 <histogram name="Doodle.ConfigDownloadOutcome"
     enum="DoodleConfigDownloadOutcome">
+  <obsolete>
+    Removed from code 2017-08.
+  </obsolete>
   <owner>treib@chromium.org</owner>
   <summary>Outcome of downloading the Doodle config.</summary>
 </histogram>
 
 <histogram name="Doodle.ConfigDownloadTime" units="ms">
+  <obsolete>
+    Removed from code 2017-08.
+  </obsolete>
   <owner>treib@chromium.org</owner>
   <summary>
     The time it took to download the Doodle config. Recorded only if the
@@ -17232,7 +17407,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram name="Enterprise.UserPolicyValidationFailure"
     enum="ValidationFailures">
   <owner>mnissler@chromium.org</owner>
-  <summary>Source of policy validation errors on ChromeOS.</summary>
+  <summary>Source of policy validation errors on Chrome OS.</summary>
 </histogram>
 
 <histogram name="Enterprise.UserPolicyValidationLoadStatus"
@@ -19464,6 +19639,59 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="Event.TouchSelectionHandle.BestVerticalClippingPercentage"
+    units="%">
+  <owner>amaralp@chromium.org</owner>
+  <summary>
+    Percentage of touch handle height that would be clipped by the viewport in
+    the best case of flipping or not flipping.
+  </summary>
+</histogram>
+
+<histogram name="Event.TouchSelectionHandle.BottomHandleClippingPercentage"
+    units="%">
+  <owner>amaralp@chromium.org</owner>
+  <summary>
+    Percentage of touch handle height that would be clipped by the viewport if
+    the handle was not vertically flipped.
+  </summary>
+</histogram>
+
+<histogram name="Event.TouchSelectionHandle.FlippingImprovementPercentage"
+    units="%">
+  <owner>amaralp@chromium.org</owner>
+  <summary>
+    The difference between the metrics |BottomHandleClippingPercentage| and
+    |BestVerticalClippingPercentage|. Measures how useful vertical flipping is.
+  </summary>
+</histogram>
+
+<histogram name="Event.TouchSelectionHandle.LeftHandleClippingPercentage"
+    units="%">
+  <owner>amaralp@chromium.org</owner>
+  <summary>
+    Percentage of left touch handle width that would be clipped by the viewport
+    without flipping.
+  </summary>
+</histogram>
+
+<histogram name="Event.TouchSelectionHandle.RightHandleClippingPercentage"
+    units="%">
+  <owner>amaralp@chromium.org</owner>
+  <summary>
+    Percentage of right touch handle width that would be clipped by the viewport
+    without flipping.
+  </summary>
+</histogram>
+
+<histogram name="Event.TouchSelectionHandle.ShouldFlipHandleVertically"
+    enum="TouchHandleVerticallyFlipped">
+  <owner>amaralp@chromium.org</owner>
+  <summary>
+    Whether flipping the handle vertically would result in less clipping.
+  </summary>
+</histogram>
+
 <histogram name="ExclusiveAccess.BubbleReshowsPerSession.Fullscreen">
   <owner>mgiuca@chromium.org</owner>
   <summary>
@@ -19929,10 +20157,23 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
 <histogram name="ExtensionInstalledLoader.ForceDisabled"
     enum="BooleanForceDisabled">
+  <obsolete>
+    Replaced with ExtensionInstalledLoader.ForceDisabled2.
+  </obsolete>
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <summary>
     Counts whether we force-disabled an installed extension at startup because a
     policy provider indicated it must remain disabled.
+  </summary>
+</histogram>
+
+<histogram name="ExtensionInstalledLoader.ForceDisabled2"
+    enum="BooleanForceDisabled">
+  <owner>rdevlin.cronin@chromium.org</owner>
+  <summary>
+    Counts whether we force-disabled an installed extension at startup because
+    it failed ManagementPolicy::MustRemainDisabled check. This checks both
+    UserMayLoad and MustRemainDisabled methods on a policy provider.
   </summary>
 </histogram>
 
@@ -20650,10 +20891,10 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>asargent@chromium.org</owner>
   <summary>
     The count of disabled extensions at startup grouped by disble reason from
-    Extension::DisableReason. When an extension is disabled, it can be for one
-    or more reasons (although typically just one), so the sum of these may be
-    greater than 'Extensions.Disabled' which is a count of the number of unique
-    extensions that are disabled.
+    disable_reason::DisableReason. When an extension is disabled, it can be for
+    one or more reasons (although typically just one), so the sum of these may
+    be greater than 'Extensions.Disabled' which is a count of the number of
+    unique extensions that are disabled.
   </summary>
 </histogram>
 
@@ -23237,6 +23478,38 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>How quick view was opened.</summary>
 </histogram>
 
+<histogram name="FileBrowser.Recent.LoadArcMedia" units="ms">
+  <owner>nya@google.com</owner>
+  <summary>
+    Time to load a recently modified file list from Media Views. It is triggered
+    when the user opens or reloads Recent view in the Files app.
+  </summary>
+</histogram>
+
+<histogram name="FileBrowser.Recent.LoadDownloads" units="ms">
+  <owner>nya@google.com</owner>
+  <summary>
+    Time to load a recently modified file list from Downloads. It is triggered
+    when the user opens or reloads Recent view in the Files app.
+  </summary>
+</histogram>
+
+<histogram name="FileBrowser.Recent.LoadDrive" units="ms">
+  <owner>nya@google.com</owner>
+  <summary>
+    Time to load a recently modified file list from Drive. It is triggered when
+    the user opens or reloads Recent view in the Files app.
+  </summary>
+</histogram>
+
+<histogram name="FileBrowser.Recent.LoadTotal" units="ms">
+  <owner>nya@google.com</owner>
+  <summary>
+    Time to load a recently modified file list from all sources. It is triggered
+    when the user opens or reloads Recent view in the Files app.
+  </summary>
+</histogram>
+
 <histogram name="FileBrowser.SuggestApps.Close"
     enum="SuggestAppsDialogCloseReason">
   <owner>joshwoodward@google.com</owner>
@@ -25195,7 +25468,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>merkulova@chromium.org</owner>
   <summary>
     Which HID were detected when user pressed Continue on OOBE dialog. This
-    metric is specific to ChromeOS.
+    metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -25203,7 +25476,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>merkulova@chromium.org</owner>
   <summary>
     Whether HID detection dialog was shown on OOBE. Logged on screen show or on
-    screen skip respectively. This metric is specific to ChromeOS.
+    screen skip respectively. This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -25211,7 +25484,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>merkulova@chromium.org</owner>
   <summary>
     Records number of times the dialog was shown by the time OOBE is completed.
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -26784,7 +27057,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     units="moves">
   <owner>rsadam@chromium.org</owner>
   <summary>
-    ChromeOS histogram that counts the number of times the cursor was moved to
+    Chrome OS histogram that counts the number of times the cursor was moved to
     the previous word by swiping backwards on the selection track. The count is
     initialized when the user starts swiping from any side of the virtual
     keyboard, incremented based on how far they swipe backwards on the selection
@@ -26846,7 +27119,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram name="InputMethod.VirtualKeyboard.MovesPerSwipe" units="moves">
   <owner>rsadam@chromium.org</owner>
   <summary>
-    ChromeOS histogram that counts the number of times the cursor was moved to
+    Chrome OS histogram that counts the number of times the cursor was moved to
     the next word by swiping forward on the selection track. The count is
     initialized when the user starts swiping from any side of the virtual
     keyboard, incremented based on how far they swipe forwards on the selection
@@ -26866,7 +27139,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     units="words">
   <owner>rsadam@chromium.org</owner>
   <summary>
-    ChromeOS histogram that tracks the total number of words that were deleted
+    Chrome OS histogram that tracks the total number of words that were deleted
     by swiping forward on the deletion track. The count is initialized when the
     user starts swiping on the backspace key, incremented based on how far they
     swipe forwards on the deletion track, and recorded when they release their
@@ -26886,7 +27159,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     units="words">
   <owner>rsadam@chromium.org</owner>
   <summary>
-    ChromeOS histogram that tracks the total number of words that were restored
+    Chrome OS histogram that tracks the total number of words that were restored
     by swiping backwards on the deletion track. The count is initialized when
     the user starts swiping on the backspace key, incremented based on how far
     they swipe backwards on the deletion track, and recorded when they release
@@ -26989,6 +27262,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Installer.Recovery.Count" units="count">
+  <obsolete>
+    Superseded by Installer.Recovery.Reason in 8/2017.
+  </obsolete>
   <owner>ahassani@chromium.org</owner>
   <summary>
     The number of times the device has been recovered.
@@ -26996,7 +27272,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     This is reported on reboot after a successful recovery. Cleared only when
     switching to dev mode or on factory reset.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -27007,7 +27283,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on reboot after a successful recovery.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -27662,6 +27938,74 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram
+    name="InstantTethering.Performance.AdvertisementToConnectionDuration"
+    units="ms">
+  <owner>hansberry@chromium.org</owner>
+  <summary>
+    The duration of time between when a client began advertising to a host, and
+    connected to that host (before authentication).
+  </summary>
+</histogram>
+
+<histogram
+    name="InstantTethering.Performance.ConnectionToAuthenticationDuration"
+    units="ms">
+  <owner>hansberry@chromium.org</owner>
+  <summary>
+    The duration of time between when a client connects to a host,  and
+    authenticates with that host.
+  </summary>
+</histogram>
+
+<histogram name="InstantTethering.Performance.ConnectTetheringResponseDuration"
+    units="ms">
+  <owner>hansberry@chromium.org</owner>
+  <summary>
+    The duration of time between when a client authenticates with a host, and
+    receives a ConnectTetheringResponse.
+  </summary>
+</histogram>
+
+<histogram name="InstantTethering.Performance.ConnectToHotspotDuration"
+    units="ms">
+  <owner>hansberry@chromium.org</owner>
+  <summary>
+    The duration of time it takes for the client to connect to the provided
+    hotspot after receiving a ConnectTetheringResponse. This does not include
+    timeouts.
+  </summary>
+</histogram>
+
+<histogram
+    name="InstantTethering.Performance.DisconnectTetheringRequestDuration"
+    units="ms">
+  <owner>hansberry@chromium.org</owner>
+  <summary>
+    The duration of time it takes for the client to send off a
+    DisconnectTetheringRequest.
+  </summary>
+</histogram>
+
+<histogram name="InstantTethering.Performance.KeepAliveTickleResponseDuration"
+    units="ms">
+  <owner>hansberry@chromium.org</owner>
+  <summary>
+    The duration of time between when a client authenticates with a host, and
+    receives a KeepAliveTickleResponse.
+  </summary>
+</histogram>
+
+<histogram
+    name="InstantTethering.Performance.TetherAvailabilityResponseDuration"
+    units="ms">
+  <owner>hansberry@chromium.org</owner>
+  <summary>
+    The duration of time between when a client authenticates with a host, and
+    receives a TetherAvailabilityResponse.
+  </summary>
+</histogram>
+
 <histogram name="InterProcessTimeTicks.BrowserAhead" units="ms">
   <owner>ppi@chromium.org</owner>
   <summary>
@@ -28034,12 +28378,41 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="IOS.ContentExtension.Index" units="index">
+  <owner>olivierrobin@chromium.org</owner>
+  <summary>
+    The index of the URL selected by the user in the Content Extension.
+  </summary>
+</histogram>
+
+<histogram name="IOS.DragAndDrop.DragContent" enum="DragContent">
+  <owner>jif@chromium.org</owner>
+  <summary>
+    The type of content that the user is dragging into Chrome. Because a drag
+    can contain multiple types of objects, multiple DragContent values may be
+    recorded for a single drag event.
+  </summary>
+</histogram>
+
 <histogram name="IOS.MailtoURLRewritten" enum="Boolean">
   <owner>pkl@chromium.org</owner>
   <summary>
     Counts the times when a mailto: URL is tapped by user and whether the URL
     has been rewritten for an available native Mail client app or not.
   </summary>
+</histogram>
+
+<histogram name="IOS.NTP.Impression" enum="IOSNTPImpression">
+  <owner>gambard@chromium.org</owner>
+  <summary>
+    The type of NTP impressions on iOS, split by type of suggestions shown
+    (local vs remote).
+  </summary>
+</histogram>
+
+<histogram name="IOS.SearchExtension.Action" enum="IOSSearchExtensionAction">
+  <owner>olivierrobin@chromium.org</owner>
+  <summary>The action selected by the user in the Search Extension.</summary>
 </histogram>
 
 <histogram name="IOS.SearchExtension.DisplayCount" units="count">
@@ -28244,10 +28617,10 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>xiaohuic@chromium.org</owner>
   <owner>zalcorn@chromium.org</owner>
   <summary>
-    The time between a user pressing the ChromeOS &quot;Search&quot; key and the
-    second key being pressed down to active a shortcut. e.g. Search + L would
-    record the time between Search key down and L key down. If the user pressed
-    multiple keys after Search, we only record the first key down.
+    The time between a user pressing the Chrome OS &quot;Search&quot; key and
+    the second key being pressed down to active a shortcut. e.g. Search + L
+    would record the time between Search key down and L key down. If the user
+    pressed multiple keys after Search, we only record the first key down.
   </summary>
 </histogram>
 
@@ -29180,6 +29553,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Media.Android.IsHttpLiveStreamingMedia" enum="MediaUrlType">
+  <obsolete>
+    Deprecated as of 08/2017
+  </obsolete>
   <owner>qinmin@chromium.org</owner>
   <summary>
     Android: Records whether a regular media URL is HLS (HTTP Live Streaming)
@@ -29189,6 +29565,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
 <histogram name="Media.Android.IsHttpLiveStreamingMediaPredictionResult"
     enum="MediaTypePredictionResult">
+  <obsolete>
+    Deprecated as of 08/2017
+  </obsolete>
   <owner>sandersd@chromium.org</owner>
   <summary>
     Android: Records which HLS prediction based on the original URL was best.
@@ -30427,7 +30806,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>xhwang@chromium.org</owner>
   <summary>
     Whether a given WebMediaPlayer instance, with a CDM attached, is played in
-    an incognito window or in ChromeOS guest mode. Players that never started
+    an incognito window or in Chrome OS guest mode. Players that never started
     playback are excluded. Recorded once at time of player destruction.
   </summary>
 </histogram>
@@ -33124,6 +33503,16 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram base="true" name="Memory.Experimental.Extension2" units="MB">
+<!-- Name completed by histogram_suffixes name="RendererMemoryAllocator2" -->
+
+  <owner>erikchen@chromium.org</owner>
+  <summary>
+    The extension process's memory usage reported by the memory instrumentation
+    service.
+  </summary>
+</histogram>
+
 <histogram name="Memory.Experimental.Gpu.PhysicalFootprint.MacOS" units="MB">
   <owner>erikchen@chromium.org</owner>
   <summary>
@@ -33234,6 +33623,14 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     The private working set used by each extension process.  Each process
     provides one sample.  Recorded once per UMA ping.
+  </summary>
+</histogram>
+
+<histogram name="Memory.Extension.PrivateMemoryFootprint" units="MB">
+  <owner>erikchen@chromium.org</owner>
+  <summary>
+    A rough estimate of the private memory footprint of the extension process.
+    Recorded once per UMA ping.
   </summary>
 </histogram>
 
@@ -46334,6 +46731,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram
+    name="NewTabPage.ContentSuggestions.CountOnNtpOpenedIfVisible.Articles.Prefetched.Offline">
+  <owner>vitaliii@chromium.org</owner>
+  <summary>
+    Android: The number of prefetched suggestion cards that were available in
+    Articles category if it was visible at the time an NTP was opened and the
+    user was offline. Analogous to
+    NewTabPage.ContentSuggestions.CountOnNtpOpenedIfVisible.
+  </summary>
+</histogram>
+
 <histogram name="NewTabPage.ContentSuggestions.DismissedUnvisited"
     units="index">
   <owner>treib@chromium.org</owner>
@@ -46491,6 +46899,21 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram
+    name="NewTabPage.ContentSuggestions.Opened.Articles.Prefetched.Offline"
+    units="index">
+  <owner>vitaliii@chromium.org</owner>
+  <summary>
+    Android: The position of the prefetched suggestion card on the NTP, that is
+    clicked through to the host website of the content, when the user is
+    offline. Analogous to NewTabPage.ContentSuggestions.Opened. That is we track
+    the position the card had in the list when it was first seen by the user.
+    This tracked position can be different from the position observed by the
+    user, e.g. when the user dismissed some suggestions from the list or
+    requested more that got inserted in the middle of the feed.
+  </summary>
+</histogram>
+
 <histogram name="NewTabPage.ContentSuggestions.OpenedAge" units="ms">
   <owner>treib@chromium.org</owner>
   <summary>
@@ -46563,6 +46986,22 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     Android: The position of a suggestion card that was shown on the NTP. A card
     is considered shown when at least 1/3 of its height is visible on the
+    screen. For each card, at most one impression is recorded per NTP instance.
+    We track the position the card had in the list when it was first seen by the
+    user. This tracked position can be different from the position observed by
+    the user, e.g. when the user dismissed some suggestions from the list or
+    requested more that got inserted in the middle of the feed.
+  </summary>
+</histogram>
+
+<histogram
+    name="NewTabPage.ContentSuggestions.Shown.Articles.Prefetched.Offline"
+    units="index">
+  <owner>vitaliii@chromium.org</owner>
+  <summary>
+    Android: The position of a prefetched suggestion card that was shown on the
+    NTP when offline. Analogous to NewTabPage.ContentSuggestions.Shown. That is
+    a card is considered shown when at least 1/3 of its height is visible on the
     screen. For each card, at most one impression is recorded per NTP instance.
     We track the position the card had in the list when it was first seen by the
     user. This tracked position can be different from the position observed by
@@ -48737,6 +49176,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
 <histogram name="NQE.UnweightedAverage.Accuracy.HttpRTT.EstimatedObservedDiff"
     units="ms">
+  <obsolete>
+    Obsoleted in August 2017.
+  </obsolete>
   <owner>tbansal@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -48750,6 +49192,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="NQE.UnweightedAverage.MainFrame.RTT" units="ms">
+  <obsolete>
+    Obsoleted in August 2017.
+  </obsolete>
   <owner>bengr@chromium.org</owner>
   <owner>tbansal@chromium.org</owner>
   <summary>
@@ -48763,6 +49208,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
 <histogram name="NQE.WeightedAverage.Accuracy.HttpRTT.EstimatedObservedDiff"
     units="ms">
+  <obsolete>
+    Obsoleted in August 2017.
+  </obsolete>
   <owner>tbansal@chromium.org</owner>
   <owner>bengr@chromium.org</owner>
   <summary>
@@ -48775,6 +49223,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="NQE.WeightedAverage.MainFrame.RTT" units="ms">
+  <obsolete>
+    Obsoleted in August 2017.
+  </obsolete>
   <owner>bengr@chromium.org</owner>
   <owner>tbansal@chromium.org</owner>
   <summary>
@@ -49948,19 +50399,37 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     the text being painted. If there are multiple keystrokes before a paint,
     logs the time since the earliest one.
 
-    This duration is composed of three parts: a) the time spent processing the
-    initial input event, b) the time spent for the repaint task to be scheduled
-    on the message loop and c) the time spent painting the Omnibox.
+    This duration is composed of three parts:
 
-    To diagnose a regression, check the following breakdown metrics:
-    Omnibox.QueryTime2 is a good proxy for (a) and Omnibox.PaintTime for (c).
-    (b) does not have a corresponding histogram but can be analyzed on the UMA
-    Task Profiler dashboard by looking at &quot;average queue time&quot; of the
-    task DisplayScheduler::ScheduleBeginFrameDeadline.
+    a) the time spent processing the initial input event
+
+    b) the time spent for the repaint task to be scheduled on the message loop
+
+    c) the time spent painting the Omnibox
+
+    d) (on views platforms) the time until the pixels are actually composited
+
+    There's a number of breakdown metrics to help diagnose a regression. First,
+    Omnibox.CharTypedToRepaintLatency.ToPaint measures the combined time of (a)
+    and (b). Omnibox.QueryTime2 is a good proxy for just (a). And there's also
+    Omnibox.PaintTime that corresponds to (c). We don't have a direct metric for
+    (d), but if neither Omnibox.CharTypedToRepaintLatency.ToPaint nor
+    Omnibox.PaintTime regressed, then the regression must be in (d).
+
+    It's also possible to get insight into (b) via the UMA Task Profiler
+    dashboard by looking at &quot;average queue time&quot; of the task
+    DisplayScheduler::ScheduleBeginFrameDeadline.
+
+    Note: The semantics of this metric on views platforms changed in M62, as
+    previously time (d) was not included in the metric.
   </summary>
 </histogram>
 
 <histogram name="Omnibox.CharTypedToRepaintLatency.Composited" units="ms">
+  <obsolete>
+    This became the new implementation of Omnibox.CharTypedToRepaintLatency as
+    of 08/2017.
+  </obsolete>
   <owner>asvitkine@chromium.org</owner>
   <owner>mpearson@chromium.org</owner>
   <summary>
@@ -49971,11 +50440,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     the character insertion, which is not covered by
     Omnibox.CharTypedToRepaintLatency. If there are multiple keystrokes before a
     paint, logs the time since the earliest one.
+  </summary>
+</histogram>
 
-    TODO(asvitkine): This is currently implemented only on Views platforms
-    (Win/Linux/CrOS) and the intention is to replace the implementation of
-    Omnibox.CharTypedToRepaintLatency by this one once we vet that it's working
-    as expected.
+<histogram name="Omnibox.CharTypedToRepaintLatency.ToPaint" units="ms">
+  <owner>asvitkine@chromium.org</owner>
+  <owner>mpearson@chromium.org</owner>
+  <summary>
+    Records the time taken between a keystroke being typed in the omnibox and
+    the time when we're ready to paint the omnibox. This is a breakdown
+    diagnostic metric for Omnibox.CharTypedToRepaintLatency, to help diagnose
+    regressions in that metric. See that metric's description for more info.
   </summary>
 </histogram>
 
@@ -54258,6 +54733,24 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="PasswordManager.ShowAllSavedPasswordsAcceptedContext"
+    enum="ShowAllSavedPasswordsContext">
+  <owner>jdoerrie@chromium.org</owner>
+  <owner>melandory@chromium.org</owner>
+  <summary>
+    Recorded when the &quot;Show all saved passwords&quot; fallback is accepted.
+  </summary>
+</histogram>
+
+<histogram name="PasswordManager.ShowAllSavedPasswordsShownContext"
+    enum="ShowAllSavedPasswordsContext">
+  <owner>jdoerrie@chromium.org</owner>
+  <owner>melandory@chromium.org</owner>
+  <summary>
+    Recorded when the &quot;Show all saved passwords&quot; fallback is shown.
+  </summary>
+</histogram>
+
 <histogram name="PasswordManager.ShowedFormNotSecureWarningOnCurrentNavigation"
     enum="BooleanShown">
   <owner>estark@chromium.org</owner>
@@ -56922,7 +57415,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     Temperature reading at sensor 0 of the CPU collected every few seconds (may
     vary between devices).
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -56932,7 +57425,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     Temperature reading at wireless interface 0 collected every few seconds (may
     vary between devices).
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -56942,7 +57435,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     Temperature reading at wireless interface 1 collected every few seconds (may
     vary between devices).
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -56952,7 +57445,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     Temperature reading at wireless interface 2 collected every few seconds (may
     vary between devices).
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -56962,7 +57455,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     State of the thermal zone of the CPU collected every second. State depends
     on device, higher state corresponds to a higher temperature.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -56972,7 +57465,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     State of the thermal zone of wireless interface 0 collected every second.
     State depends on device, higher state corresponds to a higher temperature.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -56982,7 +57475,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     State of the thermal zone of wireless interface 1 collected every second.
     State depends on device, higher state corresponds to a higher temperature.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -56992,7 +57485,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     State of the thermal zone of wireless interface 2 collected every second.
     State depends on device, higher state corresponds to a higher temperature.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -60965,7 +61458,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     enum="PrinterServiceEventType">
   <owner>vitalybuka@chromium.org</owner>
   <summary>
-    Count of events in PrinterService on ChromeOS related to USB printers.
+    Count of events in PrinterService on Chrome OS related to USB printers.
   </summary>
 </histogram>
 
@@ -61362,6 +61855,11 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram name="Profile.Avatar" enum="ProfileAvatar">
   <owner>rlp@chromium.org</owner>
   <summary>The frequency of selection of each avatar.</summary>
+</histogram>
+
+<histogram name="Profile.AvatarLoadStatus" enum="ProfileAvatarLoadStatus">
+  <owner>chengx@chromium.org</owner>
+  <summary>Load status of an avatar for decorating the Windows taskbar</summary>
 </histogram>
 
 <histogram name="Profile.BookmarksSize" units="MB">
@@ -62021,6 +62519,17 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     Time elapsed from when the backgrounded and purged renderer is foregrounded
     until the renderer is painted. This is recorded every time the backgrounded
     and purged renderer is foregrounded.
+  </summary>
+</histogram>
+
+<histogram
+    name="PurgeAndSuspend.Experimental.TimeToFirstActivePaint.AfterBackgrounded.5min"
+    units="ms">
+  <owner>tasak@google.com</owner>
+  <summary>
+    Time elapsed from when the renderer, which is kept backgrounded for more
+    than 5 minutes, is foregrounded until the renderer is painted. This is
+    recorded every time such renderer is foregrounded.
   </summary>
 </histogram>
 
@@ -63641,6 +64150,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Renderer4.SoftwarePaintDurationMS">
+  <obsolete>
+    Deprecated in issue 755432 as no longer being needed.
+  </obsolete>
   <owner>wiltzius@chromium.org</owner>
   <summary>
     Time spent by WebKit painting the page, in milliseconds, when the page is
@@ -63649,6 +64161,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="Renderer4.SoftwarePaintMegapixPerSecond">
+  <obsolete>
+    Deprecated in issue 755432 as no longer being needed.
+  </obsolete>
   <owner>wiltzius@chromium.org</owner>
   <summary>
     WebKit paint throughput, measured in megapixels per second, when the page is
@@ -65163,7 +65678,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     enum="ResourceReporterCpuUsage">
   <owner>afakhry@chromium.org</owner>
   <summary>
-    The cpu usage range reported for the browser process when the chromeos
+    The CPU usage range reported for the browser process when the Chrome OS
     device memory pressure (which is the percentage of total memory used by the
     system) is critical. This is emitted only when memory pressure changes from
     a low pressure to a higher pressure.
@@ -65175,7 +65690,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>afakhry@chromium.org</owner>
   <summary>
     The system memory usage range reported for the browser process when the
-    chromeos device memory pressure (which is the percentage of total memory
+    Chrome OS device memory pressure (which is the percentage of total memory
     used by the system) is critical. This is emitted only when memory pressure
     changes from a low pressure to a higher pressure.
   </summary>
@@ -65185,7 +65700,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     enum="ResourceReporterCpuUsage">
   <owner>afakhry@chromium.org</owner>
   <summary>
-    The cpu usage range reported for the GPU process when the chromeos device
+    The CPU usage range reported for the GPU process when the Chrome OS device
     memory pressure (which is the percentage of total memory used by the system)
     is critical. This is emitted only when memory pressure changes from a low
     pressure to a higher pressure.
@@ -65197,7 +65712,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>afakhry@chromium.org</owner>
   <summary>
     The system's RAM memory usage range reported for the GPU process when the
-    chromeos device memory pressure (which is the percentage of total memory
+    Chrome OS device memory pressure (which is the percentage of total memory
     used by the system) is critical. This is emitted only when memory pressure
     changes from a low pressure to a higher pressure.
   </summary>
@@ -71726,7 +72241,8 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
-<histogram name="ServiceWorker.StartWorker.InstalledScriptsSender.Status"
+<histogram
+    name="ServiceWorker.StartWorker.InstalledScriptsSender.FinishedReason"
     enum="ServiceWorkerInstalledScriptsManager.FinishedReason">
   <owner>shimazu@chromium.org</owner>
   <summary>
@@ -73314,6 +73830,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="SharedWorker.RendererSurviveForWorkerTime" units="ms">
+  <obsolete>
+    Replaced with BrowserRenderProcessHost.KeepAliveDuration as of Aug 2017.
+  </obsolete>
   <owner>horo@chromium.org</owner>
   <summary>
     A survival time of RenderProcessHostImpl for the In-renderer Shared Worker
@@ -73574,6 +74093,16 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>The total number of accounts in the cookie jar.</summary>
 </histogram>
 
+<histogram name="Signin.DiceResponseHeader" enum="SigninDiceResponseHeader">
+  <owner>droger@chromium.org</owner>
+  <summary>Records Dice responses (signin and signout).</summary>
+</histogram>
+
+<histogram name="Signin.DiceTokenFetchResult" enum="SigninDiceTokenFetchResult">
+  <owner>droger@chromium.org</owner>
+  <summary>Outcome of the token fetch in Dice signin.</summary>
+</histogram>
+
 <histogram name="Signin.DuringFirstRun">
   <owner>mlerman@chromium.org</owner>
   <summary>
@@ -73610,7 +74139,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>mlerman@chromium.org</owner>
   <summary>
     Failure reason of ListAccounts call failure during account reconciliation,
-    ChromeOS login, or signin internals queries.
+    Chrome OS login, or signin internals queries.
   </summary>
 </histogram>
 
@@ -73618,7 +74147,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <owner>mlerman@chromium.org</owner>
   <summary>
     Retry reason of failed ListAccounts call during Chrome OS login during
-    account reconciliation, ChromeOS login, or signin internals queries.
+    account reconciliation, Chrome OS login, or signin internals queries.
   </summary>
 </histogram>
 
@@ -77884,6 +78413,16 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="SubresourceFilter.IndexRuleset.Verify.WallDuration"
+    units="microseconds">
+  <owner>csharrison@chromium.org</owner>
+  <summary>
+    The total time it took to verify the indexed ruleset in the browser process.
+    Logged every time verification occurs, which usually occurs when the first
+    page with activation is navigated to.
+  </summary>
+</histogram>
+
 <histogram name="SubresourceFilter.IndexRuleset.WallDuration" units="ms">
   <owner>engedy@chromium.org</owner>
   <summary>
@@ -80698,6 +81237,35 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram
+    name="TabManager.BackgroundTabOpening.ForegroundTab.ExpectedTaskQueueingDuration"
+    units="ms">
+  <owner>fmeawad@chromium.org</owner>
+  <summary>
+    The expected queueing duration of tasks in a foreground tab when the browser
+    is opening background tabs but not during session restore. The metric
+    reflects the responsiveness of a tab. A lower value means the tab will
+    respond to inputs faster. This metric is equal to
+    RendererScheduler.ExpectedTaskQueueingDuration. It is emitted once for all
+    tasks in each 1000-ms window.
+  </summary>
+</histogram>
+
+<histogram name="TabManager.BackgroundTabOpening.SwitchToTab"
+    enum="TabLoadingState">
+  <owner>zhenw@chromium.org</owner>
+  <summary>
+    The loading state of a tab at the time the user switches to it when the
+    browser is opening background tabs. Backround tab opening excludes session
+    restore; this metric is tracked separately in that case
+    (TabManager.SessionRestore.SwitchToTab). The metric is only recorded when a
+    tab is switched to from another tab within the same tabstrip. As a result,
+    the case when switching between different windows is not included, either
+    between two tabs in different browser windows, or when switching to a
+    different application and switching back to the browser.
+  </summary>
+</histogram>
+
 <histogram name="TabManager.Discarding.DiscardCount" units="Discards">
   <owner>georgesak@chromium.org</owner>
   <summary>
@@ -80787,6 +81355,26 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram
+    name="TabManager.Experimental.BackgroundTabOpening.TabSwitchLoadTime"
+    units="ms">
+  <owner>zhenw@chromium.org</owner>
+  <summary>
+    The tab load time of a tab that is switched to when the browser is opening
+    background tabs. Backround tab opening excludes session restore; this metric
+    is tracked separately in that case
+    (TabManager.Experimental.SessionRestore.TabSwitchLoadTime). Tab load time is
+    defined as the time between when the user switches to a backround tab, and
+    the time when that tab finishes loading in the foreground. If the user
+    switches away before the tab finishes loading, a metric will not be recorded
+    unless the user switches back, in which case the tab load time is measured
+    from that point in time. The metric is only recorded when a tab is switched
+    to from another tab within the same tabstrip. As a result, the initial
+    forground tab is not included in this metric since it was not switched to
+    from another tab.
+  </summary>
+</histogram>
+
+<histogram
     name="TabManager.Experimental.SessionRestore.ForegroundTab.FirstContentfulPaint"
     units="ms">
   <owner>fmeawad@chromium.org</owner>
@@ -80819,6 +81407,36 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="TabManager.Experimental.SessionRestore.TabSwitchLoadTime"
+    units="ms">
+  <owner>fmeawad@chromium.org</owner>
+  <summary>
+    The tab load time of a tab that is switched to during a session restore. Tab
+    load time is defined as the time between when the user switches to a
+    backround tab, and the time when that tab finishes loading in the
+    foreground. If the user switches away before the tab finishes loading, a
+    metric will not be recorded unless the user switches back, in which case the
+    tab load time is measured from that point in time. The metric is only
+    recorded when a tab is switched to from another tab within the same
+    tabstrip. As a result, the initial forground tab is not included in this
+    metric since it was not switched to from another tab. The metric is only
+    recorded when session restore is actively loading tabs, which ends when
+    either all tabs have been loaded and their pages rendered, or tab loading
+    needs to be deferred in cases where the system is under memory pressure.
+  </summary>
+</histogram>
+
+<histogram name="TabManager.Heuristics.FromBackgroundedToFirstAlertFired"
+    units="ms">
+  <owner>chrisha@chromium.org</owner>
+  <owner>lpy@chromium.org</owner>
+  <summary>
+    Measures the time duration from when the tab is backgrounded to when a
+    JavaScript alert is updated. Only recorded when the tab is in the
+    background.
+  </summary>
+</histogram>
+
 <histogram name="TabManager.Heuristics.FromBackgroundedToFirstAudioStarts"
     units="ms">
   <owner>chrisha@chromium.org</owner>
@@ -80829,13 +81447,39 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="TabManager.Heuristics.FromBackgroundedToFirstFaviconUpdated"
+    units="ms">
+  <owner>chrisha@chromium.org</owner>
+  <owner>lpy@chromium.org</owner>
+  <summary>
+    Measures the time duration from when the tab is backgrounded to when its
+    favicon is updated. The first-time set of favicon will be ignored; this
+    metric will only be recorded after 5 minutes from main frame navigation
+    committed and when the tab is in the background.
+  </summary>
+</histogram>
+
+<histogram
+    name="TabManager.Heuristics.FromBackgroundedToFirstNonPersistentNotificationCreated"
+    units="ms">
+  <owner>chrisha@chromium.org</owner>
+  <owner>lpy@chromium.org</owner>
+  <summary>
+    Measures the time duration from when the tab is backgrounded to when a
+    non-persistent notification is created. Only recorded when the tab is in the
+    background.
+  </summary>
+</histogram>
+
 <histogram name="TabManager.Heuristics.FromBackgroundedToFirstTitleUpdated"
     units="ms">
   <owner>chrisha@chromium.org</owner>
   <owner>lpy@chromium.org</owner>
   <summary>
     Measures the time duration from when the tab is backgrounded to when its
-    title is updated. Only recorded when the tab is in the background.
+    title is updated. The first-time set of title will be ignored; this metric
+    will only be recorded after 5 minutes from main frame navigation committed
+    and when the tab is in the background.
   </summary>
 </histogram>
 
@@ -80862,6 +81506,19 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     ends when either all tabs have been loaded and their pages rendered, or tab
     loading needs to be deferred in cases where the system is under memory
     pressure. Only recorded on macOS.
+  </summary>
+</histogram>
+
+<histogram
+    name="TabManager.SessionRestore.ForegroundTab.ExpectedTaskQueueingDuration"
+    units="ms">
+  <owner>fmeawad@chromium.org</owner>
+  <summary>
+    The expected queueing duration of tasks in a foreground tab during session
+    restore. This metric reflects the responsiveness of a tab. A lower value
+    means the tab will respond to inputs faster. This metric is equal to
+    RendererScheduler.ExpectedTaskQueueingDuration. It is emitted once for all
+    tasks in each 1000-ms window.
   </summary>
 </histogram>
 
@@ -81610,6 +82267,22 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </summary>
 </histogram>
 
+<histogram name="ThirdPartyModules.InstalledPrograms.DataSize" units="KB">
+  <owner>pmonette@chromium.org</owner>
+  <summary>
+    Records the size of the in-memory representation of the installed
+    third-party programs on the user's machine.
+  </summary>
+</histogram>
+
+<histogram name="ThirdPartyModules.InstalledPrograms.GetDataTime" units="ms">
+  <owner>pmonette@chromium.org</owner>
+  <summary>
+    Records the time it took to gather the list of installed third-party
+    programs and their install location or components.
+  </summary>
+</histogram>
+
 <histogram name="ThirdPartyModules.Modules.Loaded" units="modules">
   <owner>chrisha@chromium.org</owner>
   <summary>
@@ -81756,6 +82429,16 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <summary>
     Measures whether the tile manager exceeded the hard GPU memory budget
     (OOMed). Recorded each time the tile manager assigns GPU memory to tiles.
+  </summary>
+</histogram>
+
+<histogram name="TileManager.TilesGPUMemoryUsage" units="KB">
+  <owner>xidachen@chromium.org</owner>
+  <owner>ericrk@chromium.org</owner>
+  <summary>
+    The amount of GPU memory, in kilobytes. Recorded on devices with less than
+    or equal to 512MB of memory and when tile manager had sufficient memory to
+    schedule all visible tiles.
   </summary>
 </histogram>
 
@@ -82036,7 +82719,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     Team: input-dev@chromium.org.
   </summary>
   <details>
-    NOTE: This metric was incorrectly recorded on ChromeOS for versions 42
+    NOTE: This metric was incorrectly recorded on Chrome OS for versions 42
     through 45, see http://crbug.com/499476 for more details. As of
     http://crbug.com/644318, we changed the internal name to
     TouchEventFeatureDetection, but we still keep the old histogram name here to
@@ -83662,7 +84345,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported when an update attempt ends.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83676,7 +84359,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     This is reported when an attempt ends with the &quot;Payload Download
     Error&quot; result.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83689,7 +84372,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported when an update attempt ends.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83701,7 +84384,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported when an update attempt ends.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83713,7 +84396,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported when an update attempt ends.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83726,7 +84409,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported when an attempt ends with the InternalError result.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83738,7 +84421,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported when an update attempt ends.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83749,7 +84432,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported when an update attempt ends.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83762,7 +84445,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported when an update attempt ends.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83773,7 +84456,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported when an update attempt ends.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83788,7 +84471,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported when an update attempt ends.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83799,7 +84482,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported when an update attempt ends.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83813,7 +84496,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     This is reported when an update attempt ends but only if there was a
     previous attempt for the same update.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83827,7 +84510,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     This is reported when an update attempt ends but only if there was a
     previous attempt for the same update.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83841,7 +84524,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     This is reported on every HTTPS connection to the payload download server.
     Connection drops on the same payload may report different values.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83854,7 +84537,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every update check.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83868,7 +84551,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     This is reported on every update check resulting in &quot;Download
     error&quot;.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83882,7 +84565,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on update checks resulting in &quot;Update available&quot;.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83895,7 +84578,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every update check.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83907,7 +84590,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every update check except for the first one.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83920,7 +84603,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every update check except for the first one.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83931,7 +84614,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every update check but at most once a day.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83944,7 +84627,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     This is reported every time the firmware fails to boot the slot with the
     update and fell back to the slot it originally updated from.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83958,7 +84641,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     This is reported when OOBE (Out Of Box Experience) completes (M34 or later)
     or when upgrading to a version with install-date-days support.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83969,7 +84652,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported every time there's a rollback request.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83980,7 +84663,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every successful update.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -83992,7 +84675,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every successful update.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -84005,7 +84688,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every successful update.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -84018,7 +84701,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every successful update.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -84031,7 +84714,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every successful update.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -84043,7 +84726,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every successful update.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -84056,7 +84739,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every successful update.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -84067,7 +84750,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every successful update.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -84080,7 +84763,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every successful update.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -84091,7 +84774,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every successful update.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -84105,7 +84788,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every successful update.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -84118,7 +84801,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every successful update.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -84130,7 +84813,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 
     This is reported on every successful update.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -84144,7 +84827,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
     This is reported every time the device is rebooted after an update has been
     applied.
 
-    This metric is specific to ChromeOS.
+    This metric is specific to Chrome OS.
   </summary>
 </histogram>
 
@@ -84675,6 +85358,14 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram name="V8.GCIncrementalMarkingStart" units="ms">
   <owner>hpayer@chromium.org</owner>
   <summary>Time spent in starting incremental marking.</summary>
+</histogram>
+
+<histogram name="V8.GCIncrementalMarkingSum" units="ms">
+  <owner>ulan@chromium.org</owner>
+  <summary>
+    The total time spent in incremental marking steps in one GC cycle. It is
+    only recorded if the time is non-zero.
+  </summary>
 </histogram>
 
 <histogram name="V8.GCLowMemoryNotification" units="ms">
@@ -86021,6 +86712,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="WebApk.Install.InfoBarShown" enum="WebApkInstallInfoBarShown">
+  <obsolete>
+    Deprecated 2017-08. As of M62, this is no longer recorded.
+  </obsolete>
   <owner>hanxi@chromium.org</owner>
   <owner>pkotwicz@chromium.org</owner>
   <owner>yfriedman@chromium.org</owner>
@@ -86082,6 +86776,9 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram>
 
 <histogram name="WebApk.Install.UserAction" enum="WebApkUserAction">
+  <obsolete>
+    Deprecated 2017-08. As of M62, this is no longer recorded.
+  </obsolete>
   <owner>hanxi@chromium.org</owner>
   <owner>pkotwicz@chromium.org</owner>
   <owner>yfriedman@chromium.org</owner>
@@ -89107,7 +89804,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 <histogram name="WebRTC.Video.CpuLimitedResolutionInPercent" units="%">
   <owner>asapersson@chromium.org</owner>
   <summary>
-    Percentage of frames that are limited in resolution due to cpu for a sent
+    Percentage of frames that are limited in resolution due to CPU for a sent
     video stream. Recorded when a stream is removed.
   </summary>
 </histogram>
@@ -91376,6 +92073,15 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   </suffix>
   <suffix name="WEBP"/>
   <affected-histogram name="Blink.Canvas.ToDataURL"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="BlinkCompositingLayerCount" separator=".">
+  <suffix name="Overlap"/>
+  <suffix name="ActiveAnimation"/>
+  <suffix name="AssumedOverlap"/>
+  <suffix name="IndirectComposited"/>
+  <suffix name="TotalComposited"/>
+  <affected-histogram name="Blink.Compositing.LayerPromotionCount"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="BlinkGCReason" separator="_">
@@ -94037,6 +94743,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <suffix name="IPH_DownloadPageScreenshot"
       label="In product help download page for screenshot."/>
   <suffix name="IPH_DownloadHome" label="In product help download home."/>
+  <suffix name="IPH_MediaDownload" label="In product help media download."/>
   <suffix name="IPH_NewTab" label="In product help new tab."/>
   <suffix name="IPH_IncognitoWindow" label="In product help incognito window."/>
   <suffix name="IPH_NewTabTip" label="In product help new tab tip."/>
@@ -96820,7 +97527,8 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <suffix name="async_loading" label="Offline async loaded pages"/>
   <suffix name="custom_tabs" label="Offline custom tabs"/>
   <suffix name="download" label="Offline downloaded pages"/>
-  <suffix name="ntp_suggestions" label="Offline ntp suggestions"/>
+  <suffix name="ntp_suggestions" label="NTP suggestions offlined by the user"/>
+  <suffix name="suggested_articles" label="Prefetched NTP suggestions"/>
   <affected-histogram
       name="OfflinePages.Background.BackgroundLoadingFailedCode"/>
   <affected-histogram
@@ -98896,6 +99604,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <suffix name="PartitionAlloc" label="Constrained to partition allocator."/>
   <suffix name="BlinkGC" label="Constrained to blink GC allocator."/>
   <suffix name="V8" label="Constrained to v8 allocator."/>
+  <affected-histogram name="Memory.Experimental.Extension2"/>
   <affected-histogram name="Memory.Experimental.Renderer2"/>
 </histogram_suffixes>
 
@@ -100718,7 +101427,7 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
 </histogram_suffixes>
 
 <histogram_suffixes name="VideoAdaptationReason" separator=".">
-  <suffix name="Cpu" label="Adapt reason: cpu."/>
+  <suffix name="Cpu" label="Adapt reason: CPU."/>
   <suffix name="Quality" label="Adapt reason: quality."/>
   <affected-histogram name="WebRTC.Video.AdaptChangesPerMinute"/>
 </histogram_suffixes>
@@ -100841,6 +101550,20 @@ http://cs/file:chrome/histograms.xml - but prefer this file for new entries.
   <suffix name="Data" label="Data"/>
   <affected-histogram name="WebRTC.PeerConnection.SrtpCryptoSuite"/>
   <affected-histogram name="WebRTC.PeerConnection.SslCipherSuite"/>
+</histogram_suffixes>
+
+<histogram_suffixes name="WebRTCVideoSimulcastId" separator=".">
+  <suffix name="S0"/>
+  <suffix name="S1"/>
+  <suffix name="S2"/>
+  <affected-histogram name="WebRTC.Video.EndToEndDelayInMs"/>
+  <affected-histogram name="WebRTC.Video.EndToEndDelayMaxInMs"/>
+  <affected-histogram name="WebRTC.Video.InterframeDelayInMs"/>
+  <affected-histogram name="WebRTC.Video.InterframeDelayMaxInMs"/>
+  <affected-histogram name="WebRTC.Video.Screenshare.EndToEndDelayInMs"/>
+  <affected-histogram name="WebRTC.Video.Screenshare.EndToEndDelayMaxInMs"/>
+  <affected-histogram name="WebRTC.Video.Screenshare.InterframeDelayInMs"/>
+  <affected-histogram name="WebRTC.Video.Screenshare.InterframeDelayMaxInMs"/>
 </histogram_suffixes>
 
 <histogram_suffixes name="WebSocketErrorCodesVariants" separator="_">

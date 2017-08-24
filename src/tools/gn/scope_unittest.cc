@@ -51,7 +51,7 @@ TEST(Scope, NonRecursiveMergeTo) {
 
   // Detect collisions of values' values.
   {
-    Scope new_scope(setup.settings(), {});
+    Scope new_scope(setup.settings());
     Value new_value(&assignment, "goodbye");
     new_scope.SetValue("v", new_value, &assignment);
 
@@ -64,7 +64,7 @@ TEST(Scope, NonRecursiveMergeTo) {
 
   // Template name collisions.
   {
-    Scope new_scope(setup.settings(), {});
+    Scope new_scope(setup.settings());
 
     scoped_refptr<Template> new_templ(
         new Template(&new_scope, &templ_definition));
@@ -78,7 +78,7 @@ TEST(Scope, NonRecursiveMergeTo) {
 
   // The clobber flag should just overwrite colliding values.
   {
-    Scope new_scope(setup.settings(), {});
+    Scope new_scope(setup.settings());
     Value new_value(&assignment, "goodbye");
     new_scope.SetValue("v", new_value, &assignment);
 
@@ -96,7 +96,7 @@ TEST(Scope, NonRecursiveMergeTo) {
 
   // Clobber flag for templates.
   {
-    Scope new_scope(setup.settings(), {});
+    Scope new_scope(setup.settings());
 
     scoped_refptr<Template> new_templ(
         new Template(&new_scope, &templ_definition));
@@ -116,7 +116,7 @@ TEST(Scope, NonRecursiveMergeTo) {
 
   // Don't flag values that technically collide but have the same value.
   {
-    Scope new_scope(setup.settings(), {});
+    Scope new_scope(setup.settings());
     Value new_value(&assignment, "hello");
     new_scope.SetValue("v", new_value, &assignment);
 
@@ -128,7 +128,7 @@ TEST(Scope, NonRecursiveMergeTo) {
 
   // Templates that technically collide but are the same.
   {
-    Scope new_scope(setup.settings(), {});
+    Scope new_scope(setup.settings());
 
     scoped_refptr<Template> new_templ(
         new Template(&new_scope, &templ_definition));
@@ -142,7 +142,7 @@ TEST(Scope, NonRecursiveMergeTo) {
 
   // Copy private values and templates.
   {
-    Scope new_scope(setup.settings(), {});
+    Scope new_scope(setup.settings());
 
     Err err;
     EXPECT_TRUE(setup.scope()->NonRecursiveMergeTo(
@@ -154,7 +154,7 @@ TEST(Scope, NonRecursiveMergeTo) {
 
   // Skip private values and templates.
   {
-    Scope new_scope(setup.settings(), {});
+    Scope new_scope(setup.settings());
 
     Err err;
     Scope::MergeOptions options;
@@ -168,7 +168,7 @@ TEST(Scope, NonRecursiveMergeTo) {
 
   // Don't mark used.
   {
-    Scope new_scope(setup.settings(), {});
+    Scope new_scope(setup.settings());
 
     Err err;
     Scope::MergeOptions options;
@@ -181,7 +181,7 @@ TEST(Scope, NonRecursiveMergeTo) {
 
   // Mark dest used.
   {
-    Scope new_scope(setup.settings(), {});
+    Scope new_scope(setup.settings());
 
     Err err;
     Scope::MergeOptions options;
@@ -191,23 +191,6 @@ TEST(Scope, NonRecursiveMergeTo) {
     EXPECT_FALSE(err.has_error());
     EXPECT_TRUE(new_scope.CheckForUnusedVars(&err));
     EXPECT_FALSE(err.has_error());
-  }
-
-  // Input files are merged.
-  {
-    InputFile gni_input_file(SourceFile("//features.gni"));
-    InputFile root_input_file(SourceFile("//BUILD.gn"));
-    Scope gni_scope(setup.settings(), {&gni_input_file});
-    Scope new_scope(setup.settings(), {&root_input_file});
-
-    Err err;
-    Scope::MergeOptions options;
-    EXPECT_TRUE(gni_scope.NonRecursiveMergeTo(&new_scope, options, &assignment,
-                                              "error", &err));
-    EXPECT_FALSE(err.has_error());
-    const auto& input_files = new_scope.input_files();
-    EXPECT_NE(input_files.end(), input_files.find(&gni_input_file));
-    EXPECT_NE(input_files.end(), input_files.find(&root_input_file));
   }
 }
 
@@ -224,8 +207,6 @@ TEST(Scope, MakeClosure) {
   assignment.set_value(assignment_token);
   setup.scope()->SetValue("on_root", Value(&assignment, "on_root"),
                            &assignment);
-  InputFile gni_input_file(SourceFile("//features.gni"));
-  setup.scope()->AddInputFile(&gni_input_file);
 
   // Root scope should be const from the nested caller's perspective.
   Scope nested1(static_cast<const Scope*>(setup.scope()));
@@ -247,15 +228,6 @@ TEST(Scope, MakeClosure) {
   EXPECT_TRUE(HasStringValueEqualTo(result.get(), "on_root", "on_root"));
   EXPECT_TRUE(HasStringValueEqualTo(result.get(), "on_one", "on_two"));
   EXPECT_TRUE(HasStringValueEqualTo(result.get(), "on_two", "on_two2"));
-
-  {
-    const auto& input_files = nested1.input_files();
-    EXPECT_NE(input_files.end(), input_files.find(&gni_input_file));
-  }
-  {
-    const auto& input_files = nested2.input_files();
-    EXPECT_NE(input_files.end(), input_files.find(&gni_input_file));
-  }
 }
 
 TEST(Scope, GetMutableValue) {
@@ -276,7 +248,7 @@ TEST(Scope, GetMutableValue) {
   Value value(&assignment, "hello");
 
   // Create a root scope with one value.
-  Scope root_scope(setup.settings(), {});
+  Scope root_scope(setup.settings());
   root_scope.SetValue(kOnConst, value, &assignment);
 
   // Create a first nested scope with a different value.

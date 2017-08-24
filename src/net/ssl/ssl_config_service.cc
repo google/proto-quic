@@ -76,15 +76,17 @@ void SSLConfigService::ProcessConfigUpdate(const SSLConfig& old_config,
                old_config.sha1_local_anchors_enabled,
                old_config.common_name_fallback_local_anchors_enabled,
                old_config.version_min, old_config.version_max,
-               old_config.disabled_cipher_suites, old_config.channel_id_enabled,
-               old_config.false_start_enabled, old_config.require_ecdhe) !=
+               old_config.tls13_variant, old_config.disabled_cipher_suites,
+               old_config.channel_id_enabled, old_config.false_start_enabled,
+               old_config.require_ecdhe) !=
       std::tie(new_config.rev_checking_enabled,
                new_config.rev_checking_required_local_anchors,
                new_config.sha1_local_anchors_enabled,
                new_config.common_name_fallback_local_anchors_enabled,
                new_config.version_min, new_config.version_max,
-               new_config.disabled_cipher_suites, new_config.channel_id_enabled,
-               new_config.false_start_enabled, new_config.require_ecdhe);
+               new_config.tls13_variant, new_config.disabled_cipher_suites,
+               new_config.channel_id_enabled, new_config.false_start_enabled,
+               new_config.require_ecdhe);
 
   if (config_changed)
     NotifySSLConfigChange();

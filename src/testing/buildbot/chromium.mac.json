@@ -1701,6 +1701,16 @@
           "shards": 2
         }
       }
+    ],
+    "scripts": [
+      {
+        "name": "webkit_lint",
+        "script": "webkit_lint.py"
+      },
+      {
+        "name": "webkit_python_tests",
+        "script": "webkit_python_tests.py"
+      }
     ]
   },
   "Mac10.9 Tests (dbg)": {

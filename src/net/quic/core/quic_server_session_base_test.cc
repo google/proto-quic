@@ -80,8 +80,6 @@ class TestServerSession : public QuicServerSessionBase {
   ~TestServerSession() override { delete connection(); };
 
  protected:
-  // TODO(ckrasic) - for two below, remove when
-  // quic_reloadable_flag_quic_refactor_stream_creation is deprecated.
   QuicSpdyStream* CreateIncomingDynamicStream(QuicStreamId id) override {
     if (!ShouldCreateIncomingDynamicStream(id)) {
       return nullptr;
@@ -102,10 +100,6 @@ class TestServerSession : public QuicServerSessionBase {
     stream->SetPriority(priority);
     ActivateStream(QuicWrapUnique(stream));
     return stream;
-  }
-
-  std::unique_ptr<QuicStream> CreateStream(QuicStreamId id) override {
-    return QuicMakeUnique<QuicSimpleServerStream>(id, this, response_cache_);
   }
 
   QuicCryptoServerStreamBase* CreateQuicCryptoServerStream(
@@ -357,15 +351,9 @@ TEST_P(QuicServerSessionBaseTest, GetEvenIncomingError) {
 TEST_P(QuicServerSessionBaseTest, GetStreamDisconnected) {
   // Don't create new streams if the connection is disconnected.
   QuicConnectionPeer::TearDownLocalConnectionState(connection_);
-  if (FLAGS_quic_reloadable_flag_quic_refactor_stream_creation) {
-    EXPECT_EQ(nullptr, QuicServerSessionBasePeer::GetOrCreateDynamicStream(
-                           session_.get(), GetNthClientInitiatedId(0)));
-  } else {
-    EXPECT_QUIC_BUG(
-        QuicServerSessionBasePeer::GetOrCreateDynamicStream(
-            session_.get(), GetNthClientInitiatedId(0)),
-        "ShouldCreateIncomingDynamicStream called when disconnected");
-  }
+  EXPECT_QUIC_BUG(QuicServerSessionBasePeer::GetOrCreateDynamicStream(
+                      session_.get(), GetNthClientInitiatedId(0)),
+                  "ShouldCreateIncomingDynamicStream called when disconnected");
 }
 
 class MockQuicCryptoServerStream : public QuicCryptoServerStream {

@@ -5,7 +5,6 @@
 #include "net/tools/quic/test_tools/mock_quic_time_wait_list_manager.h"
 
 using testing::_;
-using testing::AnyNumber;
 using testing::Invoke;
 
 namespace net {

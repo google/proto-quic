@@ -7,10 +7,6 @@
 Run with --test to generate an AST and verify that all comments accurately
 reflect the state of the Nodes.
 
-BUILD Type(Name)
-This comment signals that a node of type <Type> is created with the
-name <Name>.
-
 ERROR Error String
 This comment signals that a error of <Error String> is generated.  The error
 is not assigned to a node, but are expected in order.
@@ -202,7 +198,6 @@ interface MyIFaceBig2 {
   static void staticFunction(long long myLong);
 };
 
-
 /** TREE
  *Interface(MyIFaceSpecials)
  *  Operation(set)
@@ -219,20 +214,10 @@ interface MyIFaceBig2 {
  *          StringType(DOMString)
  *    Type()
  *      PrimitiveType(double)
- *  Operation(GetFiveSix)
- *    Arguments()
- *      Argument(arg)
- *        Type()
- *          Typeref(SomeType)
- *    Type()
- *      PrimitiveType(long long)
- *      Array(5)
- *        Array(6)
  */
 interface MyIFaceSpecials {
   setter creator void set(DOMString property);
   getter double (DOMString property);
-  long long [5][6] GetFiveSix(SomeType arg);
 };
 
 /** TREE

@@ -106,13 +106,12 @@ std::string RenderJSON(const BuildSettings* build_settings,
   }
 
   auto settings = base::MakeUnique<base::DictionaryValue>();
-  settings->SetStringWithoutPathExpansion("root_path",
-                                          build_settings->root_path_utf8());
-  settings->SetStringWithoutPathExpansion("build_dir",
-                                          build_settings->build_dir().value());
-  settings->SetStringWithoutPathExpansion(
+  settings->SetKey("root_path", base::Value(build_settings->root_path_utf8()));
+  settings->SetKey("build_dir",
+                   base::Value(build_settings->build_dir().value()));
+  settings->SetKey(
       "default_toolchain",
-      default_toolchain_label.GetUserVisibleName(false));
+      base::Value(default_toolchain_label.GetUserVisibleName(false)));
 
   auto output = base::MakeUnique<base::DictionaryValue>();
   output->SetWithoutPathExpansion("targets", std::move(targets));

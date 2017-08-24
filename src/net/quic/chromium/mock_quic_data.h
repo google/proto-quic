@@ -58,6 +58,12 @@ class MockQuicData {
   // Resumes I/O after it is paused.
   void Resume();
 
+  // Creates a new SequencedSocketData owned by this instance of MockQuicData.
+  // Returns a pointer to the newly created SequencedSocketData.
+  SequencedSocketData* InitializeAndGetSequencedSocketData();
+
+  SequencedSocketData* GetSequencedSocketData();
+
  private:
   std::vector<std::unique_ptr<QuicEncryptedPacket>> packets_;
   std::unique_ptr<MockConnect> connect_;

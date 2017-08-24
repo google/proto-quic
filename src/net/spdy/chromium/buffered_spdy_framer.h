@@ -29,7 +29,8 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramerVisitorInterface {
   BufferedSpdyFramerVisitorInterface() {}
 
   // Called if an error is detected in the SpdySerializedFrame protocol.
-  virtual void OnError(SpdyFramer::SpdyFramerError spdy_framer_error) = 0;
+  virtual void OnError(
+      Http2DecoderAdapter::SpdyFramerError spdy_framer_error) = 0;
 
   // Called if an error is detected in a HTTP2 stream.
   virtual void OnStreamError(SpdyStreamId stream_id,
@@ -139,7 +140,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
   void set_debug_visitor(SpdyFramerDebugVisitorInterface* debug_visitor);
 
   // SpdyFramerVisitorInterface
-  void OnError(SpdyFramer::SpdyFramerError spdy_framer_error) override;
+  void OnError(Http2DecoderAdapter::SpdyFramerError spdy_framer_error) override;
   void OnHeaders(SpdyStreamId stream_id,
                  bool has_priority,
                  int weight,
@@ -186,8 +187,8 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
   size_t ProcessInput(const char* data, size_t len);
   void UpdateHeaderDecoderTableSize(uint32_t value);
   void Reset();
-  SpdyFramer::SpdyFramerError spdy_framer_error() const;
-  SpdyFramer::SpdyState state() const;
+  Http2DecoderAdapter::SpdyFramerError spdy_framer_error() const;
+  Http2DecoderAdapter::SpdyState state() const;
   bool MessageFullyRead();
   bool HasError();
   std::unique_ptr<SpdySerializedFrame> CreateRstStream(
@@ -232,6 +233,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
 
  private:
   SpdyFramer spdy_framer_;
+  Http2DecoderAdapter deframer_;
   BufferedSpdyFramerVisitorInterface* visitor_;
 
   int frames_received_;

@@ -1679,6 +1679,91 @@ void HttpNetworkTransactionTest::PreconnectErrorResendRequestTest(
   EXPECT_EQ(kHttpData, response_data);
 }
 
+// Test that we do not retry indefinitely when a server sends an error like
+// ERR_SPDY_PING_FAILED, ERR_SPDY_SERVER_REFUSED_STREAM,
+// ERR_QUIC_HANDSHAKE_FAILED or ERR_QUIC_PROTOCOL_ERROR.
+TEST_F(HttpNetworkTransactionTest, FiniteRetriesOnIOError) {
+  HttpRequestInfo request;
+  request.method = "GET";
+  request.url = GURL("https://www.foo.com/");
+
+  // Check whether we give up after the third try.
+
+  // Construct an HTTP2 request and a "Go away" response.
+  SpdySerializedFrame spdy_request(spdy_util_.ConstructSpdyGet(
+      request.url.spec().c_str(), 1, DEFAULT_PRIORITY));
+  SpdySerializedFrame spdy_response_go_away(spdy_util_.ConstructSpdyGoAway());
+  MockRead data_read1 = CreateMockRead(spdy_response_go_away);
+  MockWrite data_write = CreateMockWrite(spdy_request, 0);
+
+  // Three go away responses.
+  StaticSocketDataProvider data1(&data_read1, 1, &data_write, 1);
+  StaticSocketDataProvider data2(&data_read1, 1, &data_write, 1);
+  StaticSocketDataProvider data3(&data_read1, 1, &data_write, 1);
+
+  session_deps_.socket_factory->AddSocketDataProvider(&data1);
+  AddSSLSocketData();
+  session_deps_.socket_factory->AddSocketDataProvider(&data2);
+  AddSSLSocketData();
+  session_deps_.socket_factory->AddSocketDataProvider(&data3);
+  AddSSLSocketData();
+
+  TestCompletionCallback callback;
+  std::unique_ptr<HttpNetworkSession> session(CreateSession(&session_deps_));
+  HttpNetworkTransaction trans(DEFAULT_PRIORITY, session.get());
+
+  int rv = trans.Start(&request, callback.callback(), NetLogWithSource());
+  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
+
+  rv = callback.WaitForResult();
+  EXPECT_THAT(rv, IsError(ERR_SPDY_SERVER_REFUSED_STREAM));
+}
+
+TEST_F(HttpNetworkTransactionTest, RetryTwiceOnIOError) {
+  HttpRequestInfo request;
+  request.method = "GET";
+  request.url = GURL("https://www.foo.com/");
+
+  // Check whether we try atleast thrice before giving up.
+
+  // Construct an HTTP2 request and a "Go away" response.
+  SpdySerializedFrame spdy_request(spdy_util_.ConstructSpdyGet(
+      request.url.spec().c_str(), 1, DEFAULT_PRIORITY));
+  SpdySerializedFrame spdy_response_go_away(spdy_util_.ConstructSpdyGoAway());
+  MockRead data_read1 = CreateMockRead(spdy_response_go_away);
+  MockWrite data_write = CreateMockWrite(spdy_request, 0);
+
+  // Construct a non error HTTP2 response.
+  SpdySerializedFrame spdy_response_no_error(
+      spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
+  SpdySerializedFrame spdy_data(spdy_util_.ConstructSpdyDataFrame(1, true));
+  MockRead data_read2[] = {CreateMockRead(spdy_response_no_error, 1),
+                           CreateMockRead(spdy_data, 2)};
+
+  // Two error responses.
+  StaticSocketDataProvider data1(&data_read1, 1, &data_write, 1);
+  StaticSocketDataProvider data2(&data_read1, 1, &data_write, 1);
+  // Followed by a success response.
+  SequencedSocketData data3(data_read2, 2, &data_write, 1);
+
+  session_deps_.socket_factory->AddSocketDataProvider(&data1);
+  AddSSLSocketData();
+  session_deps_.socket_factory->AddSocketDataProvider(&data2);
+  AddSSLSocketData();
+  session_deps_.socket_factory->AddSocketDataProvider(&data3);
+  AddSSLSocketData();
+
+  TestCompletionCallback callback;
+  std::unique_ptr<HttpNetworkSession> session(CreateSession(&session_deps_));
+  HttpNetworkTransaction trans(DEFAULT_PRIORITY, session.get());
+
+  int rv = trans.Start(&request, callback.callback(), NetLogWithSource());
+  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
+
+  rv = callback.WaitForResult();
+  EXPECT_THAT(rv, IsOk());
+}
+
 TEST_F(HttpNetworkTransactionTest, KeepAliveConnectionNotConnectedOnWrite) {
   MockWrite write_failure(ASYNC, ERR_SOCKET_NOT_CONNECTED);
   KeepAliveConnectionResendRequestTest(&write_failure, NULL);

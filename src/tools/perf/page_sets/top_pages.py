@@ -17,7 +17,6 @@ class TopPages(page_module.Page):
         url=url, page_set=page_set, name=name,
         credentials_path='data/credentials.json',
         shared_page_state_class=shared_page_state_class)
-    self.archive_data_file = 'data/top_25.json'
     self.credentials = credentials
 
 

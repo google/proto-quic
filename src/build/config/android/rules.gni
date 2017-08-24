@@ -2463,6 +2463,7 @@ if (enable_java_templates) {
           rebase_path(_generated_script, root_build_dir),
           "--apk-path",
           rebase_path(_final_apk_path, root_build_dir),
+          "--target-cpu=$target_cpu",
         ]
         if (defined(invoker.command_line_flags_file)) {
           args += [

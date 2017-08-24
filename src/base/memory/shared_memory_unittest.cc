@@ -708,16 +708,16 @@ TEST_F(SharedMemoryProcessTest, SharedMemoryAcrossProcesses) {
 
   // Start |kNumTasks| processes, each of which atomically increments the first
   // word by 1.
-  SpawnChildResult children[kNumTasks];
+  Process processes[kNumTasks];
   for (int index = 0; index < kNumTasks; ++index) {
-    children[index] = SpawnChild("SharedMemoryTestMain");
-    ASSERT_TRUE(children[index].process.IsValid());
+    processes[index] = SpawnChild("SharedMemoryTestMain");
+    ASSERT_TRUE(processes[index].IsValid());
   }
 
   // Check that each process exited correctly.
   int exit_code = 0;
   for (int index = 0; index < kNumTasks; ++index) {
-    EXPECT_TRUE(children[index].process.WaitForExit(&exit_code));
+    EXPECT_TRUE(processes[index].WaitForExit(&exit_code));
     EXPECT_EQ(0, exit_code);
   }
 

@@ -43,6 +43,7 @@ QuicChromiumClientStream::Handle::Handle(QuicChromiumClientStream* stream)
       read_headers_buffer_(nullptr),
       read_body_buffer_len_(0),
       net_error_(ERR_UNEXPECTED),
+      net_log_(stream->net_log()),
       weak_factory_(this) {
   SaveState();
 }
@@ -310,6 +311,12 @@ size_t QuicChromiumClientStream::Handle::NumBytesConsumed() const {
   return stream_->sequencer()->NumBytesConsumed();
 }
 
+bool QuicChromiumClientStream::Handle::HasBytesToRead() const {
+  if (!stream_)
+    return false;
+  return stream_->sequencer()->HasBytesToRead();
+}
+
 bool QuicChromiumClientStream::Handle::IsDoneReading() const {
   if (!stream_)
     return is_done_reading_;
@@ -339,6 +346,10 @@ bool QuicChromiumClientStream::Handle::can_migrate() {
   if (!stream_)
     return false;
   return stream_->can_migrate();
+}
+
+const NetLogWithSource& QuicChromiumClientStream::Handle::net_log() const {
+  return net_log_;
 }
 
 void QuicChromiumClientStream::Handle::SaveState() {

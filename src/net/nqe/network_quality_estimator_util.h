@@ -5,6 +5,8 @@
 #ifndef NET_NQE_NETWORK_QUALITY_ESTIMATOR_UTIL_H_
 #define NET_NQE_NETWORK_QUALITY_ESTIMATOR_UTIL_H_
 
+#include <stdint.h>
+
 #include "net/base/net_export.h"
 
 namespace net {
@@ -15,6 +17,9 @@ class HostResolver;
 namespace nqe {
 
 namespace internal {
+
+// A unified compact representation of an IPv6 or an IPv4 address.
+typedef uint64_t IPHash;
 
 // Returns true if the host contained in |host_port_pair| is a host in a
 // private Internet as defined by RFC 1918 or if the requests to

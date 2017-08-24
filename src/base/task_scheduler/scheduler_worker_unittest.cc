@@ -78,8 +78,8 @@ class TaskSchedulerWorkerTest : public testing::TestWithParam<size_t> {
 
   void SetUp() override {
     worker_ = make_scoped_refptr(new SchedulerWorker(
-        ThreadPriority::NORMAL, MakeUnique<TestSchedulerWorkerDelegate>(this),
-        &task_tracker_));
+        ThreadPriority::NORMAL,
+        std::make_unique<TestSchedulerWorkerDelegate>(this), &task_tracker_));
     ASSERT_TRUE(worker_);
     worker_->Start();
     worker_set_.Signal();
@@ -527,7 +527,7 @@ TEST(TaskSchedulerWorkerTest, WorkerCleanupDuringWork) {
   // No mock here as that's reasonably covered by other tests and the delegate
   // may destroy on a different thread. Mocks aren't designed with that in mind.
   std::unique_ptr<ControllableCleanupDelegate> delegate =
-      MakeUnique<ControllableCleanupDelegate>(&task_tracker);
+      std::make_unique<ControllableCleanupDelegate>(&task_tracker);
   scoped_refptr<ControllableCleanupDelegate::Controls> controls =
       delegate->controls();
 
@@ -551,7 +551,7 @@ TEST(TaskSchedulerWorkerTest, WorkerCleanupDuringWait) {
   // No mock here as that's reasonably covered by other tests and the delegate
   // may destroy on a different thread. Mocks aren't designed with that in mind.
   std::unique_ptr<ControllableCleanupDelegate> delegate =
-      MakeUnique<ControllableCleanupDelegate>(&task_tracker);
+      std::make_unique<ControllableCleanupDelegate>(&task_tracker);
   scoped_refptr<ControllableCleanupDelegate::Controls> controls =
       delegate->controls();
 
@@ -572,7 +572,7 @@ TEST(TaskSchedulerWorkerTest, WorkerCleanupDuringShutdown) {
   // No mock here as that's reasonably covered by other tests and the delegate
   // may destroy on a different thread. Mocks aren't designed with that in mind.
   std::unique_ptr<ControllableCleanupDelegate> delegate =
-      MakeUnique<ControllableCleanupDelegate>(&task_tracker);
+      std::make_unique<ControllableCleanupDelegate>(&task_tracker);
   scoped_refptr<ControllableCleanupDelegate::Controls> controls =
       delegate->controls();
 
@@ -598,7 +598,7 @@ TEST(TaskSchedulerWorkerTest, CleanupBeforeStart) {
   // No mock here as that's reasonably covered by other tests and the delegate
   // may destroy on a different thread. Mocks aren't designed with that in mind.
   std::unique_ptr<ControllableCleanupDelegate> delegate =
-      MakeUnique<ControllableCleanupDelegate>(&task_tracker);
+      std::make_unique<ControllableCleanupDelegate>(&task_tracker);
   scoped_refptr<ControllableCleanupDelegate::Controls> controls =
       delegate->controls();
   controls->set_expect_get_work(false);
@@ -646,7 +646,7 @@ TEST(TaskSchedulerWorkerTest, WorkerCleanupDuringJoin) {
   // delegate may destroy on a different thread. Mocks aren't designed with that
   // in mind.
   std::unique_ptr<ControllableCleanupDelegate> delegate =
-      MakeUnique<ControllableCleanupDelegate>(&task_tracker);
+      std::make_unique<ControllableCleanupDelegate>(&task_tracker);
   scoped_refptr<ControllableCleanupDelegate::Controls> controls =
       delegate->controls();
 
@@ -786,7 +786,7 @@ class CoInitializeDelegate : public SchedulerWorkerDefaultDelegate {
 
 TEST(TaskSchedulerWorkerTest, BackwardCompatibilityEnabled) {
   TaskTracker task_tracker;
-  auto delegate = MakeUnique<CoInitializeDelegate>();
+  auto delegate = std::make_unique<CoInitializeDelegate>();
   CoInitializeDelegate* const delegate_raw = delegate.get();
 
   // Create a worker with backward compatibility ENABLED. Wake it up and wait
@@ -813,7 +813,7 @@ TEST(TaskSchedulerWorkerTest, BackwardCompatibilityEnabled) {
 
 TEST(TaskSchedulerWorkerTest, BackwardCompatibilityDisabled) {
   TaskTracker task_tracker;
-  auto delegate = MakeUnique<CoInitializeDelegate>();
+  auto delegate = std::make_unique<CoInitializeDelegate>();
   CoInitializeDelegate* const delegate_raw = delegate.get();
 
   // Create a worker with backward compatibility DISABLED. Wake it up and wait

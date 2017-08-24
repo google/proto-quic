@@ -21,8 +21,8 @@ std::pair<const Target*, bool> Pair(const Target* t, bool b) {
 TEST(InheritedLibraries, Unique) {
   TestWithScope setup;
 
-  Target a(setup.settings(), Label(SourceDir("//foo/"), "a"), {});
-  Target b(setup.settings(), Label(SourceDir("//foo/"), "b"), {});
+  Target a(setup.settings(), Label(SourceDir("//foo/"), "a"));
+  Target b(setup.settings(), Label(SourceDir("//foo/"), "b"));
 
   // Setup, add the two targets as private.
   InheritedLibraries libs;
@@ -61,12 +61,12 @@ TEST(InheritedLibraries, Unique) {
 TEST(InheritedLibraries, AppendInherited) {
   TestWithScope setup;
 
-  Target a(setup.settings(), Label(SourceDir("//foo/"), "a"), {});
-  Target b(setup.settings(), Label(SourceDir("//foo/"), "b"), {});
-  Target w(setup.settings(), Label(SourceDir("//foo/"), "w"), {});
-  Target x(setup.settings(), Label(SourceDir("//foo/"), "x"), {});
-  Target y(setup.settings(), Label(SourceDir("//foo/"), "y"), {});
-  Target z(setup.settings(), Label(SourceDir("//foo/"), "z"), {});
+  Target a(setup.settings(), Label(SourceDir("//foo/"), "a"));
+  Target b(setup.settings(), Label(SourceDir("//foo/"), "b"));
+  Target w(setup.settings(), Label(SourceDir("//foo/"), "w"));
+  Target x(setup.settings(), Label(SourceDir("//foo/"), "x"));
+  Target y(setup.settings(), Label(SourceDir("//foo/"), "y"));
+  Target z(setup.settings(), Label(SourceDir("//foo/"), "z"));
 
   InheritedLibraries libs;
   libs.Append(&a, false);
@@ -111,18 +111,18 @@ TEST(InheritedLibraries, AppendPublicSharedLibraries) {
   InheritedLibraries append;
 
   // Two source sets.
-  Target set_pub(setup.settings(), Label(SourceDir("//foo/"), "set_pub"), {});
+  Target set_pub(setup.settings(), Label(SourceDir("//foo/"), "set_pub"));
   set_pub.set_output_type(Target::SOURCE_SET);
   append.Append(&set_pub, true);
-  Target set_priv(setup.settings(), Label(SourceDir("//foo/"), "set_priv"), {});
+  Target set_priv(setup.settings(), Label(SourceDir("//foo/"), "set_priv"));
   set_priv.set_output_type(Target::SOURCE_SET);
   append.Append(&set_priv, false);
 
   // Two shared libraries.
-  Target sh_pub(setup.settings(), Label(SourceDir("//foo/"), "sh_pub"), {});
+  Target sh_pub(setup.settings(), Label(SourceDir("//foo/"), "sh_pub"));
   sh_pub.set_output_type(Target::SHARED_LIBRARY);
   append.Append(&sh_pub, true);
-  Target sh_priv(setup.settings(), Label(SourceDir("//foo/"), "sh_priv"), {});
+  Target sh_priv(setup.settings(), Label(SourceDir("//foo/"), "sh_priv"));
   sh_priv.set_output_type(Target::SHARED_LIBRARY);
   append.Append(&sh_priv, false);
 

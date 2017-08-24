@@ -7,10 +7,6 @@
 Run with --test to generate an AST and verify that all comments accurately
 reflect the state of the Nodes.
 
-BUILD Type(Name)
-This comment signals that a node of type <Type> is created with the
-name <Name>.
-
 ERROR Error String
 This comment signals that a error of <Error String> is generated.  The error
 is not assigned to a node, but are expected in order.

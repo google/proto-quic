@@ -9,20 +9,21 @@ dependencies of a test binary, and then uses either QEMU from the Fuchsia SDK
 to run, or starts the bootserver to allow running on a hardware device."""
 
 import argparse
+import json
 import os
 import socket
 import sys
 import tempfile
 import time
 
-from runner_common import RunFuchsia, BuildBootfs, ReadRuntimeDeps
+from runner_common import RunFuchsia, BuildBootfs, ReadRuntimeDeps, \
+    HOST_IP_ADDRESS
 
 DIR_SOURCE_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
 sys.path.append(os.path.join(DIR_SOURCE_ROOT, 'build', 'util', 'lib', 'common'))
 import chrome_test_server_spawner
 
-TEST_SERVER_PORT = 5000
 
 def IsLocalPortAvailable(port):
   s = socket.socket()
@@ -36,20 +37,23 @@ def IsLocalPortAvailable(port):
     s.close()
 
 
-def WaitUntil(predicate, max_attempts=5):
+def WaitUntil(predicate, timeout_seconds=1):
   """Blocks until the provided predicate (function) is true.
 
   Returns:
     Whether the provided predicate was satisfied once (before the timeout).
   """
+  start_time = time.clock()
   sleep_time_sec = 0.025
-  for _ in xrange(1, max_attempts):
+  while True:
     if predicate():
       return True
+
+    if time.clock() - start_time > timeout_seconds:
+      return False
+
     time.sleep(sleep_time_sec)
     sleep_time_sec = min(1, sleep_time_sec * 2)  # Don't wait more than 1 sec.
-  return False
-
 
 # Implementation of chrome_test_server_spawner.PortForwarder that doesn't
 # forward ports. Instead the tests are expected to connect to the host IP
@@ -145,17 +149,24 @@ def main():
 
   runtime_deps = ReadRuntimeDeps(args.runtime_deps_path, args.output_directory)
 
+  spawning_server = None
+
   # Start test server spawner for tests that need it.
   if args.enable_test_server:
     spawning_server = chrome_test_server_spawner.SpawningServer(
-          TEST_SERVER_PORT, PortForwarderNoop())
+        0, PortForwarderNoop())
     spawning_server.Start()
 
     # Generate test server config.
     config_file = tempfile.NamedTemporaryFile()
-    config_file.write(str(TEST_SERVER_PORT) + ':' + str(TEST_SERVER_PORT + 1))
+    config_file.write(json.dumps({
+      'name': 'testserver',
+      'address': HOST_IP_ADDRESS,
+      'spawner_url_base': 'http://%s:%d' %
+          (HOST_IP_ADDRESS, spawning_server.server_port)
+    }))
     config_file.flush()
-    runtime_deps.append(('net-test-server-ports', config_file.name))
+    runtime_deps.append(('net-test-server-config', config_file.name))
 
   if args.test_launcher_filter_file:
     # Bundle the filter file in the runtime deps and compose the command-line
@@ -165,12 +176,19 @@ def main():
     runtime_deps.append(('test_filter_file', test_launcher_filter_file))
     child_args.append('--test-launcher-filter-file=/system/test_filter_file')
 
-  bootfs = BuildBootfs(args.output_directory, runtime_deps, args.exe_name,
-                       child_args, args.dry_run, power_off=not args.device)
-  if not bootfs:
-    return 2
+  try:
+    bootfs = BuildBootfs(args.output_directory, runtime_deps, args.exe_name,
+                         child_args, args.dry_run, power_off=not args.device)
+    if not bootfs:
+      return 2
 
-  return RunFuchsia(bootfs, args.device, args.dry_run, interactive=False)
+    return RunFuchsia(bootfs, args.device, args.dry_run)
+
+  finally:
+    # Stop the spawner to make sure it doesn't leave testserver running, in
+    # case some tests failed.
+    if spawning_server:
+      spawning_server.Stop()
 
 
 if __name__ == '__main__':

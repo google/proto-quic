@@ -3507,6 +3507,24 @@
       }
     ]
   },
+  "Fuchsia Compile": {
+    "additional_compile_targets": [
+      "base_unittests",
+      "crypto_unittests",
+      "gl_unittests",
+      "ipc_tests",
+      "media_unittests",
+      "mojo_common_unittests",
+      "mojo_js_unittests",
+      "mojo_public_bindings_unittests",
+      "mojo_public_system_unittests",
+      "mojo_system_unittests",
+      "net_unittests",
+      "skia_unittests",
+      "service_manager_unittests",
+      "ui_base_unittests"
+    ]
+  },
   "Linux Builder": {
     "additional_compile_targets": [
       "all"
@@ -4180,16 +4198,7 @@
         "isolate_name": "webkit_layout_tests_exparchive",
         "merge": {
           "args": [
-            "--verbose",
-            "--results-json-override-with-build-property",
-            "build_number",
-            "buildnumber",
-            "--results-json-override-with-build-property",
-            "builder_name",
-            "buildername",
-            "--results-json-override-with-build-property",
-            "chromium_revision",
-            "got_revision_cp"
+            "--verbose"
           ],
           "script": "//third_party/WebKit/Tools/Scripts/merge-layout-test-results"
         },
@@ -4210,6 +4219,14 @@
       {
         "name": "checkdeps",
         "script": "checkdeps.py"
+      },
+      {
+        "name": "webkit_lint",
+        "script": "webkit_lint.py"
+      },
+      {
+        "name": "webkit_python_tests",
+        "script": "webkit_python_tests.py"
       },
       {
         "name": "checkperms",

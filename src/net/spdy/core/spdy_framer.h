@@ -13,7 +13,6 @@
 #include <utility>
 
 #include "base/sys_byteorder.h"
-#include "net/spdy/core/hpack/hpack_decoder_adapter.h"
 #include "net/spdy/core/hpack/hpack_encoder.h"
 #include "net/spdy/core/spdy_alt_svc_wire_format.h"
 #include "net/spdy/core/spdy_header_block.h"
@@ -26,13 +25,10 @@
 
 namespace net {
 
-class Http2DecoderAdapter;
 class HttpNetworkLayer;
 class HttpNetworkTransactionTest;
 class HttpProxyClientSocketPoolTest;
 class SpdyFrameBuilder;
-class SpdyFramer;
-class SpdyFramerVisitorInterface;
 class SpdyHttpStreamTest;
 class SpdyNetworkTransactionTest;
 class SpdyProxyClientSocketTest;
@@ -63,97 +59,8 @@ class SPDY_EXPORT_PRIVATE SpdyFrameSequence {
   virtual const SpdyFrameIR& GetIR() const = 0;
 };
 
-class ExtensionVisitorInterface {
- public:
-  virtual ~ExtensionVisitorInterface() {}
-
-  // Called when non-standard SETTINGS are received.
-  virtual void OnSetting(uint16_t id, uint32_t value) = 0;
-
-  // Called when non-standard frames are received.
-  virtual bool OnFrameHeader(SpdyStreamId stream_id,
-                             size_t length,
-                             uint8_t type,
-                             uint8_t flags) = 0;
-
-  // The payload for a single frame may be delivered as multiple calls to
-  // OnFramePayload. Since the length field is passed in OnFrameHeader, there is
-  // no explicit indication of the end of the frame payload.
-  virtual void OnFramePayload(const char* data, size_t len) = 0;
-};
-
-// Optionally, and in addition to SpdyFramerVisitorInterface, a class supporting
-// SpdyFramerDebugVisitorInterface may be used in conjunction with SpdyFramer in
-// order to extract debug/internal information about the SpdyFramer as it
-// operates.
-//
-// Most HTTP2 implementations need not bother with this interface at all.
-class SPDY_EXPORT_PRIVATE SpdyFramerDebugVisitorInterface {
- public:
-  virtual ~SpdyFramerDebugVisitorInterface() {}
-
-  // Called after compressing a frame with a payload of
-  // a list of name-value pairs.
-  // |payload_len| is the uncompressed payload size.
-  // |frame_len| is the compressed frame size.
-  virtual void OnSendCompressedFrame(SpdyStreamId stream_id,
-                                     SpdyFrameType type,
-                                     size_t payload_len,
-                                     size_t frame_len) {}
-
-  // Called when a frame containing a compressed payload of
-  // name-value pairs is received.
-  // |frame_len| is the compressed frame size.
-  virtual void OnReceiveCompressedFrame(SpdyStreamId stream_id,
-                                        SpdyFrameType type,
-                                        size_t frame_len) {}
-};
-
 class SPDY_EXPORT_PRIVATE SpdyFramer {
  public:
-  // HTTP2 states.
-  enum SpdyState {
-    SPDY_ERROR,
-    SPDY_READY_FOR_FRAME,  // Framer is ready for reading the next frame.
-    SPDY_FRAME_COMPLETE,  // Framer has finished reading a frame, need to reset.
-    SPDY_READING_COMMON_HEADER,
-    SPDY_CONTROL_FRAME_PAYLOAD,
-    SPDY_READ_DATA_FRAME_PADDING_LENGTH,
-    SPDY_CONSUME_PADDING,
-    SPDY_IGNORE_REMAINING_PAYLOAD,
-    SPDY_FORWARD_STREAM_FRAME,
-    SPDY_CONTROL_FRAME_BEFORE_HEADER_BLOCK,
-    SPDY_CONTROL_FRAME_HEADER_BLOCK,
-    SPDY_GOAWAY_FRAME_PAYLOAD,
-    SPDY_SETTINGS_FRAME_HEADER,
-    SPDY_SETTINGS_FRAME_PAYLOAD,
-    SPDY_ALTSVC_FRAME_PAYLOAD,
-    SPDY_EXTENSION_FRAME_PAYLOAD,
-  };
-
-  // Framer error codes.
-  enum SpdyFramerError {
-    SPDY_NO_ERROR,
-    SPDY_INVALID_STREAM_ID,            // Stream ID is invalid
-    SPDY_INVALID_CONTROL_FRAME,        // Control frame is mal-formatted.
-    SPDY_CONTROL_PAYLOAD_TOO_LARGE,    // Control frame payload was too large.
-    SPDY_ZLIB_INIT_FAILURE,            // The Zlib library could not initialize.
-    SPDY_UNSUPPORTED_VERSION,          // Control frame has unsupported version.
-    SPDY_DECOMPRESS_FAILURE,           // There was an error decompressing.
-    SPDY_COMPRESS_FAILURE,             // There was an error compressing.
-    SPDY_GOAWAY_FRAME_CORRUPT,         // GOAWAY frame could not be parsed.
-    SPDY_RST_STREAM_FRAME_CORRUPT,     // RST_STREAM frame could not be parsed.
-    SPDY_INVALID_PADDING,              // HEADERS or DATA frame padding invalid
-    SPDY_INVALID_DATA_FRAME_FLAGS,     // Data frame has invalid flags.
-    SPDY_INVALID_CONTROL_FRAME_FLAGS,  // Control frame has invalid flags.
-    SPDY_UNEXPECTED_FRAME,             // Frame received out of order.
-    SPDY_INTERNAL_FRAMER_ERROR,        // SpdyFramer was used incorrectly.
-    SPDY_INVALID_CONTROL_FRAME_SIZE,   // Control frame not sized to spec
-    SPDY_OVERSIZED_PAYLOAD,            // Payload size was too large
-
-    LAST_ERROR,  // Must be the last entry in the enum.
-  };
-
   enum CompressionOption {
     ENABLE_COMPRESSION,
     DISABLE_COMPRESSION,
@@ -189,40 +96,10 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
 
   virtual ~SpdyFramer();
 
-  // Set callbacks to be called from the framer.  A visitor must be set, or
-  // else the framer will likely crash.  It is acceptable for the visitor
-  // to do nothing.  If this is called multiple times, only the last visitor
-  // will be used.
-  void set_visitor(SpdyFramerVisitorInterface* visitor);
-
-  // Set extension callbacks to be called from the framer. (Optional.)
-  void set_extension_visitor(ExtensionVisitorInterface* extension);
-
   // Set debug callbacks to be called from the framer. The debug visitor is
   // completely optional and need not be set in order for normal operation.
   // If this is called multiple times, only the last visitor will be used.
   void set_debug_visitor(SpdyFramerDebugVisitorInterface* debug_visitor);
-
-  // Sets whether or not ProcessInput returns after finishing a frame, or
-  // continues processing additional frames. Normally ProcessInput processes
-  // all input, but this method enables the caller (and visitor) to work with
-  // a single frame at a time (or that portion of the frame which is provided
-  // as input). Reset() does not change the value of this flag.
-  void set_process_single_input_frame(bool v);
-
-  // Pass data into the framer for parsing.
-  // Returns the number of bytes consumed. It is safe to pass more bytes in
-  // than may be consumed.
-  size_t ProcessInput(const char* data, size_t len);
-
-  // Resets the framer state after a frame has been successfully decoded.
-  // TODO(mbelshe): can we make this private?
-  void Reset();
-
-  // Check the state of the framer.
-  SpdyFramerError spdy_framer_error() const;
-  SpdyState state() const;
-  bool HasError() const { return state() == SPDY_ERROR; }
 
   // Create a SpdyFrameSequence to serialize |frame_ir|.
   static std::unique_ptr<SpdyFrameSequence> CreateIterator(
@@ -372,14 +249,6 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   // Returns the maximum payload size of a DATA frame.
   size_t GetDataFrameMaximumPayload() const;
 
-  // For debugging.
-  static const char* StateToString(int state);
-  static const char* SpdyFramerErrorToString(SpdyFramerError spdy_framer_error);
-
-  // Did the most recent frame header appear to be an HTTP/1.x (or earlier)
-  // response (i.e. start with "HTTP/")?
-  bool probable_http_response() const;
-
   SpdyPriority GetLowestPriority() const { return kV3LowestPriority; }
 
   SpdyPriority GetHighestPriority() const { return kV3HighestPriority; }
@@ -393,15 +262,10 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
   // Returns the maximum size of the header encoder compression table.
   size_t header_encoder_table_size() const;
 
-  void set_max_decode_buffer_size_bytes(size_t max_decode_buffer_size_bytes);
-
   size_t send_frame_size_limit() const { return send_frame_size_limit_; }
   void set_send_frame_size_limit(size_t send_frame_size_limit) {
     send_frame_size_limit_ = send_frame_size_limit;
   }
-
-  void SetDecoderHeaderTableDebugVisitor(
-      std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor);
 
   void SetEncoderHeaderTableDebugVisitor(
       std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor);
@@ -630,14 +494,7 @@ class SPDY_EXPORT_PRIVATE SpdyFramer {
 
   std::unique_ptr<HpackEncoder> hpack_encoder_;
 
-  SpdyFramerVisitorInterface* visitor_;
-  ExtensionVisitorInterface* extension_;
   SpdyFramerDebugVisitorInterface* debug_visitor_;
-
-  SpdyHeadersHandlerInterface* header_handler_;
-
-  // Decoder to use instead of this instance.
-  std::unique_ptr<Http2DecoderAdapter> decoder_adapter_;
 
   // Determines whether HPACK compression is used.
   const CompressionOption compression_option_;

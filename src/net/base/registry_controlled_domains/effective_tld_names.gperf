@@ -291,6 +291,7 @@ andriabarlettatrani.it, 0
 andriatranibarletta.it, 0
 android, 0
 anjo.aichi.jp, 0
+ann-arbor.mi.us, 0
 annaka.gunma.jp, 0
 annefrank.museum, 0
 anpachi.gifu.jp, 0
@@ -311,6 +312,11 @@ aosta-valley.it, 0
 aosta.it, 0
 aostavalley.it, 0
 aoste.it, 0
+ap-northeast-1.elasticbeanstalk.com, 4
+ap-northeast-2.elasticbeanstalk.com, 4
+ap-south-1.elasticbeanstalk.com, 4
+ap-southeast-1.elasticbeanstalk.com, 4
+ap-southeast-2.elasticbeanstalk.com, 4
 ap.gov.br, 0
 ap.gov.pl, 0
 ap.it, 0
@@ -882,6 +888,7 @@ bv.nl, 0
 bw, 0
 by, 0
 bydgoszcz.pl, 0
+byen.site, 4
 bygland.no, 0
 bykle.no, 0
 bytom.pl, 0
@@ -894,6 +901,7 @@ c.la, 4
 c.se, 0
 c66.me, 4
 ca, 0
+ca-central-1.elasticbeanstalk.com, 4
 ca.eu.org, 4
 ca.it, 0
 ca.na, 0
@@ -1055,6 +1063,7 @@ chambagri.fr, 0
 championship.aero, 0
 chanel, 0
 channel, 0
+channelsdvr.net, 4
 charter.aero, 0
 chase, 0
 chat, 0
@@ -1189,6 +1198,7 @@ club.tw, 0
 clubmed, 0
 cm, 0
 cn, 0
+cn-north-1.eb.amazonaws.com.cn, 4
 cn.com, 4
 cn.eu.org, 4
 cn.it, 0
@@ -1269,6 +1279,7 @@ codes, 0
 codespot.com, 4
 cody.museum, 0
 coffee, 0
+cog.mi.us, 0
 coldwar.museum, 0
 collection.museum, 0
 college, 0
@@ -1690,6 +1701,7 @@ dscloud.mobi, 4
 dsmynas.com, 4
 dsmynas.net, 4
 dsmynas.org, 4
+dst.mi.us, 0
 dtv, 0
 dubai, 0
 duck, 0
@@ -1754,6 +1766,7 @@ eastafrica.museum, 0
 eastcoast.museum, 0
 eat, 0
 eating-organic.net, 4
+eaton.mi.us, 0
 ebetsu.hokkaido.jp, 0
 ebina.kanagawa.jp, 0
 ebino.miyazaki.jp, 0
@@ -1910,8 +1923,7 @@ eigersund.no, 0
 eiheiji.fukui.jp, 0
 eisenbahn.museum, 0
 ekloges.cy, 0
-elasticbeanstalk.cn-north-1.amazonaws.com.cn, 4
-elasticbeanstalk.com, 6
+elasticbeanstalk.com, 4
 elb.amazonaws.com, 6
 elb.amazonaws.com.cn, 6
 elblag.pl, 0
@@ -1996,6 +2008,9 @@ eu-1.evennode.com, 4
 eu-2.evennode.com, 4
 eu-3.evennode.com, 4
 eu-4.evennode.com, 4
+eu-central-1.elasticbeanstalk.com, 4
+eu-west-1.elasticbeanstalk.com, 4
+eu-west-2.elasticbeanstalk.com, 4
 eu.com, 4
 eu.int, 0
 eu.meteorapp.com, 4
@@ -2340,6 +2355,7 @@ futaba.fukushima.jp, 0
 futbol, 0
 futsu.nagasaki.jp, 0
 futtsu.chiba.jp, 0
+futurecms.at, 6
 futurehosting.at, 4
 futuremailing.at, 4
 fvg.it, 0
@@ -2395,6 +2411,7 @@ geelvinck.museum, 0
 geisei.kochi.jp, 0
 gemological.museum, 0
 gen.in, 0
+gen.mi.us, 0
 gen.nz, 0
 gen.tr, 0
 genkai.saga.jp, 0
@@ -4694,6 +4711,7 @@ murmansk.su, 4
 muroran.hokkaido.jp, 0
 muroto.kochi.jp, 0
 mus.br, 0
+mus.mi.us, 0
 musashimurayama.tokyo.jp, 0
 musashino.tokyo.jp, 0
 museet.museum, 0
@@ -5013,6 +5031,7 @@ net.ps, 0
 net.pt, 0
 net.py, 0
 net.qa, 0
+net.ru, 4
 net.rw, 0
 net.sa, 0
 net.sb, 0
@@ -5566,6 +5585,7 @@ org.py, 0
 org.qa, 0
 org.ro, 0
 org.rs, 0
+org.ru, 4
 org.sa, 0
 org.sb, 0
 org.sc, 0
@@ -5794,6 +5814,7 @@ pistoia.it, 0
 pisz.pl, 0
 pittsburgh.museum, 0
 piw.gov.pl, 0
+pixolino.com, 4
 pizza, 0
 pk, 0
 pl, 0
@@ -5856,6 +5877,7 @@ potenza.it, 0
 powiat.pl, 0
 poznan.pl, 4
 pp.az, 0
+pp.ru, 4
 pp.se, 0
 pp.ua, 4
 ppg.br, 0
@@ -6205,6 +6227,7 @@ s3.eu-central-1.amazonaws.com, 4
 s3.eu-west-2.amazonaws.com, 4
 s3.us-east-2.amazonaws.com, 4
 sa, 0
+sa-east-1.elasticbeanstalk.com, 4
 sa.au, 0
 sa.com, 4
 sa.cr, 0
@@ -6996,6 +7019,7 @@ te.it, 0
 te.ua, 0
 teaches-yoga.com, 4
 team, 0
+tec.mi.us, 0
 tec.ve, 0
 tech, 0
 technology, 0
@@ -7404,6 +7428,11 @@ us-2.evennode.com, 4
 us-3.evennode.com, 4
 us-4.evennode.com, 4
 us-east-1.amazonaws.com, 4
+us-east-1.elasticbeanstalk.com, 4
+us-east-2.elasticbeanstalk.com, 4
+us-gov-west-1.elasticbeanstalk.com, 4
+us-west-1.elasticbeanstalk.com, 4
+us-west-2.elasticbeanstalk.com, 4
 us.com, 4
 us.eu.org, 4
 us.gov.pl, 0
@@ -7442,6 +7471,7 @@ uz, 0
 uz.ua, 0
 uzhgorod.ua, 0
 uzs.gov.pl, 0
+v-info.info, 4
 v.bg, 0
 va, 0
 va.it, 0
@@ -7619,6 +7649,7 @@ warman, 0
 warmia.pl, 0
 warszawa.pl, 0
 washingtondc.museum, 0
+washtenaw.mi.us, 0
 wassamu.hokkaido.jp, 0
 watarai.mie.jp, 0
 watari.miyagi.jp, 0
@@ -7656,6 +7687,7 @@ wed, 0
 wedding, 0
 wedeploy.io, 4
 wedeploy.me, 4
+wedeploy.sh, 4
 wegrow.pl, 0
 weibo, 0
 weir, 0

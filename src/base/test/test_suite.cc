@@ -367,7 +367,7 @@ void TestSuite::Initialize() {
       !CommandLine::ForCurrentProcess()->HasSwitch("show-error-dialogs")) {
     SuppressErrorDialogs();
     debug::SetSuppressDebugUI(true);
-    assert_handler_ = base::MakeUnique<logging::ScopedLogAssertHandler>(
+    assert_handler_ = std::make_unique<logging::ScopedLogAssertHandler>(
         base::Bind(&TestSuite::UnitTestAssertHandler, base::Unretained(this)));
   }
 

@@ -21,16 +21,16 @@ TEST_PAGES_LOCATION_BY_REPO = {
     'test-pages': {
         'dirs': [
             'src/canvas-capture',
+            'src/codec_constraints',
             'src/multiple-peerconnections',
             'src/pause-play',
         ],
-        'revision': 'cbb12a3994692c63c9d885c95db0f67c5e3e3465',
+        'revision': '9f0ff9343a38dbf16199a964a18d7411d940c601',
     },
     'samples': {
         'dirs': [
             'src/content/datachannel/datatransfer',
             'src/content/getusermedia/resolution',
-            'src/content/peerconnection/constraints',
             'src/content/peerconnection/audio',
         ],
         'files': [

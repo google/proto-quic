@@ -153,10 +153,9 @@ class FileLockingTest : public testing::Test {
         base::GetMultiProcessTestChildBaseCommandLine());
     child_command_line.AppendSwitchPath(kTempDirFlag, temp_path);
     child_command_line.AppendSwitch(unlock_action);
-
-    spawn_child_ = base::SpawnMultiProcessTestChild(
+    lock_child_ = base::SpawnMultiProcessTestChild(
         ChildMainString, child_command_line, base::LaunchOptions());
-    ASSERT_TRUE(spawn_child_.process.IsValid());
+    ASSERT_TRUE(lock_child_.IsValid());
 
     // Wait for the child to lock the file.
     ASSERT_TRUE(WaitForEventOrTimeout(kSignalLockFileLocked));
@@ -167,13 +166,13 @@ class FileLockingTest : public testing::Test {
     ASSERT_TRUE(SignalEvent(kSignalExit));
     int rv = -1;
     ASSERT_TRUE(WaitForMultiprocessTestChildExit(
-        spawn_child_.process, TestTimeouts::action_timeout(), &rv));
+        lock_child_, TestTimeouts::action_timeout(), &rv));
     ASSERT_EQ(0, rv);
   }
 
   base::ScopedTempDir temp_dir_;
   base::File lock_file_;
-  base::SpawnChildResult spawn_child_;
+  base::Process lock_child_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(FileLockingTest);
@@ -215,16 +214,19 @@ TEST_F(FileLockingTest, UnlockOnExit) {
   ASSERT_EQ(File::FILE_OK, lock_file_.Unlock());
 }
 
-// Flaky under Android ASAN (http://crbug.com/747518)
-#if !(defined(OS_ANDROID) && defined(ADDRESS_SANITIZER))
 // Test that killing the process releases the lock.  This should cover crashing.
-TEST_F(FileLockingTest, UnlockOnTerminate) {
+// Flaky on Android (http://crbug.com/747518)
+#if defined(OS_ANDROID)
+#define MAYBE_UnlockOnTerminate DISABLED_UnlockOnTerminate
+#else
+#define MAYBE_UnlockOnTerminate UnlockOnTerminate
+#endif
+TEST_F(FileLockingTest, MAYBE_UnlockOnTerminate) {
   // The child will wait for an exit which never arrives.
   StartChildAndSignalLock(kExitUnlock);
 
   ASSERT_NE(File::FILE_OK, lock_file_.Lock());
-  ASSERT_TRUE(TerminateMultiProcessTestChild(spawn_child_.process, 0, true));
+  ASSERT_TRUE(TerminateMultiProcessTestChild(lock_child_, 0, true));
   ASSERT_EQ(File::FILE_OK, lock_file_.Lock());
   ASSERT_EQ(File::FILE_OK, lock_file_.Unlock());
 }
-#endif

@@ -8,7 +8,6 @@
 
 #include "base/android/jni_android.h"
 #include "base/android/jni_string.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/thread_restrictions.h"
@@ -30,6 +29,8 @@ JavaHandlerThread::JavaHandlerThread(
     : java_thread_(obj) {}
 
 JavaHandlerThread::~JavaHandlerThread() {
+  JNIEnv* env = base::android::AttachCurrentThread();
+  DCHECK(!Java_JavaHandlerThread_isAlive(env, java_thread_));
 }
 
 void JavaHandlerThread::Start() {
@@ -51,14 +52,8 @@ void JavaHandlerThread::Start() {
 
 void JavaHandlerThread::Stop() {
   JNIEnv* env = base::android::AttachCurrentThread();
-  base::WaitableEvent shutdown_event(WaitableEvent::ResetPolicy::AUTOMATIC,
-                                     WaitableEvent::InitialState::NOT_SIGNALED);
   Java_JavaHandlerThread_stop(env, java_thread_,
-                              reinterpret_cast<intptr_t>(this),
-                              reinterpret_cast<intptr_t>(&shutdown_event));
-  // Wait for thread to shut down before returning.
-  base::ThreadRestrictions::ScopedAllowWait wait_allowed;
-  shutdown_event.Wait();
+                              reinterpret_cast<intptr_t>(this));
 }
 
 void JavaHandlerThread::InitializeThread(JNIEnv* env,
@@ -71,18 +66,34 @@ void JavaHandlerThread::InitializeThread(JNIEnv* env,
 }
 
 void JavaHandlerThread::StopThread(JNIEnv* env,
-                                   const JavaParamRef<jobject>& obj,
-                                   jlong event) {
+                                   const JavaParamRef<jobject>& obj) {
   StopMessageLoop();
-  reinterpret_cast<base::WaitableEvent*>(event)->Signal();
+}
+
+void JavaHandlerThread::OnLooperStopped(JNIEnv* env,
+                                        const JavaParamRef<jobject>& obj) {
+  message_loop_ = nullptr;
+  CleanUp();
 }
 
 void JavaHandlerThread::StartMessageLoop() {
   static_cast<MessageLoopForUI*>(message_loop_.get())->Start();
+  Init();
 }
 
 void JavaHandlerThread::StopMessageLoop() {
   base::RunLoop::QuitCurrentWhenIdleDeprecated();
+}
+
+void JavaHandlerThread::StopMessageLoopForTesting() {
+  JNIEnv* env = base::android::AttachCurrentThread();
+  Java_JavaHandlerThread_stopOnThread(env, java_thread_,
+                                      reinterpret_cast<intptr_t>(this));
+}
+
+void JavaHandlerThread::JoinForTesting() {
+  JNIEnv* env = base::android::AttachCurrentThread();
+  Java_JavaHandlerThread_joinThread(env, java_thread_);
 }
 
 } // namespace android

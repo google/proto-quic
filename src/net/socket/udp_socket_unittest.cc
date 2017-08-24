@@ -399,9 +399,12 @@ int PrivilegedRand(int min, int max) {
   return 4;
 }
 
-#if defined(OS_IOS) && !TARGET_IPHONE_SIMULATOR
-// TODO(droger): On iOS this test fails on device (but passes on simulator).
-// See http://crbug.com/227760.
+#if defined(OS_IOS) && !TARGET_IPHONE_SIMULATOR || defined(OS_FUCHSIA)
+// On iOS this test fails on device (but passes on simulator). See
+// http://crbug.com/227760.
+//
+// On Fuchsia the tests run in an emulator and have permissions to bind to
+// privileged ports.
 #define MAYBE_ConnectFail DISABLED_ConnectFail
 #else
 #define MAYBE_ConnectFail ConnectFail

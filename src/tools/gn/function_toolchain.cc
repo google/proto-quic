@@ -453,8 +453,7 @@ Value RunToolchain(Scope* scope,
 
   // This object will actually be copied into the one owned by the toolchain
   // manager, but that has to be done in the lock.
-  std::unique_ptr<Toolchain> toolchain(
-      new Toolchain(scope->settings(), label, scope->input_files()));
+  std::unique_ptr<Toolchain> toolchain(new Toolchain(scope->settings(), label));
   toolchain->set_defined_from(function);
   toolchain->visibility().SetPublic();
 

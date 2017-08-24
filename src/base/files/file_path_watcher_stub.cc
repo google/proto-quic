@@ -35,7 +35,7 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate {
 
 FilePathWatcher::FilePathWatcher() {
   sequence_checker_.DetachFromSequence();
-  impl_ = MakeUnique<FilePathWatcherImpl>();
+  impl_ = std::make_unique<FilePathWatcherImpl>();
 }
 
 }  // namespace base

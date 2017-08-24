@@ -257,7 +257,7 @@ std::string TraceConfig::ToString() const {
 
 std::unique_ptr<ConvertableToTraceFormat>
 TraceConfig::AsConvertableToTraceFormat() const {
-  return MakeUnique<ConvertableTraceConfigToTraceFormat>(*this);
+  return std::make_unique<ConvertableTraceConfigToTraceFormat>(*this);
 }
 
 std::string TraceConfig::ToCategoryFilterString() const {
@@ -476,7 +476,7 @@ void TraceConfig::SetEventFiltersFromConfigList(
 }
 
 std::unique_ptr<DictionaryValue> TraceConfig::ToDict() const {
-  auto dict = MakeUnique<DictionaryValue>();
+  auto dict = std::make_unique<DictionaryValue>();
   switch (record_mode_) {
     case RECORD_UNTIL_FULL:
       dict->SetString(kRecordModeParam, kRecordUntilFull);
@@ -511,16 +511,16 @@ std::unique_ptr<DictionaryValue> TraceConfig::ToDict() const {
   }
 
   if (category_filter_.IsCategoryEnabled(MemoryDumpManager::kTraceCategory)) {
-    auto allowed_modes = MakeUnique<ListValue>();
+    auto allowed_modes = std::make_unique<ListValue>();
     for (auto dump_mode : memory_dump_config_.allowed_dump_modes)
       allowed_modes->AppendString(MemoryDumpLevelOfDetailToString(dump_mode));
 
-    auto memory_dump_config = MakeUnique<DictionaryValue>();
+    auto memory_dump_config = std::make_unique<DictionaryValue>();
     memory_dump_config->Set(kAllowedDumpModesParam, std::move(allowed_modes));
 
-    auto triggers_list = MakeUnique<ListValue>();
+    auto triggers_list = std::make_unique<ListValue>();
     for (const auto& config : memory_dump_config_.triggers) {
-      auto trigger_dict = MakeUnique<DictionaryValue>();
+      auto trigger_dict = std::make_unique<DictionaryValue>();
       trigger_dict->SetString(kTriggerTypeParam,
                               MemoryDumpTypeToString(config.trigger_type));
       trigger_dict->SetInteger(
@@ -538,7 +538,7 @@ std::unique_ptr<DictionaryValue> TraceConfig::ToDict() const {
 
     if (memory_dump_config_.heap_profiler_options.breakdown_threshold_bytes !=
         MemoryDumpConfig::HeapProfiler::kDefaultBreakdownThresholdBytes) {
-      auto options = MakeUnique<DictionaryValue>();
+      auto options = std::make_unique<DictionaryValue>();
       options->SetInteger(
           kBreakdownThresholdBytes,
           memory_dump_config_.heap_profiler_options.breakdown_threshold_bytes);

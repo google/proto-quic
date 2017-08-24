@@ -459,8 +459,7 @@ NET_EXPORT std::unique_ptr<base::DictionaryValue> GetNetInfo(
       base::StringPairs stats;
       disk_cache->GetStats(&stats);
       for (size_t i = 0; i < stats.size(); ++i) {
-        stats_dict->SetStringWithoutPathExpansion(stats[i].first,
-                                                  stats[i].second);
+        stats_dict->SetKey(stats[i].first, base::Value(stats[i].second));
       }
     }
     info_dict->Set("stats", std::move(stats_dict));

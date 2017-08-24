@@ -179,26 +179,3 @@ class PageCyclerV2IntlKoThVi(_PageCyclerV2):
       def SetExpectations(self):
         pass # Nothing disabled.
     return StoryExpectations()
-
-
-@benchmark.Enabled('android')
-@benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
-class PageCyclerV2Top10Mobile(_PageCyclerV2):
-  """Page load time benchmark for the top 10 mobile web pages.
-
-  Runs against pages recorded in November, 2013.
-  """
-
-  @classmethod
-  def Name(cls):
-    return 'page_cycler_v2.top_10_mobile'
-
-  def CreateStorySet(self, options):
-    return page_sets.Top10MobilePageSet(cache_temperatures=[
-        cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
-
-  def GetExpectations(self):
-    class StoryExpectations(story.expectations.StoryExpectations):
-      def SetExpectations(self):
-        pass # Nothing disabled.
-    return StoryExpectations()

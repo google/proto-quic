@@ -75,7 +75,7 @@ class TestQuicServer : public QuicServer {
     return mock_dispatcher_;
   }
 
-  MockQuicSimpleDispatcher* mock_dispatcher_;
+  MockQuicSimpleDispatcher* mock_dispatcher_ = nullptr;
   QuicHttpResponseCache response_cache_;
 };
 
@@ -105,7 +105,6 @@ class QuicServerEpollInTest : public QuicTest {
 // event should try to create connections for them. And set epoll mask with
 // EPOLLIN if there are still CHLOs remaining at the end of epoll event.
 TEST_F(QuicServerEpollInTest, ProcessBufferedCHLOsOnEpollin) {
-  FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop = true;
   // Given an EPOLLIN event, try to create session for buffered CHLOs. In first
   // event, dispatcher can't create session for all of CHLOs. So listener should
   // register another EPOLLIN event by itself. Even without new packet arrival,

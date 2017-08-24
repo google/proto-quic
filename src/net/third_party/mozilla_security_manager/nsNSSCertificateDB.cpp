@@ -96,7 +96,7 @@ bool ImportCACerts(PK11SlotInfo* slot,
       LOG(ERROR) << "PK11_ImportCert failed with error " << PORT_GetError();
       return false;
     }
-    if (!SetCertTrust(root, net::CA_CERT, trustBits))
+    if (!SetCertTrust(root->os_cert_handle(), net::CA_CERT, trustBits))
       return false;
   }
 
@@ -190,7 +190,7 @@ bool ImportServerCert(
     }
   }
 
-  SetCertTrust(certificates[0].get(), net::SERVER_CERT, trustBits);
+  SetCertTrust(certificates[0]->os_cert_handle(), net::SERVER_CERT, trustBits);
   // TODO(mattm): Report SetCertTrust result?  Putting in not_imported
   // wouldn't quite match up since it was imported...
 
@@ -229,11 +229,9 @@ int ImportUserCert(const net::CertificateList& certificates) {
 }
 
 // Based on nsNSSCertificateDB::SetCertTrust.
-bool
-SetCertTrust(const net::X509Certificate* cert,
-             net::CertType type,
-             net::NSSCertDatabase::TrustBits trustBits)
-{
+bool SetCertTrust(CERTCertificate* nsscert,
+                  net::CertType type,
+                  net::NSSCertDatabase::TrustBits trustBits) {
   const unsigned kSSLTrustBits = net::NSSCertDatabase::TRUSTED_SSL |
       net::NSSCertDatabase::DISTRUSTED_SSL;
   const unsigned kEmailTrustBits = net::NSSCertDatabase::TRUSTED_EMAIL |
@@ -250,7 +248,6 @@ SetCertTrust(const net::X509Certificate* cert,
   }
 
   SECStatus srv;
-  CERTCertificate *nsscert = cert->os_cert_handle();
   if (type == net::CA_CERT) {
     // Note that we start with CERTDB_VALID_CA for default trust and explicit
     // trust, but explicitly distrusted usages will be set to

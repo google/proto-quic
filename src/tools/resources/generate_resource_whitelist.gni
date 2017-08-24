@@ -21,31 +21,16 @@
 #     output = "$target_gen_dir/pak_whitelist.txt"
 #   }
 template("generate_resource_whitelist") {
-  # Wrap the shared_library in an executable so that it does not get added
-  # as a data_dep.
-  # TODO(crbug/748113): Remove once GN has a way to specify compile-only deps.
-  _deps = invoker.deps
-  _toolchain = get_label_info(_deps[0], "toolchain")
-  assert(current_toolchain == _toolchain,
-         "See crbug.com/748113, crbug.com/749003 for context")
-  executable("${target_name}__exec") {
-    forward_variables_from(invoker, [ "deps" ])
-    sources = [
-      "//tools/resources/dummy.c",
-    ]
-
-    # dummy.c should be built without -finstrument-functions (crbug.com/750120).
-    configs -= [ "//build/config/android:default_cygprofile_instrumentation" ]
-    configs += [ "//build/config/android:no_cygprofile_instrumentation" ]
-  }
   action(target_name) {
-    deps = [
-      ":${target_name}__exec($_toolchain)",
-    ]
+    forward_variables_from(invoker, [ "deps" ])
     assert(is_android,
            "Resource whitelist currently implemented only on Android")
 
     script = "//tools/resources/generate_resource_whitelist.py"
+
+    inputs = [
+      invoker.input,
+    ]
 
     outputs = [
       invoker.output,

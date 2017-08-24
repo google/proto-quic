@@ -5,6 +5,7 @@
 #include "base/process/process_handle.h"
 
 #include <magenta/process.h>
+#include <magenta/status.h>
 #include <magenta/syscalls.h>
 
 #include "base/logging.h"
@@ -26,7 +27,8 @@ ProcessId GetProcId(ProcessHandle process) {
   mx_status_t status = mx_object_get_info(process, MX_INFO_HANDLE_BASIC, &basic,
                                           sizeof(basic), nullptr, nullptr);
   if (status != MX_OK) {
-    DLOG(ERROR) << "mx_object_get_info failed: " << status;
+    DLOG(ERROR) << "mx_object_get_info failed: "
+                << mx_status_get_string(status);
     return MX_KOID_INVALID;
   }
   return basic.koid;

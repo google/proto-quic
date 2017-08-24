@@ -123,6 +123,20 @@ void CopyStackAndRewritePointers(uintptr_t* stack_copy_bottom,
   }
 }
 
+// Extracts the "frame offset" for a given frame from the compact unwind info.
+// A frame offset indicates the location of saved non-volatile registers in
+// relation to the frame pointer. See |mach-o/compact_unwind_encoding.h| for
+// details.
+uint32_t GetFrameOffset(int compact_unwind_info) {
+  // The frame offset lives in bytes 16-23. This shifts it down by the number of
+  // leading zeroes in the mask, then masks with (1 << number of one bits in the
+  // mask) - 1, turning 0x00FF0000 into 0x000000FF. Adapted from |EXTRACT_BITS|
+  // in libunwind's CompactUnwinder.hpp.
+  return (
+      (compact_unwind_info >> __builtin_ctz(UNWIND_X86_64_RBP_FRAME_OFFSET)) &
+      (((1 << __builtin_popcount(UNWIND_X86_64_RBP_FRAME_OFFSET))) - 1));
+}
+
 // Walks the stack represented by |unwind_context|, calling back to the provided
 // lambda for each frame. Returns false if an error occurred, otherwise returns
 // true.
@@ -145,6 +159,15 @@ bool WalkStackFromContext(unw_context_t* unwind_context,
     // If this stack frame has a frame pointer, stepping the cursor will involve
     // indexing memory access off of that pointer. In that case, sanity-check
     // the frame pointer register to ensure it's within bounds.
+    //
+    // Additionally, the stack frame might be in a prologue or epilogue,
+    // which can cause a crash when the unwinder attempts to access non-volatile
+    // registers that have not yet been pushed, or have already been popped from
+    // the stack. libwunwind will try to restore those registers using an offset
+    // from the frame pointer. However, since we copy the stack from RSP up, any
+    // locations below the stack pointer are before the beginning of the stack
+    // buffer. Account for this by checking that the expected location is above
+    // the stack pointer, and rejecting the sample if it isn't.
     unw_proc_info_t proc_info;
     unw_get_proc_info(&unwind_cursor, &proc_info);
     if ((proc_info.format & UNWIND_X86_64_MODE_MASK) ==
@@ -152,8 +175,10 @@ bool WalkStackFromContext(unw_context_t* unwind_context,
       unw_word_t rsp, rbp;
       unw_get_reg(&unwind_cursor, UNW_X86_64_RSP, &rsp);
       unw_get_reg(&unwind_cursor, UNW_X86_64_RBP, &rbp);
-      if (rbp < rsp || rbp > stack_top)
+      uint32_t offset = GetFrameOffset(proc_info.format);
+      if ((rbp - offset * 8) < rsp || rbp > stack_top) {
         return false;
+      }
     }
 
     step_result = unw_step(&unwind_cursor);
@@ -491,7 +516,7 @@ std::unique_ptr<NativeStackSampler> NativeStackSampler::Create(
     PlatformThreadId thread_id,
     AnnotateCallback annotator,
     NativeStackSamplerTestDelegate* test_delegate) {
-  return base::MakeUnique<NativeStackSamplerMac>(thread_id, annotator,
+  return std::make_unique<NativeStackSamplerMac>(thread_id, annotator,
                                                  test_delegate);
 }
 

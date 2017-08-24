@@ -137,8 +137,6 @@ struct QUIC_EXPORT_PRIVATE QuicCryptoNegotiatedParameters
   QuicTag token_binding_key_param;
 
   // Used when generating proof signature when sending server config updates.
-  bool x509_ecdsa_supported;
-  bool x509_supported;
 
   // Used to generate cert chain when sending server config updates.
   std::string client_common_set_hashes;

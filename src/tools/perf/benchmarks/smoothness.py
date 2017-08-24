@@ -185,11 +185,11 @@ class SmoothnessMaps(perf_benchmark.PerfBenchmark):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
         self.DisableStory(
-            'http://localhost:8000/performance.html',
+            'http://map-test/performance.html',
             [story_module.expectations.ALL_WIN],
             'crbug.com/692663')
         self.DisableStory(
-            'http://localhost:8000/performance.html',
+            'http://map-test/performance.html',
             [story_module.expectations.ANDROID_WEBVIEW],
             'crbug.com/653993')
     return StoryExpectations()
@@ -198,6 +198,7 @@ class SmoothnessMaps(perf_benchmark.PerfBenchmark):
 @benchmark.Owner(emails=['ssid@chromium.org'])
 class SmoothnessKeyDesktopMoveCases(_Smoothness):
   page_set = page_sets.KeyDesktopMoveCasesPageSet
+  SUPPORTED_PLATFORMS = [story_module.expectations.ALL_DESKTOP]
 
   @classmethod
   def Name(cls):
@@ -206,15 +207,12 @@ class SmoothnessKeyDesktopMoveCases(_Smoothness):
   def GetExpectations(self):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
-        self.PermanentlyDisableBenchmark(
-            [story_module.expectations.ALL_MOBILE], 'Desktop benchmark.')
         self.DisableStory('https://mail.google.com/mail/',
                           [story_module.expectations.ALL_WIN],
                           'crbug.com/750131')
     return StoryExpectations()
 
 
-@benchmark.Enabled('android')
 @benchmark.Owner(emails=['vmiura@chromium.org', 'tdresser@chromium.org'])
 class SmoothnessKeyMobileSites(_Smoothness):
   """Measures rendering statistics while scrolling down the key mobile sites.
@@ -222,6 +220,7 @@ class SmoothnessKeyMobileSites(_Smoothness):
   http://www.chromium.org/developers/design-documents/rendering-benchmarks
   """
   page_set = page_sets.KeyMobileSitesSmoothPageSet
+  SUPPORTED_PLATFORMS = [story_module.expectations.ALL_MOBILE]
 
   @classmethod
   def Name(cls):
@@ -235,7 +234,10 @@ class SmoothnessKeyMobileSites(_Smoothness):
   def GetExpectations(self):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing.
+        self.DisableStory(
+            'http://digg.com',
+            [story_module.expectations.ALL_ANDROID],
+            'crbug.com/756119')
     return StoryExpectations()
 
 
@@ -274,13 +276,13 @@ class SmoothnessToughAnimationCases(_Smoothness):
     return StoryExpectations()
 
 
-@benchmark.Enabled('android')
 @benchmark.Owner(emails=['ajuma@chromium.org'])
 class SmoothnessKeySilkCases(_Smoothness):
   """Measures rendering statistics for the key silk cases without GPU
   rasterization.
   """
   page_set = page_sets.KeySilkCasesPageSet
+  SUPPORTED_PLATFORMS = [story_module.expectations.ALL_MOBILE]
 
   @classmethod
   def Name(cls):
@@ -307,13 +309,13 @@ class SmoothnessKeySilkCases(_Smoothness):
     return StoryExpectations()
 
 
-@benchmark.Enabled('android')
 @benchmark.Owner(emails=['vmiura@chromium.org'])
 class SmoothnessGpuRasterizationTop25(_Smoothness):
   """Measures rendering statistics for the top 25 with GPU rasterization.
   """
   tag = 'gpu_rasterization'
   page_set = page_sets.Top25SmoothPageSet
+  SUPPORTED_PLATFORMS = [story_module.expectations.ALL_MOBILE]
 
   def SetExtraBrowserOptions(self, options):
     silk_flags.CustomizeBrowserOptionsForGpuRasterization(options)
@@ -332,7 +334,10 @@ class SmoothnessGpuRasterizationTop25(_Smoothness):
       def SetExpectations(self):
         self.DisableStory('http://www.cnn.com', [story_module.expectations.ALL],
                           'crbug.com/528474')
-        self.DisableStory('http://www.amazon.com', [story_module.expectations.ALL],
+        self.DisableStory('http://www.amazon.com',
+                          [story_module.expectations.ALL],
+                          'crbug.com/667432')
+        self.DisableStory('Pinterest', [story_module.expectations.ALL],
                           'crbug.com/667432')
     return StoryExpectations()
 
@@ -362,9 +367,6 @@ class SmoothnessGpuRasterizationToughPathRenderingCases(_Smoothness):
     return StoryExpectations()
 
 
-# With GPU Raster enabled on Mac, there's no reason to run this benchmark in
-# addition to SmoothnessFiltersCases.
-@benchmark.Disabled('mac')
 @benchmark.Owner(emails=['senorblanco@chromium.org'])
 class SmoothnessGpuRasterizationFiltersCases(_Smoothness):
   """Tests a selection of pages with SVG and CSS filter effects with GPU
@@ -372,6 +374,14 @@ class SmoothnessGpuRasterizationFiltersCases(_Smoothness):
   """
   tag = 'gpu_rasterization'
   page_set = page_sets.ToughFiltersCasesPageSet
+
+  # With GPU Raster enabled on Mac, there's no reason to run this
+  # benchmark in addition to SmoothnessFiltersCases.
+  SUPPORTED_PLATFORMS = [
+      story_module.expectations.ALL_LINUX,
+      story_module.expectations.ALL_MOBILE,
+      story_module.expectations.ALL_WIN
+  ]
 
   def SetExtraBrowserOptions(self, options):
     silk_flags.CustomizeBrowserOptionsForGpuRasterization(options)
@@ -388,11 +398,10 @@ class SmoothnessGpuRasterizationFiltersCases(_Smoothness):
   def GetExpectations(self):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing.
+        pass
     return StoryExpectations()
 
 
-@benchmark.Enabled('android')
 @benchmark.Owner(emails=['tdresser@chromium.org', 'rbyers@chromium.org'])
 class SmoothnessSyncScrollKeyMobileSites(_Smoothness):
   """Measures rendering statistics for the key mobile sites with synchronous
@@ -400,6 +409,7 @@ class SmoothnessSyncScrollKeyMobileSites(_Smoothness):
   """
   tag = 'sync_scroll'
   page_set = page_sets.KeyMobileSitesSmoothPageSet
+  SUPPORTED_PLATFORMS = [story_module.expectations.ALL_MOBILE]
 
   def SetExtraBrowserOptions(self, options):
     silk_flags.CustomizeBrowserOptionsForSyncScrolling(options)
@@ -416,16 +426,19 @@ class SmoothnessSyncScrollKeyMobileSites(_Smoothness):
   def GetExpectations(self):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing.
+        self.DisableStory(
+            'http://digg.com',
+            [story_module.expectations.ALL],
+            'crbug.com/756119')
     return StoryExpectations()
 
 
-@benchmark.Enabled('android')
 @benchmark.Owner(emails=['vmiura@chromium.org'])
 class SmoothnessSimpleMobilePages(_Smoothness):
   """Measures rendering statistics for simple mobile sites page set.
   """
   page_set = page_sets.SimpleMobileSitesPageSet
+  SUPPORTED_PLATFORMS = [story_module.expectations.ALL_MOBILE]
 
   @classmethod
   def Name(cls):
@@ -440,13 +453,13 @@ class SmoothnessSimpleMobilePages(_Smoothness):
     return StoryExpectations()
 
 
-@benchmark.Enabled('android')
 @benchmark.Owner(emails=['bokan@chromium.org'])
 class SmoothnessToughPinchZoomCases(_Smoothness):
   """Measures rendering statistics for pinch-zooming in the tough pinch zoom
   cases.
   """
   page_set = page_sets.AndroidToughPinchZoomCasesPageSet
+  SUPPORTED_PLATFORMS = [story_module.expectations.ALL_MOBILE]
 
   @classmethod
   def Name(cls):
@@ -456,91 +469,72 @@ class SmoothnessToughPinchZoomCases(_Smoothness):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
         self.DisableStory('https://www.google.com/#hl=en&q=barack+obama',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('https://mail.google.com/mail/',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('https://www.google.com/calendar/',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('https://www.google.com/search?q=cats&tbm=isch',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('http://www.youtube.com',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('Blogger',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('Facebook',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('LinkedIn',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('Wikipedia (1 tab)',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('Twitter',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('ESPN',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('http://news.yahoo.com',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('http://www.cnn.com',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('Weather.com',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('http://www.amazon.com',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('http://www.ebay.com',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('http://games.yahoo.com',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('http://booking.com',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
         self.DisableStory('http://sports.yahoo.com/',
-                          [story_module.expectations.ALL_ANDROID,
-                          story_module.expectations.ALL_WIN],
+                          [story_module.expectations.ALL_ANDROID],
                           'crbug.com/631015')
     return StoryExpectations()
 
 
-@benchmark.Enabled('mac')
 @benchmark.Owner(emails=['ericrk@chromium.org'])
 class SmoothnessDesktopToughPinchZoomCases(_Smoothness):
   """Measures rendering statistics for pinch-zooming in the tough pinch zoom
   cases. Uses lower zoom levels customized for desktop limits.
   """
   page_set = page_sets.DesktopToughPinchZoomCasesPageSet
+  SUPPORTED_PLATFORMS = [story_module.expectations.ALL_DESKTOP]
 
   @classmethod
   def Name(cls):
@@ -549,11 +543,10 @@ class SmoothnessDesktopToughPinchZoomCases(_Smoothness):
   def GetExpectations(self):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing.
+        pass
     return StoryExpectations()
 
 
-@benchmark.Enabled('android')
 @benchmark.Owner(emails=['ericrk@chromium.org'])
 class SmoothnessGpuRasterizationToughPinchZoomCases(_Smoothness):
   """Measures rendering statistics for pinch-zooming in the tough pinch zoom
@@ -562,6 +555,7 @@ class SmoothnessGpuRasterizationToughPinchZoomCases(_Smoothness):
   tag = 'gpu_rasterization'
   test = smoothness.Smoothness
   page_set = page_sets.AndroidToughPinchZoomCasesPageSet
+  SUPPORTED_PLATFORMS = [story_module.expectations.ALL_MOBILE]
 
   def SetExtraBrowserOptions(self, options):
     silk_flags.CustomizeBrowserOptionsForGpuRasterization(options)
@@ -631,9 +625,6 @@ class SmoothnessGpuRasterizationToughPinchZoomCases(_Smoothness):
     return StoryExpectations()
 
 
-# This benchmark runs only on android, but is disabled because the page set
-# uses deprecated web platform features.  See http://crbug.com/750876
-@benchmark.Disabled('all')
 @benchmark.Owner(emails=['vmiura@chromium.org'])
 class SmoothnessGpuRasterizationPolymer(_Smoothness):
   """Measures rendering statistics for the Polymer cases with GPU rasterization.
@@ -651,7 +642,9 @@ class SmoothnessGpuRasterizationPolymer(_Smoothness):
   def GetExpectations(self):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing.
+        self.PermanentlyDisableBenchmark(
+            [story_module.expectations.ALL],
+            'Mobile Benchmark that needs modernization. Crbug.com/750876')
     return StoryExpectations()
 
 
@@ -756,12 +749,12 @@ class SmoothnessGpuImageDecodingCases(_Smoothness):
     return StoryExpectations()
 
 
-@benchmark.Enabled('android')
 @benchmark.Owner(emails=['picksi@chromium.org'])
 class SmoothnessPathologicalMobileSites(_Smoothness):
   """Measures task execution statistics while scrolling pathological sites.
   """
   page_set = page_sets.PathologicalMobileSitesPageSet
+  SUPPORTED_PLATFORMS = [story_module.expectations.ALL_MOBILE]
 
   @classmethod
   def Name(cls):
@@ -777,7 +770,7 @@ class SmoothnessPathologicalMobileSites(_Smoothness):
   def GetExpectations(self):
     class StoryExpectations(story_module.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing.
+        pass
     return StoryExpectations()
 
 

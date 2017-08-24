@@ -147,7 +147,7 @@ class SchedulerWorkerCOMDelegate : public SchedulerWorkerDelegate {
   void OnMainEntry(SchedulerWorker* worker) override {
     SchedulerWorkerDelegate::OnMainEntry(worker);
 
-    scoped_com_initializer_ = MakeUnique<win::ScopedCOMInitializer>();
+    scoped_com_initializer_ = std::make_unique<win::ScopedCOMInitializer>();
   }
 
   scoped_refptr<Sequence> GetWork(SchedulerWorker* worker) override {
@@ -205,14 +205,14 @@ class SchedulerWorkerCOMDelegate : public SchedulerWorkerDelegate {
     MSG msg;
     if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) != FALSE) {
       auto pump_message_task =
-          MakeUnique<Task>(FROM_HERE,
-                           Bind(
-                               [](MSG msg) {
-                                 TranslateMessage(&msg);
-                                 DispatchMessage(&msg);
-                               },
-                               std::move(msg)),
-                           TaskTraits(MayBlock()), TimeDelta());
+          std::make_unique<Task>(FROM_HERE,
+                                 Bind(
+                                     [](MSG msg) {
+                                       TranslateMessage(&msg);
+                                       DispatchMessage(&msg);
+                                     },
+                                     std::move(msg)),
+                                 TaskTraits(MayBlock()), TimeDelta());
       if (task_tracker_->WillPostTask(pump_message_task.get())) {
         bool was_empty =
             message_pump_sequence_->PushTask(std::move(pump_message_task));
@@ -258,7 +258,8 @@ class SchedulerSingleThreadTaskRunnerManager::SchedulerSingleThreadTaskRunner
   bool PostDelayedTask(const tracked_objects::Location& from_here,
                        OnceClosure closure,
                        TimeDelta delay) override {
-    auto task = MakeUnique<Task>(from_here, std::move(closure), traits_, delay);
+    auto task =
+        std::make_unique<Task>(from_here, std::move(closure), traits_, delay);
     task->single_thread_task_runner_ref = this;
 
     if (!outer_->task_tracker_->WillPostTask(task.get()))
@@ -481,7 +482,7 @@ template <>
 std::unique_ptr<SchedulerWorkerDelegate>
 SchedulerSingleThreadTaskRunnerManager::CreateSchedulerWorkerDelegate<
     SchedulerWorkerDelegate>(const std::string& name, int id) {
-  return MakeUnique<SchedulerWorkerDelegate>(
+  return std::make_unique<SchedulerWorkerDelegate>(
       StringPrintf("TaskSchedulerSingleThread%s%d", name.c_str(), id));
 }
 
@@ -490,7 +491,7 @@ template <>
 std::unique_ptr<SchedulerWorkerDelegate>
 SchedulerSingleThreadTaskRunnerManager::CreateSchedulerWorkerDelegate<
     SchedulerWorkerCOMDelegate>(const std::string& name, int id) {
-  return MakeUnique<SchedulerWorkerCOMDelegate>(
+  return std::make_unique<SchedulerWorkerCOMDelegate>(
       StringPrintf("TaskSchedulerSingleThreadCOMSTA%s%d", name.c_str(), id),
       task_tracker_);
 }

@@ -190,6 +190,7 @@ dev_list="\
   libxss-dev
   libxt-dev
   libxtst-dev
+  locales
   openbox
   patch
   perl

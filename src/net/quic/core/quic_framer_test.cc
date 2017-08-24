@@ -2104,6 +2104,110 @@ TEST_P(QuicFramerTest, AckFrameOneAckBlock) {
         expected_error, QUIC_INVALID_ACK_DATA);
   }
 }
+TEST_P(QuicFramerTest, FirstAckFrameUnderflow) {
+  // clang-format off
+  unsigned char packet[] = {
+      // public flags (8 byte connection_id)
+      0x3C,
+      // connection_id
+      0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
+      // packet number
+      0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12,
+
+      // frame type (ack frame)
+      // (one ack block, 2 byte largest observed, 2 byte block length)
+      0x45,
+      // largest acked
+      0x34, 0x12,
+      // Zero delta time.
+      0x00, 0x00,
+      // first ack block length.
+      0x88, 0x88,
+      // num timestamps.
+      0x00,
+  };
+
+  unsigned char packet39[] = {
+      // public flags (8 byte connection_id)
+      0x3C,
+      // connection_id
+      0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
+      // packet number
+      0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC,
+
+      // frame type (ack frame)
+      // (one ack block, 2 byte largest observed, 2 byte block length)
+      0x45,
+      // largest acked
+      0x12, 0x34,
+      // Zero delta time.
+      0x00, 0x00,
+      // first ack block length.
+      0x88, 0x88,
+      // num timestamps.
+      0x00,
+  };
+
+  unsigned char packet40[] = {
+      // public flags (8 byte connection_id)
+      0x3C,
+      // connection_id
+      0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
+      // packet number
+      0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC,
+
+      // frame type (ack frame)
+      // (one ack block, 2 byte largest observed, 2 byte block length)
+      0xA5,
+      // num timestamps.
+      0x00,
+      // largest acked
+      0x12, 0x34,
+      // Zero delta time.
+      0x00, 0x00,
+      // first ack block length.
+      0x88, 0x88,
+  };
+  // clang-format on
+
+  unsigned char* p = packet;
+  if (framer_.version() > QUIC_VERSION_39) {
+    p = packet40;
+  } else if (framer_.version() > QUIC_VERSION_38) {
+    p = packet39;
+  }
+
+  QuicEncryptedPacket encrypted(AsChars(p), arraysize(packet), false);
+  framer_.ProcessPacket(encrypted);
+
+  visitor_.header_.get();
+
+  const size_t kLargestAckedOffset = kQuicFrameTypeSize;
+  const size_t kLargestAckedDeltaTimeOffset =
+      kLargestAckedOffset + PACKET_2BYTE_PACKET_NUMBER;
+  const size_t kFirstAckBlockLengthOffset =
+      kLargestAckedDeltaTimeOffset + kQuicDeltaTimeLargestObservedSize;
+  // Now test framing boundaries.
+  const size_t ack_frame_size =
+      kFirstAckBlockLengthOffset + PACKET_2BYTE_PACKET_NUMBER;
+  string expected_error;
+  if (framer_.version() <= QUIC_VERSION_39) {
+    if (FLAGS_quic_reloadable_flag_sanitize_framer_addrange_input) {
+      expected_error =
+          "Underflow with first ack block length 34952 largest acked is "
+          "4661.";
+    } else {
+      expected_error = "Unable to read num received packets.";
+    }
+    CheckProcessingFails(
+        p,
+        ack_frame_size +
+            GetPacketHeaderSize(framer_.version(), PACKET_8BYTE_CONNECTION_ID,
+                                !kIncludeVersion, !kIncludeDiversificationNonce,
+                                PACKET_6BYTE_PACKET_NUMBER),
+        expected_error, QUIC_INVALID_ACK_DATA);
+  }
+}
 
 TEST_P(QuicFramerTest, AckFrameOneAckBlockMaxLength) {
   // clang-format off

@@ -82,14 +82,9 @@ class QuicSimpleServerSession : public QuicServerSessionBase {
 
  protected:
   // QuicSession methods:
-  // TODO(ckrasic) - remove these two when
-  // FLAGS_quic_reloadable_flag_quic_refactor_stream_creation is
-  // deprecated.
   QuicSpdyStream* CreateIncomingDynamicStream(QuicStreamId id) override;
   QuicSimpleServerStream* CreateOutgoingDynamicStream(
       SpdyPriority priority) override;
-  std::unique_ptr<QuicStream> CreateStream(QuicStreamId id) override;
-
   // Closing an outgoing stream can reduce open outgoing stream count, try
   // to handle queued promised streams right now.
   void CloseStreamInner(QuicStreamId stream_id, bool locally_reset) override;

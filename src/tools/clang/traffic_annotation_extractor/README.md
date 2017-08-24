@@ -1,7 +1,7 @@
 # Traffic Annotation Extrator
 This is a clang tool to extract network traffic annotations. The tool is run by
-`tools/traffic_annotation/auditor/traffic_annotation_auditor.py`. Refer to it
-for help on how to use.
+`tools/traffic_annotation/auditor/traffic_annotation_auditor`. Refer to it for
+help on how to use.
 
 ## Build on Linux
 `tools/clang/scripts/update.py --bootstrap --force-local-build
@@ -27,7 +27,10 @@ Example for call using run_tool.py:
 
 The executable extracts network traffic annotations and calls to network request
   generation functions from given file paths based on build parameters in build
-  path, and writes them to llvm::outs.
+  path, and writes them to llvm::outs. It also finds all code sites in which a
+  network traffic annotation tag or any of its variants are directly assigned
+  using a list expression constructor or assignment to its |unique_id_hash_code|
+  argument.
 
 Each annotation output will have the following format:
   - Line 1: "==== NEW ANNOTATION ===="
@@ -48,3 +51,10 @@ Each function call output will have the following format:
   - Line 4: Name of the called function.
   - Line 5: Does the call have an annotation?
   - Line 6: "==== CALL ENDS ===="
+
+Each direct assignment output will have the following format:
+  - Line 1: "==== NEW ASSIGNMENT ===="
+  - Line 2: File path.
+  - Line 3: Name of the function in which assignment is done.
+  - Line 4: Line number of the assignment.
+  - Line 5: "==== ASSIGNMENT ENDS ===="

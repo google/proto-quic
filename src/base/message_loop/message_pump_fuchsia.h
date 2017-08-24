@@ -156,7 +156,7 @@ class BASE_EXPORT MessagePumpFuchsia : public MessagePump {
 
  private:
   // This flag is set to false when Run should return.
-  bool keep_running_;
+  bool keep_running_ = true;
 
   ScopedMxHandle port_;
 

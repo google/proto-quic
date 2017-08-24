@@ -33,6 +33,10 @@ namespace net {
 // Provides functions to manipulate the NSS certificate stores.
 // Forwards notifications about certificate changes to the global CertDatabase
 // singleton.
+//
+// TODO(mattm): some methods have overloads to take either X509Certificate or
+// native NSS types. This is a temporary situation while crbug.com/671420 is in
+// progress. Once 671420 is done, this class will only use NSS native types.
 class NET_EXPORT NSSCertDatabase {
  public:
   class NET_EXPORT Observer {
@@ -212,6 +216,7 @@ class NET_EXPORT NSSCertDatabase {
 
   // Set trust values for certificate.
   // Returns true on success or false on failure.
+  bool SetCertTrust(CERTCertificate* cert, CertType type, TrustBits trust_bits);
   bool SetCertTrust(const X509Certificate* cert,
                     CertType type,
                     TrustBits trust_bits);

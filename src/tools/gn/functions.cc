@@ -337,8 +337,7 @@ Value RunConfig(const FunctionCallNode* function,
     g_scheduler->Log("Defining config", label.GetUserVisibleName(true));
 
   // Create the new config.
-  std::unique_ptr<Config> config(
-      new Config(scope->settings(), label, scope->input_files()));
+  std::unique_ptr<Config> config(new Config(scope->settings(), label));
   config->set_defined_from(function);
   if (!Visibility::FillItemVisibility(config.get(), scope, err))
     return Value();
@@ -909,8 +908,7 @@ Value RunPool(const FunctionCallNode* function,
   }
 
   // Create the new pool.
-  std::unique_ptr<Pool> pool(
-      new Pool(scope->settings(), label, scope->input_files()));
+  std::unique_ptr<Pool> pool(new Pool(scope->settings(), label));
   pool->set_depth(depth->int_value());
 
   // Save the generated item.

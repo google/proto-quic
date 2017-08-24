@@ -140,6 +140,19 @@ bool IsSameCertificate(CERTCertificate* a, CERTCertificate* b) {
          memcmp(a->derCert.data, b->derCert.data, a->derCert.len) == 0;
 }
 
+bool IsSameCertificate(CERTCertificate* a, const X509Certificate* b) {
+#if BUILDFLAG(USE_BYTE_CERTS)
+  return a->derCert.len == CRYPTO_BUFFER_len(b->os_cert_handle()) &&
+         memcmp(a->derCert.data, CRYPTO_BUFFER_data(b->os_cert_handle()),
+                a->derCert.len) == 0;
+#else
+  return IsSameCertificate(a, b->os_cert_handle());
+#endif
+}
+bool IsSameCertificate(const X509Certificate* a, CERTCertificate* b) {
+  return IsSameCertificate(b, a);
+}
+
 ScopedCERTCertificate CreateCERTCertificateFromBytes(const uint8_t* data,
                                                      size_t length) {
   crypto::EnsureNSSInit();
@@ -169,8 +182,104 @@ ScopedCERTCertificate CreateCERTCertificateFromX509Certificate(
 #endif
 }
 
+ScopedCERTCertificateList CreateCERTCertificateListFromX509Certificate(
+    const X509Certificate* cert) {
+  ScopedCERTCertificateList nss_chain;
+  nss_chain.reserve(1 + cert->GetIntermediateCertificates().size());
+#if BUILDFLAG(USE_BYTE_CERTS)
+  ScopedCERTCertificate nss_cert =
+      CreateCERTCertificateFromX509Certificate(cert);
+  if (!nss_cert)
+    return {};
+  nss_chain.push_back(std::move(nss_cert));
+  for (net::X509Certificate::OSCertHandle intermediate :
+       cert->GetIntermediateCertificates()) {
+    ScopedCERTCertificate nss_intermediate = CreateCERTCertificateFromBytes(
+        CRYPTO_BUFFER_data(intermediate), CRYPTO_BUFFER_len(intermediate));
+    if (!nss_intermediate)
+      return {};
+    nss_chain.push_back(std::move(nss_intermediate));
+  }
+#else
+  nss_chain.push_back(DupCERTCertificate(cert->os_cert_handle()));
+  for (net::X509Certificate::OSCertHandle intermediate :
+       cert->GetIntermediateCertificates()) {
+    nss_chain.push_back(DupCERTCertificate(intermediate));
+  }
+#endif
+  return nss_chain;
+}
+
+ScopedCERTCertificateList CreateCERTCertificateListFromBytes(const char* data,
+                                                             size_t length,
+                                                             int format) {
+  CertificateList certs =
+      X509Certificate::CreateCertificateListFromBytes(data, length, format);
+  ScopedCERTCertificateList nss_chain;
+  nss_chain.reserve(certs.size());
+  for (const scoped_refptr<X509Certificate>& cert : certs) {
+    ScopedCERTCertificate nss_cert =
+        CreateCERTCertificateFromX509Certificate(cert.get());
+    if (!nss_cert)
+      return {};
+    nss_chain.push_back(std::move(nss_cert));
+  }
+  return nss_chain;
+}
+
 ScopedCERTCertificate DupCERTCertificate(CERTCertificate* cert) {
   return ScopedCERTCertificate(CERT_DupCertificate(cert));
+}
+
+scoped_refptr<X509Certificate> CreateX509CertificateFromCERTCertificate(
+    CERTCertificate* nss_cert,
+    const std::vector<CERTCertificate*>& nss_chain) {
+#if BUILDFLAG(USE_BYTE_CERTS)
+  if (!nss_cert || !nss_cert->derCert.len)
+    return nullptr;
+  bssl::UniquePtr<CRYPTO_BUFFER> cert_handle(
+      X509Certificate::CreateOSCertHandleFromBytes(
+          reinterpret_cast<const char*>(nss_cert->derCert.data),
+          nss_cert->derCert.len));
+  if (!cert_handle)
+    return nullptr;
+
+  std::vector<bssl::UniquePtr<CRYPTO_BUFFER>> intermediates;
+  intermediates.reserve(nss_chain.size());
+  X509Certificate::OSCertHandles intermediates_raw;
+  intermediates_raw.reserve(nss_chain.size());
+  for (const CERTCertificate* nss_intermediate : nss_chain) {
+    if (!nss_intermediate || !nss_intermediate->derCert.len)
+      return nullptr;
+    bssl::UniquePtr<CRYPTO_BUFFER> intermediate_cert_handle(
+        X509Certificate::CreateOSCertHandleFromBytes(
+            reinterpret_cast<const char*>(nss_intermediate->derCert.data),
+            nss_intermediate->derCert.len));
+    if (!intermediate_cert_handle)
+      return nullptr;
+    intermediates_raw.push_back(intermediate_cert_handle.get());
+    intermediates.push_back(std::move(intermediate_cert_handle));
+  }
+  scoped_refptr<X509Certificate> result(
+      X509Certificate::CreateFromHandle(cert_handle.get(), intermediates_raw));
+  return result;
+#else
+  return X509Certificate::CreateFromHandle(nss_cert, nss_chain);
+#endif
+}
+
+scoped_refptr<X509Certificate> CreateX509CertificateFromCERTCertificate(
+    CERTCertificate* cert) {
+  return CreateX509CertificateFromCERTCertificate(
+      cert, std::vector<CERTCertificate*>());
+}
+
+bool GetDEREncoded(CERTCertificate* cert, std::string* der_encoded) {
+  if (!cert || !cert->derCert.len)
+    return false;
+  der_encoded->assign(reinterpret_cast<char*>(cert->derCert.data),
+                      cert->derCert.len);
+  return true;
 }
 
 void GetRFC822SubjectAltNames(CERTCertificate* cert_handle,

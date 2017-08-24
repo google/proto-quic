@@ -278,10 +278,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate,
   void AddTaskObserver(TaskObserver* task_observer);
   void RemoveTaskObserver(TaskObserver* task_observer);
 
-  // Returns true if the message loop has high resolution timers enabled.
-  // Provided for testing.
-  bool HasHighResolutionTasks();
-
   // Returns true if the message loop is "idle". Provided for testing.
   bool IsIdleForTesting();
 

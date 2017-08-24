@@ -92,14 +92,6 @@ class StatisticsRecorderTest : public testing::TestWithParam<bool> {
     delete histogram;
   }
 
-  int CountIterableHistograms(StatisticsRecorder::HistogramIterator* iter) {
-    int count = 0;
-    for (; *iter != StatisticsRecorder::end(); ++*iter) {
-      ++count;
-    }
-    return count;
-  }
-
   void InitLogOnShutdown() {
     DCHECK(statistics_recorder_);
     statistics_recorder_->InitLogOnShutdownWithoutLock();
@@ -423,12 +415,9 @@ TEST_P(StatisticsRecorderTest, IterationTest) {
   Histogram::FactoryGet("IterationTest1", 1, 64, 16, HistogramBase::kNoFlags);
   Histogram::FactoryGet("IterationTest2", 1, 64, 16, HistogramBase::kNoFlags);
 
-  StatisticsRecorder::HistogramIterator i1 = StatisticsRecorder::begin(true);
-  EXPECT_EQ(2, CountIterableHistograms(&i1));
-
-  StatisticsRecorder::HistogramIterator i2 = StatisticsRecorder::begin(false);
-  EXPECT_EQ(use_persistent_histogram_allocator_ ? 0 : 2,
-            CountIterableHistograms(&i2));
+  EXPECT_EQ(2U, StatisticsRecorder::GetKnownHistograms(true).size());
+  EXPECT_EQ(use_persistent_histogram_allocator_ ? 0U : 2U,
+            StatisticsRecorder::GetKnownHistograms(false).size());
 
   // Create a new global allocator using the same memory as the old one. Any
   // old one is kept around so the memory doesn't get released.
@@ -445,13 +434,11 @@ TEST_P(StatisticsRecorderTest, IterationTest) {
   InitializeStatisticsRecorder();
 
   StatisticsRecorder::ImportGlobalPersistentHistograms();
-  StatisticsRecorder::HistogramIterator i3 = StatisticsRecorder::begin(true);
-  EXPECT_EQ(use_persistent_histogram_allocator_ ? 2 : 0,
-            CountIterableHistograms(&i3));
+  EXPECT_EQ(use_persistent_histogram_allocator_ ? 2U : 0U,
+            StatisticsRecorder::GetKnownHistograms(true).size());
 
   StatisticsRecorder::ImportGlobalPersistentHistograms();
-  StatisticsRecorder::HistogramIterator i4 = StatisticsRecorder::begin(false);
-  EXPECT_EQ(0, CountIterableHistograms(&i4));
+  EXPECT_EQ(0U, StatisticsRecorder::GetKnownHistograms(false).size());
 }
 
 namespace {

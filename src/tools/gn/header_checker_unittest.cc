@@ -16,10 +16,10 @@ namespace {
 class HeaderCheckerTest : public testing::Test {
  public:
   HeaderCheckerTest()
-      : a_(setup_.settings(), Label(SourceDir("//a/"), "a"), {}),
-        b_(setup_.settings(), Label(SourceDir("//b/"), "b"), {}),
-        c_(setup_.settings(), Label(SourceDir("//c/"), "c"), {}),
-        d_(setup_.settings(), Label(SourceDir("//d/"), "d"), {}) {
+      : a_(setup_.settings(), Label(SourceDir("//a/"), "a")),
+        b_(setup_.settings(), Label(SourceDir("//b/"), "b")),
+        c_(setup_.settings(), Label(SourceDir("//c/"), "c")),
+        d_(setup_.settings(), Label(SourceDir("//d/"), "d")) {
     a_.set_output_type(Target::SOURCE_SET);
     b_.set_output_type(Target::SOURCE_SET);
     c_.set_output_type(Target::SOURCE_SET);
@@ -75,7 +75,7 @@ TEST_F(HeaderCheckerTest, IsDependencyOf) {
   // Add a target P ("private") that privately depends on C, and hook up the
   // chain so that A -> P -> C. A will depend on C via two different paths.
   Err err;
-  Target p(setup_.settings(), Label(SourceDir("//p/"), "p"), {});
+  Target p(setup_.settings(), Label(SourceDir("//p/"), "p"));
   p.set_output_type(Target::SOURCE_SET);
   p.SetToolchain(setup_.toolchain(), &err);
   EXPECT_FALSE(err.has_error());
@@ -165,7 +165,7 @@ TEST_F(HeaderCheckerTest, CheckInclude) {
   // Create another toolchain.
   Settings other_settings(setup_.build_settings(), "other/");
   Toolchain other_toolchain(&other_settings,
-                            Label(SourceDir("//toolchain/"), "other"), {});
+                            Label(SourceDir("//toolchain/"), "other"));
   TestWithScope::SetupToolchain(&other_toolchain);
   other_settings.set_toolchain_label(other_toolchain.label());
   other_settings.set_default_toolchain_label(setup_.toolchain()->label());
@@ -174,8 +174,7 @@ TEST_F(HeaderCheckerTest, CheckInclude) {
   // connected to any targets in the main toolchain.
   Target otc(&other_settings,
              Label(SourceDir("//p/"), "otc", other_toolchain.label().dir(),
-                   other_toolchain.label().name()),
-             {});
+                   other_toolchain.label().name()));
   otc.set_output_type(Target::SOURCE_SET);
   Err err;
   EXPECT_TRUE(otc.SetToolchain(&other_toolchain, &err));
@@ -224,7 +223,7 @@ TEST_F(HeaderCheckerTest, CheckInclude) {
 TEST_F(HeaderCheckerTest, PublicFirst) {
   // Now make a A -> Z -> D private dependency chain (one shorter than the
   // public one to get to D).
-  Target z(setup_.settings(), Label(SourceDir("//a/"), "a"), {});
+  Target z(setup_.settings(), Label(SourceDir("//a/"), "a"));
   z.set_output_type(Target::SOURCE_SET);
   Err err;
   EXPECT_TRUE(z.SetToolchain(setup_.toolchain(), &err));

@@ -600,15 +600,15 @@ TEST(ProcessMetricsTest, GetOpenFdCount) {
   const FilePath temp_path = temp_dir.GetPath();
   CommandLine child_command_line(GetMultiProcessTestChildBaseCommandLine());
   child_command_line.AppendSwitchPath(kTempDirFlag, temp_path);
-  SpawnChildResult spawn_child = SpawnMultiProcessTestChild(
+  Process child = SpawnMultiProcessTestChild(
       ChildMainString, child_command_line, LaunchOptions());
-  ASSERT_TRUE(spawn_child.process.IsValid());
+  ASSERT_TRUE(child.IsValid());
   WaitForEvent(temp_path, kSignalClosed);
 
   std::unique_ptr<ProcessMetrics> metrics(
-      ProcessMetrics::CreateProcessMetrics(spawn_child.process.Handle()));
+      ProcessMetrics::CreateProcessMetrics(child.Handle()));
   EXPECT_EQ(0, metrics->GetOpenFdCount());
-  ASSERT_TRUE(spawn_child.process.Terminate(0, true));
+  ASSERT_TRUE(child.Terminate(0, true));
 }
 #endif  // defined(OS_LINUX)
 

@@ -559,20 +559,10 @@ bool Histogram::ValidateHistogramContents(bool crash_if_invalid,
   };
 
   uint32_t bad_fields = 0;
-  if (!unlogged_samples_)
-    bad_fields |= 1 << kUnloggedSamplesField;
-  else if (!unlogged_samples_->bucket_ranges())
-    bad_fields |= 1 << kUnloggedBucketRangesField;
-  if (!logged_samples_)
-    bad_fields |= 1 << kLoggedSamplesField;
-  else if (!logged_samples_->bucket_ranges())
-    bad_fields |= 1 << kLoggedBucketRangesField;
-  else if (logged_samples_->id() == 0)
-    bad_fields |= 1 << kIdField;
-  else if (HashMetricName(histogram_name()) != logged_samples_->id())
+  if (histogram_name().length() > 20 && histogram_name().at(20) == '\0')
     bad_fields |= 1 << kHistogramNameField;
-  if (flags() == 0)
-    bad_fields |= 1 << kFlagsField;
+  else if (histogram_name().length() > 40 && histogram_name().at(40) == '\0')
+    bad_fields |= 1 << kHistogramNameField;
   if (dummy_ != kDummyValue)
     bad_fields |= 1 << kDummyField;
 
@@ -1039,6 +1029,9 @@ HistogramBase* LinearHistogram::DeserializeInfoImpl(PickleIterator* iter) {
 
   HistogramBase* histogram = LinearHistogram::FactoryGet(
       histogram_name, declared_min, declared_max, bucket_count, flags);
+  if (!histogram)
+    return nullptr;
+
   if (!ValidateRangeChecksum(*histogram, range_checksum)) {
     // The serialized histogram might be corrupted.
     return nullptr;
@@ -1131,6 +1124,9 @@ HistogramBase* BooleanHistogram::DeserializeInfoImpl(PickleIterator* iter) {
 
   HistogramBase* histogram = BooleanHistogram::FactoryGet(
       histogram_name, flags);
+  if (!histogram)
+    return nullptr;
+
   if (!ValidateRangeChecksum(*histogram, range_checksum)) {
     // The serialized histogram might be corrupted.
     return nullptr;
@@ -1291,6 +1287,9 @@ HistogramBase* CustomHistogram::DeserializeInfoImpl(PickleIterator* iter) {
 
   HistogramBase* histogram = CustomHistogram::FactoryGet(
       histogram_name, sample_ranges, flags);
+  if (!histogram)
+    return nullptr;
+
   if (!ValidateRangeChecksum(*histogram, range_checksum)) {
     // The serialized histogram might be corrupted.
     return nullptr;

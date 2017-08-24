@@ -8,6 +8,7 @@
 #include <cert.h>
 
 #include <memory>
+#include <vector>
 
 namespace net {
 
@@ -19,6 +20,8 @@ struct FreeCERTCertificate {
 
 typedef std::unique_ptr<CERTCertificate, FreeCERTCertificate>
     ScopedCERTCertificate;
+
+using ScopedCERTCertificateList = std::vector<ScopedCERTCertificate>;
 
 }  // namespace net
 

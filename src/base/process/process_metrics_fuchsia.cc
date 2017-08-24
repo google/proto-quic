@@ -39,4 +39,9 @@ size_t ProcessMetrics::GetPeakWorkingSetSize() const {
   return 0;
 }
 
+bool GetSystemMemoryInfo(SystemMemoryInfoKB* meminfo) {
+  NOTIMPLEMENTED();  // TODO(fuchsia): https://crbug.com/706592.
+  return false;
+}
+
 }  // namespace base

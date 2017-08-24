@@ -92,7 +92,7 @@ class CTBenchmarks(unittest.TestCase):
       parser.archive_data_file = ''
       benchmark.ProcessCommandLineArgs(self.mock_parser, parser)
       self.assertEquals(
-          'Please specify --archive_data_file.', self.mock_parser.err_msg)
+          'Please specify --archive-data-file.', self.mock_parser.err_msg)
 
   def testCTBenchmarks_missingUrlsList(self):
     for benchmark in self.ct_benchmarks:
@@ -113,4 +113,4 @@ class CTBenchmarks(unittest.TestCase):
       # Now add an empty urls_list.
       parser.urls_list = ''
       benchmark.ProcessCommandLineArgs(self.mock_parser, parser)
-      self.assertEquals('Please specify --urls_list.', self.mock_parser.err_msg)
+      self.assertEquals('Please specify --urls-list.', self.mock_parser.err_msg)

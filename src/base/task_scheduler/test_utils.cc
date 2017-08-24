@@ -6,6 +6,9 @@
 
 #include <utility>
 
+#include "base/task_scheduler/scheduler_worker_pool.h"
+#include "testing/gtest/include/gtest/gtest.h"
+
 namespace base {
 namespace internal {
 namespace test {
@@ -14,6 +17,24 @@ scoped_refptr<Sequence> CreateSequenceWithTask(std::unique_ptr<Task> task) {
   scoped_refptr<Sequence> sequence = MakeRefCounted<Sequence>();
   sequence->PushTask(std::move(task));
   return sequence;
+}
+
+scoped_refptr<TaskRunner> CreateTaskRunnerWithExecutionMode(
+    SchedulerWorkerPool* worker_pool,
+    test::ExecutionMode execution_mode) {
+  // Allow tasks posted to the returned TaskRunner to wait on a WaitableEvent.
+  const TaskTraits traits = {WithBaseSyncPrimitives()};
+  switch (execution_mode) {
+    case test::ExecutionMode::PARALLEL:
+      return worker_pool->CreateTaskRunnerWithTraits(traits);
+    case test::ExecutionMode::SEQUENCED:
+      return worker_pool->CreateSequencedTaskRunnerWithTraits(traits);
+    default:
+      // Fall through.
+      break;
+  }
+  ADD_FAILURE() << "Unexpected ExecutionMode";
+  return nullptr;
 }
 
 }  // namespace test

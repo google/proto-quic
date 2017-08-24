@@ -1,4 +1,5 @@
 include_rules = [
   "+components/policy/proto",
+  "+third_party/libxml",
   "+third_party/protobuf/src/google",
 ]

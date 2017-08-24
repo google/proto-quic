@@ -62,7 +62,8 @@ declare_args() {
 
   # Option controlling the use of GConf (the classic GNOME configuration
   # system).
-  use_gconf = is_linux && !is_chromeos && !is_chromecast
+  use_gconf = is_linux && !is_chromeos && !is_chromecast &&
+              current_toolchain == default_toolchain
 
   use_gio = is_linux && !is_chromeos && !is_chromecast
 }

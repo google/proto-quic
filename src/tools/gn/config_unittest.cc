@@ -12,7 +12,7 @@ TEST(Config, ResolvedNoSub) {
   TestWithScope setup;
   Err err;
 
-  Config config(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
+  Config config(setup.settings(), Label(SourceDir("//foo/"), "bar"));
   config.own_values().defines().push_back("FOO");
   ASSERT_TRUE(config.OnResolved(&err));
 
@@ -31,15 +31,15 @@ TEST(Config, ResolvedSub) {
   TestWithScope setup;
   Err err;
 
-  Config sub1(setup.settings(), Label(SourceDir("//foo/"), "1"), {});
+  Config sub1(setup.settings(), Label(SourceDir("//foo/"), "1"));
   sub1.own_values().defines().push_back("ONE");
   ASSERT_TRUE(sub1.OnResolved(&err));
 
-  Config sub2(setup.settings(), Label(SourceDir("//foo/"), "2"), {});
+  Config sub2(setup.settings(), Label(SourceDir("//foo/"), "2"));
   sub2.own_values().defines().push_back("TWO");
   ASSERT_TRUE(sub2.OnResolved(&err));
 
-  Config config(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
+  Config config(setup.settings(), Label(SourceDir("//foo/"), "bar"));
   config.own_values().defines().push_back("FOO");
   config.configs().push_back(LabelConfigPair(&sub1));
   config.configs().push_back(LabelConfigPair(&sub2));
@@ -63,16 +63,16 @@ TEST(Config, SubSub) {
   Err err;
 
   // Set up first -> middle -> last configs.
-  Config last(setup.settings(), Label(SourceDir("//foo/"), "last"), {});
+  Config last(setup.settings(), Label(SourceDir("//foo/"), "last"));
   last.own_values().defines().push_back("LAST");
   ASSERT_TRUE(last.OnResolved(&err));
 
-  Config middle(setup.settings(), Label(SourceDir("//foo/"), "middle"), {});
+  Config middle(setup.settings(), Label(SourceDir("//foo/"), "middle"));
   middle.own_values().defines().push_back("MIDDLE");
   middle.configs().push_back(LabelConfigPair(&last));
   ASSERT_TRUE(middle.OnResolved(&err));
 
-  Config first(setup.settings(), Label(SourceDir("//foo/"), "first"), {});
+  Config first(setup.settings(), Label(SourceDir("//foo/"), "first"));
   first.own_values().defines().push_back("FIRST");
   first.configs().push_back(LabelConfigPair(&middle));
   ASSERT_TRUE(first.OnResolved(&err));

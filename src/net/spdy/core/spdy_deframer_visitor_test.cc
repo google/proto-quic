@@ -15,6 +15,7 @@
 #include "net/spdy/core/mock_spdy_framer_visitor.h"
 #include "net/spdy/core/spdy_frame_builder.h"
 #include "net/spdy/core/spdy_frame_reader.h"
+#include "net/spdy/core/spdy_framer.h"
 #include "net/spdy/core/spdy_protocol.h"
 #include "net/spdy/core/spdy_protocol_test_utils.h"
 #include "net/spdy/core/spdy_test_utils.h"
@@ -26,9 +27,7 @@ namespace {
 
 class SpdyDeframerVisitorTest : public ::testing::Test {
  protected:
-  SpdyDeframerVisitorTest()
-      : encoder_(SpdyFramer::ENABLE_COMPRESSION),
-        decoder_(SpdyFramer::ENABLE_COMPRESSION) {
+  SpdyDeframerVisitorTest() : encoder_(SpdyFramer::ENABLE_COMPRESSION) {
     decoder_.set_process_single_input_frame(true);
     auto collector =
         SpdyMakeUnique<DeframerCallbackCollector>(&collected_frames_);
@@ -41,7 +40,7 @@ class SpdyDeframerVisitorTest : public ::testing::Test {
   bool DeframeInput(const char* input, size_t size) {
     size_t input_remaining = size;
     while (input_remaining > 0 &&
-           decoder_.spdy_framer_error() == SpdyFramer::SPDY_NO_ERROR) {
+           decoder_.spdy_framer_error() == Http2DecoderAdapter::SPDY_NO_ERROR) {
       // To make the tests more interesting, we feed random (and small) chunks
       // into the framer.  This simulates getting strange-sized reads from
       // the socket.
@@ -51,12 +50,12 @@ class SpdyDeframerVisitorTest : public ::testing::Test {
       size_t bytes_processed = decoder_.ProcessInput(input, bytes_read);
       input_remaining -= bytes_processed;
       input += bytes_processed;
-      if (decoder_.state() == SpdyFramer::SPDY_READY_FOR_FRAME) {
+      if (decoder_.state() == Http2DecoderAdapter::SPDY_READY_FOR_FRAME) {
         deframer_->AtFrameEnd();
       }
     }
     return (input_remaining == 0 &&
-            decoder_.spdy_framer_error() == SpdyFramer::SPDY_NO_ERROR);
+            decoder_.spdy_framer_error() == Http2DecoderAdapter::SPDY_NO_ERROR);
   }
 
   SpdySerializedFrame SerializeFrame(const SpdyFrameIR& frame) {
@@ -76,7 +75,7 @@ class SpdyDeframerVisitorTest : public ::testing::Test {
   //       bool
 
   SpdyFramer encoder_;
-  SpdyFramer decoder_;
+  Http2DecoderAdapter decoder_;
   std::vector<CollectedFrame> collected_frames_;
   std::unique_ptr<SpdyTestDeframer> deframer_;
 };

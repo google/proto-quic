@@ -409,9 +409,6 @@ template("copy_ex") {
     outputs = [
       _stamp_file,
     ]
-    if (defined(invoker.outputs)) {
-      outputs += invoker.outputs
-    }
 
     args = [
       "--depfile",
@@ -952,6 +949,8 @@ if (enable_java_templates) {
         rebase_path(depfile, root_build_dir),
         "--exclude",
         rebase_path(_exclusions_file, root_build_dir),
+        "--system-jar",
+        rebase_path(android_sdk_jar, root_build_dir),
         "--auxclasspath-gyp",
         "@FileArg($_rebased_build_config:javac:classpath)",
         "--output-file",
@@ -1261,7 +1260,7 @@ if (enable_java_templates) {
           rebase_path(_desugar_input_jar, root_build_dir),
           "--output-jar",
           rebase_path(_desugar_output_jar, root_build_dir),
-          "--classpath=@FileArg($_rebased_build_config:deps_info:java:full_classpath)",
+          "--classpath=@FileArg($_rebased_build_config:javac:interface_classpath)",
           "--bootclasspath-entry",
           rebase_path(_android_sdk_ijar, root_build_dir),
         ]
@@ -1311,7 +1310,7 @@ if (enable_java_templates) {
     }
 
     _output_jar_target = "${target_name}__copy"
-    copy_ex(_output_jar_target) {
+    copy(_output_jar_target) {
       deps = _deps
       if (defined(invoker.deps)) {
         deps += invoker.deps
@@ -1319,7 +1318,6 @@ if (enable_java_templates) {
       if (defined(invoker.public_deps)) {
         public_deps = invoker.public_deps
       }
-      dest = _output_jar_path
       sources = [
         _previous_output_jar,
       ]

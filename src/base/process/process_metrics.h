@@ -396,7 +396,7 @@ struct BASE_EXPORT SystemMemoryInfoKB {
 BASE_EXPORT bool GetSystemMemoryInfo(SystemMemoryInfoKB* meminfo);
 
 #endif  // defined(OS_WIN) || defined(OS_MACOSX) || defined(OS_LINUX) ||
-        // defined(OS_ANDROID)
+        // defined(OS_ANDROID) || defined(OS_AIX) || defined(OS_FUCHSIA)
 
 #if defined(OS_LINUX) || defined(OS_ANDROID) || defined(OS_AIX)
 // Parse the data found in /proc/<pid>/stat and return the sum of the

@@ -127,19 +127,6 @@ template <class T>
 using is_trivially_copyable = std::is_trivially_copyable<T>;
 #endif
 
-// std::less<> from C++14.
-struct less {
-  template <typename T, typename U>
-  constexpr auto operator()(T&& lhs, U&& rhs) const
-      -> decltype(std::forward<T>(lhs) < std::forward<U>(rhs)) {
-    return std::forward<T>(lhs) < std::forward<U>(rhs);
-  }
-
-  // You can find more information about transparent comparisons here:
-  // http://en.cppreference.com/w/cpp/utility/functional/less_void
-  using is_transparent = int;
-};
-
 }  // namespace base
 
 #undef CR_USE_FALLBACKS_FOR_GCC_WITH_LIBCXX

@@ -17,10 +17,10 @@ base::FilePath GetTestNetDataDirectory();
 // tree that contains certificates for testing.
 base::FilePath GetTestCertsDirectory();
 
-// Returns the base::FilePath object representing the path to client
-// certificate files to be used in the |client_authorities| list
-// of a net::SSLConfig object. For all other uses, use
-// GetTestCertsDirectory() instead.
+// Returns the base::FilePath to client certificate directory, relative to the
+// source tree root. It should be used to set |client_authorities| list of a
+// net::SSLConfig object. For all other uses, use GetTestCertsDirectory()
+// instead.
 base::FilePath GetTestClientCertsDirectory();
 
 // Returns the base::FilePath object representing the relative path containing

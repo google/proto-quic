@@ -10,6 +10,8 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.util.SparseArray;
 
+import java.util.List;
+
 /**
  * The interface that embedders should implement to specialize child service creation.
  */
@@ -26,9 +28,9 @@ public interface ChildProcessServiceDelegate {
     /**
      * Called once the connection has been setup. Invoked on a background thread.
      * @param connectionBundle the bundle pass to the setupConnection call
-     * @param callback the IBinder provided by the client
+     * @param clientInterfaces the IBinders interfaces provided by the client
      */
-    void onConnectionSetup(Bundle connectionBundle, IBinder callback);
+    void onConnectionSetup(Bundle connectionBundle, List<IBinder> clientInterfaces);
 
     /** Called when the service gets destroyed. */
     void onDestroy();

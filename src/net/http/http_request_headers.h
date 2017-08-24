@@ -167,15 +167,6 @@ class NET_EXPORT HttpRequestHeaders {
       const std::string* request_line,
       NetLogCaptureMode capture_mode) const;
 
-  // Takes in a Value created by the above function, and attempts to extract the
-  // request line and create a copy of the original headers.  Returns true on
-  // success.  On failure, clears |headers| and |request_line|.
-  // TODO(mmenke):  Long term, we want to remove this, and migrate external
-  //                consumers to be NetworkDelegates.
-  static bool FromNetLogParam(const base::Value* event_param,
-                              HttpRequestHeaders* headers,
-                              std::string* request_line);
-
  private:
   HeaderVector::iterator FindHeader(const base::StringPiece& key);
   HeaderVector::const_iterator FindHeader(const base::StringPiece& key) const;

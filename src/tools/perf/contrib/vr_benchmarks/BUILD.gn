@@ -8,8 +8,6 @@ group("vr_perf_tests") {
   testonly = true
   data = [
     "./__init__.py",
-    "./run_benchmark",
-    "./vr_config.py",
     "./vr_benchmarks/",
     "./vr_page_sets/",
     "//chrome/android/shared_preference_files/test/",

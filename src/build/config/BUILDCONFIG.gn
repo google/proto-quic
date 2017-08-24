@@ -138,7 +138,6 @@ declare_args() {
   is_clang =
       current_os == "mac" || current_os == "ios" || current_os == "chromeos" ||
       current_os == "fuchsia" || current_os == "android" ||
-      current_os == "win" ||
       (current_os == "linux" && current_cpu != "s390x" &&
        current_cpu != "s390" && current_cpu != "ppc64" &&
        current_cpu != "ppc" && current_cpu != "mips" && current_cpu != "mips64")

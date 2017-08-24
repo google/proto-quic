@@ -29,7 +29,8 @@ BufferedSpdyFramer::BufferedSpdyFramer(uint32_t max_header_list_size,
       max_header_list_size_(max_header_list_size),
       net_log_(net_log) {
   // Do not bother decoding response header payload above the limit.
-  spdy_framer_.set_max_decode_buffer_size_bytes(max_header_list_size_);
+  deframer_.GetHpackDecoder()->set_max_decode_buffer_size_bytes(
+      max_header_list_size_);
 }
 
 BufferedSpdyFramer::~BufferedSpdyFramer() {
@@ -38,16 +39,17 @@ BufferedSpdyFramer::~BufferedSpdyFramer() {
 void BufferedSpdyFramer::set_visitor(
     BufferedSpdyFramerVisitorInterface* visitor) {
   visitor_ = visitor;
-  spdy_framer_.set_visitor(this);
+  deframer_.set_visitor(this);
 }
 
 void BufferedSpdyFramer::set_debug_visitor(
     SpdyFramerDebugVisitorInterface* debug_visitor) {
   spdy_framer_.set_debug_visitor(debug_visitor);
+  deframer_.set_debug_visitor(debug_visitor);
 }
 
 void BufferedSpdyFramer::OnError(
-    SpdyFramer::SpdyFramerError spdy_framer_error) {
+    Http2DecoderAdapter::SpdyFramerError spdy_framer_error) {
   visitor_->OnError(spdy_framer_error);
 }
 
@@ -214,31 +216,32 @@ bool BufferedSpdyFramer::OnUnknownFrame(SpdyStreamId stream_id,
 }
 
 size_t BufferedSpdyFramer::ProcessInput(const char* data, size_t len) {
-  return spdy_framer_.ProcessInput(data, len);
+  return deframer_.ProcessInput(data, len);
 }
 
 void BufferedSpdyFramer::UpdateHeaderDecoderTableSize(uint32_t value) {
-  spdy_framer_.UpdateHeaderDecoderTableSize(value);
+  deframer_.GetHpackDecoder()->ApplyHeaderTableSizeSetting(value);
 }
 
 void BufferedSpdyFramer::Reset() {
-  spdy_framer_.Reset();
+  deframer_.Reset();
 }
 
-SpdyFramer::SpdyFramerError BufferedSpdyFramer::spdy_framer_error() const {
-  return spdy_framer_.spdy_framer_error();
+Http2DecoderAdapter::SpdyFramerError BufferedSpdyFramer::spdy_framer_error()
+    const {
+  return deframer_.spdy_framer_error();
 }
 
-SpdyFramer::SpdyState BufferedSpdyFramer::state() const {
-  return spdy_framer_.state();
+Http2DecoderAdapter::SpdyState BufferedSpdyFramer::state() const {
+  return deframer_.state();
 }
 
 bool BufferedSpdyFramer::MessageFullyRead() {
-  return state() == SpdyFramer::SPDY_FRAME_COMPLETE;
+  return state() == Http2DecoderAdapter::SPDY_FRAME_COMPLETE;
 }
 
 bool BufferedSpdyFramer::HasError() {
-  return spdy_framer_.HasError();
+  return deframer_.HasError();
 }
 
 // TODO(jgraettinger): Eliminate uses of this method (prefer
@@ -314,6 +317,7 @@ SpdyPriority BufferedSpdyFramer::GetHighestPriority() const {
 
 size_t BufferedSpdyFramer::EstimateMemoryUsage() const {
   return SpdyEstimateMemoryUsage(spdy_framer_) +
+         SpdyEstimateMemoryUsage(deframer_) +
          SpdyEstimateMemoryUsage(coalescer_) +
          SpdyEstimateMemoryUsage(control_frame_fields_) +
          SpdyEstimateMemoryUsage(goaway_fields_);

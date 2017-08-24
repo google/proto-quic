@@ -12,7 +12,7 @@ Settings::Settings(const BuildSettings* build_settings,
                    const std::string& output_subdir_name)
     : build_settings_(build_settings),
       import_manager_(),
-      base_config_(this, {}),
+      base_config_(this),
       greedy_target_generation_(false) {
   if (output_subdir_name.empty()) {
     toolchain_output_dir_ = build_settings->build_dir();

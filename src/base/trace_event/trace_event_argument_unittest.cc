@@ -131,10 +131,10 @@ TEST(TraceEventArgumentTest, PassBaseValue) {
 }
 
 TEST(TraceEventArgumentTest, PassTracedValue) {
-  auto dict_value = MakeUnique<TracedValue>();
+  auto dict_value = std::make_unique<TracedValue>();
   dict_value->SetInteger("a", 1);
 
-  auto nested_dict_value = MakeUnique<TracedValue>();
+  auto nested_dict_value = std::make_unique<TracedValue>();
   nested_dict_value->SetInteger("b", 2);
   nested_dict_value->BeginArray("c");
   nested_dict_value->AppendString("foo");

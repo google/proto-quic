@@ -28,7 +28,7 @@ TEST(NinjaCreateBundleTargetWriter, Run) {
   Err err;
   TestWithScope setup;
 
-  Target bundle_data(setup.settings(), Label(SourceDir("//foo/"), "data"), {});
+  Target bundle_data(setup.settings(), Label(SourceDir("//foo/"), "data"));
   bundle_data.set_output_type(Target::BUNDLE_DATA);
   bundle_data.sources().push_back(SourceFile("//foo/input1.txt"));
   bundle_data.sources().push_back(SourceFile("//foo/input2.txt"));
@@ -41,8 +41,7 @@ TEST(NinjaCreateBundleTargetWriter, Run) {
   Target create_bundle(
       setup.settings(),
       Label(SourceDir("//baz/"), "bar", setup.toolchain()->label().dir(),
-            setup.toolchain()->label().name()),
-      {});
+            setup.toolchain()->label().name()));
   SetupBundleDataDir(&create_bundle.bundle_data(), "//out/Debug");
   create_bundle.set_output_type(Target::CREATE_BUNDLE);
   create_bundle.private_deps().push_back(LabelTargetPair(&bundle_data));
@@ -71,7 +70,7 @@ TEST(NinjaCreateBundleTargetWriter, AssetCatalog) {
   Err err;
   TestWithScope setup;
 
-  Target bundle_data(setup.settings(), Label(SourceDir("//foo/"), "data"), {});
+  Target bundle_data(setup.settings(), Label(SourceDir("//foo/"), "data"));
   bundle_data.set_output_type(Target::BUNDLE_DATA);
   bundle_data.sources().push_back(
       SourceFile("//foo/Foo.xcassets/Contents.json"));
@@ -92,8 +91,7 @@ TEST(NinjaCreateBundleTargetWriter, AssetCatalog) {
   Target create_bundle(
       setup.settings(),
       Label(SourceDir("//baz/"), "bar", setup.toolchain()->label().dir(),
-            setup.toolchain()->label().name()),
-      {});
+            setup.toolchain()->label().name()));
   SetupBundleDataDir(&create_bundle.bundle_data(), "//out/Debug");
   create_bundle.set_output_type(Target::CREATE_BUNDLE);
   create_bundle.private_deps().push_back(LabelTargetPair(&bundle_data));
@@ -125,8 +123,7 @@ TEST(NinjaCreateBundleTargetWriter, PhonyTarget) {
   Target create_bundle(
       setup.settings(),
       Label(SourceDir("//baz/"), "bar", setup.toolchain()->label().dir(),
-            setup.toolchain()->label().name()),
-      {});
+            setup.toolchain()->label().name()));
   SetupBundleDataDir(&create_bundle.bundle_data(), "//out/Debug");
   create_bundle.set_output_type(Target::CREATE_BUNDLE);
   create_bundle.SetToolchain(setup.toolchain());
@@ -150,7 +147,7 @@ TEST(NinjaCreateBundleTargetWriter, Complex) {
   TestWithScope setup;
 
   Target bundle_data0(setup.settings(),
-                      Label(SourceDir("//qux/"), "info_plist"), {});
+                      Label(SourceDir("//qux/"), "info_plist"));
   bundle_data0.set_output_type(Target::BUNDLE_DATA);
   bundle_data0.sources().push_back(SourceFile("//qux/qux-Info.plist"));
   bundle_data0.action_values().outputs() =
@@ -159,7 +156,7 @@ TEST(NinjaCreateBundleTargetWriter, Complex) {
   bundle_data0.visibility().SetPublic();
   ASSERT_TRUE(bundle_data0.OnResolved(&err));
 
-  Target bundle_data1(setup.settings(), Label(SourceDir("//foo/"), "data"), {});
+  Target bundle_data1(setup.settings(), Label(SourceDir("//foo/"), "data"));
   bundle_data1.set_output_type(Target::BUNDLE_DATA);
   bundle_data1.sources().push_back(SourceFile("//foo/input1.txt"));
   bundle_data1.sources().push_back(SourceFile("//foo/input2.txt"));
@@ -169,8 +166,7 @@ TEST(NinjaCreateBundleTargetWriter, Complex) {
   bundle_data1.visibility().SetPublic();
   ASSERT_TRUE(bundle_data1.OnResolved(&err));
 
-  Target bundle_data2(setup.settings(), Label(SourceDir("//foo/"), "assets"),
-                      {});
+  Target bundle_data2(setup.settings(), Label(SourceDir("//foo/"), "assets"));
   bundle_data2.set_output_type(Target::BUNDLE_DATA);
   bundle_data2.sources().push_back(
       SourceFile("//foo/Foo.xcassets/Contents.json"));
@@ -188,8 +184,7 @@ TEST(NinjaCreateBundleTargetWriter, Complex) {
   bundle_data2.visibility().SetPublic();
   ASSERT_TRUE(bundle_data2.OnResolved(&err));
 
-  Target bundle_data3(setup.settings(), Label(SourceDir("//quz/"), "assets"),
-                      {});
+  Target bundle_data3(setup.settings(), Label(SourceDir("//quz/"), "assets"));
   bundle_data3.set_output_type(Target::BUNDLE_DATA);
   bundle_data3.sources().push_back(
       SourceFile("//quz/Quz.xcassets/Contents.json"));
@@ -210,8 +205,7 @@ TEST(NinjaCreateBundleTargetWriter, Complex) {
   Target create_bundle(
       setup.settings(),
       Label(SourceDir("//baz/"), "bar", setup.toolchain()->label().dir(),
-            setup.toolchain()->label().name()),
-      {});
+            setup.toolchain()->label().name()));
   SetupBundleDataDir(&create_bundle.bundle_data(), "//out/Debug");
   create_bundle.set_output_type(Target::CREATE_BUNDLE);
   create_bundle.private_deps().push_back(LabelTargetPair(&bundle_data0));
@@ -255,14 +249,14 @@ TEST(NinjaCreateBundleTargetWriter, CodeSigning) {
   Err err;
   TestWithScope setup;
 
-  Target executable(setup.settings(), Label(SourceDir("//baz/"), "quz"), {});
+  Target executable(setup.settings(), Label(SourceDir("//baz/"), "quz"));
   executable.set_output_type(Target::EXECUTABLE);
   executable.sources().push_back(SourceFile("//baz/quz.c"));
   executable.SetToolchain(setup.toolchain());
   executable.visibility().SetPublic();
   ASSERT_TRUE(executable.OnResolved(&err));
 
-  Target bundle_data(setup.settings(), Label(SourceDir("//foo/"), "data"), {});
+  Target bundle_data(setup.settings(), Label(SourceDir("//foo/"), "data"));
   bundle_data.set_output_type(Target::BUNDLE_DATA);
   bundle_data.sources().push_back(SourceFile("//foo/input1.txt"));
   bundle_data.sources().push_back(SourceFile("//foo/input2.txt"));
@@ -275,8 +269,7 @@ TEST(NinjaCreateBundleTargetWriter, CodeSigning) {
   Target create_bundle(
       setup.settings(),
       Label(SourceDir("//baz/"), "bar", setup.toolchain()->label().dir(),
-            setup.toolchain()->label().name()),
-      {});
+            setup.toolchain()->label().name()));
   SetupBundleDataDir(&create_bundle.bundle_data(), "//out/Debug");
   create_bundle.set_output_type(Target::CREATE_BUNDLE);
   create_bundle.bundle_data().set_code_signing_script(

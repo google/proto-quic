@@ -153,9 +153,6 @@
   "chrome/browser/debugger/frontend/devtools_frontend_resources.grd": {
     "includes": [21500],
   },
-  "chrome/browser/resources/options_resources.grd": {
-    "includes": [22000],
-  },
   "cloud_print/virtual_driver/win/install/virtual_driver_setup_resources.grd": {
     "messages": [22500],
   },

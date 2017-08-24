@@ -35,7 +35,7 @@ std::string ExtractGNBuildCommands(const base::FilePath& build_ninja_file) {
     result.push_back('\n');
     if (line.empty())
       ++num_blank_lines;
-    if (num_blank_lines == 2)
+    if (num_blank_lines == 3)
       break;
   }
 

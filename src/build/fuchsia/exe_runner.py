@@ -40,7 +40,7 @@ def main():
   if not bootfs:
     return 2
 
-  return RunFuchsia(bootfs, args.device, args.dry_run, interactive=True)
+  return RunFuchsia(bootfs, args.device, args.dry_run)
 
 
 if __name__ == '__main__':

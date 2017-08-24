@@ -103,6 +103,7 @@
       'Browser Side Navigation Linux': 'release_bot',
       'CFI Linux CF': 'cfi_full_cfi_diag_recover_release_static',
       'CFI Linux ToT': 'clang_tot_cfi_full_cfi_diag_thin_lto_release_static_dcheck_always_on',
+      'CFI Linux (icall)': 'cfi_full_diag_recover_icall_static',
       'ChromeOS amd64 Chromium Goma Canary': 'cros_chrome_sdk',
       'Chromium Linux Goma Canary': 'release_bot',
       'Chromium Linux Goma Canary': 'release_bot',
@@ -119,8 +120,7 @@
       'Chromium Mac 10.9 Goma Canary (dbg)': 'debug_bot',
       'Chromium Mac 10.9 Goma Canary (dbg)(clobber)': 'debug_bot',
       'Chromium Mac Goma Canary LocalOutputCache': 'release_bot',
-      'Chromium Win 10 GCE Tests (Win 7 Build)': 'release_bot_minimal_symbols',
-      'Chromium Win 10 GCE Tests (Win 10 Build)': 'release_bot_minimal_symbols',
+      'Chromium Win 10 GCE Tests': 'release_bot_minimal_symbols',
       'Chromium Win PGO Builder': {
         '1': 'official_optimize_chrome_pgo_phase_1_x86',
         '2': 'official_optimize_chrome_pgo_phase_2_x86',
@@ -179,7 +179,6 @@
       'EarlGreyiOS': 'ios',
       'Fuchsia': 'release_bot_fuchsia',
       'Fuchsia (dbg)': 'debug_bot_fuchsia',
-      'Fuchsia Compile': 'release_bot_fuchsia',
       'GomaCanaryiOS': 'ios',
       'ios-simulator': 'ios',
       'Headless Linux (dbg)': 'headless_linux_debug_bot',
@@ -207,10 +206,10 @@
       'Mojo Linux': 'release_trybot',
       'Mojo Windows': 'release_bot_x86_minimal_symbols',
       'Ozone Linux': 'ozone_linux_release_bot',
-      'Out of Process Profiling Android': 'release_bot_out_of_process_profiling',
-      'Out of Process Profiling Linux': 'release_bot_out_of_process_profiling',
-      'Out of Process Profiling Mac': 'release_bot_out_of_process_profiling',
-      'Out of Process Profiling Windows': 'release_bot_out_of_process_profiling',
+      'Out of Process Profiling Android': 'android_release_bot_minimal_symbols',
+      'Out of Process Profiling Linux': 'release_bot',
+      'Out of Process Profiling Mac': 'release_bot',
+      'Out of Process Profiling Windows': 'release_bot',
       'Site Isolation Android': 'android_release_bot_minimal_symbols_arm64',
       'Site Isolation Linux': 'release_trybot',
       'Site Isolation Win': 'release_trybot_x86',
@@ -237,8 +236,8 @@
       # These all use the 'trybot' mixins to ensure that dcheck is on.
       'GPU Mac Builder': 'gpu_tests_release_trybot',
       'GPU Mac Builder (dbg)': 'gpu_tests_debug_trybot',
-      'GPU Linux Builder (dbg)': 'gpu_tests_debug_trybot',
       'GPU Linux Builder': 'gpu_tests_release_trybot',
+      'GPU Linux Builder (dbg)': 'gpu_tests_debug_trybot',
       'GPU Win Builder': 'gpu_tests_release_trybot_x86_minimal_symbols',
       'GPU Win Builder (dbg)': 'gpu_tests_debug_trybot_x86_minimal_symbols',
     },
@@ -251,15 +250,19 @@
       'Android Release (Nexus 6P)': 'android_release_trybot_arm64',
       'Android Release (Nexus 9)': 'android_release_trybot_arm64',
       'Android Release (NVIDIA Shield TV)': 'android_release_trybot_arm64',
-      'GPU Linux Builder (dbg)': 'gpu_fyi_tests_debug_trybot',
       'GPU Linux Builder': 'gpu_fyi_tests_release_trybot',
+      'GPU Linux Builder (dbg)': 'gpu_fyi_tests_debug_trybot',
+      'GPU Linux dEQP Builder': 'gpu_fyi_tests_release_trybot',
       'GPU Mac Builder': 'gpu_fyi_tests_release_trybot',
       'GPU Mac Builder (dbg)': 'gpu_fyi_tests_debug_trybot',
+      'GPU Mac dEQP Builder': 'gpu_fyi_tests_release_trybot',
       'GPU Win Builder': 'gpu_tests_deqp_gles_release_trybot_x86',
       'GPU Win Builder (dbg)': 'gpu_tests_deqp_gles_debug_trybot_x86',
+      'GPU Win dEQP Builder': 'gpu_tests_deqp_gles_release_trybot_x86',
       'GPU Win Clang Builder (dbg)': 'gpu_fyi_tests_win_clang_debug_bot',
       'GPU Win x64 Builder': 'gpu_tests_deqp_gles_release_trybot',
       'GPU Win x64 Builder (dbg)': 'gpu_tests_deqp_gles_debug_trybot',
+      'GPU Win x64 dEQP Builder': 'gpu_tests_deqp_gles_release_trybot',
       'Linux ChromiumOS Builder': 'gpu_fyi_tests_chromeos_cros_release_trybot',
       # This is, confusingly, apparently not actually building ChromiumOS.
       'Linux ChromiumOS Ozone Builder': 'gpu_fyi_tests_ozone_linux_system_gbm_libdrm_release_trybot',
@@ -294,6 +297,7 @@
       'Linux Builder (dbg)(32)': 'debug_bot_x86',
       'Linux Builder': 'release_bot',
       'Deterministic Linux': 'release_bot',
+      'Fuchsia Compile': 'release_bot_fuchsia',
     },
 
     'chromium.lkgr': {
@@ -424,8 +428,8 @@
 
     'chromium.webrtc': {
       'Linux Builder': 'release_bot_chrome_with_codecs',
-      'Mac Builder': 'chrome_with_codecs_blink_logging_release_trybot',
-      'Win Builder': 'chrome_with_codecs_blink_logging_release_trybot_x86',
+      'Mac Builder': 'release_bot_chrome_with_codecs',
+      'Win Builder': 'release_bot_x86_minimal_symbols',
     },
 
     'chromium.webrtc.fyi': {
@@ -433,8 +437,11 @@
       'Android Builder (dbg)': 'android_debug_static_bot',
       'Android Builder ARM64 (dbg)': 'android_debug_static_bot_arm64',
       'Linux Builder': 'release_bot_chrome_with_codecs',
-      'Mac Builder': 'chrome_with_codecs_blink_logging_release_trybot',
-      'Win Builder': 'chrome_with_codecs_blink_logging_release_trybot_x86',
+      'Linux Builder (dbg)': 'debug_bot',
+      'Mac Builder': 'release_bot_chrome_with_codecs',
+      'Mac Builder (dbg)': 'debug_bot',
+      'Win Builder': 'release_bot_x86_minimal_symbols',
+      'Win Builder (dbg)': 'debug_bot_x86_minimal_symbols',
     },
 
     'chromium.win': {
@@ -644,6 +651,7 @@
     },
 
     'tryserver.chromium.win': {
+      'win7_chromium_rel_ng': 'gpu_tests_release_trybot_x86_minimal_symbols',
       'win10_chromium_x64_rel_ng': 'release_trybot',
       'win10_chromium_x64_rel_ng_exp': 'release_trybot',
       'win10_gce_x64_rel': 'release_bot_minimal_symbols',
@@ -997,19 +1005,15 @@
     ],
 
     'cfi_full_cfi_diag_recover_release_static': [
-      'cfi_full', 'cfi_diag', 'cfi_recover', 'release', 'static',
+      'cfi_full', 'cfi_diag', 'cfi_recover', 'thin_lto', 'release', 'static',
     ],
 
     'cfi_full_cfi_diag_thin_lto_release_static_dcheck_always_on_goma': [
       'cfi_full', 'cfi_diag', 'thin_lto', 'release', 'static', 'dcheck_always_on', 'goma',
     ],
 
-    'chrome_with_codecs_blink_logging_release_trybot': [
-      'chrome_with_codecs', 'blink_logging', 'release_trybot',
-    ],
-
-    'chrome_with_codecs_blink_logging_release_trybot_x86': [
-      'chrome_with_codecs', 'blink_logging', 'release_trybot', 'x86',
+    'cfi_full_diag_recover_icall_static': [
+      'cfi_full', 'cfi_diag', 'cfi_recover', 'cfi_icall', 'thin_lto', 'static',
     ],
 
     'chromeos_asan_lsan_edge_fuzzer_v8_heap_release_bot': [
@@ -1041,10 +1045,7 @@
     ],
 
     'clang_debug_bot_minimal_symbols_x86': [
-      # Now that the default win bots use clang, use a "clang" bot to make sure
-      # things stay compilable with msvc. TODO(thakis): Having a "clang" bot
-      # check that is very confusing, so rename the bot to "msvc".
-      'no_clang', 'debug_bot', 'minimal_symbols', 'x86',
+      'clang', 'debug_bot', 'minimal_symbols', 'x86',
     ],
 
     'clang_release_bot_minimal_symbols_x86': [
@@ -1052,24 +1053,15 @@
     ],
 
     'clang_minimal_symbols_shared_release_bot_x86_dcheck': [
-      # Now that the default win bots use clang, use a "clang" bot to make sure
-      # things stay compilable with msvc. TODO(thakis): Having a "clang" bot
-      # check that is very confusing, so rename the bot to "msvc".
-      'no_clang', 'minimal_symbols', 'shared_release_bot', 'x86', 'dcheck_always_on',
+      'clang', 'minimal_symbols', 'shared_release_bot', 'x86', 'dcheck_always_on',
     ],
 
     'clang_official_release_bot_minimal_symbols': [
-      # Now that the default win bots use clang, use a "clang" bot to make sure
-      # things stay compilable with msvc. TODO(thakis): Having a "clang" bot
-      # check that is very confusing, so rename the bot to "msvc".
-      'no_clang', 'official', 'release_bot', 'minimal_symbols',
+      'clang', 'official', 'release_bot', 'minimal_symbols',
     ],
 
     'clang_official_release_bot_minimal_symbols_x86': [
-      # Now that the default win bots use clang, use a "clang" bot to make sure
-      # things stay compilable with msvc. TODO(thakis): Having a "clang" bot
-      # check that is very confusing, so rename the bot to "msvc".
-      'no_clang', 'official', 'release_bot', 'minimal_symbols', 'x86',
+      'clang', 'official', 'release_bot', 'minimal_symbols', 'x86',
     ],
 
     'clang_official_optimize_release_bot_minimal_symbols_x86': [
@@ -1085,10 +1077,7 @@
     ],
 
     'clang_shared_release_bot_dcheck': [
-      # Now that the default win bots use clang, use a "clang" bot to make sure
-      # things stay compilable with msvc. TODO(thakis): Having a "clang" bot
-      # check that is very confusing, so rename the bot to "msvc".
-      'no_clang', 'shared_release_bot', 'dcheck_always_on',
+      'clang', 'shared_release_bot', 'dcheck_always_on',
     ],
 
     'clang_tot_asan_lsan_static_release': [
@@ -1453,10 +1442,6 @@
       'release_bot', 'mac_strip',
     ],
 
-    'release_bot_out_of_process_profiling': [
-      'release_bot', 'out_of_process_profiling',
-    ],
-
     'release_bot_x86': [
       'release_bot', 'x86',
     ],
@@ -1560,17 +1545,11 @@
     ],
 
     'win_clang_debug_bot': [
-      # Now that the default win bots use clang, use a "clang" bot to make sure
-      # things stay compilable with msvc. TODO(thakis): Having a "clang" bot
-      # check that is very confusing, so rename the bot to "msvc".
-      'no_clang', 'debug_bot', 'minimal_symbols',
+      'clang', 'debug_bot', 'minimal_symbols',
     ],
 
     'win_clang_release_bot': [
-      # Now that the default win bots use clang, use a "clang" bot to make sure
-      # things stay compilable with msvc. TODO(thakis): Having a "clang" bot
-      # check that is very confusing, so rename the bot to "msvc".
-      'no_clang', 'release_bot', 'minimal_symbols',
+      'clang', 'release_bot', 'minimal_symbols',
     ],
 
     'windows_analyze': [
@@ -1626,10 +1605,6 @@
       'gn_args': 'is_asan=true',
     },
 
-    'blink_logging': {
-      'gn_args': 'blink_logging_always_on=true',
-    },
-
     'ffmpeg_branding_chrome': {
       'gn_args': 'ffmpeg_branding="Chrome"',
     },
@@ -1648,6 +1623,10 @@
 
     'cfi_full': {
       'gn_args': 'is_cfi=true use_cfi_cast=true',
+    },
+
+    'cfi_icall': {
+      'gn_args': 'use_cfi_icall=true',
     },
 
     'cfi_diag': {
@@ -1886,10 +1865,6 @@
 
     'optimize_for_fuzzing': {
       'gn_args': 'optimize_for_fuzzing=true',
-    },
-
-    'out_of_process_profiling': {
-      'gn_args': 'enable_oop_heap_profiling=true',
     },
 
     'ozone_linux': {

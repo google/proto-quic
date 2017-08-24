@@ -101,10 +101,10 @@ if (is_android) {
     # Libc++ library directory. Override to use a custom libc++ binary.
     android_libcpp_lib_dir = ""
 
-    # Android versionCode for android_apk()s that don't expclitly set one.
+    # Android versionCode for android_apk()s that don't explicitly set one.
     android_default_version_code = "1"
 
-    # Android versionName for android_apk()s that don't expclitly set one.
+    # Android versionName for android_apk()s that don't explicitly set one.
     android_default_version_name = "Developer Build"
 
     # The path to the keystore to use for signing builds.

@@ -10,7 +10,6 @@
 
 #include "base/memory/free_deleter.h"
 #include "base/metrics/histogram_macros.h"
-#include "base/sha1.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_local.h"
@@ -582,11 +581,9 @@ bool CheckEV(PCCERT_CHAIN_CONTEXT chain_context,
 
   // Look up the EV policy OID of the root CA.
   PCCERT_CONTEXT root_cert = element[num_elements - 1]->pCertContext;
-  SHA1HashValue weak_fingerprint;
-  base::SHA1HashBytes(root_cert->pbCertEncoded, root_cert->cbCertEncoded,
-                      weak_fingerprint.data);
+  SHA256HashValue fingerprint = x509_util::CalculateFingerprint256(root_cert);
   EVRootCAMetadata* metadata = EVRootCAMetadata::GetInstance();
-  return metadata->HasEVPolicyOID(weak_fingerprint, policy_oid);
+  return metadata->HasEVPolicyOID(fingerprint, policy_oid);
 }
 
 // Custom revocation provider function that compares incoming certificates with

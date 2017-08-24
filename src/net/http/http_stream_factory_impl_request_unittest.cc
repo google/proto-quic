@@ -60,7 +60,7 @@ TEST_F(HttpStreamFactoryImplRequestTest, SetPriority) {
   request->SetPriority(MEDIUM);
   EXPECT_EQ(MEDIUM, job_controller_raw_ptr->main_job()->priority());
 
-  EXPECT_CALL(request_delegate, OnStreamFailed(_, _)).Times(1);
+  EXPECT_CALL(request_delegate, OnStreamFailed(_, _, _)).Times(1);
   job_controller_raw_ptr->OnStreamFailed(job_factory.main_job(), ERR_FAILED,
                                          SSLConfig());
 

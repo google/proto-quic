@@ -69,7 +69,7 @@ class FileDescriptorWatcherTest
     }
 
     ASSERT_TRUE(message_loop_for_io->IsType(MessageLoop::TYPE_IO));
-    file_descriptor_watcher_ = MakeUnique<FileDescriptorWatcher>(
+    file_descriptor_watcher_ = std::make_unique<FileDescriptorWatcher>(
         static_cast<MessageLoopForIO*>(message_loop_for_io));
   }
 

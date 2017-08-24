@@ -98,11 +98,6 @@ class MockQuicSession : public QuicSession {
     ActivateStream(std::move(stream));
   }
 
- protected:
-  std::unique_ptr<QuicStream> CreateStream(QuicStreamId id) override {
-    return nullptr;
-  }
-
  private:
   // Stores written data from ReliableQuicStreamAdapter.
   std::string* write_buffer_;

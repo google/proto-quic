@@ -508,11 +508,11 @@ void TraceLog::CreateFiltersForTraceConfig() {
     std::unique_ptr<TraceEventFilter> new_filter;
     const std::string& predicate_name = filter_config.predicate_name();
     if (predicate_name == EventNameFilter::kName) {
-      auto whitelist = MakeUnique<std::unordered_set<std::string>>();
+      auto whitelist = std::make_unique<std::unordered_set<std::string>>();
       CHECK(filter_config.GetArgAsSet("event_name_whitelist", &*whitelist));
-      new_filter = MakeUnique<EventNameFilter>(std::move(whitelist));
+      new_filter = std::make_unique<EventNameFilter>(std::move(whitelist));
     } else if (predicate_name == HeapProfilerEventFilter::kName) {
-      new_filter = MakeUnique<HeapProfilerEventFilter>();
+      new_filter = std::make_unique<HeapProfilerEventFilter>();
     } else {
       if (filter_factory_for_testing_)
         new_filter = filter_factory_for_testing_(predicate_name);

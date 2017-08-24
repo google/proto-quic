@@ -113,7 +113,7 @@ void TcpCubicSenderBase::OnCongestionEvent(
     bool rtt_updated,
     QuicByteCount prior_in_flight,
     QuicTime event_time,
-    const CongestionVector& acked_packets,
+    const AckedPacketVector& acked_packets,
     const CongestionVector& lost_packets) {
   if (rtt_updated && InSlowStart() &&
       hybrid_slow_start_.ShouldExitSlowStart(
@@ -125,9 +125,9 @@ void TcpCubicSenderBase::OnCongestionEvent(
        it != lost_packets.end(); ++it) {
     OnPacketLost(it->first, it->second, prior_in_flight);
   }
-  for (CongestionVector::const_iterator it = acked_packets.begin();
-       it != acked_packets.end(); ++it) {
-    OnPacketAcked(it->first, it->second, prior_in_flight, event_time);
+  for (const SendAlgorithmInterface::AckedPacket acked_packet : acked_packets) {
+    OnPacketAcked(acked_packet.packet_number, acked_packet.bytes_acked,
+                  prior_in_flight, event_time);
   }
 }
 
@@ -233,6 +233,10 @@ bool TcpCubicSenderBase::IsCwndLimited(QuicByteCount bytes_in_flight) const {
 bool TcpCubicSenderBase::InRecovery() const {
   return largest_acked_packet_number_ <= largest_sent_at_last_cutback_ &&
          largest_acked_packet_number_ != 0;
+}
+
+bool TcpCubicSenderBase::IsProbingForMoreBandwidth() const {
+  return false;
 }
 
 void TcpCubicSenderBase::OnRetransmissionTimeout(bool packets_retransmitted) {

@@ -207,8 +207,7 @@ void SpdyProxyClientSocketTest::Initialize(MockRead* reads,
 
   // Create the SpdyProxyClientSocket.
   sock_ = base::MakeUnique<SpdyProxyClientSocket>(
-      spdy_stream, user_agent_, endpoint_host_port_pair_, proxy_host_port_,
-      net_log_.bound(),
+      spdy_stream, user_agent_, endpoint_host_port_pair_, net_log_.bound(),
       new HttpAuthController(
           HttpAuth::AUTH_PROXY, GURL("https://" + proxy_host_port_.ToString()),
           session_->http_auth_cache(), session_->http_auth_handler_factory()));

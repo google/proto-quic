@@ -13,18 +13,18 @@ namespace android {
 
 void RunCallbackAndroid(const JavaRef<jobject>& callback,
                         const JavaRef<jobject>& arg) {
-  Java_Callback_onResultFromNativeV_JLO(base::android::AttachCurrentThread(),
-                                        callback, arg);
+  Java_Helper_onObjectResultFromNative(base::android::AttachCurrentThread(),
+                                       callback, arg);
 }
 
 void RunCallbackAndroid(const JavaRef<jobject>& callback, bool arg) {
-  Java_Callback_onResultFromNativeV_Z(base::android::AttachCurrentThread(),
-                                      callback, static_cast<jboolean>(arg));
+  Java_Helper_onBooleanResultFromNative(base::android::AttachCurrentThread(),
+                                        callback, static_cast<jboolean>(arg));
 }
 
 void RunCallbackAndroid(const JavaRef<jobject>& callback, int arg) {
-  Java_Callback_onResultFromNativeV_I(base::android::AttachCurrentThread(),
-                                      callback, arg);
+  Java_Helper_onIntResultFromNative(base::android::AttachCurrentThread(),
+                                    callback, arg);
 }
 
 void RunCallbackAndroid(const JavaRef<jobject>& callback,
@@ -32,7 +32,7 @@ void RunCallbackAndroid(const JavaRef<jobject>& callback,
   JNIEnv* env = base::android::AttachCurrentThread();
   base::android::ScopedJavaLocalRef<jbyteArray> j_bytes =
       base::android::ToJavaByteArray(env, arg);
-  Java_Callback_onResultFromNativeV_AB(env, callback, j_bytes);
+  Java_Helper_onObjectResultFromNative(env, callback, j_bytes);
 }
 
 }  // namespace android

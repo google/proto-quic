@@ -8,9 +8,11 @@
 
 #include "base/debug/activity_tracker.h"
 #include "base/debug/alias.h"
+#include "base/metrics/statistics_recorder.h"  // crbug/744734
 #include "base/pending_task.h"
 #include "base/trace_event/trace_event.h"
 #include "base/tracked_objects.h"
+#include "build/build_config.h"  // crbug/744734
 
 namespace base {
 namespace debug {
@@ -32,6 +34,13 @@ void TaskAnnotator::DidQueueTask(const char* queue_function,
 void TaskAnnotator::RunTask(const char* queue_function,
                             PendingTask* pending_task) {
   ScopedTaskRunActivity task_activity(*pending_task);
+
+#if defined(OS_ANDROID)
+  // Try to find the source of heap object corruption by validating all
+  // histogram objects before and after each posted task.
+  // TODO(bcwhite): Remove this after successful canary build.
+  base::StatisticsRecorder::ValidateAllHistograms(nullptr);
+#endif
 
   tracked_objects::TaskStopwatch stopwatch;
   stopwatch.Start();
@@ -61,6 +70,13 @@ void TaskAnnotator::RunTask(const char* queue_function,
   stopwatch.Stop();
   tracked_objects::ThreadData::TallyRunOnNamedThreadIfTracking(*pending_task,
                                                                stopwatch);
+
+#if defined(OS_ANDROID)
+  // Try to find the source of heap object corruption by validating all
+  // histogram objects before and after each posted task.
+  // TODO(bcwhite): Remove this after successful canary build.
+  base::StatisticsRecorder::ValidateAllHistograms(&pending_task->posted_from);
+#endif
 }
 
 uint64_t TaskAnnotator::GetTaskTraceID(const PendingTask& task) const {

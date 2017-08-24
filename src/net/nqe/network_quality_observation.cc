@@ -15,18 +15,27 @@ Observation::Observation(int32_t value,
                          base::TimeTicks timestamp,
                          const base::Optional<int32_t>& signal_strength,
                          NetworkQualityObservationSource source)
+    : Observation(value, timestamp, signal_strength, source, base::nullopt) {}
+
+Observation::Observation(int32_t value,
+                         base::TimeTicks timestamp,
+                         const base::Optional<int32_t>& signal_strength,
+                         NetworkQualityObservationSource source,
+                         const base::Optional<IPHash>& host)
     : value(value),
       timestamp(timestamp),
       signal_strength(signal_strength),
-      source(source) {
+      source(source),
+      host(host) {
   DCHECK(!timestamp.is_null());
 }
 
 Observation::Observation(const Observation& other)
-    : value(other.value),
-      timestamp(other.timestamp),
-      signal_strength(other.signal_strength),
-      source(other.source) {}
+    : Observation(other.value,
+                  other.timestamp,
+                  other.signal_strength,
+                  other.source,
+                  other.host) {}
 
 Observation::~Observation() {}
 

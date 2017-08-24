@@ -769,7 +769,7 @@ TEST(FilesystemUtils, GetBuildDirForTarget) {
   build_settings.SetBuildDir(SourceDir("//out/Debug/"));
   Settings settings(&build_settings, "");
 
-  Target a(&settings, Label(SourceDir("//foo/bar/"), "baz"), {});
+  Target a(&settings, Label(SourceDir("//foo/bar/"), "baz"));
   EXPECT_EQ("//out/Debug/obj/foo/bar/",
             GetBuildDirForTargetAsSourceDir(&a, BuildDirType::OBJ).value());
   EXPECT_EQ("obj/foo/bar/",

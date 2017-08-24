@@ -78,7 +78,7 @@ class ThreadPerfTest : public testing::Test {
     // Create threads and collect starting cpu-time for each thread.
     std::vector<base::ThreadTicks> thread_starts;
     while (threads_.size() < num_threads) {
-      threads_.push_back(MakeUnique<base::Thread>("PingPonger"));
+      threads_.push_back(std::make_unique<base::Thread>("PingPonger"));
       threads_.back()->Start();
       if (base::ThreadTicks::IsSupported())
         thread_starts.push_back(ThreadNow(*threads_.back()));
@@ -185,7 +185,7 @@ class EventPerfTest : public ThreadPerfTest {
  public:
   void Init() override {
     for (size_t i = 0; i < threads_.size(); i++) {
-      events_.push_back(MakeUnique<WaitableEventType>(
+      events_.push_back(std::make_unique<WaitableEventType>(
           WaitableEvent::ResetPolicy::AUTOMATIC,
           WaitableEvent::InitialState::NOT_SIGNALED));
     }

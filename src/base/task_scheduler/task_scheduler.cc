@@ -27,13 +27,15 @@ TaskScheduler::InitParams::InitParams(
     const SchedulerWorkerPoolParams& background_worker_pool_params_in,
     const SchedulerWorkerPoolParams& background_blocking_worker_pool_params_in,
     const SchedulerWorkerPoolParams& foreground_worker_pool_params_in,
-    const SchedulerWorkerPoolParams& foreground_blocking_worker_pool_params_in)
+    const SchedulerWorkerPoolParams& foreground_blocking_worker_pool_params_in,
+    TaskPriorityAdjustment task_priority_adjustment_in)
     : background_worker_pool_params(background_worker_pool_params_in),
       background_blocking_worker_pool_params(
           background_blocking_worker_pool_params_in),
       foreground_worker_pool_params(foreground_worker_pool_params_in),
       foreground_blocking_worker_pool_params(
-          foreground_blocking_worker_pool_params_in) {}
+          foreground_blocking_worker_pool_params_in),
+      task_priority_adjustment(task_priority_adjustment_in) {}
 
 TaskScheduler::InitParams::~InitParams() = default;
 
@@ -62,7 +64,7 @@ void TaskScheduler::CreateAndStartWithDefaultParams(StringPiece name) {
 #endif  // !defined(OS_NACL)
 
 void TaskScheduler::Create(StringPiece name) {
-  SetInstance(MakeUnique<internal::TaskSchedulerImpl>(name));
+  SetInstance(std::make_unique<internal::TaskSchedulerImpl>(name));
 }
 
 // static

@@ -31,7 +31,7 @@ net::NetworkTrafficAnnotationTag kTrafficAnnotation =
         comments: "comment1")");
 }
 
-void Sample1() {
+void TestAnnotations() {
   net::PartialNetworkTrafficAnnotationTag partial_traffic_annotation =
       net::DefinePartialNetworkTrafficAnnotation("id2", "completing_id2", R"(
         semantics {
@@ -68,7 +68,7 @@ void Sample1() {
         })");
 }
 
-void Sample2() {
+void TestURLFetcherCreate() {
   net::URLFetcherDelegate* delegate = nullptr;
   net::URLFetcher::Create(GURL(), net::URLFetcher::RequestType::TEST_VALUE,
                           delegate);
@@ -83,11 +83,36 @@ void Sample2() {
                           delegate, NO_TRAFFIC_ANNOTATION_YET);
 }
 
-void Sample3() {
+void TestCreateRequest() {
   net::URLRequest::Delegate* delegate = nullptr;
   net::URLRequestContext context;
 
   context.CreateRequest(GURL(), net::RequestPriority::TEST_VALUE, delegate);
   context.CreateRequest(GURL(), net::RequestPriority::TEST_VALUE, delegate,
                         kTrafficAnnotation);
+}
+
+void TestInitList() {
+  net::NetworkTrafficAnnotationTag({-1});
+  net::MutableNetworkTrafficAnnotationTag({-2});
+  net::PartialNetworkTrafficAnnotationTag({-1});
+  net::MutablePartialNetworkTrafficAnnotationTag({-2});
+  int i = 0;
+  net::NetworkTrafficAnnotationTag({i});
+}
+
+void TestAssignment() {
+  net::MutableNetworkTrafficAnnotationTag tag1;
+  tag1.unique_id_hash_code = 1;
+
+  net::MutablePartialNetworkTrafficAnnotationTag tag2;
+  tag2.unique_id_hash_code = 2;
+
+  // Test if assignment to |unique_id_hash_code| of another structure is not
+  // caught.
+  struct something_else {
+    int unique_id_hash_code;
+  } x;
+
+  x.unique_id_hash_code = 3;
 }

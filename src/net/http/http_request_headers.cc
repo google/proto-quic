@@ -207,37 +207,6 @@ std::unique_ptr<base::Value> HttpRequestHeaders::NetLogCallback(
   return std::move(dict);
 }
 
-// static
-bool HttpRequestHeaders::FromNetLogParam(const base::Value* event_param,
-                                         HttpRequestHeaders* headers,
-                                         std::string* request_line) {
-  headers->Clear();
-  *request_line = "";
-
-  const base::DictionaryValue* dict = NULL;
-  const base::ListValue* header_list = NULL;
-
-  if (!event_param ||
-      !event_param->GetAsDictionary(&dict) ||
-      !dict->GetList("headers", &header_list) ||
-      !dict->GetString("line", request_line)) {
-    return false;
-  }
-
-  for (base::ListValue::const_iterator it = header_list->begin();
-       it != header_list->end();
-       ++it) {
-    std::string header_line;
-    if (!it->GetAsString(&header_line)) {
-      headers->Clear();
-      *request_line = "";
-      return false;
-    }
-    headers->AddHeaderFromString(header_line);
-  }
-  return true;
-}
-
 HttpRequestHeaders::HeaderVector::iterator
 HttpRequestHeaders::FindHeader(const base::StringPiece& key) {
   for (HeaderVector::iterator it = headers_.begin();

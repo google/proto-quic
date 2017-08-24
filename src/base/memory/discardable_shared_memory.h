@@ -32,6 +32,11 @@
 
 namespace base {
 
+namespace trace_event {
+class MemoryAllocatorDump;
+class ProcessMemoryDump;
+}  // namespace trace_event
+
 // Platform abstraction for discardable shared memory.
 //
 // This class is not thread-safe. Clients are responsible for synchronizing
@@ -130,6 +135,16 @@ class BASE_EXPORT DiscardableSharedMemory {
   // Closes the open discardable memory segment.
   // It is safe to call Close repeatedly.
   void Close();
+
+  // For tracing: Creates ownership edge to the underlying shared memory dump
+  // which is cross process in the given |pmd|. |local_segment_dump| is the dump
+  // associated with the local discardable shared memory segment and |is_owned|
+  // is true when the current process owns the segment and the effective memory
+  // is assigned to the current process.
+  void CreateSharedMemoryOwnershipEdge(
+      trace_event::MemoryAllocatorDump* local_segment_dump,
+      trace_event::ProcessMemoryDump* pmd,
+      bool is_owned) const;
 
  private:
   // Virtual for tests.

@@ -49,13 +49,7 @@ void MockQuicData::AddWrite(IoMode mode, int rv) {
 }
 
 void MockQuicData::AddSocketDataToFactory(MockClientSocketFactory* factory) {
-  MockRead* reads = reads_.empty() ? nullptr : &reads_[0];
-  MockWrite* writes = writes_.empty() ? nullptr : &writes_[0];
-  socket_data_.reset(
-      new SequencedSocketData(reads, reads_.size(), writes, writes_.size()));
-  if (connect_ != nullptr)
-    socket_data_->set_connect_data(*connect_);
-  factory->AddSocketDataProvider(socket_data_.get());
+  factory->AddSocketDataProvider(InitializeAndGetSequencedSocketData());
 }
 
 bool MockQuicData::AllReadDataConsumed() {
@@ -68,6 +62,21 @@ bool MockQuicData::AllWriteDataConsumed() {
 
 void MockQuicData::Resume() {
   socket_data_->Resume();
+}
+
+SequencedSocketData* MockQuicData::InitializeAndGetSequencedSocketData() {
+  MockRead* reads = reads_.empty() ? nullptr : &reads_[0];
+  MockWrite* writes = writes_.empty() ? nullptr : &writes_[0];
+  socket_data_.reset(
+      new SequencedSocketData(reads, reads_.size(), writes, writes_.size()));
+  if (connect_ != nullptr)
+    socket_data_->set_connect_data(*connect_);
+
+  return socket_data_.get();
+}
+
+SequencedSocketData* MockQuicData::GetSequencedSocketData() {
+  return socket_data_.get();
 }
 
 }  // namespace test

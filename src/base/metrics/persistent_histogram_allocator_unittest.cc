@@ -104,8 +104,9 @@ TEST_F(PersistentHistogramAllocatorTest, CreateAndIterate) {
 
   // Create a second allocator and have it access the memory of the first.
   std::unique_ptr<HistogramBase> recovered;
-  PersistentHistogramAllocator recovery(MakeUnique<PersistentMemoryAllocator>(
-      allocator_memory_.get(), kAllocatorMemorySize, 0, 0, "", false));
+  PersistentHistogramAllocator recovery(
+      std::make_unique<PersistentMemoryAllocator>(
+          allocator_memory_.get(), kAllocatorMemorySize, 0, 0, "", false));
   PersistentHistogramAllocator::Iterator histogram_iter(&recovery);
 
   recovered = histogram_iter.GetNext();
@@ -228,9 +229,10 @@ TEST_F(PersistentHistogramAllocatorTest, StatisticsRecorderMerge) {
   GlobalHistogramAllocator::Set(std::move(old_allocator));
 
   // Create a "recovery" allocator using the same memory as the local one.
-  PersistentHistogramAllocator recovery1(MakeUnique<PersistentMemoryAllocator>(
-      const_cast<void*>(new_allocator->memory_allocator()->data()),
-      new_allocator->memory_allocator()->size(), 0, 0, "", false));
+  PersistentHistogramAllocator recovery1(
+      std::make_unique<PersistentMemoryAllocator>(
+          const_cast<void*>(new_allocator->memory_allocator()->data()),
+          new_allocator->memory_allocator()->size(), 0, 0, "", false));
   PersistentHistogramAllocator::Iterator histogram_iter1(&recovery1);
 
   // Get the histograms that were created locally (and forgotten) and merge
@@ -274,9 +276,10 @@ TEST_F(PersistentHistogramAllocatorTest, StatisticsRecorderMerge) {
   histogram2->Add(7);
 
   // Do another merge.
-  PersistentHistogramAllocator recovery2(MakeUnique<PersistentMemoryAllocator>(
-      const_cast<void*>(new_allocator->memory_allocator()->data()),
-      new_allocator->memory_allocator()->size(), 0, 0, "", false));
+  PersistentHistogramAllocator recovery2(
+      std::make_unique<PersistentMemoryAllocator>(
+          const_cast<void*>(new_allocator->memory_allocator()->data()),
+          new_allocator->memory_allocator()->size(), 0, 0, "", false));
   PersistentHistogramAllocator::Iterator histogram_iter2(&recovery2);
   while (true) {
     recovered = histogram_iter2.GetNext();

@@ -154,6 +154,10 @@ class URL_EXPORT Origin {
   // Note: The returned URL will not necessarily be serialized to the same value
   // as the Origin would. The GURL will have an added "/" path for Origins with
   // valid SchemeHostPorts and file Origins.
+  //
+  // Try not to use this method under normal circumstances, as it loses type
+  // information. Downstream consumers can mistake the returned GURL with a full
+  // URL (e.g. with a path component).
   GURL GetURL() const;
 
   // Same as GURL::DomainIs. If |this| origin is unique, then returns false.

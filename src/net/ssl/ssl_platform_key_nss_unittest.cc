@@ -19,6 +19,7 @@
 #include "crypto/ec_private_key.h"
 #include "crypto/scoped_nss_types.h"
 #include "crypto/scoped_test_nss_db.h"
+#include "net/cert/x509_util_nss.h"
 #include "net/ssl/ssl_private_key.h"
 #include "net/ssl/ssl_private_key_test_util.h"
 #include "net/test/cert_test_util.h"
@@ -67,6 +68,7 @@ TEST_P(SSLPlatformKeyNSSTest, KeyMatches) {
   // Import the key into a test NSS database.
   crypto::ScopedTestNSSDB test_db;
   scoped_refptr<X509Certificate> cert;
+  ScopedCERTCertificate nss_cert;
   if (test_key.is_ecdsa) {
     // NSS cannot import unencrypted ECDSA keys, so we encrypt it with an empty
     // password and import manually.
@@ -112,17 +114,19 @@ TEST_P(SSLPlatformKeyNSSTest, KeyMatches) {
 
     cert = ImportCertFromFile(GetTestCertsDirectory(), test_key.cert_file);
     ASSERT_TRUE(cert);
-    ASSERT_TRUE(ImportClientCertToSlot(cert, test_db.slot()));
+    nss_cert = ImportClientCertToSlot(cert, test_db.slot());
+    ASSERT_TRUE(nss_cert);
   } else {
     cert = ImportClientCertAndKeyFromFile(GetTestCertsDirectory(),
                                           test_key.cert_file, test_key.key_file,
-                                          test_db.slot());
+                                          test_db.slot(), &nss_cert);
     ASSERT_TRUE(cert);
+    ASSERT_TRUE(nss_cert);
   }
 
   // Look up the key.
   scoped_refptr<SSLPrivateKey> key =
-      FetchClientCertPrivateKey(cert.get(), nullptr);
+      FetchClientCertPrivateKey(cert.get(), nss_cert.get(), nullptr);
   ASSERT_TRUE(key);
 
   // All NSS keys are expected to have the same hash preferences.

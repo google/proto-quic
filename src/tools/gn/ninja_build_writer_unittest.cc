@@ -16,7 +16,7 @@ TEST(NinjaBuildWriter, TwoTargets) {
   TestWithScope setup;
   Err err;
 
-  Target target_foo(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
+  Target target_foo(setup.settings(), Label(SourceDir("//foo/"), "bar"));
   target_foo.set_output_type(Target::ACTION);
   target_foo.action_values().set_script(SourceFile("//foo/script.py"));
   target_foo.action_values().outputs() = SubstitutionList::MakeForTest(
@@ -24,7 +24,7 @@ TEST(NinjaBuildWriter, TwoTargets) {
   target_foo.SetToolchain(setup.toolchain());
   ASSERT_TRUE(target_foo.OnResolved(&err));
 
-  Target target_bar(setup.settings(), Label(SourceDir("//bar/"), "bar"), {});
+  Target target_bar(setup.settings(), Label(SourceDir("//bar/"), "bar"));
   target_bar.set_output_type(Target::ACTION);
   target_bar.action_values().set_script(SourceFile("//bar/script.py"));
   target_bar.action_values().outputs() = SubstitutionList::MakeForTest(
@@ -34,13 +34,11 @@ TEST(NinjaBuildWriter, TwoTargets) {
 
   // Make a secondary toolchain that references a pool.
   Label other_toolchain_label(SourceDir("//other/"), "toolchain");
-  Pool other_pool(
-      setup.settings(),
-      Label(SourceDir("//other/"), "pool", other_toolchain_label.dir(),
-            other_toolchain_label.name()),
-      {});
+  Pool other_pool(setup.settings(), Label(SourceDir("//other/"), "pool",
+                                          other_toolchain_label.dir(),
+                                          other_toolchain_label.name()));
   other_pool.set_depth(42);
-  Toolchain other_toolchain(setup.settings(), other_toolchain_label, {});
+  Toolchain other_toolchain(setup.settings(), other_toolchain_label);
   TestWithScope::SetupToolchain(&other_toolchain);
   other_toolchain.GetTool(Toolchain::TYPE_LINK)->set_pool(
       LabelPtrPair<Pool>(&other_pool));
@@ -102,7 +100,7 @@ TEST(NinjaBuildWriter, DuplicateOutputs) {
   TestWithScope setup;
   Err err;
 
-  Target target_foo(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
+  Target target_foo(setup.settings(), Label(SourceDir("//foo/"), "bar"));
   target_foo.set_output_type(Target::ACTION);
   target_foo.action_values().set_script(SourceFile("//foo/script.py"));
   target_foo.action_values().outputs() = SubstitutionList::MakeForTest(
@@ -110,7 +108,7 @@ TEST(NinjaBuildWriter, DuplicateOutputs) {
   target_foo.SetToolchain(setup.toolchain());
   ASSERT_TRUE(target_foo.OnResolved(&err));
 
-  Target target_bar(setup.settings(), Label(SourceDir("//bar/"), "bar"), {});
+  Target target_bar(setup.settings(), Label(SourceDir("//bar/"), "bar"));
   target_bar.set_output_type(Target::ACTION);
   target_bar.action_values().set_script(SourceFile("//bar/script.py"));
   target_bar.action_values().outputs() = SubstitutionList::MakeForTest(

@@ -10,17 +10,16 @@ using namespace testing;
 
 namespace battor {
 
-TEST(SerialUtilsTest, CharVectorToStringLengthZero) {
-  EXPECT_EQ("", CharVectorToString(std::vector<char>()));
+TEST(SerialUtilsTest, ByteVectorToStringLengthZero) {
+  EXPECT_EQ("", ByteVectorToString(std::vector<uint8_t>()));
 }
 
-TEST(SerialUtilsTest, CharVectorToStringLengthOne) {
-  EXPECT_EQ("0x41", CharVectorToString(std::vector<char>({'A'})));
+TEST(SerialUtilsTest, ByteVectorToStringLengthOne) {
+  EXPECT_EQ("0x41", ByteVectorToString(std::vector<uint8_t>({'A'})));
 }
 
-TEST(SerialUtilsTest, CharVectorToStringLengthTwo) {
-  EXPECT_EQ("0x41 0x4a",
-            CharVectorToString(std::vector<char>({'A', 'J'})));
+TEST(SerialUtilsTest, ByteVectorToStringLengthTwo) {
+  EXPECT_EQ("0x41 0x4a", ByteVectorToString(std::vector<uint8_t>({'A', 'J'})));
 }
 
 TEST(SerialUtilsTest, CharArrayToStringLengthOne) {

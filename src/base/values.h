@@ -30,6 +30,7 @@
 #include "base/base_export.h"
 #include "base/compiler_specific.h"
 #include "base/containers/flat_map.h"
+#include "base/containers/span.h"
 #include "base/macros.h"
 #include "base/memory/manual_constructor.h"
 #include "base/strings/string16.h"
@@ -68,14 +69,18 @@ class BASE_EXPORT Value {
   // For situations where you want to keep ownership of your buffer, this
   // factory method creates a new BinaryValue by copying the contents of the
   // buffer that's passed in.
-  // DEPRECATED, use MakeUnique<Value>(const BlobStorage&) instead.
+  // DEPRECATED, use std::make_unique<Value>(const BlobStorage&) instead.
   // TODO(crbug.com/646113): Delete this and migrate callsites.
   static std::unique_ptr<Value> CreateWithCopiedBuffer(const char* buffer,
                                                        size_t size);
 
-  Value(const Value& that);
   Value(Value&& that) noexcept;
   Value() noexcept;  // A null value.
+
+  // Value's copy constructor and copy assignment operator are deleted. Use this
+  // to obtain a deep copy explicitly.
+  Value Clone() const;
+
   explicit Value(Type type);
   explicit Value(bool in_bool);
   explicit Value(int in_int);
@@ -97,12 +102,12 @@ class BASE_EXPORT Value {
   explicit Value(const BlobStorage& in_blob);
   explicit Value(BlobStorage&& in_blob) noexcept;
 
+  explicit Value(const DictStorage& in_dict);
   explicit Value(DictStorage&& in_dict) noexcept;
 
   explicit Value(const ListStorage& in_list);
   explicit Value(ListStorage&& in_list) noexcept;
 
-  Value& operator=(const Value& that);
   Value& operator=(Value&& that) noexcept;
 
   ~Value();
@@ -120,6 +125,7 @@ class BASE_EXPORT Value {
 
   // Returns true if the current object represents a given type.
   bool IsType(Type type) const { return type == type_; }
+  bool is_none() const { return type() == Type::NONE; }
   bool is_bool() const { return type() == Type::BOOLEAN; }
   bool is_int() const { return type() == Type::INTEGER; }
   bool is_double() const { return type() == Type::DOUBLE; }
@@ -138,38 +144,41 @@ class BASE_EXPORT Value {
   ListStorage& GetList();
   const ListStorage& GetList() const;
 
-  using dict_iterator = detail::dict_iterator;
-  using const_dict_iterator = detail::const_dict_iterator;
-  using dict_iterator_proxy = detail::dict_iterator_proxy;
-  using const_dict_iterator_proxy = detail::const_dict_iterator_proxy;
-
   // |FindKey| looks up |key| in the underlying dictionary. If found, it returns
-  // an iterator to the element. Otherwise the end iterator of the dictionary is
-  // returned. Callers are expected to compare the returned iterator against
-  // |DictEnd()| in order to determine whether |key| was present.
+  // a pointer to the element. Otherwise it returns nullptr.
+  // returned. Callers are expected to perform a check against null before using
+  // the pointer.
   // Note: This fatally asserts if type() is not Type::DICTIONARY.
-  dict_iterator FindKey(StringPiece key);
-  const_dict_iterator FindKey(StringPiece key) const;
+  //
+  // Example:
+  //   auto* found = FindKey("foo");
+  Value* FindKey(StringPiece key);
+  const Value* FindKey(StringPiece key) const;
 
   // |FindKeyOfType| is similar to |FindKey|, but it also requires the found
   // value to have type |type|. If no type is found, or the found value is of a
-  // different type the end iterator of the dictionary is returned.
-  // Callers are expected to compare the returned iterator against |DictEnd()|
-  // in order to determine whether |key| was present and of the correct |type|.
+  // different type nullptr is returned.
+  // Callers are expected to perform a check against null before using the
+  // pointer.
   // Note: This fatally asserts if type() is not Type::DICTIONARY.
-  dict_iterator FindKeyOfType(StringPiece key, Type type);
-  const_dict_iterator FindKeyOfType(StringPiece key, Type type) const;
+  //
+  // Example:
+  //   auto* found = FindKey("foo", Type::DOUBLE);
+  Value* FindKeyOfType(StringPiece key, Type type);
+  const Value* FindKeyOfType(StringPiece key, Type type) const;
 
   // |SetKey| looks up |key| in the underlying dictionary and sets the mapped
   // value to |value|. If |key| could not be found, a new element is inserted.
-  // An iterator to the modified item is returned.
+  // A pointer to the modified item is returned.
   // Note: This fatally asserts if type() is not Type::DICTIONARY.
-  dict_iterator SetKey(StringPiece key, Value value);
-  // This overload can result in a performance improvement if |key| is not yet
-  // present.
-  dict_iterator SetKey(std::string&& key, Value value);
+  //
+  // Example:
+  //   SetKey("foo", std::move(myvalue));
+  Value* SetKey(StringPiece key, Value value);
+  // This overload results in a performance improvement for std::string&&.
+  Value* SetKey(std::string&& key, Value value);
   // This overload is necessary to avoid ambiguity for const char* arguments.
-  dict_iterator SetKey(const char* key, Value value);
+  Value* SetKey(const char* key, Value value);
 
   // Searches a hierarchy of dictionary values for a given value. If a path
   // of dictionaries exist, returns the item at that path. If any of the path
@@ -180,18 +189,25 @@ class BASE_EXPORT Value {
   //
   // Implementation note: This can't return an iterator because the iterator
   // will actually be into another Value, so it can't be compared to iterators
-  // from thise one (in particular, the DictEnd() iterator).
+  // from this one (in particular, the DictItems().end() iterator).
   //
   // Example:
-  //   auto found = FindPath({"foo", "bar"});
-  Value* FindPath(std::initializer_list<const char*> path);
-  const Value* FindPath(std::initializer_list<const char*> path) const;
+  //   auto* found = FindPath({"foo", "bar"});
+  //
+  //   std::vector<StringPiece> components = ...
+  //   auto* found = FindPath(components);
+  Value* FindPath(std::initializer_list<StringPiece> path);
+  Value* FindPath(span<const StringPiece> path);
+  const Value* FindPath(std::initializer_list<StringPiece> path) const;
+  const Value* FindPath(span<const StringPiece> path) const;
 
   // Like FindPath but will only return the value if the leaf Value type
   // matches the given type. Will return nullptr otherwise.
-  Value* FindPathOfType(std::initializer_list<const char*> path, Type type);
-  const Value* FindPathOfType(std::initializer_list<const char*> path,
+  Value* FindPathOfType(std::initializer_list<StringPiece> path, Type type);
+  Value* FindPathOfType(span<const StringPiece> path, Type type);
+  const Value* FindPathOfType(std::initializer_list<StringPiece> path,
                               Type type) const;
+  const Value* FindPathOfType(span<const StringPiece> path, Type type) const;
 
   // Sets the given path, expanding and creating dictionary keys as necessary.
   //
@@ -203,14 +219,14 @@ class BASE_EXPORT Value {
   //
   // Example:
   //   value.SetPath({"foo", "bar"}, std::move(myvalue));
-  Value* SetPath(std::initializer_list<const char*> path, Value value);
+  //
+  //   std::vector<StringPiece> components = ...
+  //   value.SetPath(components, std::move(myvalue));
+  Value* SetPath(std::initializer_list<StringPiece> path, Value value);
+  Value* SetPath(span<const StringPiece> path, Value value);
 
-  // |DictEnd| returns the end iterator of the underlying dictionary. It is
-  // intended to be used with |FindKey| in order to determine whether a given
-  // key is present in the dictionary.
-  // Note: This fatally asserts if type() is not Type::DICTIONARY.
-  dict_iterator DictEnd();
-  const_dict_iterator DictEnd() const;
+  using dict_iterator_proxy = detail::dict_iterator_proxy;
+  using const_dict_iterator_proxy = detail::const_dict_iterator_proxy;
 
   // |DictItems| returns a proxy object that exposes iterators to the underlying
   // dictionary. These are intended for iteration over all items in the
@@ -248,10 +264,10 @@ class BASE_EXPORT Value {
   // to the copy. The caller gets ownership of the copy, of course.
   // Subclasses return their own type directly in their overrides;
   // this works because C++ supports covariant return types.
-  // DEPRECATED, use Value's copy constructor instead.
+  // DEPRECATED, use Value::Clone() instead.
   // TODO(crbug.com/646113): Delete this and migrate callsites.
   Value* DeepCopy() const;
-  // DEPRECATED, use Value's copy constructor instead.
+  // DEPRECATED, use Value::Clone() instead.
   // TODO(crbug.com/646113): Delete this and migrate callsites.
   std::unique_ptr<Value> CreateDeepCopy() const;
 
@@ -285,11 +301,10 @@ class BASE_EXPORT Value {
   };
 
  private:
-  void InternalCopyFundamentalValue(const Value& that);
-  void InternalCopyConstructFrom(const Value& that);
   void InternalMoveConstructFrom(Value&& that);
-  void InternalCopyAssignFromSameType(const Value& that);
   void InternalCleanup();
+
+  DISALLOW_COPY_AND_ASSIGN(Value);
 };
 
 // DictionaryValue provides a key-value dictionary with (optional) "path"
@@ -304,6 +319,8 @@ class BASE_EXPORT DictionaryValue : public Value {
   static std::unique_ptr<DictionaryValue> From(std::unique_ptr<Value> value);
 
   DictionaryValue();
+  explicit DictionaryValue(const DictStorage& in_dict);
+  explicit DictionaryValue(DictStorage&& in_dict) noexcept;
 
   // Returns true if the current dictionary has a value for the given key.
   bool HasKey(StringPiece key) const;
@@ -345,13 +362,6 @@ class BASE_EXPORT DictionaryValue : public Value {
                                  std::unique_ptr<Value> in_value);
 
   // Convenience forms of SetWithoutPathExpansion().
-  // DEPRECATED, use Value::SetKey(path, Value(double)) instead.
-  Value* SetDoubleWithoutPathExpansion(StringPiece path, double in_value);
-  // DEPRECATED, use Value::SetKey(path, Value(string)) instead.
-  Value* SetStringWithoutPathExpansion(StringPiece path, StringPiece in_value);
-  // DEPRECATED, use Value::SetKey(path, Value(string16)) instead.
-  Value* SetStringWithoutPathExpansion(StringPiece path,
-                                       const string16& in_value);
   // DEPRECATED, use Value::SetKey(path, Value(Type::DICTIONARY)) instead.
   DictionaryValue* SetDictionaryWithoutPathExpansion(
       StringPiece path,
@@ -479,10 +489,10 @@ class BASE_EXPORT DictionaryValue : public Value {
   const_iterator begin() const { return dict_->begin(); }
   const_iterator end() const { return dict_->end(); }
 
-  // DEPRECATED, use DictionaryValue's copy constructor instead.
+  // DEPRECATED, use Value::Clone() instead.
   // TODO(crbug.com/646113): Delete this and migrate callsites.
   DictionaryValue* DeepCopy() const;
-  // DEPRECATED, use DictionaryValue's copy constructor instead.
+  // DEPRECATED, use Value::Clone() instead.
   // TODO(crbug.com/646113): Delete this and migrate callsites.
   std::unique_ptr<DictionaryValue> CreateDeepCopy() const;
 };
@@ -630,10 +640,10 @@ class BASE_EXPORT ListValue : public Value {
   // DEPRECATED, use GetList()::end() instead.
   const_iterator end() const { return list_->end(); }
 
-  // DEPRECATED, use ListValue's copy constructor instead.
+  // DEPRECATED, use Value::Clone() instead.
   // TODO(crbug.com/646113): Delete this and migrate callsites.
   ListValue* DeepCopy() const;
-  // DEPRECATED, use ListValue's copy constructor instead.
+  // DEPRECATED, use Value::Clone() instead.
   // TODO(crbug.com/646113): Delete this and migrate callsites.
   std::unique_ptr<ListValue> CreateDeepCopy() const;
 };

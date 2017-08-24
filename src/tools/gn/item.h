@@ -7,7 +7,6 @@
 
 #include <string>
 
-#include "tools/gn/input_file.h"
 #include "tools/gn/label.h"
 #include "tools/gn/visibility.h"
 
@@ -22,9 +21,7 @@ class Toolchain;
 // graph.
 class Item {
  public:
-  Item(const Settings* settings,
-       const Label& label,
-       const InputFileSet& input_files);
+  Item(const Settings* settings, const Label& label);
   virtual ~Item();
 
   const Settings* settings() const { return settings_; }
@@ -58,15 +55,12 @@ class Item {
   // returns false on failure.
   virtual bool OnResolved(Err* err);
 
-  const InputFileSet& input_files() const { return input_files_; }
-
  private:
   const Settings* settings_;
   Label label_;
   const ParseNode* defined_from_;
 
   Visibility visibility_;
-  InputFileSet input_files_;
 };
 
 #endif  // TOOLS_GN_ITEM_H_

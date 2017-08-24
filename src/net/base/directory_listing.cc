@@ -90,4 +90,8 @@ std::string GetDirectoryListingEntry(const base::string16& name,
   return result;
 }
 
+std::string GetParentDirectoryLink() {
+  return std::string("<script>onHasParentDirectory();</script>\n");
+}
+
 }  // namespace net

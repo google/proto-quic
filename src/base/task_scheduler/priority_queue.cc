@@ -93,6 +93,10 @@ bool PriorityQueue::Transaction::IsEmpty() const {
   return outer_queue_->container_.empty();
 }
 
+size_t PriorityQueue::Transaction::Size() const {
+  return outer_queue_->container_.size();
+}
+
 PriorityQueue::PriorityQueue() = default;
 
 PriorityQueue::~PriorityQueue() = default;

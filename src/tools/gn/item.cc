@@ -1,18 +1,14 @@
 // Copyright (c) 2013 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #include "tools/gn/item.h"
 
 #include "base/logging.h"
 #include "tools/gn/settings.h"
 
-Item::Item(const Settings* settings,
-           const Label& label,
-           const InputFileSet& input_files)
-    : settings_(settings),
-      label_(label),
-      defined_from_(nullptr),
-      input_files_(input_files) {}
+Item::Item(const Settings* settings, const Label& label)
+    : settings_(settings), label_(label), defined_from_(nullptr) {}
 
 Item::~Item() {
 }

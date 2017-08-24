@@ -67,7 +67,7 @@ std::unique_ptr<Value> ParseJson(base::StringPiece json) {
       json, base::JSON_ALLOW_TRAILING_COMMAS, NULL, &error_msg);
   if (!result) {
     ADD_FAILURE() << "Failed to parse \"" << json << "\": " << error_msg;
-    result = MakeUnique<Value>();
+    result = std::make_unique<Value>();
   }
   return result;
 }

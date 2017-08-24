@@ -27,6 +27,7 @@ class NET_EXPORT_PRIVATE URLRequestFileDirJob
                        const base::FilePath& dir_path);
 
   void StartAsync();
+
   // Overridden from URLRequestJob:
   void Start() override;
   void Kill() override;
@@ -53,7 +54,7 @@ class NET_EXPORT_PRIVATE URLRequestFileDirJob
   int ReadBuffer(char* buf, int buf_size);
 
   DirectoryLister lister_;
-  base::FilePath dir_path_;
+  const base::FilePath dir_path_;
 
   std::string data_;
   bool canceled_;

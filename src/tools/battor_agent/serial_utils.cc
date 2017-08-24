@@ -6,13 +6,13 @@
 
 namespace battor {
 
-std::string CharVectorToString(const std::vector<char> data) {
+std::string ByteVectorToString(const std::vector<uint8_t>& data) {
   std::string s;
 
   // Reserve enough bytes for '0x', the two data characters, a space, and a null
   // terminating byte.
   char num_buff[6];
-  for (char d : data) {
+  for (uint8_t d : data) {
     // We use sprintf because stringstream's hex support wants to print our
     // characters as signed.
     sprintf(num_buff, "0x%02hhx ", d);
@@ -23,7 +23,7 @@ std::string CharVectorToString(const std::vector<char> data) {
 }
 
 std::string CharArrayToString(const char* bytes, size_t len) {
-  return CharVectorToString(std::vector<char>(bytes, bytes + len));
+  return ByteVectorToString(std::vector<uint8_t>(bytes, bytes + len));
 }
 
 }  // namespace battor

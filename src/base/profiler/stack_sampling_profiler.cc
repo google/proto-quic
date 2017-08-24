@@ -651,7 +651,7 @@ void StackSamplingProfiler::SamplingThread::PerformCollectionTask(int id) {
 
   // Restart the collection with the new params. Keep the same id so the
   // Stop() operation continues to work.
-  auto new_collection = MakeUnique<SamplingThread::CollectionContext>(
+  auto new_collection = std::make_unique<SamplingThread::CollectionContext>(
       id, collection->target, new_params.value(), collection->callback,
       collection->finished, std::move(collection->native_sampler));
   AddCollectionTask(std::move(new_collection));
@@ -813,7 +813,7 @@ void StackSamplingProfiler::Start() {
 
   DCHECK_EQ(NULL_PROFILER_ID, profiler_id_);
   profiler_id_ = SamplingThread::GetInstance()->Add(
-      MakeUnique<SamplingThread::CollectionContext>(
+      std::make_unique<SamplingThread::CollectionContext>(
           SamplingThread::CollectionContext::next_profiler_id.GetNext(),
           thread_id_, params_, completed_callback_, &profiling_inactive_,
           std::move(native_sampler)));

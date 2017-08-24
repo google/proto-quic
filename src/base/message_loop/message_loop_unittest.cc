@@ -191,6 +191,41 @@ class TaskList {
   std::vector<TaskItem> task_list_;
 };
 
+class DummyTaskObserver : public MessageLoop::TaskObserver {
+ public:
+  explicit DummyTaskObserver(int num_tasks)
+      : num_tasks_started_(0), num_tasks_processed_(0), num_tasks_(num_tasks) {}
+
+  DummyTaskObserver(int num_tasks, int num_tasks_started)
+      : num_tasks_started_(num_tasks_started),
+        num_tasks_processed_(0),
+        num_tasks_(num_tasks) {}
+
+  ~DummyTaskObserver() override {}
+
+  void WillProcessTask(const PendingTask& pending_task) override {
+    num_tasks_started_++;
+    EXPECT_LE(num_tasks_started_, num_tasks_);
+    EXPECT_EQ(num_tasks_started_, num_tasks_processed_ + 1);
+  }
+
+  void DidProcessTask(const PendingTask& pending_task) override {
+    num_tasks_processed_++;
+    EXPECT_LE(num_tasks_started_, num_tasks_);
+    EXPECT_EQ(num_tasks_started_, num_tasks_processed_);
+  }
+
+  int num_tasks_started() const { return num_tasks_started_; }
+  int num_tasks_processed() const { return num_tasks_processed_; }
+
+ private:
+  int num_tasks_started_;
+  int num_tasks_processed_;
+  const int num_tasks_;
+
+  DISALLOW_COPY_AND_ASSIGN(DummyTaskObserver);
+};
+
 void RecursiveFunc(TaskList* order, int cookie, int depth,
                    bool is_reentrant) {
   order->RecordStart(RECURSIVE, cookie);
@@ -208,6 +243,13 @@ void QuitFunc(TaskList* order, int cookie) {
   order->RecordStart(QUITMESSAGELOOP, cookie);
   RunLoop::QuitCurrentWhenIdleDeprecated();
   order->RecordEnd(QUITMESSAGELOOP, cookie);
+}
+
+void PostNTasks(int posts_remaining) {
+  if (posts_remaining > 1) {
+    ThreadTaskRunnerHandle::Get()->PostTask(
+        FROM_HERE, BindOnce(&PostNTasks, posts_remaining - 1));
+  }
 }
 
 #if defined(OS_ANDROID)
@@ -267,6 +309,34 @@ TEST(MessageLoopTest, JavaExceptionAbortInitJavaFirst) {
   constexpr bool delayed = false;
   constexpr bool init_java_first = true;
   RunTest_AbortDontRunMoreTasks(delayed, init_java_first);
+}
+
+TEST(MessageLoopTest, RunTasksWhileShuttingDownJavaThread) {
+  const int kNumPosts = 6;
+  DummyTaskObserver observer(kNumPosts, 1);
+
+  auto java_thread = MakeUnique<android::JavaHandlerThread>("test");
+  java_thread->Start();
+
+  java_thread->message_loop()->task_runner()->PostTask(
+      FROM_HERE,
+      BindOnce(
+          [](android::JavaHandlerThread* java_thread,
+             DummyTaskObserver* observer, int num_posts) {
+            java_thread->message_loop()->AddTaskObserver(observer);
+            ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+                FROM_HERE, BindOnce([]() { ADD_FAILURE(); }),
+                TimeDelta::FromDays(1));
+            java_thread->StopMessageLoopForTesting();
+            PostNTasks(num_posts);
+          },
+          Unretained(java_thread.get()), Unretained(&observer), kNumPosts));
+
+  java_thread->JoinForTesting();
+  java_thread.reset();
+
+  EXPECT_EQ(kNumPosts, observer.num_tasks_started());
+  EXPECT_EQ(kNumPosts, observer.num_tasks_processed());
 }
 #endif  // defined(OS_ANDROID)
 
@@ -1258,6 +1328,41 @@ TEST_P(MessageLoopTypedTest, RunLoopQuitNested) {
   EXPECT_EQ(static_cast<size_t>(task_index), order.Size());
 }
 
+// Quits current loop and immediately runs a nested loop.
+void QuitAndRunNestedLoop(TaskList* order,
+                          int cookie,
+                          RunLoop* outer_run_loop,
+                          RunLoop* nested_run_loop) {
+  order->RecordStart(RUNS, cookie);
+  outer_run_loop->Quit();
+  nested_run_loop->Run();
+  order->RecordEnd(RUNS, cookie);
+}
+
+// Test that we can run nested loop after quitting the current one.
+TEST_P(MessageLoopTypedTest, RunLoopNestedAfterQuit) {
+  MessageLoop loop(GetParam());
+
+  TaskList order;
+
+  RunLoop outer_run_loop;
+  RunLoop nested_run_loop;
+
+  ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
+                                          nested_run_loop.QuitClosure());
+  ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE, BindOnce(&QuitAndRunNestedLoop, &order, 1, &outer_run_loop,
+                          &nested_run_loop));
+
+  outer_run_loop.Run();
+
+  ASSERT_EQ(2U, order.Size());
+  int task_index = 0;
+  EXPECT_EQ(order.Get(task_index++), TaskItem(RUNS, 1, true));
+  EXPECT_EQ(order.Get(task_index++), TaskItem(RUNS, 1, false));
+  EXPECT_EQ(static_cast<size_t>(task_index), order.Size());
+}
+
 // Tests RunLoopQuit only quits the corresponding MessageLoop::Run.
 TEST_P(MessageLoopTypedTest, RunLoopQuitBogus) {
   MessageLoop loop(GetParam());
@@ -1484,38 +1589,6 @@ TEST(MessageLoopTest, RecursiveSupport2) {
 }
 #endif  // defined(OS_WIN)
 
-class DummyTaskObserver : public MessageLoop::TaskObserver {
- public:
-  explicit DummyTaskObserver(int num_tasks)
-      : num_tasks_started_(0),
-        num_tasks_processed_(0),
-        num_tasks_(num_tasks) {}
-
-  ~DummyTaskObserver() override {}
-
-  void WillProcessTask(const PendingTask& pending_task) override {
-    num_tasks_started_++;
-    EXPECT_LE(num_tasks_started_, num_tasks_);
-    EXPECT_EQ(num_tasks_started_, num_tasks_processed_ + 1);
-  }
-
-  void DidProcessTask(const PendingTask& pending_task) override {
-    num_tasks_processed_++;
-    EXPECT_LE(num_tasks_started_, num_tasks_);
-    EXPECT_EQ(num_tasks_started_, num_tasks_processed_);
-  }
-
-  int num_tasks_started() const { return num_tasks_started_; }
-  int num_tasks_processed() const { return num_tasks_processed_; }
-
- private:
-  int num_tasks_started_;
-  int num_tasks_processed_;
-  const int num_tasks_;
-
-  DISALLOW_COPY_AND_ASSIGN(DummyTaskObserver);
-};
-
 TEST(MessageLoopTest, TaskObserver) {
   const int kNumPosts = 6;
   DummyTaskObserver observer(kNumPosts);
@@ -1544,24 +1617,40 @@ TEST(MessageLoopTest, HighResolutionTimer) {
   MessageLoop message_loop;
   Time::EnableHighResolutionTimer(true);
 
-  const TimeDelta kFastTimer = TimeDelta::FromMilliseconds(5);
-  const TimeDelta kSlowTimer = TimeDelta::FromMilliseconds(100);
+  constexpr TimeDelta kFastTimer = TimeDelta::FromMilliseconds(5);
+  constexpr TimeDelta kSlowTimer = TimeDelta::FromMilliseconds(100);
 
-  EXPECT_FALSE(message_loop.HasHighResolutionTasks());
-  // Post a fast task to enable the high resolution timers.
-  message_loop.task_runner()->PostDelayedTask(
-      FROM_HERE, BindOnce(&PostNTasksThenQuit, 1), kFastTimer);
-  EXPECT_TRUE(message_loop.HasHighResolutionTasks());
-  RunLoop().Run();
-  EXPECT_FALSE(message_loop.HasHighResolutionTasks());
+  {
+    // Post a fast task to enable the high resolution timers.
+    RunLoop run_loop;
+    message_loop.task_runner()->PostDelayedTask(
+        FROM_HERE,
+        BindOnce(
+            [](RunLoop* run_loop) {
+              EXPECT_TRUE(Time::IsHighResolutionTimerInUse());
+              run_loop->QuitWhenIdle();
+            },
+            &run_loop),
+        kFastTimer);
+    run_loop.Run();
+  }
   EXPECT_FALSE(Time::IsHighResolutionTimerInUse());
-  // Check that a slow task does not trigger the high resolution logic.
-  message_loop.task_runner()->PostDelayedTask(
-      FROM_HERE, BindOnce(&PostNTasksThenQuit, 1), kSlowTimer);
-  EXPECT_FALSE(message_loop.HasHighResolutionTasks());
-  RunLoop().Run();
-  EXPECT_FALSE(message_loop.HasHighResolutionTasks());
+  {
+    // Check that a slow task does not trigger the high resolution logic.
+    RunLoop run_loop;
+    message_loop.task_runner()->PostDelayedTask(
+        FROM_HERE,
+        BindOnce(
+            [](RunLoop* run_loop) {
+              EXPECT_FALSE(Time::IsHighResolutionTimerInUse());
+              run_loop->QuitWhenIdle();
+            },
+            &run_loop),
+        kSlowTimer);
+    run_loop.Run();
+  }
   Time::EnableHighResolutionTimer(false);
+  Time::ResetHighResolutionTimerUsage();
 }
 
 #endif  // defined(OS_WIN)

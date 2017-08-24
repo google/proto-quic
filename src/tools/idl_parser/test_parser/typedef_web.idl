@@ -7,10 +7,6 @@
 Run with --test to generate an AST and verify that all comments accurately
 reflect the state of the Nodes.
 
-BUILD Type(Name)
-This comment signals that a node of type <Type> is created with the
-name <Name>.
-
 ERROR Error String
 This comment signals that a error of <Error String> is generated.  The error
 is not assigned to a node, but are expected in order.
@@ -43,55 +39,22 @@ typedef long MyLong;
 typedef [foo] long MyLong;
 
 /** TREE
- *Typedef(MyLongArray)
+ *Typedef(MyLongSequence)
  *  Type()
- *    PrimitiveType(long)
- *    Array()
+ *    Sequence()
+ *      Type()
+ *        PrimitiveType(long)
  */
-typedef long[] MyLongArray;
+typedef sequence<long> MyLongSequence;
 
 /** TREE
- *Typedef(MyLongSizedArray)
+ *Typedef(MyTypeSequence)
  *  Type()
- *    PrimitiveType(long)
- *    Array(4)
+ *    Sequence()
+ *      Type()
+ *        Typeref(MyType)
  */
-typedef long[4] MyLongSizedArray;
-
-/** TREE
- *Typedef(MyLongSizedArrayArray)
- *  Type()
- *    PrimitiveType(long)
- *    Array(4)
- *      Array(5)
- */
-typedef long[4][5] MyLongSizedArrayArray;
-
-/** TREE
- *Typedef(MyLongArraySizedArray)
- *  Type()
- *    PrimitiveType(long)
- *    Array()
- *      Array(5)
- */
-typedef long[][5] MyLongArraySizedArray;
-
-/** TREE
- *Typedef(MyTypeFive)
- *  Type()
- *    Typeref(MyType)
- *    Array(5)
- */
-typedef MyType[5] MyTypeFive;
-
-/** TREE
- *Typedef(MyTypeUnsizedFive)
- *  Type()
- *    Typeref(MyType)
- *    Array()
- *      Array(5)
- */
-typedef MyType[][5] MyTypeUnsizedFive;
+typedef sequence<MyType> MyTypeSequence;
 
 /** TREE
  *Typedef(MyLongLong)

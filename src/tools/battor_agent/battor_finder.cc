@@ -6,8 +6,8 @@
 
 #include "base/command_line.h"
 #include "base/logging.h"
-#include "device/serial/serial.mojom.h"
 #include "device/serial/serial_device_enumerator.h"
+#include "services/device/public/interfaces/serial.mojom.h"
 
 namespace battor {
 

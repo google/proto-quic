@@ -90,6 +90,9 @@ char kLSanDefaultSuppressions[] =
     // http://crbug.com/601435
     "leak:mojo/edk/js/handle.h\n"
 
+    // https://crbug.com/755670
+    "leak:third_party/yasm/\n"
+
     // PLEASE READ ABOVE BEFORE ADDING NEW SUPPRESSIONS.
 
     // End of suppressions.

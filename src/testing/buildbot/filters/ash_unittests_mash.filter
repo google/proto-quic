@@ -103,6 +103,7 @@
 -DragDropControllerTest.ViewRemovedWhileInDragDropTest
 -DragDropControllerTest.WindowDestroyedDuringDragDrop
 -DragDropControllerTest.DragStartedAndEndedEvents
+-DragDropControllerTest.EventTarget
 -DragWindowResizerTest.CursorDeviceScaleFactor
 -DragWindowResizerTest.DragWindowController
 -DragWindowResizerTest.DragWindowControllerAcrossThreeDisplays
@@ -218,6 +219,7 @@
 -PointerWatcherdapterClassicTest.Mousevents
 -PointerWatcherdapterClassicTest.Touchvents
 -ResizeShadowAndCursorTest.MaximizeRestore
+-ResizeShadowAndCursorTest.Minimize
 -ResizeShadowAndCursorTest.MouseDrag
 -ResizeShadowAndCursorTest.MouseHover
 -ResizeShadowAndCursorTest.Touch

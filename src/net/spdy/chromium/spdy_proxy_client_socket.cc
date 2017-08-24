@@ -35,7 +35,6 @@ SpdyProxyClientSocket::SpdyProxyClientSocket(
     const base::WeakPtr<SpdyStream>& spdy_stream,
     const SpdyString& user_agent,
     const HostPortPair& endpoint,
-    const HostPortPair& proxy_server,
     const NetLogWithSource& source_net_log,
     HttpAuthController* auth_controller)
     : next_state_(STATE_DISCONNECTED),

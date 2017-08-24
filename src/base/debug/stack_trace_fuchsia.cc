@@ -52,7 +52,7 @@ class SymbolMap {
  public:
   struct Entry {
     void* addr;
-    char name[MX_MAX_NAME_LEN + 1];
+    char name[MX_MAX_NAME_LEN + kProcessNamePrefixLen];
   };
 
   SymbolMap();
@@ -98,10 +98,14 @@ SymbolMap::Entry* SymbolMap::GetForAddress(void* address) {
 void SymbolMap::Populate() {
   mx_handle_t process = mx_process_self();
 
-  // Get the process' name.
-  char app_name[MX_MAX_NAME_LEN + kProcessNamePrefixLen];
+  // Try to fetch the name of the process' main executable, which was set as the
+  // name of the |process| kernel object.
+  // TODO(wez): Object names can only have up to MX_MAX_NAME_LEN characters, so
+  // if we keep hitting problems with truncation, find a way to plumb argv[0]
+  // through to here instead, e.g. using CommandLine::GetProgramName().
+  char app_name[arraysize(SymbolMap::Entry::name)];
   strcpy(app_name, kProcessNamePrefix);
-  auto status = mx_object_get_property(
+  mx_status_t status = mx_object_get_property(
       process, MX_PROP_NAME, app_name + kProcessNamePrefixLen,
       sizeof(app_name) - kProcessNamePrefixLen);
   if (status != MX_OK) {
@@ -185,7 +189,7 @@ void StackTrace::OutputToStream(std::ostream* os) const {
 
   size_t i = 0;
   for (; (i < count_) && os->good(); ++i) {
-    auto entry = map.GetForAddress(trace_[i]);
+    SymbolMap::Entry* entry = map.GetForAddress(trace_[i]);
     if (entry) {
       size_t offset = reinterpret_cast<uintptr_t>(trace_[i]) -
                       reinterpret_cast<uintptr_t>(entry->addr);

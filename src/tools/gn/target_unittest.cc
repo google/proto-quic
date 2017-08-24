@@ -91,17 +91,17 @@ TEST(Target, DependentConfigs) {
   b.private_deps().push_back(LabelTargetPair(&c));
 
   // Normal non-inherited config.
-  Config config(setup.settings(), Label(SourceDir("//foo/"), "config"), {});
+  Config config(setup.settings(), Label(SourceDir("//foo/"), "config"));
   ASSERT_TRUE(config.OnResolved(&err));
   c.configs().push_back(LabelConfigPair(&config));
 
   // All dependent config.
-  Config all(setup.settings(), Label(SourceDir("//foo/"), "all"), {});
+  Config all(setup.settings(), Label(SourceDir("//foo/"), "all"));
   ASSERT_TRUE(all.OnResolved(&err));
   c.all_dependent_configs().push_back(LabelConfigPair(&all));
 
   // Direct dependent config.
-  Config direct(setup.settings(), Label(SourceDir("//foo/"), "direct"), {});
+  Config direct(setup.settings(), Label(SourceDir("//foo/"), "direct"));
   ASSERT_TRUE(direct.OnResolved(&err));
   c.public_configs().push_back(LabelConfigPair(&direct));
 
@@ -144,15 +144,14 @@ TEST(Target, NoDependentConfigsBetweenToolchains) {
 
   // Create another toolchain.
   Toolchain other_toolchain(setup.settings(),
-                            Label(SourceDir("//other/"), "toolchain"), {});
+                            Label(SourceDir("//other/"), "toolchain"));
   TestWithScope::SetupToolchain(&other_toolchain);
 
   // Set up a dependency chain of |a| -> |b| -> |c| where |a| has a different
   // toolchain.
   Target a(setup.settings(),
            Label(SourceDir("//foo/"), "a", other_toolchain.label().dir(),
-                 other_toolchain.label().name()),
-           {});
+                 other_toolchain.label().name()));
   a.set_output_type(Target::EXECUTABLE);
   EXPECT_TRUE(a.SetToolchain(&other_toolchain, &err));
   TestTarget b(setup, "//foo:b", Target::EXECUTABLE);
@@ -161,19 +160,18 @@ TEST(Target, NoDependentConfigsBetweenToolchains) {
   b.private_deps().push_back(LabelTargetPair(&c));
 
   // All dependent config.
-  Config all_dependent(setup.settings(), Label(SourceDir("//foo/"), "all"), {});
+  Config all_dependent(setup.settings(), Label(SourceDir("//foo/"), "all"));
   ASSERT_TRUE(all_dependent.OnResolved(&err));
   c.all_dependent_configs().push_back(LabelConfigPair(&all_dependent));
 
   // Public config.
-  Config public_config(setup.settings(), Label(SourceDir("//foo/"), "public"),
-                       {});
+  Config public_config(setup.settings(), Label(SourceDir("//foo/"), "public"));
   ASSERT_TRUE(public_config.OnResolved(&err));
   c.public_configs().push_back(LabelConfigPair(&public_config));
 
   // Another public config.
-  Config public_config2(setup.settings(), Label(SourceDir("//foo/"), "public2"),
-                        {});
+  Config public_config2(setup.settings(),
+                        Label(SourceDir("//foo/"), "public2"));
   ASSERT_TRUE(public_config2.OnResolved(&err));
   b.public_configs().push_back(LabelConfigPair(&public_config2));
 
@@ -485,7 +483,7 @@ TEST(Target, PublicConfigs) {
   Err err;
 
   Label pub_config_label(SourceDir("//a/"), "pubconfig");
-  Config pub_config(setup.settings(), pub_config_label, {});
+  Config pub_config(setup.settings(), pub_config_label);
   LibFile lib_name("testlib");
   pub_config.own_values().libs().push_back(lib_name);
   ASSERT_TRUE(pub_config.OnResolved(&err));
@@ -527,12 +525,12 @@ TEST(Target, ConfigOrdering) {
   // Make Dep1. It has all_dependent_configs and public_configs.
   TestTarget dep1(setup, "//:dep1", Target::SOURCE_SET);
   Label dep1_all_config_label(SourceDir("//"), "dep1_all_config");
-  Config dep1_all_config(setup.settings(), dep1_all_config_label, {});
+  Config dep1_all_config(setup.settings(), dep1_all_config_label);
   ASSERT_TRUE(dep1_all_config.OnResolved(&err));
   dep1.all_dependent_configs().push_back(LabelConfigPair(&dep1_all_config));
 
   Label dep1_public_config_label(SourceDir("//"), "dep1_public_config");
-  Config dep1_public_config(setup.settings(), dep1_public_config_label, {});
+  Config dep1_public_config(setup.settings(), dep1_public_config_label);
   ASSERT_TRUE(dep1_public_config.OnResolved(&err));
   dep1.public_configs().push_back(LabelConfigPair(&dep1_public_config));
   ASSERT_TRUE(dep1.OnResolved(&err));
@@ -540,12 +538,12 @@ TEST(Target, ConfigOrdering) {
   // Make Dep2 with the same structure.
   TestTarget dep2(setup, "//:dep2", Target::SOURCE_SET);
   Label dep2_all_config_label(SourceDir("//"), "dep2_all_config");
-  Config dep2_all_config(setup.settings(), dep2_all_config_label, {});
+  Config dep2_all_config(setup.settings(), dep2_all_config_label);
   ASSERT_TRUE(dep2_all_config.OnResolved(&err));
   dep2.all_dependent_configs().push_back(LabelConfigPair(&dep2_all_config));
 
   Label dep2_public_config_label(SourceDir("//"), "dep2_public_config");
-  Config dep2_public_config(setup.settings(), dep2_public_config_label, {});
+  Config dep2_public_config(setup.settings(), dep2_public_config_label);
   ASSERT_TRUE(dep2_public_config.OnResolved(&err));
   dep2.public_configs().push_back(LabelConfigPair(&dep2_public_config));
   ASSERT_TRUE(dep2.OnResolved(&err));
@@ -557,12 +555,12 @@ TEST(Target, ConfigOrdering) {
 
   // It also has a private and public config.
   Label public_config_label(SourceDir("//"), "public");
-  Config public_config(setup.settings(), public_config_label, {});
+  Config public_config(setup.settings(), public_config_label);
   ASSERT_TRUE(public_config.OnResolved(&err));
   target.public_configs().push_back(LabelConfigPair(&public_config));
 
   Label private_config_label(SourceDir("//"), "private");
-  Config private_config(setup.settings(), private_config_label, {});
+  Config private_config(setup.settings(), private_config_label);
   ASSERT_TRUE(private_config.OnResolved(&err));
   target.configs().push_back(LabelConfigPair(&private_config));
 
@@ -589,7 +587,7 @@ TEST(Target, LinkAndDepOutputs) {
   TestWithScope setup;
   Err err;
 
-  Toolchain toolchain(setup.settings(), Label(SourceDir("//tc/"), "tc"), {});
+  Toolchain toolchain(setup.settings(), Label(SourceDir("//tc/"), "tc"));
 
   std::unique_ptr<Tool> solink_tool(new Tool());
   solink_tool->set_output_prefix("lib");
@@ -612,7 +610,7 @@ TEST(Target, LinkAndDepOutputs) {
 
   toolchain.SetTool(Toolchain::TYPE_SOLINK, std::move(solink_tool));
 
-  Target target(setup.settings(), Label(SourceDir("//a/"), "a"), {});
+  Target target(setup.settings(), Label(SourceDir("//a/"), "a"));
   target.set_output_type(Target::SHARED_LIBRARY);
   target.SetToolchain(&toolchain);
   ASSERT_TRUE(target.OnResolved(&err));
@@ -630,7 +628,7 @@ TEST(Target, RuntimeOuputs) {
   TestWithScope setup;
   Err err;
 
-  Toolchain toolchain(setup.settings(), Label(SourceDir("//tc/"), "tc"), {});
+  Toolchain toolchain(setup.settings(), Label(SourceDir("//tc/"), "tc"));
 
   std::unique_ptr<Tool> solink_tool(new Tool());
   solink_tool->set_output_prefix("");
@@ -656,7 +654,7 @@ TEST(Target, RuntimeOuputs) {
 
   toolchain.SetTool(Toolchain::TYPE_SOLINK, std::move(solink_tool));
 
-  Target target(setup.settings(), Label(SourceDir("//a/"), "a"), {});
+  Target target(setup.settings(), Label(SourceDir("//a/"), "a"));
   target.set_output_type(Target::SHARED_LIBRARY);
   target.SetToolchain(&toolchain);
   ASSERT_TRUE(target.OnResolved(&err));
@@ -873,13 +871,13 @@ TEST(Target, ResolvePrecompiledHeaders) {
   TestWithScope setup;
   Err err;
 
-  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
+  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"));
 
   // Target with no settings, no configs, should be a no-op.
   EXPECT_TRUE(target.ResolvePrecompiledHeaders(&err));
 
   // Config with PCH values.
-  Config config_1(setup.settings(), Label(SourceDir("//foo/"), "c1"), {});
+  Config config_1(setup.settings(), Label(SourceDir("//foo/"), "c1"));
   std::string pch_1("pch.h");
   SourceFile pcs_1("//pcs.cc");
   config_1.own_values().set_precompiled_header(pch_1);
@@ -900,7 +898,7 @@ TEST(Target, ResolvePrecompiledHeaders) {
   EXPECT_TRUE(target.config_values().precompiled_source() == pcs_1);
 
   // Second config with different PCH values.
-  Config config_2(setup.settings(), Label(SourceDir("//foo/"), "c2"), {});
+  Config config_2(setup.settings(), Label(SourceDir("//foo/"), "c2"));
   std::string pch_2("pch2.h");
   SourceFile pcs_2("//pcs2.cc");
   config_2.own_values().set_precompiled_header(pch_2);

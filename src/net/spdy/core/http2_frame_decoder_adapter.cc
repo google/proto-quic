@@ -30,7 +30,6 @@
 #include "net/spdy/core/spdy_alt_svc_wire_format.h"
 #include "net/spdy/core/spdy_bug_tracker.h"
 #include "net/spdy/core/spdy_frame_builder.h"
-#include "net/spdy/core/spdy_framer.h"
 #include "net/spdy/core/spdy_header_block.h"
 #include "net/spdy/core/spdy_headers_handler_interface.h"
 #include "net/spdy/core/spdy_protocol.h"
@@ -41,8 +40,8 @@
 namespace net {
 namespace {
 
-using SpdyFramerError = SpdyFramer::SpdyFramerError;
-using SpdyState = SpdyFramer::SpdyState;
+using SpdyFramerError = Http2DecoderAdapter::SpdyFramerError;
+using SpdyState = Http2DecoderAdapter::SpdyState;
 
 const bool kHasPriorityFields = true;
 const bool kNotHasPriorityFields = false;
@@ -82,6 +81,85 @@ void CorruptFrameHeader(Http2FrameHeader* header) {
 
 }  // namespace
 
+const char* Http2DecoderAdapter::StateToString(int state) {
+  switch (state) {
+    case SPDY_ERROR:
+      return "ERROR";
+    case SPDY_FRAME_COMPLETE:
+      return "FRAME_COMPLETE";
+    case SPDY_READY_FOR_FRAME:
+      return "READY_FOR_FRAME";
+    case SPDY_READING_COMMON_HEADER:
+      return "READING_COMMON_HEADER";
+    case SPDY_CONTROL_FRAME_PAYLOAD:
+      return "CONTROL_FRAME_PAYLOAD";
+    case SPDY_READ_DATA_FRAME_PADDING_LENGTH:
+      return "SPDY_READ_DATA_FRAME_PADDING_LENGTH";
+    case SPDY_CONSUME_PADDING:
+      return "SPDY_CONSUME_PADDING";
+    case SPDY_IGNORE_REMAINING_PAYLOAD:
+      return "IGNORE_REMAINING_PAYLOAD";
+    case SPDY_FORWARD_STREAM_FRAME:
+      return "FORWARD_STREAM_FRAME";
+    case SPDY_CONTROL_FRAME_BEFORE_HEADER_BLOCK:
+      return "SPDY_CONTROL_FRAME_BEFORE_HEADER_BLOCK";
+    case SPDY_CONTROL_FRAME_HEADER_BLOCK:
+      return "SPDY_CONTROL_FRAME_HEADER_BLOCK";
+    case SPDY_GOAWAY_FRAME_PAYLOAD:
+      return "SPDY_GOAWAY_FRAME_PAYLOAD";
+    case SPDY_SETTINGS_FRAME_HEADER:
+      return "SPDY_SETTINGS_FRAME_HEADER";
+    case SPDY_SETTINGS_FRAME_PAYLOAD:
+      return "SPDY_SETTINGS_FRAME_PAYLOAD";
+    case SPDY_ALTSVC_FRAME_PAYLOAD:
+      return "SPDY_ALTSVC_FRAME_PAYLOAD";
+  }
+  return "UNKNOWN_STATE";
+}
+
+const char* Http2DecoderAdapter::SpdyFramerErrorToString(
+    SpdyFramerError spdy_framer_error) {
+  switch (spdy_framer_error) {
+    case SPDY_NO_ERROR:
+      return "NO_ERROR";
+    case SPDY_INVALID_STREAM_ID:
+      return "INVALID_STREAM_ID";
+    case SPDY_INVALID_CONTROL_FRAME:
+      return "INVALID_CONTROL_FRAME";
+    case SPDY_CONTROL_PAYLOAD_TOO_LARGE:
+      return "CONTROL_PAYLOAD_TOO_LARGE";
+    case SPDY_ZLIB_INIT_FAILURE:
+      return "ZLIB_INIT_FAILURE";
+    case SPDY_UNSUPPORTED_VERSION:
+      return "UNSUPPORTED_VERSION";
+    case SPDY_DECOMPRESS_FAILURE:
+      return "DECOMPRESS_FAILURE";
+    case SPDY_COMPRESS_FAILURE:
+      return "COMPRESS_FAILURE";
+    case SPDY_GOAWAY_FRAME_CORRUPT:
+      return "GOAWAY_FRAME_CORRUPT";
+    case SPDY_RST_STREAM_FRAME_CORRUPT:
+      return "RST_STREAM_FRAME_CORRUPT";
+    case SPDY_INVALID_PADDING:
+      return "INVALID_PADDING";
+    case SPDY_INVALID_DATA_FRAME_FLAGS:
+      return "INVALID_DATA_FRAME_FLAGS";
+    case SPDY_INVALID_CONTROL_FRAME_FLAGS:
+      return "INVALID_CONTROL_FRAME_FLAGS";
+    case SPDY_UNEXPECTED_FRAME:
+      return "UNEXPECTED_FRAME";
+    case SPDY_INTERNAL_FRAMER_ERROR:
+      return "INTERNAL_FRAMER_ERROR";
+    case SPDY_INVALID_CONTROL_FRAME_SIZE:
+      return "INVALID_CONTROL_FRAME_SIZE";
+    case SPDY_OVERSIZED_PAYLOAD:
+      return "OVERSIZED_PAYLOAD";
+    case LAST_ERROR:
+      return "UNKNOWN_ERROR";
+  }
+  return "UNKNOWN_ERROR";
+}
+
 Http2DecoderAdapter::Http2DecoderAdapter() {
   DVLOG(1) << "Http2DecoderAdapter ctor";
   ResetInternal();
@@ -118,7 +196,7 @@ size_t Http2DecoderAdapter::ProcessInput(const char* data, size_t len) {
   frame_decoder_->set_maximum_payload_size(limit);
 
   size_t total_processed = 0;
-  while (len > 0 && spdy_state_ != SpdyFramer::SPDY_ERROR) {
+  while (len > 0 && spdy_state_ != SPDY_ERROR) {
     // Process one at a time so that we update the adapter's internal
     // state appropriately.
     const size_t processed = ProcessInputFrame(data, len);
@@ -144,11 +222,12 @@ void Http2DecoderAdapter::Reset() {
   ResetInternal();
 }
 
-SpdyState Http2DecoderAdapter::state() const {
+Http2DecoderAdapter::SpdyState Http2DecoderAdapter::state() const {
   return spdy_state_;
 }
 
-SpdyFramerError Http2DecoderAdapter::spdy_framer_error() const {
+Http2DecoderAdapter::SpdyFramerError Http2DecoderAdapter::spdy_framer_error()
+    const {
   return spdy_framer_error_;
 }
 
@@ -167,8 +246,8 @@ size_t Http2DecoderAdapter::EstimateMemoryUsage() const {
 // Implementations of the methods declared by Http2FrameDecoderListener.
 
 // Called once the common frame header has been decoded for any frame.
-// This function is largely based on SpdyFramer::ValidateFrameHeader
-// and some parts of SpdyFramer::ProcessCommonHeader.
+// This function is largely based on Http2DecoderAdapter::ValidateFrameHeader
+// and some parts of Http2DecoderAdapter::ProcessCommonHeader.
 bool Http2DecoderAdapter::OnFrameHeader(const Http2FrameHeader& header) {
   DVLOG(1) << "OnFrameHeader: " << header;
   decoded_frame_header_ = true;
@@ -615,7 +694,7 @@ size_t Http2DecoderAdapter::ProcessInputFrame(const char* data, size_t len) {
     DetermineSpdyState(status);
   } else {
     VLOG(1) << "ProcessInputFrame spdy_framer_error_="
-            << SpdyFramer::SpdyFramerErrorToString(spdy_framer_error_);
+            << SpdyFramerErrorToString(spdy_framer_error_);
     if (spdy_framer_error_ == SpdyFramerError::SPDY_INVALID_PADDING &&
         has_frame_header_ && frame_type() != Http2FrameType::DATA) {
       // spdy_framer_test checks that all of the available frame payload
@@ -641,7 +720,7 @@ size_t Http2DecoderAdapter::ProcessInputFrame(const char* data, size_t len) {
 // detected an error condition), because otherwise we assume that the callback
 // method has set spdy_framer_error_ appropriately.
 void Http2DecoderAdapter::DetermineSpdyState(DecodeStatus status) {
-  DCHECK_EQ(spdy_framer_error_, SpdyFramer::SPDY_NO_ERROR);
+  DCHECK_EQ(spdy_framer_error_, SPDY_NO_ERROR);
   DCHECK(!HasError()) << spdy_framer_error_;
   switch (status) {
     case DecodeStatus::kDecodeDone:
@@ -679,10 +758,10 @@ void Http2DecoderAdapter::DetermineSpdyState(DecodeStatus status) {
           if (status != DecodeStatus::kDecodeDone) {
             SPDY_BUG << "Expected to be done decoding the frame, not "
                      << status;
-            SetSpdyErrorAndNotify(SpdyFramer::SPDY_INTERNAL_FRAMER_ERROR);
-          } else if (spdy_framer_error_ != SpdyFramer::SPDY_NO_ERROR) {
+            SetSpdyErrorAndNotify(SPDY_INTERNAL_FRAMER_ERROR);
+          } else if (spdy_framer_error_ != SPDY_NO_ERROR) {
             SPDY_BUG << "Expected to have no error, not "
-                     << SpdyFramer::SpdyFramerErrorToString(spdy_framer_error_);
+                     << SpdyFramerErrorToString(spdy_framer_error_);
           } else {
             ResetBetweenFrames();
           }
@@ -690,7 +769,7 @@ void Http2DecoderAdapter::DetermineSpdyState(DecodeStatus status) {
           set_spdy_state(SpdyState::SPDY_IGNORE_REMAINING_PAYLOAD);
         }
       } else {
-        SetSpdyErrorAndNotify(SpdyFramer::SPDY_INVALID_CONTROL_FRAME);
+        SetSpdyErrorAndNotify(SPDY_INVALID_CONTROL_FRAME);
       }
       break;
   }
@@ -724,7 +803,7 @@ void Http2DecoderAdapter::ResetInternal() {
 }
 
 void Http2DecoderAdapter::set_spdy_state(SpdyState v) {
-  DVLOG(2) << "set_spdy_state(" << SpdyFramer::StateToString(v) << ")";
+  DVLOG(2) << "set_spdy_state(" << StateToString(v) << ")";
   spdy_state_ = v;
 }
 
@@ -732,8 +811,8 @@ void Http2DecoderAdapter::SetSpdyErrorAndNotify(SpdyFramerError error) {
   if (HasError()) {
     DCHECK_EQ(spdy_state_, SpdyState::SPDY_ERROR);
   } else {
-    VLOG(2) << "SetSpdyErrorAndNotify("
-            << SpdyFramer::SpdyFramerErrorToString(error) << ")";
+    VLOG(2) << "SetSpdyErrorAndNotify(" << SpdyFramerErrorToString(error)
+            << ")";
     DCHECK_NE(error, SpdyFramerError::SPDY_NO_ERROR);
     spdy_framer_error_ = error;
     set_spdy_state(SpdyState::SPDY_ERROR);
@@ -929,10 +1008,6 @@ void Http2DecoderAdapter::CommonHpackFragmentEnd() {
 bool SpdyFramerVisitorInterface::OnGoAwayFrameData(const char* goaway_data,
                                                    size_t len) {
   return true;
-}
-
-std::unique_ptr<Http2DecoderAdapter> CreateHttp2FrameDecoderAdapter() {
-  return SpdyMakeUnique<Http2DecoderAdapter>();
 }
 
 }  // namespace net

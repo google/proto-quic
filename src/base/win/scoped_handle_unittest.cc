@@ -114,11 +114,11 @@ TEST(ScopedHandleTest, MAYBE_MultiProcess) {
   CommandLine command_line(base::GetMultiProcessTestChildBaseCommandLine());
   command_line.AppendSwitch(switches::kTestDoNotInitializeIcu);
 
-  base::SpawnChildResult spawn_child = base::SpawnMultiProcessTestChild(
+  base::Process test_child_process = base::SpawnMultiProcessTestChild(
       "ActiveVerifierChildProcess", command_line, LaunchOptions());
 
   int rv = -1;
-  ASSERT_TRUE(spawn_child.process.WaitForExitWithTimeout(
+  ASSERT_TRUE(test_child_process.WaitForExitWithTimeout(
       TestTimeouts::action_timeout(), &rv));
   EXPECT_EQ(0, rv);
 }
