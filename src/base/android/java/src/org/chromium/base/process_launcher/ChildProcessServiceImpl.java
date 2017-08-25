@@ -23,7 +23,6 @@ import org.chromium.base.annotations.JNINamespace;
 import org.chromium.base.annotations.MainDex;
 import org.chromium.base.annotations.SuppressFBWarnings;
 
-import java.util.List;
 import java.util.concurrent.Semaphore;
 
 import javax.annotation.concurrent.GuardedBy;
@@ -106,7 +105,7 @@ public class ChildProcessServiceImpl {
         }
 
         @Override
-        public void setupConnection(Bundle args, ICallbackInt pidCallback, List<IBinder> callbacks)
+        public void setupConnection(Bundle args, ICallbackInt pidCallback, IBinder callback)
                 throws RemoteException {
             assert mServiceBound;
             synchronized (mBinderLock) {
@@ -118,7 +117,7 @@ public class ChildProcessServiceImpl {
             }
 
             pidCallback.call(Process.myPid());
-            processConnectionBundle(args, callbacks);
+            processConnectionBundle(args, callback);
         }
 
         @Override
@@ -284,7 +283,7 @@ public class ChildProcessServiceImpl {
         return mBinder;
     }
 
-    private void processConnectionBundle(Bundle bundle, List<IBinder> clientInterfaces) {
+    private void processConnectionBundle(Bundle bundle, IBinder callback) {
         // Required to unparcel FileDescriptorInfo.
         bundle.setClassLoader(mHostClassLoader);
         synchronized (mMainThread) {
@@ -303,7 +302,7 @@ public class ChildProcessServiceImpl {
                 mFdInfos = new FileDescriptorInfo[fdInfosAsParcelable.length];
                 System.arraycopy(fdInfosAsParcelable, 0, mFdInfos, 0, fdInfosAsParcelable.length);
             }
-            mDelegate.onConnectionSetup(bundle, clientInterfaces);
+            mDelegate.onConnectionSetup(bundle, callback);
             mMainThread.notifyAll();
         }
     }

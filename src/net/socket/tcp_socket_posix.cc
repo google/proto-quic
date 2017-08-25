@@ -18,7 +18,6 @@
 #include "base/strings/string_piece.h"
 #include "base/task_scheduler/post_task.h"
 #include "base/time/time.h"
-#include "build/build_config.h"
 #include "net/base/address_list.h"
 #include "net/base/io_buffer.h"
 #include "net/base/ip_endpoint.h"
@@ -36,15 +35,8 @@
 #include "net/socket/socket_posix.h"
 
 // If we don't have a definition for TCPI_OPT_SYN_DATA, create one.
-#if !defined(TCPI_OPT_SYN_DATA)
+#ifndef TCPI_OPT_SYN_DATA
 #define TCPI_OPT_SYN_DATA 32
-#endif
-
-// Fuchsia defines TCP_INFO, but it's not implemented.
-// TODO(crbug.com/758294): Enable TCP_INFO on Fuchsia once it's implemented
-// there (see NET-160).
-#if defined(TCP_INFO) && !defined(OS_FUCHSIA)
-#define HAVE_TCP_INFO
 #endif
 
 namespace net {
@@ -122,7 +114,7 @@ void RegisterTCPFastOpenIntentAndSupport(bool user_enabled,
 }
 #endif
 
-#if defined(HAVE_TCP_INFO)
+#if defined(TCP_INFO)
 bool GetTcpInfo(SocketDescriptor fd, tcp_info* info) {
   socklen_t info_len = sizeof(tcp_info);
   return getsockopt(fd, IPPROTO_TCP, TCP_INFO, info, &info_len) == 0 &&
@@ -759,7 +751,7 @@ int TCPSocketPosix::TcpFastOpenWrite(IOBuffer* buf,
 }
 
 void TCPSocketPosix::NotifySocketPerformanceWatcher() {
-#if defined(HAVE_TCP_INFO)
+#if defined(TCP_INFO)
   // Check if |socket_performance_watcher_| is interested in receiving a RTT
   // update notification.
   if (!socket_performance_watcher_ ||
@@ -799,7 +791,7 @@ void TCPSocketPosix::UpdateTCPFastOpenStatusAfterRead() {
 
   bool getsockopt_success = false;
   bool server_acked_data = false;
-#if defined(HAVE_TCP_INFO)
+#if defined(TCP_INFO)
   // Probe to see the if the socket used TCP FastOpen.
   tcp_info info;
   getsockopt_success = GetTcpInfo(socket_->socket_fd(), &info);
@@ -830,7 +822,7 @@ bool TCPSocketPosix::GetEstimatedRoundTripTime(base::TimeDelta* out_rtt) const {
   if (!socket_)
     return false;
 
-#if defined(HAVE_TCP_INFO)
+#if defined(TCP_INFO)
   tcp_info info;
   if (GetTcpInfo(socket_->socket_fd(), &info)) {
     // tcpi_rtt is zero when the kernel doesn't have an RTT estimate,

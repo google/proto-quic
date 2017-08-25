@@ -10,7 +10,6 @@
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
-#include "base/run_loop.h"
 #include "base/threading/sequenced_task_runner_handle.h"
 #include "base/threading/thread_local.h"
 
@@ -54,8 +53,8 @@ ScopedClosureRunner ThreadTaskRunnerHandle::OverrideForTesting(
   DCHECK(!SequencedTaskRunnerHandle::IsSet() || IsSet());
 
   if (!IsSet()) {
-    auto top_level_ttrh = std::make_unique<ThreadTaskRunnerHandle>(
-        std::move(overriding_task_runner));
+    std::unique_ptr<ThreadTaskRunnerHandle> top_level_ttrh =
+        MakeUnique<ThreadTaskRunnerHandle>(std::move(overriding_task_runner));
     return ScopedClosureRunner(base::Bind(
         [](std::unique_ptr<ThreadTaskRunnerHandle> ttrh_to_release) {},
         base::Passed(&top_level_ttrh)));
@@ -66,14 +65,9 @@ ScopedClosureRunner ThreadTaskRunnerHandle::OverrideForTesting(
   // previous one, as the |task_runner_to_restore|).
   ttrh->task_runner_.swap(overriding_task_runner);
 
-  auto no_running_during_override =
-      std::make_unique<RunLoop::ScopedDisallowRunningForTesting>();
-
   return ScopedClosureRunner(base::Bind(
       [](scoped_refptr<SingleThreadTaskRunner> task_runner_to_restore,
-         SingleThreadTaskRunner* expected_task_runner_before_restore,
-         std::unique_ptr<RunLoop::ScopedDisallowRunningForTesting>
-             no_running_during_override) {
+         SingleThreadTaskRunner* expected_task_runner_before_restore) {
         ThreadTaskRunnerHandle* ttrh = lazy_tls_ptr.Pointer()->Get();
 
         DCHECK_EQ(expected_task_runner_before_restore, ttrh->task_runner_.get())
@@ -83,8 +77,7 @@ ScopedClosureRunner ThreadTaskRunnerHandle::OverrideForTesting(
         ttrh->task_runner_.swap(task_runner_to_restore);
       },
       base::Passed(&overriding_task_runner),
-      base::Unretained(ttrh->task_runner_.get()),
-      base::Passed(&no_running_during_override)));
+      base::Unretained(ttrh->task_runner_.get())));
 }
 
 ThreadTaskRunnerHandle::ThreadTaskRunnerHandle(

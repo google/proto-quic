@@ -364,7 +364,7 @@ std::unique_ptr<base::Value> TracedValue::ToBaseValue() const {
     DCHECK((cur_dict && !cur_list) || (cur_list && !cur_dict));
     switch (*type) {
       case kTypeStartDict: {
-        auto new_dict = std::make_unique<DictionaryValue>();
+        auto new_dict = base::MakeUnique<DictionaryValue>();
         if (cur_dict) {
           stack.push_back(cur_dict);
           cur_dict = cur_dict->SetDictionaryWithoutPathExpansion(
@@ -390,7 +390,7 @@ std::unique_ptr<base::Value> TracedValue::ToBaseValue() const {
       } break;
 
       case kTypeStartArray: {
-        auto new_list = std::make_unique<ListValue>();
+        auto new_list = base::MakeUnique<ListValue>();
         if (cur_dict) {
           stack.push_back(cur_dict);
           cur_list = cur_dict->SetListWithoutPathExpansion(ReadKeyName(it),
@@ -429,7 +429,7 @@ std::unique_ptr<base::Value> TracedValue::ToBaseValue() const {
         double value;
         CHECK(it.ReadDouble(&value));
         if (cur_dict) {
-          cur_dict->SetKey(ReadKeyName(it), Value(value));
+          cur_dict->SetDoubleWithoutPathExpansion(ReadKeyName(it), value);
         } else {
           cur_list->AppendDouble(value);
         }
@@ -439,7 +439,7 @@ std::unique_ptr<base::Value> TracedValue::ToBaseValue() const {
         std::string value;
         CHECK(it.ReadString(&value));
         if (cur_dict) {
-          cur_dict->SetKey(ReadKeyName(it), Value(value));
+          cur_dict->SetStringWithoutPathExpansion(ReadKeyName(it), value);
         } else {
           cur_list->AppendString(value);
         }

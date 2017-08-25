@@ -77,6 +77,10 @@ class TestCryptoStream : public QuicCryptoStream, public QuicCryptoHandshaker {
     session()->OnCryptoHandshakeEvent(QuicSession::HANDSHAKE_CONFIRMED);
   }
 
+  void set_encryption_established(bool value) {
+    encryption_established_ = value;
+  }
+
   // QuicCryptoStream implementation
   bool encryption_established() const override {
     return encryption_established_;
@@ -183,6 +187,15 @@ class TestSession : public QuicSpdySession {
   }
 
   bool ShouldCreateOutgoingDynamicStream() override { return true; }
+
+  TestStream* MaybeCreateOutgoingDynamicStream(SpdyPriority priority) override {
+    return static_cast<TestStream*>(
+        QuicSpdySession::MaybeCreateOutgoingDynamicStream(priority));
+  }
+
+  std::unique_ptr<QuicStream> CreateStream(QuicStreamId id) override {
+    return QuicMakeUnique<TestStream>(id, this);
+  }
 
   bool IsClosedStream(QuicStreamId id) {
     return QuicSession::IsClosedStream(id);
@@ -292,6 +305,9 @@ class QuicSessionTestBase : public QuicTestWithParam<QuicVersion> {
         "EFFlEYHsBQ98rXImL8ySDycdLEFvBPdtctPmWCfTxwmoSMLHU2SCVDhbqMWU5b0yr"
         "JBCScs_ejbKaqBDoB7ZGxTvqlrB__2ZmnHHjCr8RgMRtKNtIeuZAo ";
     connection_->AdvanceTime(QuicTime::Delta::FromSeconds(1));
+    if (FLAGS_quic_reloadable_flag_quic_refactor_stream_creation) {
+      session_.GetMutableCryptoStream()->set_encryption_established(true);
+    }
   }
 
   void CheckClosedStreams() {
@@ -342,10 +358,6 @@ INSTANTIATE_TEST_CASE_P(Tests,
 TEST_P(QuicSessionTestServer, PeerAddress) {
   EXPECT_EQ(QuicSocketAddress(QuicIpAddress::Loopback4(), kTestPort),
             session_.peer_address());
-}
-
-TEST_P(QuicSessionTestServer, SelfAddress) {
-  EXPECT_EQ(QuicSocketAddress(), session_.self_address());
 }
 
 TEST_P(QuicSessionTestServer, IsCryptoHandshakeConfirmed) {

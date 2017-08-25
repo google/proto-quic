@@ -1845,7 +1845,7 @@ TEST_F(URLRequestInterceptorTest, Intercept) {
   base::SupportsUserData::Data* user_data0 = new base::SupportsUserData::Data();
   base::SupportsUserData::Data* user_data1 = new base::SupportsUserData::Data();
   base::SupportsUserData::Data* user_data2 = new base::SupportsUserData::Data();
-  req->SetUserData(&user_data0, base::WrapUnique(user_data0));
+  req->SetUserData(nullptr, base::WrapUnique(user_data0));
   req->SetUserData(&user_data1, base::WrapUnique(user_data1));
   req->SetUserData(&user_data2, base::WrapUnique(user_data2));
   req->set_method("GET");
@@ -1853,7 +1853,7 @@ TEST_F(URLRequestInterceptorTest, Intercept) {
   base::RunLoop().Run();
 
   // Make sure we can retrieve our specific user data.
-  EXPECT_EQ(user_data0, req->GetUserData(&user_data0));
+  EXPECT_EQ(user_data0, req->GetUserData(nullptr));
   EXPECT_EQ(user_data1, req->GetUserData(&user_data1));
   EXPECT_EQ(user_data2, req->GetUserData(&user_data2));
 
@@ -10213,10 +10213,9 @@ TEST_F(HTTPSSessionTest, DontResumeSessionsForInvalidCertificates) {
 
 // This the fingerprint of the "Testing CA" certificate used by the testserver.
 // See net/data/ssl/certificates/ocsp-test-root.pem.
-static const SHA256HashValue kOCSPTestCertFingerprint = {{
-    0x0c, 0xa9, 0x05, 0x11, 0xb0, 0xa2, 0xc0, 0x1d, 0x40, 0x6a, 0x99,
-    0x04, 0x21, 0x36, 0x45, 0x3f, 0x59, 0x12, 0x5c, 0x80, 0x64, 0x2d,
-    0x46, 0x6a, 0x3b, 0x78, 0x9e, 0x84, 0xea, 0x54, 0x0f, 0x8b,
+static const SHA1HashValue kOCSPTestCertFingerprint = {{
+    0x80, 0x37, 0xe7, 0xee, 0x12, 0x19, 0xeb, 0x10, 0x79, 0x36,
+    0x00, 0x48, 0x57, 0x5a, 0xa6, 0x1e, 0x2b, 0x24, 0x1a, 0xd7,
 }};
 
 // This is the SHA256, SPKI hash of the "Testing CA" certificate used by the

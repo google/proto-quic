@@ -14,8 +14,6 @@ SupportsUserData::SupportsUserData() {
 
 SupportsUserData::Data* SupportsUserData::GetUserData(const void* key) const {
   DCHECK(sequence_checker_.CalledOnValidSequence());
-  // Avoid null keys; they are too vulnerable to collision.
-  DCHECK(key);
   DataMap::const_iterator found = user_data_.find(key);
   if (found != user_data_.end())
     return found->second.get();
@@ -25,8 +23,6 @@ SupportsUserData::Data* SupportsUserData::GetUserData(const void* key) const {
 void SupportsUserData::SetUserData(const void* key,
                                    std::unique_ptr<Data> data) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
-  // Avoid null keys; they are too vulnerable to collision.
-  DCHECK(key);
   user_data_[key] = std::move(data);
 }
 

@@ -333,16 +333,17 @@ TEST(ProcessMemoryDumpTest, SharedMemoryOwnershipTest) {
       pmd->allocator_dumps_edges_for_testing();
 
   auto* client_dump2 = pmd->CreateAllocatorDump("discardable/segment2");
+  MemoryAllocatorDumpGuid client_global_guid2(2);
   auto shm_token2 = UnguessableToken::Create();
   MemoryAllocatorDumpGuid shm_local_guid2 =
-      MemoryAllocatorDump::GetDumpIdFromName(
-          SharedMemoryTracker::GetDumpNameForTracing(shm_token2));
+      SharedMemoryTracker::GetDumpIdForTracing(shm_token2);
   MemoryAllocatorDumpGuid shm_global_guid2 =
       SharedMemoryTracker::GetGlobalDumpIdForTracing(shm_token2);
   pmd->AddOverridableOwnershipEdge(shm_local_guid2, shm_global_guid2,
                                    0 /* importance */);
 
-  pmd->CreateSharedMemoryOwnershipEdge(client_dump2->guid(), shm_token2,
+  pmd->CreateSharedMemoryOwnershipEdge(client_dump2->guid(),
+                                       client_global_guid2, shm_token2,
                                        1 /* importance */);
   EXPECT_EQ(2u, edges.size());
 

@@ -51,7 +51,7 @@ class QUIC_EXPORT_PRIVATE TcpCubicSenderBase : public SendAlgorithmInterface {
   void OnCongestionEvent(bool rtt_updated,
                          QuicByteCount prior_in_flight,
                          QuicTime event_time,
-                         const AckedPacketVector& acked_packets,
+                         const CongestionVector& acked_packets,
                          const CongestionVector& lost_packets) override;
   bool OnPacketSent(QuicTime sent_time,
                     QuicByteCount bytes_in_flight,
@@ -66,7 +66,6 @@ class QUIC_EXPORT_PRIVATE TcpCubicSenderBase : public SendAlgorithmInterface {
   QuicBandwidth BandwidthEstimate() const override;
   bool InSlowStart() const override;
   bool InRecovery() const override;
-  bool IsProbingForMoreBandwidth() const override;
   std::string GetDebugState() const override;
   void OnApplicationLimited(QuicByteCount bytes_in_flight) override;
 

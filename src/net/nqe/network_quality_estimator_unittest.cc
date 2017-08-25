@@ -308,6 +308,8 @@ TEST(NetworkQualityEstimatorTest, TestKbpsRTTUpdates) {
 
   // Verify that metrics are logged correctly on main-frame requests.
   histogram_tester.ExpectTotalCount("NQE.MainFrame.RTT.Percentile50", 1);
+  histogram_tester.ExpectTotalCount("NQE.WeightedAverage.MainFrame.RTT", 1);
+  histogram_tester.ExpectTotalCount("NQE.UnweightedAverage.MainFrame.RTT", 1);
   histogram_tester.ExpectTotalCount("NQE.MainFrame.RTT.Percentile50.Unknown",
                                     1);
   histogram_tester.ExpectTotalCount("NQE.MainFrame.TransportRTT.Percentile50",
@@ -539,11 +541,10 @@ TEST(NetworkQualityEstimatorTest, QuicObservations) {
   base::HistogramTester histogram_tester;
   TestNetworkQualityEstimator estimator;
   estimator.OnUpdatedRTTAvailable(SocketPerformanceWatcherFactory::PROTOCOL_TCP,
-                                  base::TimeDelta::FromMilliseconds(10),
-                                  base::nullopt);
+                                  base::TimeDelta::FromMilliseconds(10));
   estimator.OnUpdatedRTTAvailable(
       SocketPerformanceWatcherFactory::PROTOCOL_QUIC,
-      base::TimeDelta::FromMilliseconds(10), base::nullopt);
+      base::TimeDelta::FromMilliseconds(10));
   histogram_tester.ExpectBucketCount("NQE.RTT.ObservationSource",
                                      NETWORK_QUALITY_OBSERVATION_SOURCE_TCP, 1);
   histogram_tester.ExpectBucketCount(
@@ -634,6 +635,22 @@ TEST(NetworkQualityEstimatorTest, ComputedPercentiles) {
                     base::TimeTicks(), i),
                 estimator.GetDownlinkThroughputKbpsEstimateInternal(
                     base::TimeTicks(), i - 1));
+
+      // Weighted average statistic should be computed correctly.
+      EXPECT_NE(nqe::internal::InvalidRTT(),
+                estimator.GetRTTEstimateInternal(
+                    disallowed_observation_sources, base::TimeTicks(),
+                    NetworkQualityEstimator::STATISTIC_WEIGHTED_AVERAGE, i));
+
+      // Weighted average statistic should disregard the value of the percentile
+      // argument.
+      EXPECT_EQ(
+          estimator.GetRTTEstimateInternal(
+              disallowed_observation_sources, base::TimeTicks(),
+              NetworkQualityEstimator::STATISTIC_WEIGHTED_AVERAGE, i),
+          estimator.GetRTTEstimateInternal(
+              disallowed_observation_sources, base::TimeTicks(),
+              NetworkQualityEstimator::STATISTIC_WEIGHTED_AVERAGE, i - 1));
 
       // RTT percentiles are in increasing order.
       EXPECT_GE(
@@ -2007,7 +2024,7 @@ TEST(NetworkQualityEstimatorTest, UnknownEffectiveConnectionType) {
       NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP);
 
   for (size_t i = 0; i < 10; ++i) {
-    estimator.AddAndNotifyObserversOfRTT(rtt_observation);
+    estimator.NotifyObserversOfRTT(rtt_observation);
     EXPECT_EQ(expected_effective_connection_type_notifications,
               observer.effective_connection_types().size());
   }
@@ -2016,7 +2033,7 @@ TEST(NetworkQualityEstimatorTest, UnknownEffectiveConnectionType) {
   // Even though there are 10 RTT samples already available, the addition of one
   // more RTT sample should trigger recomputation of the effective connection
   // type since the last computed effective connection type was unknown.
-  estimator.AddAndNotifyObserversOfRTT(NetworkQualityEstimator::Observation(
+  estimator.NotifyObserversOfRTT(NetworkQualityEstimator::Observation(
       5000, tick_clock_ptr->NowTicks(), INT32_MIN,
       NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
   ++expected_effective_connection_type_notifications;
@@ -2101,7 +2118,12 @@ TEST(NetworkQualityEstimatorTest,
     // of current observations. This should trigger recomputation of
     // effective connection type.
     for (size_t i = 0; i < rtt_observations_count + 1; ++i) {
-      estimator.AddAndNotifyObserversOfRTT(NetworkQualityEstimator::Observation(
+      estimator.rtt_ms_observations_.AddObservation(
+          NetworkQualityEstimator::Observation(
+              5000, tick_clock_ptr->NowTicks(), INT32_MIN,
+              NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+
+      estimator.NotifyObserversOfRTT(NetworkQualityEstimator::Observation(
           5000, tick_clock_ptr->NowTicks(), INT32_MIN,
           NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
 
@@ -2512,6 +2534,20 @@ TEST(NetworkQualityEstimatorTest, MAYBE_RecordAccuracy) {
               rtt_sign_suffix_with_zero_samples + "." + interval_value +
               ".300_620",
           0);
+
+      // All samples are recorded in bucket 0 because recent HTTP RTT and
+      // HTTP RTT are equal when weighted or unweighted average algorithms are
+      // used.
+      histogram_tester.ExpectUniqueSample(
+          "NQE.WeightedAverage.Accuracy.HttpRTT.EstimatedObservedDiff."
+          "Positive." +
+              interval_value + ".300_620",
+          0, 1);
+      histogram_tester.ExpectUniqueSample(
+          "NQE.UnweightedAverage.Accuracy.HttpRTT.EstimatedObservedDiff."
+          "Positive." +
+              interval_value + ".300_620",
+          0, 1);
 
       histogram_tester.ExpectUniqueSample(
           "NQE.Accuracy.TransportRTT.EstimatedObservedDiff." +
@@ -3209,84 +3245,6 @@ TEST(NetworkQualityEstimatorTest, TestBDPComputation) {
   EXPECT_TRUE(estimator.GetBandwidthDelayProductKbits().has_value());
   EXPECT_EQ(estimator.GetBandwidthDelayProductKbits().value(),
             (int32_t)(std::pow(2, 2) * std::pow(3, 8) / 1000));
-}
-
-TEST(NetworkQualityEstimatorTest,
-     TestComputeIncreaseInTransportRTTFullHostsOverlap) {
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params);
-
-  base::TimeTicks now = base::TimeTicks::Now();
-  base::TimeTicks recent = now - base::TimeDelta::FromMilliseconds(2500);
-  base::TimeTicks historical = now - base::TimeDelta::FromSeconds(20);
-
-  estimator.SimulateNetworkChange(
-      NetworkChangeNotifier::ConnectionType::CONNECTION_WIFI, "test");
-
-  // Add historical observations. The 0 percentile for |host| is |10 * host|
-  // ms.
-  for (int host = 1; host <= 3; ++host) {
-    for (int rtt = 10 * host; rtt <= 10 * host + 20; ++rtt) {
-      estimator.rtt_ms_observations_.AddObservation(
-          NetworkQualityEstimator::Observation(
-              rtt, historical, INT32_MIN,
-              NETWORK_QUALITY_OBSERVATION_SOURCE_TCP,
-              static_cast<uint64_t>(host)));
-    }
-  }
-
-  // Add recent observations. The 50 percentile for |host| is |10 * host + 10|
-  // ms. The difference between them is expected to be 10 ms.
-  for (int host = 1; host <= 3; ++host) {
-    for (int rtt = 10 * host + 5; rtt <= 10 * host + 15; ++rtt) {
-      estimator.rtt_ms_observations_.AddObservation(
-          NetworkQualityEstimator::Observation(
-              rtt, recent, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_TCP,
-              static_cast<uint64_t>(host)));
-    }
-  }
-
-  EXPECT_EQ(10, estimator.ComputeIncreaseInTransportRTTForTests().value_or(0));
-}
-
-TEST(NetworkQualityEstimatorTest,
-     TestComputeIncreaseInTransportRTTPartialHostsOverlap) {
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params);
-
-  base::TimeTicks now = base::TimeTicks::Now();
-  base::TimeTicks recent = now - base::TimeDelta::FromMilliseconds(2500);
-  base::TimeTicks historical = now - base::TimeDelta::FromSeconds(20);
-
-  estimator.SimulateNetworkChange(
-      NetworkChangeNotifier::ConnectionType::CONNECTION_WIFI, "test");
-
-  // Add historical observations for hosts 1 and 2 with minimum RTT as
-  // |10 * host|.
-  for (int host = 1; host <= 2; ++host) {
-    for (int rtt = 10 * host; rtt <= 10 * host + 20; ++rtt) {
-      estimator.rtt_ms_observations_.AddObservation(
-          NetworkQualityEstimator::Observation(
-              rtt, historical, INT32_MIN,
-              NETWORK_QUALITY_OBSERVATION_SOURCE_TCP,
-              static_cast<uint64_t>(host)));
-    }
-  }
-
-  // Add recent observations, with median RTT as |10 + host| over the
-  // historical minimum for hosts 2 and 3.
-  for (int host = 2; host <= 3; ++host) {
-    for (int rtt = 11 * host + 5; rtt <= 11 * host + 15; ++rtt) {
-      estimator.rtt_ms_observations_.AddObservation(
-          NetworkQualityEstimator::Observation(
-              rtt, recent, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_TCP,
-              static_cast<uint64_t>(host)));
-    }
-  }
-
-  // Only host 2 should have contributed to the calculation. Hence, the median
-  // should be |10 + 2 = 12|.
-  EXPECT_EQ(12, estimator.ComputeIncreaseInTransportRTTForTests().value_or(0));
 }
 
 }  // namespace net

@@ -1206,58 +1206,6 @@ TEST_P(QuicConnectionTest, ClientAddressChangeAndPacketReordered) {
                                   kPeerAddress);
 }
 
-TEST_P(QuicConnectionTest, PeerAddressChangeAtServer) {
-  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
-  set_perspective(Perspective::IS_SERVER);
-  QuicPacketCreatorPeer::SetSendVersionInPacket(creator_, false);
-  EXPECT_EQ(Perspective::IS_SERVER, connection_.perspective());
-
-  // Clear peer address.
-  QuicConnectionPeer::SetPeerAddress(&connection_, QuicSocketAddress());
-  EXPECT_FALSE(connection_.peer_address().IsInitialized());
-
-  QuicStreamFrame stream_frame(1u, false, 0u, QuicStringPiece());
-  EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(AnyNumber());
-  ProcessFramePacketWithAddresses(QuicFrame(&stream_frame), kSelfAddress,
-                                  kPeerAddress);
-  EXPECT_EQ(kPeerAddress, connection_.peer_address());
-
-  // Process another packet with a different peer address on server side will
-  // start connection migration.
-  const QuicSocketAddress kNewPeerAddress =
-      QuicSocketAddress(QuicIpAddress::Loopback6(), /*port=*/23456);
-  EXPECT_CALL(visitor_, OnConnectionMigration(PORT_CHANGE)).Times(1);
-  ProcessFramePacketWithAddresses(QuicFrame(&stream_frame), kSelfAddress,
-                                  kNewPeerAddress);
-  EXPECT_EQ(kNewPeerAddress, connection_.peer_address());
-}
-
-TEST_P(QuicConnectionTest, PeerAddressChangeAtClient) {
-  FLAGS_quic_reloadable_flag_quic_disable_peer_migration_on_client = true;
-  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
-  set_perspective(Perspective::IS_CLIENT);
-  EXPECT_EQ(Perspective::IS_CLIENT, connection_.perspective());
-
-  // Clear peer address.
-  QuicConnectionPeer::SetPeerAddress(&connection_, QuicSocketAddress());
-  EXPECT_FALSE(connection_.peer_address().IsInitialized());
-
-  QuicStreamFrame stream_frame(1u, false, 0u, QuicStringPiece());
-  EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(AnyNumber());
-  ProcessFramePacketWithAddresses(QuicFrame(&stream_frame), kSelfAddress,
-                                  kPeerAddress);
-  EXPECT_EQ(kPeerAddress, connection_.peer_address());
-
-  // Process another packet with a different peer address on client side will
-  // only update peer address.
-  const QuicSocketAddress kNewPeerAddress =
-      QuicSocketAddress(QuicIpAddress::Loopback6(), /*port=*/23456);
-  EXPECT_CALL(visitor_, OnConnectionMigration(PORT_CHANGE)).Times(0);
-  ProcessFramePacketWithAddresses(QuicFrame(&stream_frame), kSelfAddress,
-                                  kNewPeerAddress);
-  EXPECT_EQ(kNewPeerAddress, connection_.peer_address());
-}
-
 TEST_P(QuicConnectionTest, MaxPacketSize) {
   EXPECT_EQ(Perspective::IS_CLIENT, connection_.perspective());
   EXPECT_EQ(1350u, connection_.max_packet_length());
@@ -3377,7 +3325,7 @@ TEST_P(QuicConnectionTest, TimeoutAfterSend) {
   SendStreamDataToPeer(kClientDataStreamId1, "foo", 0, FIN, nullptr);
   EXPECT_EQ(default_timeout, connection_.GetTimeoutAlarm()->deadline());
 
-  // Now send more data. This will not move the timeout because
+  // Now send more data. This will not move the timeout becase
   // no data has been recieved since the previous write.
   clock_.AdvanceTime(five_ms);
   SendStreamDataToPeer(kClientDataStreamId1, "foo", 3, FIN, nullptr);
@@ -3514,7 +3462,7 @@ TEST_P(QuicConnectionTest, NewTimeoutAfterSendSilentClose) {
   SendStreamDataToPeer(kClientDataStreamId1, "foo", 0, FIN, nullptr);
   EXPECT_EQ(default_timeout, connection_.GetTimeoutAlarm()->deadline());
 
-  // Now send more data. This will not move the timeout because
+  // Now send more data. This will not move the timeout becase
   // no data has been recieved since the previous write.
   clock_.AdvanceTime(five_ms);
   SendStreamDataToPeer(kClientDataStreamId1, "foo", 3, FIN, nullptr);

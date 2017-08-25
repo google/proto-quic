@@ -53,17 +53,6 @@ class HistogramBase;
 // process's instance.
 class BASE_EXPORT TaskScheduler {
  public:
-  enum class TaskPriorityAdjustment {
-    // Honor the TaskPriority with which tasks are posted.
-    NONE,
-
-    // Handle all tasks with TaskPriority::USER_BLOCKING. This is strictly for
-    // an experiment -- not something regular users should consider.
-    //
-    // TODO(fdoray): Remove after experiment. https://crbug.com/757022
-    EXPERIMENTAL_ALL_TASKS_USER_BLOCKING,
-  };
-
   struct BASE_EXPORT InitParams {
     InitParams(
         const SchedulerWorkerPoolParams& background_worker_pool_params_in,
@@ -71,17 +60,13 @@ class BASE_EXPORT TaskScheduler {
             background_blocking_worker_pool_params_in,
         const SchedulerWorkerPoolParams& foreground_worker_pool_params_in,
         const SchedulerWorkerPoolParams&
-            foreground_blocking_worker_pool_params_in,
-        TaskPriorityAdjustment task_priority_adjustment_in =
-            TaskPriorityAdjustment::NONE);
+            foreground_blocking_worker_pool_params_in);
     ~InitParams();
 
     SchedulerWorkerPoolParams background_worker_pool_params;
     SchedulerWorkerPoolParams background_blocking_worker_pool_params;
     SchedulerWorkerPoolParams foreground_worker_pool_params;
     SchedulerWorkerPoolParams foreground_blocking_worker_pool_params;
-    TaskPriorityAdjustment task_priority_adjustment =
-        TaskPriorityAdjustment::NONE;
   };
 
   // Destroying a TaskScheduler is not allowed in production; it is always
@@ -216,16 +201,15 @@ class BASE_EXPORT TaskScheduler {
   friend class gin::V8Platform;
   friend class content::BrowserMainLoopTest_CreateThreadsInSingleProcess_Test;
 
-  // Returns the maximum number of non-single-threaded non-blocked tasks posted
-  // with |traits| that can run concurrently in this TaskScheduler.
+  // Returns the maximum number of non-single-threaded tasks posted with
+  // |traits| that can run concurrently in this TaskScheduler.
   //
   // Do not use this method. To process n items, post n tasks that each process
-  // 1 item rather than GetMaxConcurrentNonBlockedTasksWithTraitsDeprecated()
-  // tasks that each process
-  // n/GetMaxConcurrentNonBlockedTasksWithTraitsDeprecated() items.
+  // 1 item rather than GetMaxConcurrentTasksWithTraitsDeprecated() tasks that
+  // each process n/GetMaxConcurrentTasksWithTraitsDeprecated() items.
   //
   // TODO(fdoray): Remove this method. https://crbug.com/687264
-  virtual int GetMaxConcurrentNonBlockedTasksWithTraitsDeprecated(
+  virtual int GetMaxConcurrentTasksWithTraitsDeprecated(
       const TaskTraits& traits) const = 0;
 };
 

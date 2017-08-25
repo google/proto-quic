@@ -15,6 +15,7 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "tools/gn/err.h"
+#include "tools/gn/input_file.h"
 #include "tools/gn/pattern.h"
 #include "tools/gn/source_dir.h"
 #include "tools/gn/value.h"
@@ -99,7 +100,7 @@ class Scope {
   };
 
   // Creates an empty toplevel scope.
-  explicit Scope(const Settings* settings);
+  Scope(const Settings* settings, const InputFileSet& input_files);
 
   // Creates a dependent scope.
   explicit Scope(Scope* parent);
@@ -284,6 +285,10 @@ class Scope {
   const SourceDir& GetSourceDir() const;
   void set_source_dir(const SourceDir& d) { source_dir_ = d; }
 
+  // The set of source files which affected this scope.
+  const InputFileSet& input_files() const { return input_files_; }
+  void AddInputFile(const InputFile* input_file);
+
   // The item collector is where Items (Targets, Configs, etc.) go that have
   // been defined. If a scope can generate items, this non-owning pointer will
   // point to the storage for such items. The creator of this scope will be
@@ -378,6 +383,8 @@ class Scope {
   ProviderSet programmatic_providers_;
 
   SourceDir source_dir_;
+
+  InputFileSet input_files_;
 
   DISALLOW_COPY_AND_ASSIGN(Scope);
 };

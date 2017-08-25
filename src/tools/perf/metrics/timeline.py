@@ -309,7 +309,7 @@ class ThreadTimesTimelineMetric(timeline_based_metric.TimelineBasedMetric):
       for thread_results in thread_category_results.values():
         if thread_results.name in self.results_to_report:
           thread_results.AddResults(num_intervals, interval_name, results)
-        # TODO(nduca): When generic results objects are done, this special case
+        # TOOD(nduca): When generic results objects are done, this special case
         # can be replaced with a generic UI feature.
         if thread_results.name in self.details_to_report:
           thread_results.AddDetailedResults(

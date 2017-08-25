@@ -17,9 +17,7 @@ import org.chromium.base.library_loader.ProcessInitException;
 import org.chromium.base.process_launcher.ChildProcessServiceDelegate;
 import org.chromium.native_test.MainRunner;
 
-import java.util.List;
-
-/** Implementation of the ChildProcessServiceDelegate used for the Multiprocess tests. */
+/** Implmentation of the ChildProcessServiceDelegate used for the Multiprocess tests. */
 public class MultiprocessTestClientServiceDelegate implements ChildProcessServiceDelegate {
     private static final String TAG = "MPTestCSDelegate";
 
@@ -49,8 +47,8 @@ public class MultiprocessTestClientServiceDelegate implements ChildProcessServic
     public void onServiceBound(Intent intent) {}
 
     @Override
-    public void onConnectionSetup(Bundle connectionBundle, List<IBinder> callbacks) {
-        mTestCallback = ITestCallback.Stub.asInterface(callbacks.get(0));
+    public void onConnectionSetup(Bundle connectionBundle, IBinder callback) {
+        mTestCallback = ITestCallback.Stub.asInterface(callback);
     }
 
     @Override

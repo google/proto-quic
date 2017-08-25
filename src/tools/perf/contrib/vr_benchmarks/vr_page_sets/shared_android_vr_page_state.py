@@ -8,7 +8,6 @@ path_util.AddAndroidPylibToPath()
 from pylib.utils import shared_preference_utils
 from telemetry.core import android_platform
 from telemetry.core import platform
-from telemetry.core import util
 from telemetry.page import shared_page_state
 from telemetry.internal.platform import android_device
 
@@ -40,10 +39,8 @@ class SharedAndroidVrPageState(shared_page_state.SharedPageState):
   def _PerformAndroidVrSetup(self):
     self._InstallVrCore()
     self._ConfigureVrCore()
-    self._InstallNfcApk()
 
   def _InstallVrCore(self):
-    """Installs the VrCore APK."""
     # TODO(bsheedy): Add support for temporarily replacing it if it's still
     # installed as a system app on the test device
     self._platform.InstallApplication(
@@ -52,7 +49,6 @@ class SharedAndroidVrPageState(shared_page_state.SharedPageState):
                      'vr_services_current.apk'))
 
   def _ConfigureVrCore(self):
-    """Configures VrCore using the settings file passed to the benchmark."""
     settings = shared_preference_utils.ExtractSettingsFromJson(
         os.path.join(path_util.GetChromiumSrcDir(),
                      self._finder_options.shared_prefs_file))
@@ -61,24 +57,6 @@ class SharedAndroidVrPageState(shared_page_state.SharedPageState):
                                                   setting['filename'])
       shared_preference_utils.ApplySharedPreferenceSetting(
           shared_pref, setting)
-
-  def _InstallNfcApk(self):
-    """Installs the APK that allows VR tests to simulate a headset NFC scan."""
-    chromium_root = path_util.GetChromiumSrcDir()
-    # Find the most recently build APK
-    candidate_apks = []
-    for build_path in util.GetBuildDirectories(chromium_root):
-      apk_path = os.path.join(build_path, 'apks', 'VrNfcSimulator.apk')
-      if os.path.exists(apk_path):
-        last_changed = os.path.getmtime(apk_path)
-        candidate_apks.append((last_changed, apk_path))
-
-    if not candidate_apks:
-      raise RuntimeError(
-          'Could not find VrNfcSimulator.apk in a build output directory')
-    newest_apk_path = sorted(candidate_apks)[-1][1]
-    self._platform.InstallApplication(
-        os.path.join(chromium_root, newest_apk_path))
 
   @property
   def platform(self):

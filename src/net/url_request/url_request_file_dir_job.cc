@@ -98,8 +98,6 @@ void URLRequestFileDirJob::OnListFile(
   // We wait to write out the header until we get the first file, so that we
   // can catch errors from DirectoryLister and show an error page.
   if (!wrote_header_) {
-    wrote_header_ = true;
-
 #if defined(OS_WIN)
     const base::string16& title = dir_path_.value();
 #elif defined(OS_POSIX)
@@ -112,33 +110,22 @@ void URLRequestFileDirJob::OnListFile(
         base::SysNativeMBToWide(dir_path_.value()));
 #endif
     data_.append(GetDirectoryListingHeader(title));
-
-    // If this isn't top level directory, add a link to the parent directory.
-    // To figure this out, first normalize |dir_path_| by stripping it of
-    // trailing separators. Then compare the resulting |stripped_dir_path| to
-    // its DirName(). For the top level directory, e.g. "/" or "c:\\", the
-    // normalized path is equal to its DirName().
-    base::FilePath stripped_dir_path = dir_path_.StripTrailingSeparators();
-    if (stripped_dir_path != stripped_dir_path.DirName()) {
-      data_.append(GetParentDirectoryLink());
-    }
+    wrote_header_ = true;
   }
 
-  // Skip the current and parent directory entries in the listing.
-  // GetParentDirectoryLink() takes care of them.
-  base::FilePath filename = data.info.GetName();
-  if (filename.value() != base::FilePath::kCurrentDirectory &&
-      filename.value() != base::FilePath::kParentDirectory) {
 #if defined(OS_WIN)
-    std::string raw_bytes;  // Empty on Windows means UTF-8 encoded name.
+  std::string raw_bytes;  // Empty on Windows means UTF-8 encoded name.
 #elif defined(OS_POSIX)
-    // TODO(jungshik): The same issue as for the directory name.
-    const std::string& raw_bytes = filename.value();
+  // TOOD(jungshik): The same issue as for the directory name.
+  base::FilePath filename = data.info.GetName();
+  const std::string& raw_bytes = filename.value();
 #endif
-    data_.append(GetDirectoryListingEntry(
-        filename.LossyDisplayName(), raw_bytes, data.info.IsDirectory(),
-        data.info.GetSize(), data.info.GetLastModifiedTime()));
-  }
+  data_.append(GetDirectoryListingEntry(
+      data.info.GetName().LossyDisplayName(),
+      raw_bytes,
+      data.info.IsDirectory(),
+      data.info.GetSize(),
+      data.info.GetLastModifiedTime()));
 
   // TODO(darin): coalesce more?
   CompleteRead(OK);
@@ -180,7 +167,7 @@ void URLRequestFileDirJob::CompleteRead(Error error) {
     result = ReadBuffer(read_buffer_->data(), read_buffer_length_);
     if (result >= 0) {
       // We completed the read, so reset the read buffer.
-      read_buffer_ = nullptr;
+      read_buffer_ = NULL;
       read_buffer_length_ = 0;
     } else {
       NOTREACHED();
@@ -199,8 +186,7 @@ int URLRequestFileDirJob::ReadBuffer(char* buf, int buf_size) {
     memcpy(buf, &data_[0], count);
     data_.erase(0, count);
     return count;
-  }
-  if (list_complete_) {
+  } else if (list_complete_) {
     // EOF
     return list_complete_result_;
   }

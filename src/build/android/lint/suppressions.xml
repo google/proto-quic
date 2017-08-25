@@ -300,30 +300,42 @@ Still reading?
   </issue>
   <!-- Our generated enums are allowed to have the same values. -->
   <issue id="UniqueConstants" severity="ignore"/>
-  <!-- Please add specific rationale to each unused resources suppression. -->
+  <!-- Please add rationale to each UnusedResources suppression. -->
   <issue id="UnusedResources">
-    <!-- 3 raw resources are accessed by URL in various places -->
+    <!-- These 3 raw resources are accessed by URL in various places -->
     <ignore regexp="PRODUCT_DIR/gen/remoting/android/.*/res/raw/credits.html"/>
     <ignore regexp="PRODUCT_DIR/gen/remoting/android/.*/res/raw/credits_css.css"/>
     <ignore regexp="PRODUCT_DIR/gen/remoting/android/.*/res/raw/credits_js.js"/>
-    <!-- 2 dimens override support library's res, will be changing soon -->
+    <!-- The 2 dimens override support library's res, will be changing soon -->
     <ignore regexp="design_bottom_navigation_text_size"/>
     <ignore regexp="design_bottom_navigation_active_text_size"/>
-    <!-- 1 string is used in CronetSmokeTestCase dynamically -->
+    <!-- This 1 string is used in CronetSmokeTestCase dynamically -->
     <ignore regexp="R.string.TestSupportImplClass"/>
-    <!-- 1 string used by Android's policies system, pulled from app directly -->
+    <!-- TODO(iuliah@google.com): Remove suppression when wired up -->
+    <ignore regexp="chrome/android/java/res/layout/signin_promo_view.xml"/>
+    <ignore regexp="R.dimen.signin_promo_account_image_size"/>
+    <ignore regexp="R.dimen.signin_promo_cold_state_image_size"/>
+    <!-- Used by Android's policies system, pulled from app directly -->
     <ignore regexp="restriction_values.xml"/>
-    <!-- 3 resources used by android webview tests, doesn't affect binary size -->
-    <ignore regexp="android_webview/tools/automated_ui_tests/java/res/layout/"/>
+    <!-- TODO(wnwen): Clean up the suppressions below this comment -->
+    <ignore regexp="android_ui_strings.xml"/>
+    <ignore regexp="android_webview/java/res/drawable-hdpi/ic_play_circle_outline_black_48dp.png"/>
     <ignore regexp="android_webview/test/shell/res/raw/resource_file.html"/>
     <ignore regexp="android_webview/test/shell/res/raw/resource_icon.png"/>
-    <!-- 2 resources used by android webview glue layer, could be refactored -->
-    <ignore regexp="android_webview/java/res/drawable-hdpi/ic_play_circle_outline_black_48dp.png"/>
-    <ignore regexp="R.string.private_browsing_warning"/>
-    <!-- 1 set of strings used dynamically by remoting apk -->
-    <ignore regexp="R.string.offline_reason_*"/>
-    <!-- TODO(wnwen): Clean up components strings so it is linted -->
+    <ignore regexp="android_webview/tools/automated_ui_tests/java/res/"/>
+    <ignore regexp="chromecast/browser/android/apk/res/values/strings.xml"/>
+    <ignore regexp="chromecast/internal"/>
+    <ignore regexp="android_webview/locale_paks.resources.zip/*"/>
+    <ignore regexp="android_webview/strings_grd.resources.zip/values/android_webview_strings.xml"/>
     <ignore regexp="components/strings/components_strings_grd.resources.zip/values.*/components_strings.xml"/>
+    <ignore regexp="remoting/resources/strings_java.resources.zip/values/remoting_strings.xml"/>
+    <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_backspace.png"/>
+    <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_cardboard.png"/>
+    <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_voice_input.png"/>
+    <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_zoom_in.png"/>
+    <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_zoom_out.png"/>
+    <ignore regexp="remoting/android/java/res/layout/navigation_list_item.xml"/>
+    <ignore regexp="remoting/android/java/res/values-v17/styles.xml"/>
   </issue>
   <issue id="UseCompoundDrawables">
     <!-- Upscaling 24dp to 48dp doesn't work as expected with a TextView compound drawable. -->
@@ -349,12 +361,6 @@ Still reading?
   <issue id="VisibleForTests" severity="Error">
     <ignore regexp="chrome/android/javatests"/>
     <ignore regexp="/test/"/>
-    <!-- TODO(crbug.com/757124): Remove all these specific Feedback files after underlying issue is resolved -->
-    <!-- Underlying issue is that Android FeedbackOptions.Builder using @VisibleForTesting without 'otherwise='. -->
-    <ignore regexp="clank/java/src/com/google/android/apps/chrome/feedback/FeedbackUtil.java"/>
-    <ignore regexp="clank/java/src/com/google/android/apps/chrome/feedback/PlayServicesFeedbackReporter.java"/>
-    <ignore regexp="clank/java/src/com/google/android/apps/chrome/help/FeedbackCategoryChooserActivity.java"/>
-    <ignore regexp="clank/java/src/com/google/android/apps/chrome/help/HelpAndFeedbackInternal.java"/>
   </issue>
   <issue id="WrongCall" severity="ignore"/>
   <issue id="WrongConstant">

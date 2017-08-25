@@ -192,7 +192,9 @@ Process StartChildProcess(HANDLE mutex, HANDLE sync_event) {
   LaunchOptions options;
   options.handles_to_inherit.push_back(mutex);
   options.handles_to_inherit.push_back(sync_event);
-  return SpawnMultiProcessTestChild("WaitChainTestProc", command_line, options);
+  base::SpawnChildResult spawn_result =
+      SpawnMultiProcessTestChild("WaitChainTestProc", command_line, options);
+  return std::move(spawn_result.process);
 }
 
 // Returns true if the |wait_chain| is an alternating sequence of thread objects

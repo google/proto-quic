@@ -687,11 +687,9 @@ ThreadActivityTracker::ThreadActivityTracker(void* base, size_t size)
     : header_(static_cast<Header*>(base)),
       stack_(reinterpret_cast<Activity*>(reinterpret_cast<char*>(base) +
                                          sizeof(Header))),
-#if DCHECK_IS_ON()
-      thread_id_(PlatformThreadRef()),
-#endif
       stack_slots_(
           static_cast<uint32_t>((size - sizeof(Header)) / sizeof(Activity))) {
+  DCHECK(thread_checker_.CalledOnValidThread());
 
   // Verify the parameters but fail gracefully if they're not valid so that
   // production code based on external inputs will not crash.  IsValid() will
@@ -769,7 +767,8 @@ ThreadActivityTracker::ActivityId ThreadActivityTracker::PushActivity(
     const ActivityData& data) {
   // A thread-checker creates a lock to check the thread-id which means
   // re-entry into this code if lock acquisitions are being tracked.
-  DCHECK(type == Activity::ACT_LOCK_ACQUIRE || CalledOnValidThread());
+  DCHECK(type == Activity::ACT_LOCK_ACQUIRE ||
+         thread_checker_.CalledOnValidThread());
 
   // Get the current depth of the stack. No access to other memory guarded
   // by this variable is done here so a "relaxed" load is acceptable.
@@ -802,7 +801,7 @@ ThreadActivityTracker::ActivityId ThreadActivityTracker::PushActivity(
 void ThreadActivityTracker::ChangeActivity(ActivityId id,
                                            Activity::Type type,
                                            const ActivityData& data) {
-  DCHECK(CalledOnValidThread());
+  DCHECK(thread_checker_.CalledOnValidThread());
   DCHECK(type != Activity::ACT_NULL || &data != &kNullActivityData);
   DCHECK_LT(id, header_->current_depth.load(std::memory_order_acquire));
 
@@ -837,7 +836,7 @@ void ThreadActivityTracker::PopActivity(ActivityId id) {
   // A thread-checker creates a lock to check the thread-id which means
   // re-entry into this code if lock acquisitions are being tracked.
   DCHECK(stack_[depth].activity_type == Activity::ACT_LOCK_ACQUIRE ||
-         CalledOnValidThread());
+         thread_checker_.CalledOnValidThread());
 
   // The stack has shrunk meaning that some other thread trying to copy the
   // contents for reporting purposes could get bad data. That thread would
@@ -854,12 +853,12 @@ std::unique_ptr<ActivityUserData> ThreadActivityTracker::GetUserData(
   // Don't allow user data for lock acquisition as recursion may occur.
   if (stack_[id].activity_type == Activity::ACT_LOCK_ACQUIRE) {
     NOTREACHED();
-    return std::make_unique<ActivityUserData>();
+    return MakeUnique<ActivityUserData>();
   }
 
   // User-data is only stored for activities actually held in the stack.
   if (id >= stack_slots_)
-    return std::make_unique<ActivityUserData>();
+    return MakeUnique<ActivityUserData>();
 
   // Create and return a real UserData object.
   return CreateUserDataForActivity(&stack_[id], allocator);
@@ -886,7 +885,7 @@ void ThreadActivityTracker::RecordExceptionActivity(const void* program_counter,
                                                     const ActivityData& data) {
   // A thread-checker creates a lock to check the thread-id which means
   // re-entry into this code if lock acquisitions are being tracked.
-  DCHECK(CalledOnValidThread());
+  DCHECK(thread_checker_.CalledOnValidThread());
 
   // Fill the reusable exception activity.
   Activity::FillFrom(&header_->last_exception, program_counter, origin, type,
@@ -1043,14 +1042,6 @@ size_t ThreadActivityTracker::SizeForStackDepth(int stack_depth) {
   return static_cast<size_t>(stack_depth) * sizeof(Activity) + sizeof(Header);
 }
 
-bool ThreadActivityTracker::CalledOnValidThread() {
-#if DCHECK_IS_ON()
-  return thread_id_ == PlatformThreadRef();
-#else
-  return true;
-#endif
-}
-
 std::unique_ptr<ActivityUserData>
 ThreadActivityTracker::CreateUserDataForActivity(
     Activity* activity,
@@ -1061,14 +1052,14 @@ ThreadActivityTracker::CreateUserDataForActivity(
   void* memory = allocator->GetAsArray<char>(ref, kUserDataSize);
   if (memory) {
     std::unique_ptr<ActivityUserData> user_data =
-        std::make_unique<ActivityUserData>(memory, kUserDataSize);
+        MakeUnique<ActivityUserData>(memory, kUserDataSize);
     activity->user_data_ref = ref;
     activity->user_data_id = user_data->id();
     return user_data;
   }
 
   // Return a dummy object that will still accept (but ignore) Set() calls.
-  return std::make_unique<ActivityUserData>();
+  return MakeUnique<ActivityUserData>();
 }
 
 // The instantiation of the GlobalActivityTracker object.
@@ -1224,7 +1215,7 @@ ActivityUserData& GlobalActivityTracker::ScopedThreadActivity::user_data() {
       user_data_ =
           tracker_->GetUserData(activity_id_, &global->user_data_allocator_);
     } else {
-      user_data_ = std::make_unique<ActivityUserData>();
+      user_data_ = MakeUnique<ActivityUserData>();
     }
   }
   return *user_data_;
@@ -1291,7 +1282,7 @@ void GlobalActivityTracker::CreateWithFile(const FilePath& file_path,
                               {0, static_cast<int64_t>(size)},
                               MemoryMappedFile::READ_WRITE_EXTEND);
   DCHECK(success);
-  CreateWithAllocator(std::make_unique<FilePersistentMemoryAllocator>(
+  CreateWithAllocator(MakeUnique<FilePersistentMemoryAllocator>(
                           std::move(mapped_file), size, id, name, false),
                       stack_depth, 0);
 }
@@ -1304,8 +1295,8 @@ void GlobalActivityTracker::CreateWithLocalMemory(size_t size,
                                                   int stack_depth,
                                                   int64_t process_id) {
   CreateWithAllocator(
-      std::make_unique<LocalPersistentMemoryAllocator>(size, id, name),
-      stack_depth, process_id);
+      MakeUnique<LocalPersistentMemoryAllocator>(size, id, name), stack_depth,
+      process_id);
 }
 
 // static

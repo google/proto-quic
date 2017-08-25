@@ -296,15 +296,6 @@ const int32_t kInitialSessionWindowSize = 64 * 1024 - 1;
 // The NPN string for HTTP2, "h2".
 extern const char* const kHttp2Npn;
 
-// Names of pseudo-headers defined for HTTP/2 requests.
-extern const char* const kHttp2AuthorityHeader;
-extern const char* const kHttp2MethodHeader;
-extern const char* const kHttp2PathHeader;
-extern const char* const kHttp2SchemeHeader;
-
-// Name of pseudo-header defined for HTTP/2 responses.
-extern const char* const kHttp2StatusHeader;
-
 // Variant type (i.e. tagged union) that is either a SPDY 3.x priority value,
 // or else an HTTP/2 stream dependency tuple {parent stream ID, weight,
 // exclusive bit}. Templated to allow for use by QUIC code; SPDY and HTTP/2
@@ -863,7 +854,7 @@ class SPDY_EXPORT_PRIVATE SpdyUnknownIR : public SpdyFrameIR {
   DISALLOW_COPY_AND_ASSIGN(SpdyUnknownIR);
 };
 
-class SPDY_EXPORT_PRIVATE SpdySerializedFrame {
+class SpdySerializedFrame {
  public:
   SpdySerializedFrame()
       : frame_(const_cast<char*>("")), size_(0), owns_buffer_(false) {}
@@ -945,7 +936,7 @@ class SPDY_EXPORT_PRIVATE SpdySerializedFrame {
 // having to know what type they are.  An instance of this interface can be
 // passed to a SpdyFrameIR's Visit method, and the appropriate type-specific
 // method of this class will be called.
-class SPDY_EXPORT_PRIVATE SpdyFrameVisitor {
+class SpdyFrameVisitor {
  public:
   virtual void VisitRstStream(const SpdyRstStreamIR& rst_stream) = 0;
   virtual void VisitSettings(const SpdySettingsIR& settings) = 0;
@@ -968,33 +959,6 @@ class SPDY_EXPORT_PRIVATE SpdyFrameVisitor {
 
  private:
   DISALLOW_COPY_AND_ASSIGN(SpdyFrameVisitor);
-};
-
-// Optionally, and in addition to SpdyFramerVisitorInterface, a class supporting
-// SpdyFramerDebugVisitorInterface may be used in conjunction with SpdyFramer in
-// order to extract debug/internal information about the SpdyFramer as it
-// operates.
-//
-// Most HTTP2 implementations need not bother with this interface at all.
-class SPDY_EXPORT_PRIVATE SpdyFramerDebugVisitorInterface {
- public:
-  virtual ~SpdyFramerDebugVisitorInterface() {}
-
-  // Called after compressing a frame with a payload of
-  // a list of name-value pairs.
-  // |payload_len| is the uncompressed payload size.
-  // |frame_len| is the compressed frame size.
-  virtual void OnSendCompressedFrame(SpdyStreamId stream_id,
-                                     SpdyFrameType type,
-                                     size_t payload_len,
-                                     size_t frame_len) {}
-
-  // Called when a frame containing a compressed payload of
-  // name-value pairs is received.
-  // |frame_len| is the compressed frame size.
-  virtual void OnReceiveCompressedFrame(SpdyStreamId stream_id,
-                                        SpdyFrameType type,
-                                        size_t frame_len) {}
 };
 
 }  // namespace net

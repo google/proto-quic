@@ -180,24 +180,9 @@ OSInfo::OSInfo()
         break;
       case PRODUCT_PROFESSIONAL:
       case PRODUCT_ULTIMATE:
-        version_type_ = SUITE_PROFESSIONAL;
-        break;
       case PRODUCT_ENTERPRISE:
-      case PRODUCT_ENTERPRISE_E:
-      case PRODUCT_ENTERPRISE_EVALUATION:
-      case PRODUCT_ENTERPRISE_N:
-      case PRODUCT_ENTERPRISE_N_EVALUATION:
-      case PRODUCT_ENTERPRISE_S:
-      case PRODUCT_ENTERPRISE_S_EVALUATION:
-      case PRODUCT_ENTERPRISE_S_N:
-      case PRODUCT_ENTERPRISE_S_N_EVALUATION:
       case PRODUCT_BUSINESS:
-      case PRODUCT_BUSINESS_N:
-        version_type_ = SUITE_ENTERPRISE;
-        break;
-      case PRODUCT_EDUCATION:
-      case PRODUCT_EDUCATION_N:
-        version_type_ = SUITE_EDUCATION;
+        version_type_ = SUITE_PROFESSIONAL;
         break;
       case PRODUCT_HOME_BASIC:
       case PRODUCT_HOME_PREMIUM:

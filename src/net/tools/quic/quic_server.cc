@@ -181,7 +181,9 @@ void QuicServer::OnEvent(int fd, EpollEvent* event) {
   if (event->in_events & EPOLLIN) {
     QUIC_DVLOG(1) << "EPOLLIN";
 
-    dispatcher_->ProcessBufferedChlos(kNumSessionsToCreatePerSocketEvent);
+    if (FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop) {
+      dispatcher_->ProcessBufferedChlos(kNumSessionsToCreatePerSocketEvent);
+    }
 
     bool more_to_read = true;
     while (more_to_read) {
@@ -190,7 +192,8 @@ void QuicServer::OnEvent(int fd, EpollEvent* event) {
           overflow_supported_ ? &packets_dropped_ : nullptr);
     }
 
-    if (dispatcher_->HasChlosBuffered()) {
+    if (FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop &&
+        dispatcher_->HasChlosBuffered()) {
       // Register EPOLLIN event to consume buffered CHLO(s).
       event->out_ready_mask |= EPOLLIN;
     }

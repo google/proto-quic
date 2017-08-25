@@ -1,76 +1,76 @@
 {
     "archives": {
         "http://acko.net/dumpx/996b.html": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://geoapis.appspot.com/agdnZW9hcGlzchMLEgtFeGFtcGxlQ29kZRjh1wIM": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://hakim.se/experiments/html5/magnetic/02/": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://ie.microsoft.com/testdrive/Graphics/HowStuffWorksGears/Default.html": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://ie.microsoft.com/testdrive/Graphics/TweetMap/Default.html": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://ie.microsoft.com/testdrive/Graphics/VideoCity/Default.html": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://ie.microsoft.com/testdrive/Graphics/WorkerFountains/Default.html": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://ie.microsoft.com/testdrive/Performance/AsteroidBelt/Default.html": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://ie.microsoft.com/testdrive/Performance/Fireflies/Default.html": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://ie.microsoft.com/testdrive/Performance/FishIETank/Default.html": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://ie.microsoft.com/testdrive/Performance/LetItSnow/": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://ie.microsoft.com/testdrive/Performance/SpeedReading/Default.html": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://jarrodoverson.com/static/demos/particleSystem/": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://mix10k.visitmix.com/Entry/Details/169": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://mudcu.be/labs/JS1k/BreathingGalaxies.html": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://runway.countlessprojects.com/prototype/performance_test.html": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://spielzeugz.de/html5/liquid-particles.html": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://themaninblue.com/experiment/AnimationBenchmark/canvas/": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://www.chiptune.com/starfield/starfield.html": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://www.craftymind.com/factory/guimark2/HTML5ChartingTest.html": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://www.effectgames.com/demos/canvascycle/": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://www.kevs3d.co.uk/dev/canvask3d/k3d_test.html": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://www.megidish.net/awjs/": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         },
         "http://www.smashcat.org/av/canvas_test/": {
-            "DEFAULT": "tough_canvas_cases_001.wprgo"
+            "DEFAULT": "tough_canvas_cases_001.wpr"
         }
     },
     "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",

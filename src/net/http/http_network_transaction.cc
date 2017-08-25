@@ -68,12 +68,6 @@
 #include "url/gurl.h"
 #include "url/url_canon.h"
 
-namespace {
-// Max number of |retry_attempts| (excluding the initial request) after which
-// we give up and show an error page.
-const size_t kMaxRetryAttempts = 2;
-}  // namespace
-
 namespace net {
 
 HttpNetworkTransaction::HttpNetworkTransaction(RequestPriority priority,
@@ -94,8 +88,7 @@ HttpNetworkTransaction::HttpNetworkTransaction(RequestPriority priority,
       enable_ip_based_pooling_(true),
       enable_alternative_services_(true),
       websocket_handshake_stream_base_create_helper_(NULL),
-      net_error_details_(),
-      retry_attempts_(0) {}
+      net_error_details_() {}
 
 HttpNetworkTransaction::~HttpNetworkTransaction() {
   if (stream_.get()) {
@@ -502,16 +495,13 @@ void HttpNetworkTransaction::OnWebSocketHandshakeStreamReady(
   OnStreamReady(used_ssl_config, used_proxy_info, std::move(stream));
 }
 
-void HttpNetworkTransaction::OnStreamFailed(
-    int result,
-    const NetErrorDetails& net_error_details,
-    const SSLConfig& used_ssl_config) {
+void HttpNetworkTransaction::OnStreamFailed(int result,
+                                            const SSLConfig& used_ssl_config) {
   DCHECK_EQ(STATE_CREATE_STREAM_COMPLETE, next_state_);
   DCHECK_NE(OK, result);
   DCHECK(stream_request_.get());
   DCHECK(!stream_.get());
   server_ssl_config_ = used_ssl_config;
-  net_error_details_ = net_error_details;
 
   OnIOComplete(result);
 }
@@ -1553,11 +1543,8 @@ int HttpNetworkTransaction::HandleIOError(int error) {
     case ERR_SPDY_PING_FAILED:
     case ERR_SPDY_SERVER_REFUSED_STREAM:
     case ERR_QUIC_HANDSHAKE_FAILED:
-      if (HasExceededMaxRetries())
-        break;
       net_log_.AddEventWithNetErrorCode(
           NetLogEventType::HTTP_TRANSACTION_RESTART_AFTER_ERROR, error);
-      retry_attempts_++;
       ResetConnectionAndRequestForResend();
       error = OK;
       break;
@@ -1570,8 +1557,6 @@ int HttpNetworkTransaction::HandleIOError(int error) {
         // alternative service to be disabled.
         break;
       }
-      if (HasExceededMaxRetries())
-        break;
       if (session_->http_server_properties()->IsAlternativeServiceBroken(
               retried_alternative_service_)) {
         // If the alternative service was marked as broken while the request
@@ -1579,7 +1564,6 @@ int HttpNetworkTransaction::HandleIOError(int error) {
         // alternative service.
         net_log_.AddEventWithNetErrorCode(
             NetLogEventType::HTTP_TRANSACTION_RESTART_AFTER_ERROR, error);
-        retry_attempts_++;
         ResetConnectionAndRequestForResend();
         error = OK;
       } else if (session_->params().retry_without_alt_svc_on_quic_errors) {
@@ -1589,7 +1573,6 @@ int HttpNetworkTransaction::HandleIOError(int error) {
         enable_alternative_services_ = false;
         net_log_.AddEventWithNetErrorCode(
             NetLogEventType::HTTP_TRANSACTION_RESTART_AFTER_ERROR, error);
-        retry_attempts_++;
         ResetConnectionAndRequestForResend();
         error = OK;
       }
@@ -1645,10 +1628,6 @@ bool HttpNetworkTransaction::ShouldResendRequest() const {
   if (connection_is_proven && !has_received_headers)
     return true;
   return false;
-}
-
-bool HttpNetworkTransaction::HasExceededMaxRetries() const {
-  return (retry_attempts_ >= kMaxRetryAttempts);
 }
 
 void HttpNetworkTransaction::ResetConnectionAndRequestForResend() {

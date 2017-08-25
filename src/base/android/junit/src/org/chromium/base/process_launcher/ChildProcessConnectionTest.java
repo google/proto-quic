@@ -132,8 +132,8 @@ public class ChildProcessConnectionTest {
             }
         })
                 .when(mIChildProcessService)
-                .setupConnection(
-                        or(isNull(), any(Bundle.class)), or(isNull(), any()), or(isNull(), any()));
+                .setupConnection(or(isNull(), any(Bundle.class)),
+                        or(isNull(), any(ICallbackInt.class)), or(isNull(), any(IBinder.class)));
 
         mChildProcessServiceBinder = new Binder();
         mChildProcessServiceBinder.attachInterface(

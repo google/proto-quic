@@ -55,7 +55,7 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
   // TaskTracker is used.
   explicit TaskSchedulerImpl(StringPiece name,
                              std::unique_ptr<TaskTrackerImpl> task_tracker =
-                                 std::make_unique<TaskTrackerImpl>());
+                                 MakeUnique<TaskTrackerImpl>());
   ~TaskSchedulerImpl() override;
 
   // TaskScheduler:
@@ -77,7 +77,7 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
       SingleThreadTaskRunnerThreadMode thread_mode) override;
 #endif  // defined(OS_WIN)
   std::vector<const HistogramBase*> GetHistograms() const override;
-  int GetMaxConcurrentNonBlockedTasksWithTraitsDeprecated(
+  int GetMaxConcurrentTasksWithTraitsDeprecated(
       const TaskTraits& traits) const override;
   void Shutdown() override;
   void FlushForTesting() override;
@@ -88,21 +88,11 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
   SchedulerWorkerPoolImpl* GetWorkerPoolForTraits(
       const TaskTraits& traits) const;
 
-  // Returns |traits|, with priority set to TaskPriority::USER_BLOCKING if
-  // |all_tasks_user_blocking_| is set.
-  TaskTraits SetUserBlockingPriorityIfNeeded(const TaskTraits& traits) const;
-
   const std::string name_;
   Thread service_thread_;
   const std::unique_ptr<TaskTrackerImpl> task_tracker_;
   DelayedTaskManager delayed_task_manager_;
   SchedulerSingleThreadTaskRunnerManager single_thread_task_runner_manager_;
-
-  // Indicates that all tasks are handled as if they had been posted with
-  // TaskPriority::USER_BLOCKING. Since this is set in Start(), it doesn't apply
-  // to tasks posted before Start() or to tasks posted to TaskRunners created
-  // before Start().
-  AtomicFlag all_tasks_user_blocking_;
 
   // There are 4 SchedulerWorkerPoolImpl in this array to match the 4
   // SchedulerWorkerPoolParams in TaskScheduler::InitParams.

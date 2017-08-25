@@ -14,7 +14,6 @@
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_text_utils.h"
-#include "net/spdy/core/spdy_protocol.h"
 
 using base::IntToString;
 using std::string;
@@ -272,7 +271,7 @@ bool QuicSpdyStream::FinishedReadingHeaders() const {
 
 bool QuicSpdyStream::ParseHeaderStatusCode(const SpdyHeaderBlock& header,
                                            int* status_code) const {
-  SpdyHeaderBlock::const_iterator it = header.find(kHttp2StatusHeader);
+  SpdyHeaderBlock::const_iterator it = header.find(":status");
   if (it == header.end()) {
     return false;
   }

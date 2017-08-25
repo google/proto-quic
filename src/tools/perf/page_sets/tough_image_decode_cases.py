@@ -13,6 +13,7 @@ class ToughImageDecodeCasesPage(page_module.Page):
       page_set=page_set,
       name=name,
       shared_page_state_class=shared_page_state.SharedMobilePageState)
+    self.archive_data_file = 'data/tough_image_decode_cases.json'
 
   def RunPageInteractions(self, action_runner):
     action_runner.WaitForJavaScriptCondition(

@@ -17,8 +17,8 @@ def AddBenchmarkCommandLineArgs(parser):
 
 def ValidateCommandLineArgs(parser, args):
   if not args.user_agent:
-    parser.error('Please specify --user-agent.')
+    parser.error('Please specify --user_agent.')
   if not args.archive_data_file:
-    parser.error('Please specify --archive-data-file.')
+    parser.error('Please specify --archive_data_file.')
   if not args.urls_list:
-    parser.error('Please specify --urls-list.')
+    parser.error('Please specify --urls_list.')

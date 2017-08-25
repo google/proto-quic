@@ -151,7 +151,9 @@ QuicSpdyClientStream* QuicSpdyClientBase::CreateClientStream() {
   }
 
   auto* stream = static_cast<QuicSpdyClientStream*>(
-      client_session()->CreateOutgoingDynamicStream(kDefaultPriority));
+      FLAGS_quic_reloadable_flag_quic_refactor_stream_creation
+          ? client_session()->MaybeCreateOutgoingDynamicStream(kDefaultPriority)
+          : client_session()->CreateOutgoingDynamicStream(kDefaultPriority));
   if (stream) {
     stream->set_visitor(this);
   }

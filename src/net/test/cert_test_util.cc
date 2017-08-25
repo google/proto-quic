@@ -79,9 +79,10 @@ scoped_refptr<X509Certificate> ImportCertFromFile(
 }
 
 ScopedTestEVPolicy::ScopedTestEVPolicy(EVRootCAMetadata* ev_root_ca_metadata,
-                                       const SHA256HashValue& fingerprint,
+                                       const SHA1HashValue& fingerprint,
                                        const char* policy)
-    : fingerprint_(fingerprint), ev_root_ca_metadata_(ev_root_ca_metadata) {
+    : fingerprint_(fingerprint),
+      ev_root_ca_metadata_(ev_root_ca_metadata) {
   EXPECT_TRUE(ev_root_ca_metadata->AddEVCA(fingerprint, policy));
 }
 

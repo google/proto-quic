@@ -49,7 +49,7 @@ void FilePathWatcherImpl::Cancel() {
 
 FilePathWatcher::FilePathWatcher() {
   sequence_checker_.DetachFromSequence();
-  impl_ = std::make_unique<FilePathWatcherImpl>();
+  impl_ = MakeUnique<FilePathWatcherImpl>();
 }
 
 }  // namespace base

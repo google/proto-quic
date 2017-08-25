@@ -395,11 +395,9 @@ class SpawningServer(object):
   """The class used to start/stop a http server."""
 
   def __init__(self, test_server_spawner_port, port_forwarder):
+    logging.info('Creating new spawner on port: %d.', test_server_spawner_port)
     self.server = BaseHTTPServer.HTTPServer(('', test_server_spawner_port),
                                             SpawningServerRequestHandler)
-    self.server_port = self.server.server_port
-    logging.info('Started test server spawner on port: %d.', self.server_port)
-
     self.server.port_forwarder = port_forwarder
     self.server.test_server_instance = None
 

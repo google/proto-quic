@@ -10,8 +10,6 @@
 #include <memory>
 
 #include "base/android/scoped_java_ref.h"
-#include "base/message_loop/message_loop.h"
-#include "base/single_thread_task_runner.h"
 
 namespace base {
 
@@ -35,12 +33,6 @@ class BASE_EXPORT JavaHandlerThread {
   virtual ~JavaHandlerThread();
 
   base::MessageLoop* message_loop() const { return message_loop_.get(); }
-
-  // Gets the TaskRunner associated with the message loop.
-  scoped_refptr<SingleThreadTaskRunner> task_runner() const {
-    return message_loop_ ? message_loop_->task_runner() : nullptr;
-  }
-
   void Start();
   void Stop();
 
@@ -49,25 +41,14 @@ class BASE_EXPORT JavaHandlerThread {
   void InitializeThread(JNIEnv* env,
                         const JavaParamRef<jobject>& obj,
                         jlong event);
-  void StopThread(JNIEnv* env, const JavaParamRef<jobject>& obj);
-  void OnLooperStopped(JNIEnv* env, const JavaParamRef<jobject>& obj);
+  void StopThread(JNIEnv* env,
+                  const JavaParamRef<jobject>& obj,
+                  jlong event);
 
   virtual void StartMessageLoop();
   virtual void StopMessageLoop();
 
-  void StopMessageLoopForTesting();
-  void JoinForTesting();
-
  protected:
-  // Semantically the same as base::Thread#Init(), but unlike base::Thread the
-  // Android Looper will already be running. This Init() call will still run
-  // before other tasks are posted to the thread.
-  virtual void Init() {}
-
-  // Semantically the same as base::Thread#CleanUp(), called after the message
-  // loop ends. The Android Looper will also have been quit by this point.
-  virtual void CleanUp() {}
-
   std::unique_ptr<base::MessageLoop> message_loop_;
 
  private:

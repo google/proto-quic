@@ -29,7 +29,6 @@
 #include "net/cert/internal/signature_algorithm.h"
 #include "net/cert/test_root_certs.h"
 #include "net/cert/x509_certificate.h"
-#include "net/cert/x509_util.h"
 #include "net/der/input.h"
 #include "net/der/parser.h"
 #include "net/test/cert_test_util.h"
@@ -343,8 +342,8 @@ TEST_P(CertVerifyProcInternalTest, EVVerificationMultipleOID) {
 TEST_P(CertVerifyProcInternalTest, TrustedTargetCertWithEVPolicy) {
   // The policy that "explicit-policy-chain.pem" target certificate asserts.
   static const char kEVTestCertPolicy[] = "1.2.3.4";
-  ScopedTestEVPolicy scoped_test_ev_policy(
-      EVRootCAMetadata::GetInstance(), SHA256HashValue(), kEVTestCertPolicy);
+  ScopedTestEVPolicy scoped_test_ev_policy(EVRootCAMetadata::GetInstance(),
+                                           SHA1HashValue(), kEVTestCertPolicy);
 
   scoped_refptr<X509Certificate> cert =
       ImportCertFromFile(GetTestCertsDirectory(), "explicit-policy-chain.pem");
@@ -379,10 +378,9 @@ TEST_P(CertVerifyProcInternalTest,
   static const char kEVTestCertPolicy[] = "1.2.3.4";
   // This the fingerprint of the "explicit-policy-chain.pem" target certificate.
   // See net/data/ssl/certificates/explicit-policy-chain.pem
-  static const SHA256HashValue kEVTestCertFingerprint = {
-      {0x71, 0xac, 0xfa, 0x12, 0xa4, 0x42, 0x31, 0x3c, 0xff, 0x10, 0xd2,
-       0x9d, 0xb6, 0x1b, 0x4a, 0xe8, 0x25, 0x4e, 0x77, 0xd3, 0x9f, 0xa3,
-       0x2f, 0xb3, 0x19, 0x8d, 0x46, 0x9f, 0xb7, 0x73, 0x07, 0x30}};
+  static const SHA1HashValue kEVTestCertFingerprint = {
+      {0x45, 0x1f, 0x20, 0x51, 0x97, 0xe9, 0x41, 0x96, 0xc4, 0xd8,
+       0x5f, 0x83, 0xc7, 0x52, 0x6e, 0x90, 0x1f, 0x87, 0x5b, 0xd4}};
   ScopedTestEVPolicy scoped_test_ev_policy(EVRootCAMetadata::GetInstance(),
                                            kEVTestCertFingerprint,
                                            kEVTestCertPolicy);
@@ -444,7 +442,7 @@ TEST_P(CertVerifyProcInternalTest, DISABLED_PaypalNullCertParsing) {
     // ERR_CERT_AUTHORITY_INVALID on the real device.
     EXPECT_THAT(error, IsError(ERR_CERT_INVALID));
   } else {
-    // TODO(bulach): investigate why macosx and win aren't returning
+    // TOOD(bulach): investigate why macosx and win aren't returning
     // ERR_CERT_INVALID or ERR_CERT_COMMON_NAME_INVALID.
     EXPECT_THAT(error, IsError(ERR_CERT_AUTHORITY_INVALID));
   }
@@ -495,8 +493,8 @@ TEST_P(CertVerifyProcInternalTest, InvalidTarget) {
 TEST_P(CertVerifyProcInternalTest, InvalidIntermediate) {
   base::FilePath certs_dir =
       GetTestNetDataDirectory().AppendASCII("parse_certificate_unittest");
-  bssl::UniquePtr<CRYPTO_BUFFER> bad_cert =
-      x509_util::CreateCryptoBuffer(base::StringPiece("invalid"));
+  scoped_refptr<X509Certificate> bad_cert =
+      ImportCertFromFile(certs_dir, "signature_algorithm_null.pem");
   ASSERT_TRUE(bad_cert);
 
   scoped_refptr<X509Certificate> ok_cert(
@@ -505,7 +503,7 @@ TEST_P(CertVerifyProcInternalTest, InvalidIntermediate) {
 
   scoped_refptr<X509Certificate> cert_with_bad_intermediate(
       X509Certificate::CreateFromHandle(ok_cert->os_cert_handle(),
-                                        {bad_cert.get()}));
+                                        {bad_cert->os_cert_handle()}));
   ASSERT_TRUE(cert_with_bad_intermediate);
   EXPECT_EQ(1U,
             cert_with_bad_intermediate->GetIntermediateCertificates().size());

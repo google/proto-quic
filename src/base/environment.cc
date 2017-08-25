@@ -136,7 +136,7 @@ Environment::~Environment() {}
 
 // static
 std::unique_ptr<Environment> Environment::Create() {
-  return std::make_unique<EnvironmentImpl>();
+  return MakeUnique<EnvironmentImpl>();
 }
 
 bool Environment::HasVar(StringPiece variable_name) {

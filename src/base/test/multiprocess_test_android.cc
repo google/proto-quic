@@ -24,9 +24,10 @@ namespace base {
 //  - All options except |fds_to_remap| are ignored.
 //
 // NOTE: This MUST NOT run on the main thread of the NativeTest application.
-Process SpawnMultiProcessTestChild(const std::string& procname,
-                                   const CommandLine& base_command_line,
-                                   const LaunchOptions& options) {
+SpawnChildResult SpawnMultiProcessTestChild(
+    const std::string& procname,
+    const CommandLine& base_command_line,
+    const LaunchOptions& options) {
   JNIEnv* env = android::AttachCurrentThread();
   DCHECK(env);
 
@@ -51,7 +52,10 @@ Process SpawnMultiProcessTestChild(const std::string& procname,
       android::ToJavaArrayOfStrings(env, command_line.argv());
   jint pid = android::Java_MultiprocessTestClientLauncher_launchClient(
       env, j_argv, fds);
-  return Process(pid);
+
+  SpawnChildResult result;
+  result.process = Process(pid);
+  return result;
 }
 
 bool WaitForMultiprocessTestChildExit(const Process& process,

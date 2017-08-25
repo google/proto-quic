@@ -295,7 +295,7 @@ TEST_F(ThreadTest, DISABLED_StopOnNonOwningThreadIsDeath) {
 
 TEST_F(ThreadTest, TransferOwnershipAndStop) {
   std::unique_ptr<Thread> a =
-      std::make_unique<Thread>("TransferOwnershipAndStop");
+      base::MakeUnique<Thread>("TransferOwnershipAndStop");
   EXPECT_TRUE(a->StartAndWaitForTesting());
   EXPECT_TRUE(a->IsRunning());
 

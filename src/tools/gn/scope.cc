@@ -7,6 +7,7 @@
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "tools/gn/parse_tree.h"
+#include "tools/gn/source_file.h"
 #include "tools/gn/template.h"
 
 namespace {
@@ -39,26 +40,29 @@ Scope::ProgrammaticProvider::~ProgrammaticProvider() {
   scope_->RemoveProvider(this);
 }
 
-Scope::Scope(const Settings* settings)
+Scope::Scope(const Settings* settings, const InputFileSet& input_files)
     : const_containing_(nullptr),
       mutable_containing_(nullptr),
       settings_(settings),
       mode_flags_(0),
-      item_collector_(nullptr) {}
+      item_collector_(nullptr),
+      input_files_(input_files) {}
 
 Scope::Scope(Scope* parent)
     : const_containing_(nullptr),
       mutable_containing_(parent),
       settings_(parent->settings()),
       mode_flags_(0),
-      item_collector_(nullptr) {}
+      item_collector_(nullptr),
+      input_files_(parent->input_files_) {}
 
 Scope::Scope(const Scope* parent)
     : const_containing_(parent),
       mutable_containing_(nullptr),
       settings_(parent->settings()),
       mode_flags_(0),
-      item_collector_(nullptr) {}
+      item_collector_(nullptr),
+      input_files_(parent->input_files_) {}
 
 Scope::~Scope() {
 }
@@ -346,7 +350,7 @@ bool Scope::NonRecursiveMergeTo(Scope* dest,
     }
 
     std::unique_ptr<Scope>& dest_scope = dest->target_defaults_[current_name];
-    dest_scope = base::MakeUnique<Scope>(settings_);
+    dest_scope = base::MakeUnique<Scope>(settings_, input_files_);
     pair.second->NonRecursiveMergeTo(dest_scope.get(), options, node_for_err,
                                      "<SHOULDN'T HAPPEN>", err);
   }
@@ -404,6 +408,9 @@ bool Scope::NonRecursiveMergeTo(Scope* dest,
     dest->templates_[current_name] = pair.second;
   }
 
+  // Input files.
+  dest->input_files_.insert(input_files_.begin(), input_files_.end());
+
   return true;
 }
 
@@ -419,7 +426,7 @@ std::unique_ptr<Scope> Scope::MakeClosure() const {
     result = mutable_containing_->MakeClosure();
   } else {
     // This is a standalone scope, just copy it.
-    result.reset(new Scope(settings_));
+    result.reset(new Scope(settings_, input_files_));
   }
 
   // Want to clobber since we've flattened some nested scopes, and our parent
@@ -437,7 +444,7 @@ std::unique_ptr<Scope> Scope::MakeClosure() const {
 
 Scope* Scope::MakeTargetDefaults(const std::string& target_type) {
   std::unique_ptr<Scope>& dest = target_defaults_[target_type];
-  dest = base::MakeUnique<Scope>(settings_);
+  dest = base::MakeUnique<Scope>(settings_, input_files_);
   return dest.get();
 }
 
@@ -500,6 +507,10 @@ const SourceDir& Scope::GetSourceDir() const {
   if (containing())
     return containing()->GetSourceDir();
   return source_dir_;
+}
+
+void Scope::AddInputFile(const InputFile* input_file) {
+  input_files_.insert(input_file);
 }
 
 Scope::ItemVector* Scope::GetItemCollector() {

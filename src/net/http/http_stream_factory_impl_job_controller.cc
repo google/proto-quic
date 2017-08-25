@@ -370,7 +370,7 @@ void HttpStreamFactoryImpl::JobController::OnStreamFailed(
     RunLoop(status);
     return;
   }
-  delegate_->OnStreamFailed(status, *job->net_error_details(), used_ssl_config);
+  delegate_->OnStreamFailed(status, used_ssl_config);
 }
 
 void HttpStreamFactoryImpl::JobController::OnCertificateError(
@@ -657,7 +657,8 @@ void HttpStreamFactoryImpl::JobController::
 
 void HttpStreamFactoryImpl::JobController::
     RemoveRequestFromSpdySessionRequestMap() {
-  DCHECK(request_);
+  // TODO(xunjieli): Use a DCHECK once https://crbug.com/718576 is fixed.
+  CHECK(request_);
   session_->spdy_session_pool()->RemoveRequestFromSpdySessionRequestMap(
       request_);
 }
@@ -1046,7 +1047,7 @@ void HttpStreamFactoryImpl::JobController::MaybeNotifyFactoryOfCompletion() {
 void HttpStreamFactoryImpl::JobController::NotifyRequestFailed(int rv) {
   if (!request_)
     return;
-  delegate_->OnStreamFailed(rv, NetErrorDetails(), server_ssl_config_);
+  delegate_->OnStreamFailed(rv, server_ssl_config_);
 }
 
 GURL HttpStreamFactoryImpl::JobController::ApplyHostMappingRules(

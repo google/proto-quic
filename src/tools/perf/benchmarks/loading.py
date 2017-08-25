@@ -24,10 +24,10 @@ class _LoadingBase(perf_benchmark.PerfBenchmark):
     return tbm_options
 
 
+@benchmark.Disabled('android')
 @benchmark.Owner(emails=['kouhei@chormium.org', 'ksakamoto@chromium.org'])
 class LoadingDesktop(_LoadingBase):
   """ A benchmark measuring loading performance of desktop sites. """
-  SUPPORTED_PLATFORMS = [story.expectations.ALL_DESKTOP]
 
   @classmethod
   def ShouldDisable(cls, possible_browser):
@@ -52,10 +52,10 @@ class LoadingDesktop(_LoadingBase):
     return 'loading.desktop'
 
 
+@benchmark.Enabled('android')
 @benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
 class LoadingMobile(_LoadingBase):
   """ A benchmark measuring loading performance of mobile sites. """
-  SUPPORTED_PLATFORMS = [story.expectations.ALL_MOBILE]
 
   @classmethod
   def ShouldDisable(cls, possible_browser):

@@ -1638,11 +1638,6 @@ class HostResolverImplDnsTest : public HostResolverImplTest {
     CreateResolver();
   }
 
-  void TearDown() override {
-    HostResolverImplTest::TearDown();
-    ChangeDnsConfig(DnsConfig());
-  }
-
   // HostResolverImplTest implementation:
   void CreateResolverWithLimitsAndParams(
       size_t max_concurrent_resolves,

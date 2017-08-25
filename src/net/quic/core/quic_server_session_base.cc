@@ -194,6 +194,7 @@ void QuicServerSessionBase::OnCongestionWindowChange(QuicTime now) {
 }
 
 bool QuicServerSessionBase::ShouldCreateIncomingDynamicStream(QuicStreamId id) {
+  DCHECK(!FLAGS_quic_reloadable_flag_quic_refactor_stream_creation);
   if (!connection()->connected()) {
     QUIC_BUG << "ShouldCreateIncomingDynamicStream called when disconnected";
     return false;
@@ -210,6 +211,7 @@ bool QuicServerSessionBase::ShouldCreateIncomingDynamicStream(QuicStreamId id) {
 }
 
 bool QuicServerSessionBase::ShouldCreateOutgoingDynamicStream() {
+  DCHECK(!FLAGS_quic_reloadable_flag_quic_refactor_stream_creation);
   if (!connection()->connected()) {
     QUIC_BUG << "ShouldCreateOutgoingDynamicStream called when disconnected";
     return false;

@@ -80,6 +80,7 @@ QuicSentPacketManager::QuicSentPacketManager(
       enable_half_rtt_tail_loss_probe_(false),
       using_pacing_(false),
       use_new_rto_(false),
+      undo_pending_retransmits_(false),
       conservative_handshake_retransmits_(false),
       largest_newly_acked_(0),
       largest_mtu_acked_(0),
@@ -150,6 +151,9 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
   }
   if (config.HasClientRequestedIndependentOption(kLFAK, perspective_)) {
     general_loss_algorithm_.SetLossDetectionType(kLazyFack);
+  }
+  if (config.HasClientSentConnectionOption(kUNDO, perspective_)) {
+    undo_pending_retransmits_ = true;
   }
   if (config.HasClientSentConnectionOption(kCONH, perspective_)) {
     conservative_handshake_retransmits_ = true;
@@ -241,6 +245,17 @@ void QuicSentPacketManager::OnIncomingAck(const QuicAckFrame& ack_frame,
     consecutive_tlp_count_ = 0;
     consecutive_crypto_retransmission_count_ = 0;
   }
+  // TODO(ianswett): Consider replacing the pending_retransmissions_ with a
+  // fast way to retrieve the next pending retransmission, if there are any.
+  // A single packet number indicating all packets below that are lost should
+  // be all the state that is necessary.
+  while (undo_pending_retransmits_ && !pending_retransmissions_.empty() &&
+         pending_retransmissions_.front().first > largest_newly_acked_ &&
+         pending_retransmissions_.front().second == LOSS_RETRANSMISSION) {
+    // Cancel any pending retransmissions larger than largest_newly_acked_.
+    unacked_packets_.RestoreToInFlight(pending_retransmissions_.front().first);
+    pending_retransmissions_.pop_front();
+  }
 
   if (debug_delegate_ != nullptr) {
     debug_delegate_->OnIncomingAck(ack_frame, ack_receive_time,
@@ -310,8 +325,7 @@ void QuicSentPacketManager::HandleAckForSentPackets(
     // If data is associated with the most recent transmission of this
     // packet, then inform the caller.
     if (it->in_flight) {
-      packets_acked_.push_back(SendAlgorithmInterface::AckedPacket(
-          packet_number, it->bytes_sent, QuicTime::Zero()));
+      packets_acked_.push_back(std::make_pair(packet_number, it->bytes_sent));
     } else if (skip_unackable_packets_early || !it->is_unackable) {
       // Packets are marked unackable after they've been acked once.
       largest_newly_acked_ = packet_number;
@@ -668,9 +682,8 @@ QuicSentPacketManager::GetRetransmissionMode() const {
 
 void QuicSentPacketManager::InvokeLossDetection(QuicTime time) {
   if (!packets_acked_.empty()) {
-    DCHECK_LE(packets_acked_.front().packet_number,
-              packets_acked_.back().packet_number);
-    largest_newly_acked_ = packets_acked_.back().packet_number;
+    DCHECK_LE(packets_acked_.front().first, packets_acked_.back().first);
+    largest_newly_acked_ = packets_acked_.back().first;
   }
   loss_algorithm_->DetectLosses(unacked_packets_, time, rtt_stats_,
                                 largest_newly_acked_, &packets_lost_);
@@ -926,6 +939,11 @@ QuicPacketNumber QuicSentPacketManager::GetLargestObserved() const {
 
 QuicPacketNumber QuicSentPacketManager::GetLargestSentPacket() const {
   return unacked_packets_.largest_sent_packet();
+}
+
+// Remove this method when deprecating QUIC_VERSION_33.
+QuicPacketNumber QuicSentPacketManager::GetLeastPacketAwaitedByPeer() const {
+  return least_packet_awaited_by_peer_;
 }
 
 void QuicSentPacketManager::SetNetworkChangeVisitor(

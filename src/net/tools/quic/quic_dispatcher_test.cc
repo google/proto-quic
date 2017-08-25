@@ -81,6 +81,7 @@ class TestQuicSpdyServerSession : public QuicServerSessionBase {
   MOCK_METHOD1(CreateIncomingDynamicStream, QuicSpdyStream*(QuicStreamId id));
   MOCK_METHOD1(CreateOutgoingDynamicStream,
                QuicSpdyStream*(SpdyPriority priority));
+  MOCK_METHOD1(CreateStream, std::unique_ptr<QuicStream>(QuicStreamId id));
 
   QuicCryptoServerStreamBase* CreateQuicCryptoServerStream(
       const QuicCryptoServerConfig* crypto_config,
@@ -551,7 +552,7 @@ TEST_F(QuicDispatcherTest, SupportedVersionsChangeInFlight) {
                 "Supported versions out of sync");
   FLAGS_quic_reloadable_flag_quic_enable_version_38 = true;
   FLAGS_quic_reloadable_flag_quic_enable_version_39 = true;
-  FLAGS_quic_reloadable_flag_quic_enable_version_40 = true;
+  SetQuicFlag(&FLAGS_quic_enable_version_40, true);
   SetQuicFlag(&FLAGS_quic_enable_version_41, true);
   QuicSocketAddress client_address(QuicIpAddress::Loopback4(), 1);
   server_address_ = QuicSocketAddress(QuicIpAddress::Any4(), 5);
@@ -627,7 +628,7 @@ TEST_F(QuicDispatcherTest, SupportedVersionsChangeInFlight) {
                 SerializeCHLO(), PACKET_8BYTE_CONNECTION_ID,
                 PACKET_6BYTE_PACKET_NUMBER, 1);
   // Turn off version 40.
-  FLAGS_quic_reloadable_flag_quic_enable_version_40 = false;
+  SetQuicFlag(&FLAGS_quic_enable_version_40, false);
   ++connection_id;
   EXPECT_CALL(*dispatcher_, CreateQuicSession(connection_id, client_address,
                                               QuicStringPiece("hq")))
@@ -637,7 +638,7 @@ TEST_F(QuicDispatcherTest, SupportedVersionsChangeInFlight) {
                 PACKET_6BYTE_PACKET_NUMBER, 1);
 
   // Turn on version 40.
-  FLAGS_quic_reloadable_flag_quic_enable_version_40 = true;
+  SetQuicFlag(&FLAGS_quic_enable_version_40, true);
   ++connection_id;
   EXPECT_CALL(*dispatcher_, CreateQuicSession(connection_id, client_address,
                                               QuicStringPiece("hq")))
@@ -1327,7 +1328,11 @@ TEST_P(BufferedPacketStoreTest,
   InSequence s;
   server_address_ = QuicSocketAddress(QuicIpAddress::Any4(), 5);
   // A bunch of non-CHLO should be buffered upon arrival.
-  size_t kNumConnections = kMaxConnectionsWithoutCHLO + 1;
+  size_t kNumConnections =
+      (FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop
+           ? kMaxConnectionsWithoutCHLO
+           : kDefaultMaxConnectionsInStore) +
+      1;
   for (size_t i = 1; i <= kNumConnections; ++i) {
     QuicSocketAddress client_address(QuicIpAddress::Loopback4(), i);
     QuicConnectionId conn_id = i;
@@ -1362,7 +1367,11 @@ TEST_P(BufferedPacketStoreTest,
             QuicDispatcherPeer::GetCache(dispatcher_.get()), &session1_)));
     // First |kNumConnections| - 1 connections should have buffered
     // a packet in store. The rest should have been dropped.
-    size_t num_packet_to_process = i <= kMaxConnectionsWithoutCHLO ? 2u : 1u;
+    size_t upper_limit =
+        FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop
+            ? kMaxConnectionsWithoutCHLO
+            : kDefaultMaxConnectionsInStore;
+    size_t num_packet_to_process = i <= upper_limit ? 2u : 1u;
     EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
                 ProcessUdpPacket(_, client_address, _))
         .Times(num_packet_to_process)
@@ -1447,6 +1456,7 @@ TEST_P(BufferedPacketStoreTest, ReceiveCHLOAfterExpiration) {
 }
 
 TEST_P(BufferedPacketStoreTest, ProcessCHLOsUptoLimitAndBufferTheRest) {
+  FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop = true;
   // Process more than (|kMaxNumSessionsToCreate| +
   // |kDefaultMaxConnectionsInStore|) CHLOs,
   // the first |kMaxNumSessionsToCreate| should create connections immediately,
@@ -1516,6 +1526,7 @@ TEST_P(BufferedPacketStoreTest, ProcessCHLOsUptoLimitAndBufferTheRest) {
 
 // Duplicated CHLO shouldn't be buffered.
 TEST_P(BufferedPacketStoreTest, BufferDuplicatedCHLO) {
+  FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop = true;
   for (QuicConnectionId conn_id = 1; conn_id <= kMaxNumSessionsToCreate + 1;
        ++conn_id) {
     // Last CHLO will be buffered. Others will create connection right away.
@@ -1559,6 +1570,7 @@ TEST_P(BufferedPacketStoreTest, BufferDuplicatedCHLO) {
 }
 
 TEST_P(BufferedPacketStoreTest, BufferNonChloPacketsUptoLimitWithChloBuffered) {
+  FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop = true;
   QuicConnectionId last_connection_id = kMaxNumSessionsToCreate + 1;
   for (QuicConnectionId conn_id = 1; conn_id <= last_connection_id; ++conn_id) {
     // Last CHLO will be buffered. Others will create connection right away.
@@ -1607,6 +1619,7 @@ TEST_P(BufferedPacketStoreTest, BufferNonChloPacketsUptoLimitWithChloBuffered) {
 // Tests that when dispatcher's packet buffer is full, a CHLO on connection
 // which doesn't have buffered CHLO should be buffered.
 TEST_P(BufferedPacketStoreTest, ReceiveCHLOForBufferedConnection) {
+  FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop = true;
   QuicBufferedPacketStore* store =
       QuicDispatcherPeer::GetBufferedPackets(dispatcher_.get());
 

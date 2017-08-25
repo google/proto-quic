@@ -498,38 +498,25 @@ TEST(CircularDeque, CapacityReserveShrink) {
   EXPECT_EQ(new_capacity, q.size());
   EXPECT_EQ(new_capacity, q.capacity());
 
-  // Shrink to fit to a smaller size.
+  // Shrinking doesn't resize capacity.
   size_t capacity_2 = new_capacity / 2;
   q.resize(capacity_2);
+  EXPECT_EQ(capacity_2, q.size());
+  EXPECT_EQ(new_capacity, q.capacity());
+
+  // Shrink to fit to that size.
   q.shrink_to_fit();
   EXPECT_EQ(capacity_2, q.size());
   EXPECT_EQ(capacity_2, q.capacity());
-}
 
-TEST(CircularDeque, CapacityAutoShrink) {
-  size_t big_size = 1000u;
-  circular_deque<int> q;
-  q.resize(big_size);
-
-  size_t big_capacity = q.capacity();
-
-  // Delete 3/4 of the items.
-  for (size_t i = 0; i < big_size / 4 * 3; i++)
-    q.pop_back();
-
-  // The capacity should have shrunk by deleting that many items.
-  size_t medium_capacity = q.capacity();
-  EXPECT_GT(big_capacity, medium_capacity);
-
-  // Using resize to shrink should keep some extra capacity.
-  q.resize(1);
-  EXPECT_LT(1u, q.capacity());
-
+  // Shrink to 0, should have the same capacity.
   q.resize(0);
-  EXPECT_LT(0u, q.capacity());
+  EXPECT_EQ(0u, q.size());
+  EXPECT_EQ(capacity_2, q.capacity());
 
-  // Using clear() should delete everything.
-  q.clear();
+  // Shrinking to fit should give 0 capacity.
+  q.shrink_to_fit();
+  EXPECT_EQ(0u, q.size());
   EXPECT_EQ(0u, q.capacity());
 }
 
@@ -600,31 +587,24 @@ TEST(CircularDeque, ResizeDelete) {
   // The loops below assume the capacity will be set by resize().
   EXPECT_EQ(10u, q.capacity());
 
-  // Delete some via resize(). This is done so that the wasted items are
-  // still greater than the size() so that auto-shrinking is not triggered
-  // (which will mess up our destructor counting).
   counter = 0;
-  q.resize(8, DestructorCounter(&counter));
-  // 2 deleted ones + the one temporary in the resize() call.
-  EXPECT_EQ(3, counter);
+  q.resize(5, DestructorCounter(&counter));
+  // 5 deleted ones + the one temporary in the resize() call.
+  EXPECT_EQ(6, counter);
 
-  // Cycle through some items so two items will cross the boundary in the
-  // 11-item buffer (one more than the capacity).
-  //   Before: x x x x x x x x . . .
-  //   After:  x . . . x x x x x x x
+  // Cycle through some items so the 5 remaining items will cross the boundary
+  // in the 11-item buffer (one more than the capacity).
   counter = 0;
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 7; i++) {
     q.emplace_back(&counter);
     q.pop_front();
   }
-  EXPECT_EQ(4, counter);  // Loop should have deleted 7 items.
+  EXPECT_EQ(7, counter);  // Loop should have deleted 7 items.
 
-  // Delete two items with resize, these should be on either side of the
-  // buffer wrap point.
   counter = 0;
-  q.resize(6, DestructorCounter(&counter));
-  // 2 deleted ones + the one temporary in the resize() call.
-  EXPECT_EQ(3, counter);
+  q.resize(1, DestructorCounter(&counter));
+  // 4 deleted ones + the one temporary in the resize() call.
+  EXPECT_EQ(5, counter);
 }
 
 /*

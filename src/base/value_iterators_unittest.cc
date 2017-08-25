@@ -58,7 +58,7 @@ TEST(ValueIteratorsTest, IsAssignable) {
 
 TEST(ValueIteratorsTest, DictIteratorOperatorStar) {
   DictStorage storage;
-  storage.emplace("0", std::make_unique<Value>(0));
+  storage.emplace("0", MakeUnique<Value>(0));
 
   using iterator = dict_iterator;
   iterator iter(storage.begin());
@@ -71,7 +71,7 @@ TEST(ValueIteratorsTest, DictIteratorOperatorStar) {
 
 TEST(ValueIteratorsTest, DictIteratorOperatorArrow) {
   DictStorage storage;
-  storage.emplace("0", std::make_unique<Value>(0));
+  storage.emplace("0", MakeUnique<Value>(0));
 
   using iterator = dict_iterator;
   iterator iter(storage.begin());
@@ -84,8 +84,8 @@ TEST(ValueIteratorsTest, DictIteratorOperatorArrow) {
 
 TEST(ValueIteratorsTest, DictIteratorPreIncrement) {
   DictStorage storage;
-  storage.emplace("0", std::make_unique<Value>(0));
-  storage.emplace("1", std::make_unique<Value>(1));
+  storage.emplace("0", MakeUnique<Value>(0));
+  storage.emplace("1", MakeUnique<Value>(1));
 
   using iterator = dict_iterator;
   iterator iter(storage.begin());
@@ -101,8 +101,8 @@ TEST(ValueIteratorsTest, DictIteratorPreIncrement) {
 
 TEST(ValueIteratorsTest, DictIteratorPostIncrement) {
   DictStorage storage;
-  storage.emplace("0", std::make_unique<Value>(0));
-  storage.emplace("1", std::make_unique<Value>(1));
+  storage.emplace("0", MakeUnique<Value>(0));
+  storage.emplace("1", MakeUnique<Value>(1));
 
   using iterator = dict_iterator;
   iterator iter(storage.begin());
@@ -117,8 +117,8 @@ TEST(ValueIteratorsTest, DictIteratorPostIncrement) {
 
 TEST(ValueIteratorsTest, DictIteratorPreDecrement) {
   DictStorage storage;
-  storage.emplace("0", std::make_unique<Value>(0));
-  storage.emplace("1", std::make_unique<Value>(1));
+  storage.emplace("0", MakeUnique<Value>(0));
+  storage.emplace("1", MakeUnique<Value>(1));
 
   using iterator = dict_iterator;
   iterator iter(++storage.begin());
@@ -134,8 +134,8 @@ TEST(ValueIteratorsTest, DictIteratorPreDecrement) {
 
 TEST(ValueIteratorsTest, DictIteratorPostDecrement) {
   DictStorage storage;
-  storage.emplace("0", std::make_unique<Value>(0));
-  storage.emplace("1", std::make_unique<Value>(1));
+  storage.emplace("0", MakeUnique<Value>(0));
+  storage.emplace("1", MakeUnique<Value>(1));
 
   using iterator = dict_iterator;
   iterator iter(++storage.begin());
@@ -157,7 +157,7 @@ TEST(ValueIteratorsTest, DictIteratorOperatorEQ) {
 
 TEST(ValueIteratorsTest, DictIteratorOperatorNE) {
   DictStorage storage;
-  storage.emplace("0", std::make_unique<Value>(0));
+  storage.emplace("0", MakeUnique<Value>(0));
 
   using iterator = dict_iterator;
   EXPECT_NE(iterator(storage.begin()), iterator(storage.end()));
@@ -165,7 +165,7 @@ TEST(ValueIteratorsTest, DictIteratorOperatorNE) {
 
 TEST(ValueIteratorsTest, ConstDictIteratorOperatorStar) {
   DictStorage storage;
-  storage.emplace("0", std::make_unique<Value>(0));
+  storage.emplace("0", MakeUnique<Value>(0));
 
   using iterator = const_dict_iterator;
   iterator iter(storage.begin());
@@ -175,7 +175,7 @@ TEST(ValueIteratorsTest, ConstDictIteratorOperatorStar) {
 
 TEST(ValueIteratorsTest, ConstDictIteratorOperatorArrow) {
   DictStorage storage;
-  storage.emplace("0", std::make_unique<Value>(0));
+  storage.emplace("0", MakeUnique<Value>(0));
 
   using iterator = const_dict_iterator;
   iterator iter(storage.begin());
@@ -185,8 +185,8 @@ TEST(ValueIteratorsTest, ConstDictIteratorOperatorArrow) {
 
 TEST(ValueIteratorsTest, ConstDictIteratorPreIncrement) {
   DictStorage storage;
-  storage.emplace("0", std::make_unique<Value>(0));
-  storage.emplace("1", std::make_unique<Value>(1));
+  storage.emplace("0", MakeUnique<Value>(0));
+  storage.emplace("1", MakeUnique<Value>(1));
 
   using iterator = const_dict_iterator;
   iterator iter(storage.begin());
@@ -202,8 +202,8 @@ TEST(ValueIteratorsTest, ConstDictIteratorPreIncrement) {
 
 TEST(ValueIteratorsTest, ConstDictIteratorPostIncrement) {
   DictStorage storage;
-  storage.emplace("0", std::make_unique<Value>(0));
-  storage.emplace("1", std::make_unique<Value>(1));
+  storage.emplace("0", MakeUnique<Value>(0));
+  storage.emplace("1", MakeUnique<Value>(1));
 
   using iterator = const_dict_iterator;
   iterator iter(storage.begin());
@@ -218,8 +218,8 @@ TEST(ValueIteratorsTest, ConstDictIteratorPostIncrement) {
 
 TEST(ValueIteratorsTest, ConstDictIteratorPreDecrement) {
   DictStorage storage;
-  storage.emplace("0", std::make_unique<Value>(0));
-  storage.emplace("1", std::make_unique<Value>(1));
+  storage.emplace("0", MakeUnique<Value>(0));
+  storage.emplace("1", MakeUnique<Value>(1));
 
   using iterator = const_dict_iterator;
   iterator iter(++storage.begin());
@@ -235,8 +235,8 @@ TEST(ValueIteratorsTest, ConstDictIteratorPreDecrement) {
 
 TEST(ValueIteratorsTest, ConstDictIteratorPostDecrement) {
   DictStorage storage;
-  storage.emplace("0", std::make_unique<Value>(0));
-  storage.emplace("1", std::make_unique<Value>(1));
+  storage.emplace("0", MakeUnique<Value>(0));
+  storage.emplace("1", MakeUnique<Value>(1));
 
   using iterator = const_dict_iterator;
   iterator iter(++storage.begin());
@@ -258,7 +258,7 @@ TEST(ValueIteratorsTest, ConstDictIteratorOperatorEQ) {
 
 TEST(ValueIteratorsTest, ConstDictIteratorOperatorNE) {
   DictStorage storage;
-  storage.emplace("0", std::make_unique<Value>(0));
+  storage.emplace("0", MakeUnique<Value>(0));
 
   using iterator = const_dict_iterator;
   EXPECT_NE(iterator(storage.begin()), iterator(storage.end()));
@@ -266,21 +266,20 @@ TEST(ValueIteratorsTest, ConstDictIteratorOperatorNE) {
 
 TEST(ValueIteratorsTest, DictIteratorProxy) {
   DictStorage storage;
-  storage.emplace("null", std::make_unique<Value>(Value::Type::NONE));
-  storage.emplace("bool", std::make_unique<Value>(Value::Type::BOOLEAN));
-  storage.emplace("int", std::make_unique<Value>(Value::Type::INTEGER));
-  storage.emplace("double", std::make_unique<Value>(Value::Type::DOUBLE));
-  storage.emplace("string", std::make_unique<Value>(Value::Type::STRING));
-  storage.emplace("blob", std::make_unique<Value>(Value::Type::BINARY));
-  storage.emplace("dict", std::make_unique<Value>(Value::Type::DICTIONARY));
-  storage.emplace("list", std::make_unique<Value>(Value::Type::LIST));
+  storage.emplace("null", MakeUnique<Value>(Value::Type::NONE));
+  storage.emplace("bool", MakeUnique<Value>(Value::Type::BOOLEAN));
+  storage.emplace("int", MakeUnique<Value>(Value::Type::INTEGER));
+  storage.emplace("double", MakeUnique<Value>(Value::Type::DOUBLE));
+  storage.emplace("string", MakeUnique<Value>(Value::Type::STRING));
+  storage.emplace("blob", MakeUnique<Value>(Value::Type::BINARY));
+  storage.emplace("dict", MakeUnique<Value>(Value::Type::DICTIONARY));
+  storage.emplace("list", MakeUnique<Value>(Value::Type::LIST));
 
-  using iterator = const_dict_iterator;
   using iterator_proxy = dict_iterator_proxy;
   iterator_proxy proxy(&storage);
 
   auto equal_to = [](const DictStorage::value_type& lhs,
-                     const iterator::reference& rhs) {
+                     const iterator_proxy::value_type& rhs) {
     return std::tie(lhs.first, *lhs.second) == std::tie(rhs.first, rhs.second);
   };
 
@@ -299,21 +298,20 @@ TEST(ValueIteratorsTest, DictIteratorProxy) {
 
 TEST(ValueIteratorsTest, ConstDictIteratorProxy) {
   DictStorage storage;
-  storage.emplace("null", std::make_unique<Value>(Value::Type::NONE));
-  storage.emplace("bool", std::make_unique<Value>(Value::Type::BOOLEAN));
-  storage.emplace("int", std::make_unique<Value>(Value::Type::INTEGER));
-  storage.emplace("double", std::make_unique<Value>(Value::Type::DOUBLE));
-  storage.emplace("string", std::make_unique<Value>(Value::Type::STRING));
-  storage.emplace("blob", std::make_unique<Value>(Value::Type::BINARY));
-  storage.emplace("dict", std::make_unique<Value>(Value::Type::DICTIONARY));
-  storage.emplace("list", std::make_unique<Value>(Value::Type::LIST));
+  storage.emplace("null", MakeUnique<Value>(Value::Type::NONE));
+  storage.emplace("bool", MakeUnique<Value>(Value::Type::BOOLEAN));
+  storage.emplace("int", MakeUnique<Value>(Value::Type::INTEGER));
+  storage.emplace("double", MakeUnique<Value>(Value::Type::DOUBLE));
+  storage.emplace("string", MakeUnique<Value>(Value::Type::STRING));
+  storage.emplace("blob", MakeUnique<Value>(Value::Type::BINARY));
+  storage.emplace("dict", MakeUnique<Value>(Value::Type::DICTIONARY));
+  storage.emplace("list", MakeUnique<Value>(Value::Type::LIST));
 
-  using iterator = const_dict_iterator;
   using iterator_proxy = const_dict_iterator_proxy;
   iterator_proxy proxy(&storage);
 
   auto equal_to = [](const DictStorage::value_type& lhs,
-                     const iterator::reference& rhs) {
+                     const iterator_proxy::value_type& rhs) {
     return std::tie(lhs.first, *lhs.second) == std::tie(rhs.first, rhs.second);
   };
 

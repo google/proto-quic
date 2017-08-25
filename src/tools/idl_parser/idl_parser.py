@@ -8,7 +8,7 @@
 #
 # IDL Parser
 #
-# The parser uses the PLY yacc library to build a set of parsing rules based
+# The parser is uses the PLY yacc library to build a set of parsing rules based
 # on Web IDL.
 #
 # Web IDL, and Web IDL grammar can be found at:
@@ -785,7 +785,7 @@ class IDLParser(object):
 
   def p_Type(self, p):
     """Type : SingleType
-            | UnionType Null"""
+            | UnionType TypeSuffix"""
     if len(p) == 2:
       p[0] = self.BuildProduction('Type', p, 1, p[1])
     else:
@@ -793,11 +793,11 @@ class IDLParser(object):
 
   def p_SingleType(self, p):
     """SingleType : NonAnyType
-                  | ANY"""
-    if p[1] != 'any':
+                  | ANY TypeSuffixStartingWithArray"""
+    if len(p) == 2:
       p[0] = p[1]
     else:
-      p[0] = self.BuildProduction('Any', p, 1)
+      p[0] = ListFromConcat(self.BuildProduction('Any', p, 1), p[2])
 
   def p_UnionType(self, p):
     """UnionType : '(' UnionMemberType OR UnionMemberType UnionMemberTypes ')'"""
@@ -806,11 +806,15 @@ class IDLParser(object):
 
   def p_UnionMemberType(self, p):
     """UnionMemberType : NonAnyType
-                       | UnionType Null"""
+                       | UnionType TypeSuffix
+                       | ANY '[' ']' TypeSuffix"""
     if len(p) == 2:
       p[0] = self.BuildProduction('Type', p, 1, p[1])
-    else:
+    elif len(p) == 3:
       p[0] = self.BuildProduction('Type', p, 1, ListFromConcat(p[1], p[2]))
+    else:
+      any_node = ListFromConcat(self.BuildProduction('Any', p, 1), p[4])
+      p[0] = self.BuildProduction('Type', p, 1, any_node)
 
   def p_UnionMemberTypes(self, p):
     """UnionMemberTypes : OR UnionMemberType UnionMemberTypes
@@ -823,9 +827,9 @@ class IDLParser(object):
   # differentiate between them and 'identifier', since p[1] would be a string in
   # both cases.
   def p_NonAnyType(self, p):
-    """NonAnyType : PrimitiveType Null
+    """NonAnyType : PrimitiveType TypeSuffix
                   | PromiseType Null
-                  | identifier Null
+                  | identifier TypeSuffix
                   | SEQUENCE '<' Type '>' Null
                   | FROZENARRAY '<' Type '>' Null
                   | RecordType Null"""
@@ -918,6 +922,27 @@ class IDLParser(object):
       p[0] = self.BuildNamed('Promise', p, 1, resolution_type)
     else:
       p[0] = self.BuildNamed('Promise', p, 1, p[3])
+
+  # Add support for sized array
+  def p_TypeSuffix(self, p):
+    """TypeSuffix : '[' integer ']' TypeSuffix
+                  | '[' ']' TypeSuffix
+                  | '?' TypeSuffixStartingWithArray
+                  | """
+    if len(p) == 5:
+      p[0] = self.BuildNamed('Array', p, 2, p[4])
+
+    if len(p) == 4:
+      p[0] = self.BuildProduction('Array', p, 1, p[3])
+
+    if len(p) == 3:
+      p[0] = ListFromConcat(self.BuildTrue('NULLABLE'), p[2])
+
+  def p_TypeSuffixStartingWithArray(self, p):
+    """TypeSuffixStartingWithArray : '[' ']' TypeSuffix
+                                   | """
+    if len(p) > 1:
+      p[0] = self.BuildProduction('Array', p, 0, p[3])
 
   def p_Null(self, p):
     """Null : '?'

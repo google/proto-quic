@@ -31,6 +31,7 @@ class KeyMobileSitesSmoothPage(page_module.Page):
         url=url, page_set=page_set, name=name,
         credentials_path='data/credentials.json', tags=tags,
         shared_page_state_class=shared_page_state.SharedMobilePageState)
+    self.archive_data_file = 'data/key_mobile_sites.json'
     self.action_on_load_complete = action_on_load_complete
 
   def RunPageInteractions(self, action_runner):

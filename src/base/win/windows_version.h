@@ -41,14 +41,11 @@ enum Version {
 
 // A rough bucketing of the available types of versions of Windows. This is used
 // to distinguish enterprise enabled versions from home versions and potentially
-// server versions. Keep these values in the same order, since they are used as
-// is for metrics histogram ids.
+// server versions.
 enum VersionType {
-  SUITE_HOME = 0,
+  SUITE_HOME,
   SUITE_PROFESSIONAL,
   SUITE_SERVER,
-  SUITE_ENTERPRISE,
-  SUITE_EDUCATION,
   SUITE_LAST,
 };
 

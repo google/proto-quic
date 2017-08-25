@@ -83,9 +83,7 @@ void ThreadActivityAnalyzer::AddGlobalInformation(
 
 GlobalActivityAnalyzer::GlobalActivityAnalyzer(
     std::unique_ptr<PersistentMemoryAllocator> allocator)
-    : allocator_(std::move(allocator)),
-      analysis_stamp_(0LL),
-      allocator_iterator_(allocator_.get()) {
+    : allocator_(std::move(allocator)), allocator_iterator_(allocator_.get()) {
   DCHECK(allocator_);
 }
 
@@ -234,7 +232,7 @@ std::vector<std::string> GlobalActivityAnalyzer::GetLogMessages() {
 }
 
 std::vector<GlobalActivityTracker::ModuleInfo>
-GlobalActivityAnalyzer::GetModules(int64_t pid) {
+GlobalActivityAnalyzer::GetModules() {
   std::vector<GlobalActivityTracker::ModuleInfo> modules;
 
   PersistentMemoryAllocator::Iterator iter(allocator_.get());
@@ -243,13 +241,6 @@ GlobalActivityAnalyzer::GetModules(int64_t pid) {
       (record =
            iter.GetNextOfObject<GlobalActivityTracker::ModuleInfoRecord>()) !=
       nullptr) {
-    int64_t process_id;
-    int64_t create_stamp;
-    if (!OwningProcess::GetOwningProcessId(&record->owner, &process_id,
-                                           &create_stamp) ||
-        pid != process_id || create_stamp > analysis_stamp_) {
-      continue;
-    }
     GlobalActivityTracker::ModuleInfo info;
     if (record->DecodeTo(&info, allocator_->GetAllocSize(
                                     allocator_->GetAsReference(record)))) {

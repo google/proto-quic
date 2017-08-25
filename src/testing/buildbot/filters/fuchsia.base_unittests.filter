@@ -29,9 +29,15 @@
 -SysInfoTest.AmountOfMem
 -SysInfoTest.AmountOfTotalDiskSpace
 
+# CancelableSyncSocket tests fail: https://crbug.com/741783
+-CancelableSyncSocket*
+
 # These tests all rely on being able to set the exit code of an externally
 # terminated process, which mx_task_kill() does not support.
 # https://crbug.com/753490.
+-ProcessTest.Terminate
+-ProcessTest.TerminateCurrentProcessImmediatelyWithNonZeroExitCode
+-ProcessTest.TerminateCurrentProcessImmediatelyWithZeroExitCode
 -ProcessTest.WaitForExitWithTimeout
 -ProcessUtilTest.GetTerminationStatusCrash
 -ProcessUtilTest.GetTerminationStatusSigKill
@@ -48,8 +54,3 @@
 -ProcessUtilTest.DelayedTermination
 -ProcessUtilTest.ImmediateTermination
 -TraceCategoryTest.ThreadRaces
-
-# This test expects a task to complete no later than 250ms after it's expected
-# to, but that's easily a poor assumption when running on QEMU without hardware
-# virtualization.
--*TaskSchedulerWorkerPoolImplTest.PostDelayedTask*

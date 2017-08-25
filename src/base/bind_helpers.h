@@ -282,7 +282,7 @@ class PassedWrapper {
 };
 
 template <typename T>
-using Unwrapper = BindUnwrapTraits<std::decay_t<T>>;
+using Unwrapper = BindUnwrapTraits<typename std::decay<T>::type>;
 
 template <typename T>
 auto Unwrap(T&& o) -> decltype(Unwrapper<T>::Unwrap(std::forward<T>(o))) {
@@ -438,7 +438,8 @@ static inline internal::OwnedWrapper<T> Owned(T* o) {
 // Both versions of Passed() prevent T from being an lvalue reference. The first
 // via use of enable_if, and the second takes a T* which will not bind to T&.
 template <typename T,
-          std::enable_if_t<!std::is_lvalue_reference<T>::value>* = nullptr>
+          typename std::enable_if<!std::is_lvalue_reference<T>::value>::type* =
+              nullptr>
 static inline internal::PassedWrapper<T> Passed(T&& scoper) {
   return internal::PassedWrapper<T>(std::move(scoper));
 }
@@ -537,9 +538,9 @@ template <typename Functor, typename... BoundArgs>
 struct CallbackCancellationTraits<
     Functor,
     std::tuple<BoundArgs...>,
-    std::enable_if_t<
+    typename std::enable_if<
         internal::IsWeakMethod<internal::FunctorTraits<Functor>::is_method,
-                               BoundArgs...>::value>> {
+                               BoundArgs...>::value>::type> {
   static constexpr bool is_cancellable = true;
 
   template <typename Receiver, typename... Args>

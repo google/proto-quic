@@ -140,10 +140,6 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
     // code.
     int GetPeerAddress(IPEndPoint* address) const;
 
-    // Copies the local udp address into |address| and returns a net error
-    // code.
-    int GetSelfAddress(IPEndPoint* address) const;
-
     // Returns the push promise index associated with the session.
     QuicClientPushPromiseIndex* GetPushPromiseIndex();
 
@@ -158,9 +154,6 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
                    const SpdyHeaderBlock& promise_request,
                    const SpdyHeaderBlock& promise_response) override;
     void OnRendezvousResult(QuicSpdyStream* stream) override;
-
-    // Returns true if the session's connection has sent or received any bytes.
-    bool WasEverUsed() const;
 
    private:
     friend class QuicChromiumClientSession;
@@ -178,11 +171,9 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
 
     // Called when the session is closed with a net error.
     void OnSessionClosed(QuicVersion quic_version,
-                         int net_error,
-                         QuicErrorCode quic_error,
+                         int error,
                          bool port_migration_detected,
-                         LoadTimingInfo::ConnectTiming connect_timing,
-                         bool was_ever_used);
+                         LoadTimingInfo::ConnectTiming connect_timing);
 
     // Called by |request| to create a stream.
     int TryCreateStream(StreamRequest* request);
@@ -200,8 +191,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
     // session is destroyed.
     NetLogWithSource net_log_;
     bool was_handshake_confirmed_;
-    int net_error_;
-    QuicErrorCode quic_error_;
+    int error_;
     bool port_migration_detected_;
     QuicServerId server_id_;
     QuicVersion quic_version_;
@@ -215,8 +205,6 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
     QuicClientPushPromiseIndex::TryHandle* push_handle_;
     CompletionCallback push_callback_;
     std::unique_ptr<QuicChromiumClientStream::Handle> push_stream_;
-
-    bool was_ever_used_;
   };
 
   // A helper class used to manage a request to create a stream.
@@ -261,8 +249,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
 
     // Called by |session_| for an asynchronous request when the stream
     // request has finished successfully.
-    void OnRequestCompleteSuccess(
-        std::unique_ptr<QuicChromiumClientStream::Handle> stream);
+    void OnRequestCompleteSuccess(QuicChromiumClientStream* stream);
 
     // Called by |session_| for an asynchronous request when the stream
     // request has finished with an error. Also called with ERR_ABORTED
@@ -272,7 +259,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
     QuicChromiumClientSession::Handle* session_;
     const bool requires_confirmation_;
     CompletionCallback callback_;
-    std::unique_ptr<QuicChromiumClientStream::Handle> stream_;
+    QuicChromiumClientStream* stream_;
     // For tracking how much time pending stream requests wait.
     base::TimeTicks pending_start_time_;
     State next_state_;
@@ -309,6 +296,8 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
       std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLog* net_log);
   ~QuicChromiumClientSession() override;
+
+  std::unique_ptr<QuicStream> CreateStream(QuicStreamId id) override;
 
   void Initialize() override;
 
@@ -502,8 +491,6 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
 
   typedef std::set<Handle*> HandleSet;
   typedef std::list<StreamRequest*> StreamRequestQueue;
-
-  bool WasConnectionEverUsed();
 
   QuicChromiumClientStream* CreateOutgoingReliableStreamImpl();
   QuicChromiumClientStream* CreateIncomingReliableStreamImpl(QuicStreamId id);

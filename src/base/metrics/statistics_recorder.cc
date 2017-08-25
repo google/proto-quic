@@ -7,10 +7,8 @@
 #include <memory>
 
 #include "base/at_exit.h"
-#include "base/debug/crash_logging.h"  // crbug/744734
 #include "base/debug/leak_annotations.h"
 #include "base/json/string_escape.h"
-#include "base/location.h"  // crbug/744734
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "base/metrics/histogram.h"
@@ -20,7 +18,6 @@
 #include "base/stl_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/values.h"
-#include "build/build_config.h"  // crbug/744734
 
 namespace {
 
@@ -36,6 +33,48 @@ bool HistogramNameLesser(const base::HistogramBase* a,
 }  // namespace
 
 namespace base {
+
+StatisticsRecorder::HistogramIterator::HistogramIterator(
+    const HistogramMap::iterator& iter, bool include_persistent)
+    : iter_(iter),
+      include_persistent_(include_persistent) {
+  // The starting location could point to a persistent histogram when such
+  // is not wanted. If so, skip it.
+  if (!include_persistent_ && iter_ != histograms_->end() &&
+      (iter_->second->flags() & HistogramBase::kIsPersistent)) {
+    // This operator will continue to skip until a non-persistent histogram
+    // is found.
+    operator++();
+  }
+}
+
+StatisticsRecorder::HistogramIterator::HistogramIterator(
+    const HistogramIterator& rhs)
+    : iter_(rhs.iter_),
+      include_persistent_(rhs.include_persistent_) {
+}
+
+StatisticsRecorder::HistogramIterator::~HistogramIterator() {}
+
+StatisticsRecorder::HistogramIterator&
+StatisticsRecorder::HistogramIterator::operator++() {
+  const HistogramMap::iterator histograms_end = histograms_->end();
+  if (iter_ == histograms_end)
+    return *this;
+
+  for (;;) {
+    ++iter_;
+    if (iter_ == histograms_end)
+      break;
+    if (!include_persistent_ && (iter_->second->flags() &
+                                 HistogramBase::kIsPersistent)) {
+      continue;
+    }
+    break;
+  }
+
+  return *this;
+}
 
 StatisticsRecorder::~StatisticsRecorder() {
   DCHECK(histograms_);
@@ -293,35 +332,37 @@ void StatisticsRecorder::PrepareDeltas(
     HistogramBase::Flags flags_to_set,
     HistogramBase::Flags required_flags,
     HistogramSnapshotManager* snapshot_manager) {
-  if (include_persistent)
-    ImportGlobalPersistentHistograms();
+  // This must be called *before* the lock is acquired below because it will
+  // call back into this object to register histograms. Those called methods
+  // will acquire the lock at that time.
+  ImportGlobalPersistentHistograms();
 
-  auto known = GetKnownHistograms(include_persistent);
-  snapshot_manager->PrepareDeltas(known.begin(), known.end(), flags_to_set,
-                                  required_flags);
+  base::AutoLock auto_lock(lock_.Get());
+  snapshot_manager->PrepareDeltas(begin(include_persistent), end(),
+                                  flags_to_set, required_flags);
 }
 
 // static
-void StatisticsRecorder::ValidateAllHistograms(
-    tracked_objects::Location* location) {
+void StatisticsRecorder::ValidateAllHistograms() {
+  // This must be called *before* the lock is acquired below because it will
+  // call back into this object to register histograms. Those called methods
+  // will acquire the lock at that time.
   ImportGlobalPersistentHistograms();
 
-  auto known = GetKnownHistograms(/*include_persistent=*/true);
+  base::AutoLock auto_lock(lock_.Get());
 
-  for (HistogramBase* h : known) {
-    const bool is_valid = h->ValidateHistogramContents(!location, 0);
+  HistogramBase* last_invalid_histogram = nullptr;
+  int invalid_count = 0;
+  HistogramIterator end_it = end();
+  for (HistogramIterator it = begin(true); it != end_it; ++it) {
+    const bool is_valid = (*it)->ValidateHistogramContents(false, 0);
     if (!is_valid) {
-#if !defined(OS_NACL)
-      // CrashKey is scoped so can't be inside "if (location)" block so the
-      // "!location" parameter to ValidatehistogramContents causes it to
-      // crash there if location is passed as null.
-      const std::string debug_string = base::StringPrintf(
-          "%s:%d", location->file_name(), location->line_number());
-      base::debug::ScopedCrashKey crash_key("from_location", debug_string);
-      h->ValidateHistogramContents(true, 0);
-#endif
+      ++invalid_count;
+      last_invalid_histogram = *it;
     }
   }
+  if (last_invalid_histogram)
+    last_invalid_histogram->ValidateHistogramContents(true, invalid_count);
 }
 
 // static
@@ -451,23 +492,18 @@ void StatisticsRecorder::UninitializeForTesting() {
 }
 
 // static
-std::vector<HistogramBase*> StatisticsRecorder::GetKnownHistograms(
+StatisticsRecorder::HistogramIterator StatisticsRecorder::begin(
     bool include_persistent) {
-  std::vector<HistogramBase*> known;
-  base::AutoLock auto_lock(lock_.Get());
-  if (!histograms_)
-    return known;
+  DCHECK(histograms_);
 
-  known.reserve(histograms_->size());
-  for (const auto& h : *histograms_) {
-    if (!include_persistent &&
-        (h.second->flags() & HistogramBase::kIsPersistent)) {
-      continue;
-    }
-    known.push_back(h.second);
-  }
+  HistogramMap::iterator iter_begin = histograms_->begin();
+  return HistogramIterator(iter_begin, include_persistent);
+}
 
-  return known;
+// static
+StatisticsRecorder::HistogramIterator StatisticsRecorder::end() {
+  HistogramMap::iterator iter_end = histograms_->end();
+  return HistogramIterator(iter_end, true);
 }
 
 // static

@@ -355,24 +355,8 @@ class QuicStreamFactory::Job {
 
   base::WeakPtr<Job> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
-  void PopulateNetErrorDetails(NetErrorDetails* details) const;
-
   // Returns the estimate of dynamically allocated memory in bytes.
   size_t EstimateMemoryUsage() const;
-
-  void AddRequest(QuicStreamRequest* request) {
-    stream_requests_.insert(request);
-  }
-
-  void RemoveRequest(QuicStreamRequest* request) {
-    auto request_iter = stream_requests_.find(request);
-    DCHECK(request_iter != stream_requests_.end());
-    stream_requests_.erase(request_iter);
-  }
-
-  const std::set<QuicStreamRequest*>& stream_requests() {
-    return stream_requests_;
-  }
 
  private:
   enum IoState {
@@ -398,9 +382,7 @@ class QuicStreamFactory::Job {
   AddressList address_list_;
   base::TimeTicks dns_resolution_start_time_;
   base::TimeTicks dns_resolution_end_time_;
-  std::set<QuicStreamRequest*> stream_requests_;
   base::WeakPtrFactory<Job> weak_factory_;
-
   DISALLOW_COPY_AND_ASSIGN(Job);
 };
 
@@ -490,15 +472,6 @@ void QuicStreamFactory::Job::Cancel() {
     session_->connection()->CloseConnection(
         QUIC_CONNECTION_CANCELLED, "New job canceled.",
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
-}
-
-void QuicStreamFactory::Job::PopulateNetErrorDetails(
-    NetErrorDetails* details) const {
-  if (!session_)
-    return;
-  details->connection_info = QuicHttpStream::ConnectionInfoFromQuicVersion(
-      session_->connection()->version());
-  details->quic_connection_error = session_->error();
 }
 
 size_t QuicStreamFactory::Job::EstimateMemoryUsage() const {
@@ -620,14 +593,10 @@ int QuicStreamRequest::Request(const HostPortPair& destination,
                                const GURL& url,
                                QuicStringPiece method,
                                const NetLogWithSource& net_log,
-                               NetErrorDetails* net_error_details,
                                const CompletionCallback& callback) {
   DCHECK_NE(quic_version, QUIC_VERSION_UNSUPPORTED);
-  DCHECK(net_error_details);
   DCHECK(callback_.is_null());
   DCHECK(factory_);
-
-  net_error_details_ = net_error_details;
   server_id_ = QuicServerId(HostPortPair::FromURL(url), privacy_mode);
 
   int rv = factory_->Create(server_id_, destination, quic_version,
@@ -846,6 +815,7 @@ void QuicStreamFactory::DumpMemoryStats(
       base::trace_event::EstimateMemoryUsage(session_peer_ip_) +
       base::trace_event::EstimateMemoryUsage(gone_away_aliases_) +
       base::trace_event::EstimateMemoryUsage(active_jobs_) +
+      base::trace_event::EstimateMemoryUsage(job_requests_map_) +
       base::trace_event::EstimateMemoryUsage(active_cert_verifier_jobs_);
   factory_dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameSize,
                           base::trace_event::MemoryAllocatorDump::kUnitsBytes,
@@ -938,7 +908,7 @@ int QuicStreamFactory::Create(const QuicServerId& server_id,
     net_log.AddEvent(
         NetLogEventType::HTTP_STREAM_JOB_BOUND_TO_QUIC_STREAM_FACTORY_JOB,
         job_net_log.source().ToEventParametersCallback());
-    it->second->AddRequest(request);
+    job_requests_map_[server_id].insert(request);
     return ERR_IO_PENDING;
   }
 
@@ -968,7 +938,7 @@ int QuicStreamFactory::Create(const QuicServerId& server_id,
   int rv = job->Run(base::Bind(&QuicStreamFactory::OnJobComplete,
                                base::Unretained(this), job.get()));
   if (rv == ERR_IO_PENDING) {
-    job->AddRequest(request);
+    job_requests_map_[server_id].insert(request);
     active_jobs_[server_id] = std::move(job);
     return rv;
   }
@@ -1034,33 +1004,37 @@ void QuicStreamFactory::OnJobComplete(Job* job, int rv) {
   // returns.
   const QuicServerId server_id(job->key().server_id());
 
-  auto iter = active_jobs_.find(server_id);
+  ServerIDRequestsMap::iterator requests_iter =
+      job_requests_map_.find(server_id);
   // TODO(xunjieli): Change following CHECKs back to DCHECKs after
   // crbug.com/750271 is fixed.
-  CHECK(iter != active_jobs_.end());
+  CHECK(requests_iter != job_requests_map_.end());
   if (rv == OK) {
     set_require_confirmation(false);
 
-    SessionMap::iterator session_it = active_sessions_.find(server_id);
-    CHECK(session_it != active_sessions_.end());
-    QuicChromiumClientSession* session = session_it->second;
-    for (auto* request : iter->second->stream_requests()) {
-      CHECK(request->server_id() == server_id);
-      // Do not notify |request| yet.
-      request->SetSession(session->CreateHandle());
+    if (!requests_iter->second.empty()) {
+      SessionMap::iterator session_it = active_sessions_.find(server_id);
+      CHECK(session_it != active_sessions_.end());
+      QuicChromiumClientSession* session = session_it->second;
+      for (QuicStreamRequest* request : requests_iter->second) {
+        CHECK(request->server_id() == server_id);
+        // Do not notify |request| yet.
+        request->SetSession(session->CreateHandle());
+      }
     }
   }
 
-  for (auto* request : iter->second->stream_requests()) {
+  // It's okay not to erase |request| from |requests_iter->second| because the
+  // entire RequestSet will be erased from |job_requests_map_|.
+  for (auto* request : requests_iter->second) {
     // Even though we're invoking callbacks here, we don't need to worry
     // about |this| being deleted, because the factory is owned by the
     // profile which can not be deleted via callbacks.
-    if (rv < 0) {
-      job->PopulateNetErrorDetails(request->net_error_details());
-    }
     request->OnRequestComplete(rv);
   }
-  active_jobs_.erase(iter);
+
+  active_jobs_.erase(server_id);
+  job_requests_map_.erase(requests_iter);
 }
 
 void QuicStreamFactory::OnCertVerifyJobComplete(CertVerifierJob* job, int rv) {
@@ -1129,8 +1103,10 @@ void QuicStreamFactory::OnBlackholeAfterHandshakeConfirmed(
 }
 
 void QuicStreamFactory::CancelRequest(QuicStreamRequest* request) {
-  auto job_iter = active_jobs_.find(request->server_id());
-  job_iter->second->RemoveRequest(request);
+  ServerIDRequestsMap::iterator requests_it =
+      job_requests_map_.find(request->server_id());
+  DCHECK(requests_it != job_requests_map_.end());
+  requests_it->second.erase(request);
 }
 
 void QuicStreamFactory::CloseAllSessions(int error, QuicErrorCode quic_error) {

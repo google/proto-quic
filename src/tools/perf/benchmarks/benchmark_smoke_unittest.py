@@ -45,8 +45,8 @@ def SmokeTestGenerator(benchmark, num_pages=1):
   # failing or flaky benchmark would disable a much wider swath of coverage
   # than is usally intended. Instead, if a particular benchmark is failing,
   # disable it in tools/perf/benchmarks/*.
-  @decorators.Disabled('chromeos')  # crbug.com/351114
-  @decorators.Disabled('android')  # crbug.com/641934
+  @benchmark_module.Disabled('chromeos')  # crbug.com/351114
+  @benchmark_module.Disabled('android')  # crbug.com/641934
   def BenchmarkSmokeTest(self):
     # Only measure a single page so that this test cycles reasonably quickly.
     benchmark.options['pageset_repeat'] = 1
@@ -104,7 +104,6 @@ _BLACK_LIST_TEST_MODULES = {
 _BLACK_LIST_TEST_NAMES = [
    'memory.long_running_idle_gmail_background_tbmv2',
    'tab_switching.typical_25',
-   'oortonline_tbmv2',
 ]
 
 

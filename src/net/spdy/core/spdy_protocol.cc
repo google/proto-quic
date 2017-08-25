@@ -208,13 +208,6 @@ const char* ErrorCodeToString(SpdyErrorCode error_code) {
 
 const char* const kHttp2Npn = "h2";
 
-const char* const kHttp2AuthorityHeader = ":authority";
-const char* const kHttp2MethodHeader = ":method";
-const char* const kHttp2PathHeader = ":path";
-const char* const kHttp2SchemeHeader = ":scheme";
-
-const char* const kHttp2StatusHeader = ":status";
-
 bool SpdyFrameIR::fin() const {
   return false;
 }

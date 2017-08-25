@@ -4,8 +4,6 @@
 
 #include "base/test/launcher/test_launcher.h"
 
-#include <stdio.h>
-
 #include <memory>
 
 #include "base/at_exit.h"
@@ -420,65 +418,76 @@ void DoLaunchChildTestProcess(
     const TestLauncher::GTestProcessLaunchedCallback& launched_callback) {
   TimeTicks start_time = TimeTicks::Now();
 
-  ScopedFILE output_file;
-  FilePath output_filename;
-  if (redirect_stdio) {
-    FILE* raw_output_file = CreateAndOpenTemporaryFile(&output_filename);
-    output_file.reset(raw_output_file);
-    CHECK(output_file);
-  }
+  // Redirect child process output to a file.
+  FilePath output_file;
+  CHECK(CreateTemporaryFile(&output_file));
 
   LaunchOptions options;
 #if defined(OS_WIN)
   options.inherit_mode = test_launch_options.inherit_mode;
   options.handles_to_inherit = test_launch_options.handles_to_inherit;
+
+  win::ScopedHandle handle;
+
   if (redirect_stdio) {
-    HANDLE handle =
-        reinterpret_cast<HANDLE>(_get_osfhandle(_fileno(output_file.get())));
-    CHECK_NE(INVALID_HANDLE_VALUE, handle);
+    handle.Set(CreateFile(output_file.value().c_str(), GENERIC_WRITE,
+                          FILE_SHARE_READ | FILE_SHARE_DELETE, nullptr,
+                          OPEN_EXISTING, FILE_ATTRIBUTE_TEMPORARY, NULL));
+    CHECK(handle.IsValid());
     options.stdin_handle = INVALID_HANDLE_VALUE;
-    options.stdout_handle = handle;
-    options.stderr_handle = handle;
+    options.stdout_handle = handle.Get();
+    options.stderr_handle = handle.Get();
     // See LaunchOptions.stdout_handle comments for why this compares against
     // FILE_TYPE_CHAR.
     if (options.inherit_mode == base::LaunchOptions::Inherit::kSpecific &&
-        GetFileType(handle) != FILE_TYPE_CHAR) {
-      options.handles_to_inherit.push_back(handle);
-    }
+        GetFileType(handle.Get()) != FILE_TYPE_CHAR)
+      options.handles_to_inherit.push_back(handle.Get());
   }
+
 #elif defined(OS_POSIX)
   options.new_process_group = true;
-  options.fds_to_remap = test_launch_options.fds_to_remap;
-  if (redirect_stdio) {
-    int output_file_fd = fileno(output_file.get());
-    CHECK_LE(0, output_file_fd);
-    options.fds_to_remap.push_back(
-        std::make_pair(output_file_fd, STDOUT_FILENO));
-    options.fds_to_remap.push_back(
-        std::make_pair(output_file_fd, STDERR_FILENO));
-  }
-
 #if defined(OS_LINUX)
   options.kill_on_parent_death = true;
-#endif
+#endif  // defined(OS_LINUX)
 
-#endif  // defined(OS_POSIX)
+  ScopedFD output_file_fd;
+
+  options.fds_to_remap = test_launch_options.fds_to_remap;
+  if (redirect_stdio) {
+    // Don't use O_CREATE here - CreateTemporaryFile should have created it.
+    // O_APPEND is necessary on Fuchsia, otherwise stdio/stderr will have
+    // independent seek positions, and trample one another (crbug.com/751253).
+    output_file_fd.reset(
+        open(output_file.value().c_str(), O_WRONLY | O_APPEND | O_TRUNC));
+    CHECK(output_file_fd.is_valid());
+
+    options.fds_to_remap.push_back(
+        std::make_pair(output_file_fd.get(), STDOUT_FILENO));
+    options.fds_to_remap.push_back(
+        std::make_pair(output_file_fd.get(), STDERR_FILENO));
+  }
+#endif
 
   bool was_timeout = false;
   int exit_code = LaunchChildTestProcessWithOptions(
       command_line, options, test_launch_options.flags, timeout,
       launched_callback, &was_timeout);
 
-  std::string output_file_contents;
   if (redirect_stdio) {
-    fflush(output_file.get());
-    output_file.reset();
-    CHECK(ReadFileToString(output_filename, &output_file_contents));
+#if defined(OS_WIN)
+    FlushFileBuffers(handle.Get());
+    handle.Close();
+#elif defined(OS_POSIX)
+    output_file_fd.reset();
+#endif
+  }
 
-    if (!DeleteFile(output_filename, false)) {
-      // This needs to be non-fatal at least for Windows.
-      LOG(WARNING) << "Failed to delete " << output_filename.AsUTF8Unsafe();
-    }
+  std::string output_file_contents;
+  CHECK(ReadFileToString(output_file, &output_file_contents));
+
+  if (!DeleteFile(output_file, false)) {
+    // This needs to be non-fatal at least for Windows.
+    LOG(WARNING) << "Failed to delete " << output_file.AsUTF8Unsafe();
   }
 
   // Run target callback on the thread it was originating from, not on
@@ -836,10 +845,10 @@ bool TestLauncher::Init() {
     // redirection experiment concludes https://crbug.com/622400.
     SequencedWorkerPool::EnableForProcess();
 
-    worker_pool_owner_ = std::make_unique<SequencedWorkerPoolOwner>(
+    worker_pool_owner_ = MakeUnique<SequencedWorkerPoolOwner>(
         parallel_jobs_, "test_launcher");
   } else {
-    worker_thread_ = std::make_unique<Thread>("test_launcher");
+    worker_thread_ = MakeUnique<Thread>("test_launcher");
     worker_thread_->Start();
   }
 

@@ -57,7 +57,6 @@ class MediaToughVideoCases(perf_benchmark.PerfBenchmark):
   """Obtains media metrics for key user scenarios."""
   test = media.Media
   page_set = page_sets.ToughVideoCasesPageSet
-  SUPPORTED_PLATFORMS = [story.expectations.ALL_DESKTOP]
 
   @classmethod
   def Name(cls):
@@ -66,7 +65,8 @@ class MediaToughVideoCases(perf_benchmark.PerfBenchmark):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass
+        self.PermanentlyDisableBenchmark(
+            [story.expectations.ALL_MOBILE], 'Desktop Benchmark')
     return StoryExpectations()
 
 
@@ -79,7 +79,6 @@ class MediaAndroidToughVideoCases(perf_benchmark.PerfBenchmark):
   tag = 'android'
   page_set = page_sets.ToughVideoCasesPageSet
   options = {'story_tag_filter_exclude': 'is_4k,is_50fps'}
-  SUPPORTED_PLATFORMS = [story.expectations.ANDROID_NOT_WEBVIEW]
 
   @classmethod
   def Name(cls):
@@ -88,7 +87,8 @@ class MediaAndroidToughVideoCases(perf_benchmark.PerfBenchmark):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass
+        self.PermanentlyDisableBenchmark(
+            [story.expectations.ALL_DESKTOP], 'Android Benchmark')
     return StoryExpectations()
 
 
@@ -128,7 +128,6 @@ class _MediaTBMv2Benchmark(perf_benchmark.PerfBenchmark):
 class MediaToughVideoCasesTBMv2(_MediaTBMv2Benchmark):
   """Obtains media metrics using TBMv2.
   Will eventually replace MediaToughVideoCases class."""
-  SUPPORTED_PLATFORMS = [story.expectations.ALL_DESKTOP]
 
   @classmethod
   def Name(cls):
@@ -144,7 +143,8 @@ class MediaToughVideoCasesTBMv2(_MediaTBMv2Benchmark):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass
+        self.PermanentlyDisableBenchmark(
+            [story.expectations.ALL_MOBILE], 'Desktop Benchmark')
     return StoryExpectations()
 
 
@@ -157,7 +157,6 @@ class MediaAndroidToughVideoCasesTBMv2(_MediaTBMv2Benchmark):
 
   tag = 'android'
   options = {'story_tag_filter_exclude': 'is_4k,is_50fps'}
-  SUPPORTED_PLATFORMS = [story.expectations.ANDROID_NOT_WEBVIEW]
 
   @classmethod
   def Name(cls):
@@ -166,7 +165,8 @@ class MediaAndroidToughVideoCasesTBMv2(_MediaTBMv2Benchmark):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass
+        self.PermanentlyDisableBenchmark(
+            [story.expectations.ALL_DESKTOP], 'Android Benchmark')
     return StoryExpectations()
 
   def SetExtraBrowserOptions(self, options):
@@ -189,6 +189,7 @@ class MediaAndroidToughVideoCasesTBMv2(_MediaTBMv2Benchmark):
     return not _IGNORED_STATS_RE.search(value.name)
 
 
+@benchmark.Disabled('all')  # crbug/676345
 @benchmark.Owner(emails=['crouleau@chromium.org', 'videostack-eng@google.com'],
                  component='Internals>Media')
 class MediaNetworkSimulation(perf_benchmark.PerfBenchmark):

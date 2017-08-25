@@ -33,9 +33,9 @@ class _BattOrBenchmark(perf_benchmark.PerfBenchmark):
     return not possible_browser.platform.HasBattOrConnected()
 
 
+@benchmark.Enabled('mac')
 @benchmark.Owner(emails=['charliea@chromium.org'])
 class BattOrTrivialPages(_BattOrBenchmark):
-  SUPPORTED_PLATFORMS = [story.expectations.ALL_MAC]
 
   def CreateStorySet(self, options):
     # We want it to wait for 30 seconds to be comparable to legacy power tests.
@@ -48,13 +48,13 @@ class BattOrTrivialPages(_BattOrBenchmark):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass
+        pass # Nothing disabled.
     return StoryExpectations()
 
 
+@benchmark.Enabled('mac')
 @benchmark.Owner(emails=['charliea@chromium.org'])
 class BattOrSteadyStatePages(_BattOrBenchmark):
-  SUPPORTED_PLATFORMS = [story.expectations.ALL_MAC]
 
   def CreateStorySet(self, options):
     # We want it to wait for 30 seconds to be comparable to legacy power tests.

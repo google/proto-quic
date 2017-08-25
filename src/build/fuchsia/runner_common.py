@@ -24,12 +24,6 @@ DIR_SOURCE_ROOT = os.path.abspath(
 SDK_ROOT = os.path.join(DIR_SOURCE_ROOT, 'third_party', 'fuchsia-sdk')
 SYMBOLIZATION_TIMEOUT_SECS = 10
 
-# The guest will get 192.168.3.9 from DHCP, while the host will be
-# accessible as 192.168.3.2 .
-GUEST_NET = '192.168.3.0/24'
-GUEST_IP_ADDRESS = '192.168.3.9'
-HOST_IP_ADDRESS = '192.168.3.2'
-
 
 def _RunAndCheck(dry_run, args):
   if dry_run:
@@ -41,10 +35,6 @@ def _RunAndCheck(dry_run, args):
       return 0
     except subprocess.CalledProcessError as e:
       return e.returncode
-
-
-def _IsRunningOnBot():
-  return int(os.environ.get('CHROME_HEADLESS', 0)) != 0
 
 
 def _DumpFile(dry_run, name, description):
@@ -167,23 +157,11 @@ def BuildBootfs(output_directory, runtime_deps, bin_name, child_args,
   # Generate a script that runs the binaries and shuts down QEMU (if used).
   autorun_file = tempfile.NamedTemporaryFile()
   autorun_file.write('#!/bin/sh\n')
-  if _IsRunningOnBot():
-    # We drop to -smp 1 to avoid counterintuitive observations on the realtime
-    # clock, but keep the concurrency at the default of 4. Insert at the
-    # beginning of the list so that if the real command line provides a specific
-    # value later, it will be used.
-    child_args.insert(0, '--test-launcher-jobs=4')
-
-    # TODO(scottmg): Passed through for https://crbug.com/755282.
+  if int(os.environ.get('CHROME_HEADLESS', 0)) != 0:
     autorun_file.write('export CHROME_HEADLESS=1\n')
-
   autorun_file.write('echo Executing ' + os.path.basename(bin_name) + ' ' +
                      ' '.join(child_args) + '\n')
-
-  # Due to Fuchsia's object name length limit being small, we cd into /system
-  # and set PATH to "." to reduce the length of the main executable path.
-  autorun_file.write('cd /system\n')
-  autorun_file.write('PATH=. ' + os.path.basename(bin_name))
+  autorun_file.write('/system/' + os.path.basename(bin_name))
   for arg in child_args:
     autorun_file.write(' "%s"' % arg);
   autorun_file.write('\n')
@@ -237,7 +215,6 @@ def _SymbolizeEntry(entry):
   filename_re = re.compile(r'at ([-._a-zA-Z0-9/+]+):(\d+)')
   raw, frame_id = entry['raw'], entry['frame_id']
   prefix = '#%s: ' % frame_id
-
   if entry.has_key('debug_binary') and entry.has_key('pc_offset'):
     # Invoke addr2line on the host-side binary to resolve the symbol.
     addr2line_output = subprocess.check_output(
@@ -275,16 +252,11 @@ def _FindDebugBinary(entry, file_mapping):
   if binary.startswith(app_prefix):
     binary = binary[len(app_prefix):]
 
-  # We change directory into /system/ before running the target executable, so
-  # all paths are relative to "/system/", and will typically start with "./".
-  # Some crashes still uses the full filesystem path, so cope with that as well.
-  system_prefix = '/system/'
-  cwd_prefix = './'
-  if binary.startswith(cwd_prefix):
-    binary = binary[len(cwd_prefix):]
-  elif binary.startswith(system_prefix):
-    binary = binary[len(system_prefix):]
-  # Allow any other paths to pass-through; sometimes neither prefix is present.
+  # Names in |file_mapping| are all relative to "/system/".
+  path_prefix = '/system/'
+  if not binary.startswith(path_prefix):
+    return None
+  binary = binary[len(path_prefix):]
 
   if binary in file_mapping:
     return file_mapping[binary]
@@ -327,7 +299,7 @@ def _ParallelSymbolizeBacktrace(backtrace, file_mapping):
   return symbolized
 
 
-def RunFuchsia(bootfs_and_manifest, use_device, dry_run):
+def RunFuchsia(bootfs_and_manifest, use_device, dry_run, interactive):
   bootfs, bootfs_manifest = bootfs_and_manifest
   kernel_path = os.path.join(SDK_ROOT, 'kernel', 'magenta.bin')
 
@@ -342,16 +314,27 @@ def RunFuchsia(bootfs_and_manifest, use_device, dry_run):
   qemu_command = [qemu_path,
       '-m', '2048',
       '-nographic',
+      '-smp', '4',
       '-machine', 'q35',
       '-kernel', kernel_path,
       '-initrd', bootfs,
 
-      # Configure virtual network. It is used in the tests to connect to
-      # testserver running on the host.
-      '-netdev', 'user,id=net0,net=%s,dhcpstart=%s,host=%s' %
-          (GUEST_NET, GUEST_IP_ADDRESS, HOST_IP_ADDRESS),
+      # Configure virtual network. The guest will get 192.168.3.9 from
+      # DHCP, while the host will be accessible as 192.168.3.2 . The network
+      # is used in the tests to connect to testserver running on the host.
+      '-netdev', 'user,id=net0,net=192.168.3.0/24,dhcpstart=192.168.3.9,' +
+                 'host=192.168.3.2',
       '-device', 'e1000,netdev=net0',
+      ]
 
+  if interactive:
+    # TERM is passed through to make locally entered commands echo. With
+    # TERM=dumb what's typed isn't visible.
+    qemu_command.extend([
+      '-append', 'TERM=%s kernel.halt_on_panic=true' % os.environ.get('TERM'),
+    ])
+  else:
+    qemu_command.extend([
       # Use stdio for the guest OS only; don't attach the QEMU interactive
       # monitor.
       '-serial', 'stdio',
@@ -360,16 +343,19 @@ def RunFuchsia(bootfs_and_manifest, use_device, dry_run):
       # TERM=dumb tells the guest OS to not emit ANSI commands that trigger
       # noisy ANSI spew from the user's terminal emulator.
       '-append', 'TERM=dumb kernel.halt_on_panic=true',
-    ]
+    ])
 
-  if _IsRunningOnBot():
-    qemu_command += ['-smp', '1', '-cpu', 'Haswell,+smap,-check']
+  if int(os.environ.get('CHROME_HEADLESS', 0)) == 0:
+    qemu_command += ['-enable-kvm', '-cpu', 'host,migratable=no']
   else:
-    # Bot executions can't (currently) enable KVM.
-    qemu_command += ['-smp', '4', '-enable-kvm', '-cpu', 'host,migratable=no']
+    qemu_command += ['-cpu', 'Haswell,+smap,-check']
 
   if dry_run:
     print 'Run:', ' '.join(qemu_command)
+    return 0
+
+  if interactive:
+    subprocess.check_call(qemu_command)
     return 0
 
   # Set up backtrace-parsing regexps.

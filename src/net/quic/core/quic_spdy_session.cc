@@ -138,19 +138,18 @@ class QuicSpdySession::SpdyFramerVisitor
                     QUIC_INVALID_HEADERS_STREAM_DATA);
   }
 
-  void OnError(Http2DecoderAdapter::SpdyFramerError error) override {
+  void OnError(SpdyFramer::SpdyFramerError error) override {
     QuicErrorCode code = QUIC_INVALID_HEADERS_STREAM_DATA;
     switch (error) {
-      case Http2DecoderAdapter::SpdyFramerError::SPDY_DECOMPRESS_FAILURE:
+      case SpdyFramer::SpdyFramerError::SPDY_DECOMPRESS_FAILURE:
         code = QUIC_HEADERS_STREAM_DATA_DECOMPRESS_FAILURE;
         break;
       default:
         break;
     }
-    CloseConnection(
-        QuicStrCat("SPDY framing error: ",
-                   Http2DecoderAdapter::SpdyFramerErrorToString(error)),
-        code);
+    CloseConnection(QuicStrCat("SPDY framing error: ",
+                               SpdyFramer::SpdyFramerErrorToString(error)),
+                    code);
   }
 
   void OnDataFrameHeader(SpdyStreamId stream_id,
@@ -347,8 +346,8 @@ QuicSpdySession::QuicSpdySession(QuicConnection* connection,
       prev_max_timestamp_(QuicTime::Zero()),
       spdy_framer_(SpdyFramer::ENABLE_COMPRESSION),
       spdy_framer_visitor_(new SpdyFramerVisitor(this)) {
-  h2_deframer_.set_visitor(spdy_framer_visitor_.get());
-  h2_deframer_.set_debug_visitor(spdy_framer_visitor_.get());
+  spdy_framer_.set_visitor(spdy_framer_visitor_.get());
+  spdy_framer_.set_debug_visitor(spdy_framer_visitor_.get());
 }
 
 QuicSpdySession::~QuicSpdySession() {
@@ -434,7 +433,7 @@ size_t QuicSpdySession::ProcessHeaderData(const struct iovec& iov,
                                           QuicTime timestamp) {
   DCHECK(timestamp.IsInitialized());
   UpdateCurMaxTimeStamp(timestamp);
-  return h2_deframer_.ProcessInput(static_cast<char*>(iov.iov_base),
+  return spdy_framer_.ProcessInput(static_cast<char*>(iov.iov_base),
                                    iov.iov_len);
 }
 
@@ -745,7 +744,7 @@ void QuicSpdySession::SetHpackEncoderDebugVisitor(
 
 void QuicSpdySession::SetHpackDecoderDebugVisitor(
     std::unique_ptr<QuicHpackDebugVisitor> visitor) {
-  h2_deframer_.SetDecoderHeaderTableDebugVisitor(
+  spdy_framer_.SetDecoderHeaderTableDebugVisitor(
       std::unique_ptr<HeaderTableDebugVisitor>(new HeaderTableDebugVisitor(
           connection()->helper()->GetClock(), std::move(visitor))));
 }
@@ -802,6 +801,22 @@ void QuicSpdySession::CloseConnectionWithDetails(QuicErrorCode error,
                                                  const string& details) {
   connection()->CloseConnection(
       error, details, ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
+}
+
+QuicSpdyStream* QuicSpdySession::MaybeCreateIncomingDynamicStream(
+    QuicStreamId id) {
+  return static_cast<QuicSpdyStream*>(
+      QuicSession::MaybeCreateIncomingDynamicStream(id));
+}
+
+QuicSpdyStream* QuicSpdySession::MaybeCreateOutgoingDynamicStream(
+    SpdyPriority priority) {
+  auto* stream = static_cast<QuicSpdyStream*>(
+      QuicSession::MaybeCreateOutgoingDynamicStream(priority));
+  if (stream) {
+    stream->SetPriority(priority);
+  }
+  return stream;
 }
 
 }  // namespace net

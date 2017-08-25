@@ -66,9 +66,8 @@ public class EarlyTraceEvent {
             mEndThreadTimeMillis = SystemClock.currentThreadTimeMillis();
         }
 
-        @VisibleForTesting
         @SuppressLint("NewApi")
-        static long elapsedRealtimeNanos() {
+        private static long elapsedRealtimeNanos() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
                 return SystemClock.elapsedRealtimeNanos();
             } else {
@@ -138,7 +137,7 @@ public class EarlyTraceEvent {
      */
     static void disable() {
         synchronized (sLock) {
-            if (!enabled()) return;
+            if (sState != STATE_ENABLED) return;
             sState = STATE_FINISHING;
             maybeFinishLocked();
         }
@@ -154,19 +153,15 @@ public class EarlyTraceEvent {
         return (state == STATE_ENABLED || state == STATE_FINISHING);
     }
 
-    static boolean enabled() {
-        return sState == STATE_ENABLED;
-    }
-
     /** @see {@link TraceEvent#begin()}. */
     public static void begin(String name) {
         // begin() and end() are going to be called once per TraceEvent, this avoids entering a
         // synchronized block at each and every call.
-        if (!enabled()) return;
+        if (sState != STATE_ENABLED) return;
         Event event = new Event(name);
         Event conflictingEvent;
         synchronized (sLock) {
-            if (!enabled()) return;
+            if (sState != STATE_ENABLED) return;
             conflictingEvent = sPendingEvents.put(name, event);
         }
         if (conflictingEvent != null) {
@@ -186,13 +181,6 @@ public class EarlyTraceEvent {
             sCompletedEvents.add(event);
             if (sState == STATE_FINISHING) maybeFinishLocked();
         }
-    }
-
-    @VisibleForTesting
-    static void resetForTesting() {
-        sState = EarlyTraceEvent.STATE_DISABLED;
-        sCompletedEvents = null;
-        sPendingEvents = null;
     }
 
     private static void maybeFinishLocked() {

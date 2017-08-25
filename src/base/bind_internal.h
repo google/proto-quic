@@ -7,14 +7,15 @@
 
 #include <stddef.h>
 
+#include <tuple>
 #include <type_traits>
-#include <utility>
 
 #include "base/bind_helpers.h"
 #include "base/callback_internal.h"
 #include "base/memory/raw_scoped_refptr_mismatch_checker.h"
 #include "base/memory/weak_ptr.h"
 #include "base/template_util.h"
+#include "base/tuple.h"
 #include "build/build_config.h"
 
 namespace base {
@@ -98,9 +99,9 @@ struct HasRefCountedTypeAsRawPtr : std::false_type {};
 // parameters recursively.
 template <typename T, typename... Args>
 struct HasRefCountedTypeAsRawPtr<T, Args...>
-    : std::conditional_t<NeedsScopedRefptrButGetsRawPtr<T>::value,
-                         std::true_type,
-                         HasRefCountedTypeAsRawPtr<Args...>> {};
+    : std::conditional<NeedsScopedRefptrButGetsRawPtr<T>::value,
+                       std::true_type,
+                       HasRefCountedTypeAsRawPtr<Args...>>::type {};
 
 // ForceVoidReturn<>
 //
@@ -124,8 +125,9 @@ struct FunctorTraits;
 // base::Bind(), based on the fact that captureless lambdas can be convertible
 // to the function type while capturing lambdas can't.
 template <typename Functor>
-struct FunctorTraits<Functor,
-                     std::enable_if_t<IsConvertibleToRunType<Functor>::value>> {
+struct FunctorTraits<
+    Functor,
+    typename std::enable_if<IsConvertibleToRunType<Functor>::value>::type> {
   using RunType = ExtractCallableRunType<Functor>;
   static constexpr bool is_method = false;
   static constexpr bool is_nullable = false;
@@ -242,7 +244,7 @@ struct FunctorTraits<Callback<R(Args...), copy_mode, repeat_mode>> {
 };
 
 template <typename Functor>
-using MakeFunctorTraits = FunctorTraits<std::decay_t<Functor>>;
+using MakeFunctorTraits = FunctorTraits<typename std::decay<Functor>::type>;
 
 // InvokeHelper<>
 //
@@ -303,7 +305,7 @@ struct Invoker<StorageType, R(UnboundArgs...)> {
         std::tuple_size<decltype(storage->bound_args_)>::value;
     return RunImpl(std::move(storage->functor_),
                    std::move(storage->bound_args_),
-                   std::make_index_sequence<num_bound_args>(),
+                   MakeIndexSequence<num_bound_args>(),
                    std::forward<UnboundArgs>(unbound_args)...);
   }
 
@@ -314,8 +316,9 @@ struct Invoker<StorageType, R(UnboundArgs...)> {
     const StorageType* storage = static_cast<StorageType*>(base);
     static constexpr size_t num_bound_args =
         std::tuple_size<decltype(storage->bound_args_)>::value;
-    return RunImpl(storage->functor_, storage->bound_args_,
-                   std::make_index_sequence<num_bound_args>(),
+    return RunImpl(storage->functor_,
+                   storage->bound_args_,
+                   MakeIndexSequence<num_bound_args>(),
                    std::forward<UnboundArgs>(unbound_args)...);
   }
 
@@ -323,14 +326,16 @@ struct Invoker<StorageType, R(UnboundArgs...)> {
   template <typename Functor, typename BoundArgsTuple, size_t... indices>
   static inline R RunImpl(Functor&& functor,
                           BoundArgsTuple&& bound,
-                          std::index_sequence<indices...>,
+                          IndexSequence<indices...>,
                           UnboundArgs&&... unbound_args) {
     static constexpr bool is_method = MakeFunctorTraits<Functor>::is_method;
 
-    using DecayedArgsTuple = std::decay_t<BoundArgsTuple>;
+    using DecayedArgsTuple = typename std::decay<BoundArgsTuple>::type;
     static constexpr bool is_weak_call =
         IsWeakMethod<is_method,
-                     std::tuple_element_t<indices, DecayedArgsTuple>...>();
+                     typename std::tuple_element<
+                         indices,
+                         DecayedArgsTuple>::type...>::value;
 
     return InvokeHelper<is_weak_call, R>::MakeItSo(
         std::forward<Functor>(functor),
@@ -369,14 +374,14 @@ struct BindTypeHelper {
 };
 
 template <typename Functor>
-std::enable_if_t<FunctorTraits<Functor>::is_nullable, bool> IsNull(
-    const Functor& functor) {
+typename std::enable_if<FunctorTraits<Functor>::is_nullable, bool>::type
+IsNull(const Functor& functor) {
   return !functor;
 }
 
 template <typename Functor>
-std::enable_if_t<!FunctorTraits<Functor>::is_nullable, bool> IsNull(
-    const Functor&) {
+typename std::enable_if<!FunctorTraits<Functor>::is_nullable, bool>::type
+IsNull(const Functor&) {
   return false;
 }
 
@@ -384,7 +389,7 @@ std::enable_if_t<!FunctorTraits<Functor>::is_nullable, bool> IsNull(
 template <typename Functor, typename BoundArgsTuple, size_t... indices>
 bool ApplyCancellationTraitsImpl(const Functor& functor,
                                  const BoundArgsTuple& bound_args,
-                                 std::index_sequence<indices...>) {
+                                 IndexSequence<indices...>) {
   return CallbackCancellationTraits<Functor, BoundArgsTuple>::IsCancelled(
       functor, std::get<indices>(bound_args)...);
 }
@@ -396,9 +401,25 @@ bool ApplyCancellationTraits(const BindStateBase* base) {
   const BindStateType* storage = static_cast<const BindStateType*>(base);
   static constexpr size_t num_bound_args =
       std::tuple_size<decltype(storage->bound_args_)>::value;
-  return ApplyCancellationTraitsImpl(
-      storage->functor_, storage->bound_args_,
-      std::make_index_sequence<num_bound_args>());
+  return ApplyCancellationTraitsImpl(storage->functor_, storage->bound_args_,
+                                     MakeIndexSequence<num_bound_args>());
+};
+
+// Template helpers to detect using Bind() on a base::Callback without any
+// additional arguments. In that case, the original base::Callback object should
+// just be directly used.
+template <typename Functor, typename... BoundArgs>
+struct BindingCallbackWithNoArgs {
+  static constexpr bool value = false;
+};
+
+template <typename Signature,
+          typename... BoundArgs,
+          CopyMode copy_mode,
+          RepeatMode repeat_mode>
+struct BindingCallbackWithNoArgs<Callback<Signature, copy_mode, repeat_mode>,
+                                 BoundArgs...> {
+  static constexpr bool value = sizeof...(BoundArgs) == 0;
 };
 
 // BindState<>
@@ -422,6 +443,10 @@ struct BindState final : BindStateBase {
                   invoke_func,
                   std::forward<ForwardFunctor>(functor),
                   std::forward<ForwardBoundArgs>(bound_args)...) {
+    static_assert(!BindingCallbackWithNoArgs<Functor, BoundArgs...>::value,
+                  "Attempting to bind a base::Callback with no additional "
+                  "arguments: save a heap allocation and use the original "
+                  "base::Callback object");
   }
 
   Functor functor_;
@@ -465,33 +490,38 @@ struct MakeBindStateTypeImpl;
 
 template <typename Functor, typename... BoundArgs>
 struct MakeBindStateTypeImpl<false, Functor, BoundArgs...> {
-  static_assert(!HasRefCountedTypeAsRawPtr<std::decay_t<BoundArgs>...>::value,
+  static_assert(!HasRefCountedTypeAsRawPtr<
+                    typename std::decay<BoundArgs>::type...>::value,
                 "A parameter is a refcounted type and needs scoped_refptr.");
-  using Type = BindState<std::decay_t<Functor>, std::decay_t<BoundArgs>...>;
+  using Type = BindState<typename std::decay<Functor>::type,
+                         typename std::decay<BoundArgs>::type...>;
 };
 
 template <typename Functor>
 struct MakeBindStateTypeImpl<true, Functor> {
-  using Type = BindState<std::decay_t<Functor>>;
+  using Type = BindState<typename std::decay<Functor>::type>;
 };
 
 template <typename Functor, typename Receiver, typename... BoundArgs>
 struct MakeBindStateTypeImpl<true, Functor, Receiver, BoundArgs...> {
-  static_assert(!std::is_array<std::remove_reference_t<Receiver>>::value,
-                "First bound argument to a method cannot be an array.");
-  static_assert(!HasRefCountedTypeAsRawPtr<std::decay_t<BoundArgs>...>::value,
+  static_assert(
+      !std::is_array<typename std::remove_reference<Receiver>::type>::value,
+      "First bound argument to a method cannot be an array.");
+  static_assert(!HasRefCountedTypeAsRawPtr<
+                    typename std::decay<BoundArgs>::type...>::value,
                 "A parameter is a refcounted type and needs scoped_refptr.");
 
  private:
-  using DecayedReceiver = std::decay_t<Receiver>;
+  using DecayedReceiver = typename std::decay<Receiver>::type;
 
  public:
   using Type = BindState<
-      std::decay_t<Functor>,
-      std::conditional_t<std::is_pointer<DecayedReceiver>::value,
-                         scoped_refptr<std::remove_pointer_t<DecayedReceiver>>,
-                         DecayedReceiver>,
-      std::decay_t<BoundArgs>...>;
+      typename std::decay<Functor>::type,
+      typename std::conditional<
+          std::is_pointer<DecayedReceiver>::value,
+          scoped_refptr<typename std::remove_pointer<DecayedReceiver>::type>,
+          DecayedReceiver>::type,
+      typename std::decay<BoundArgs>::type...>;
 };
 
 template <typename Functor, typename... BoundArgs>

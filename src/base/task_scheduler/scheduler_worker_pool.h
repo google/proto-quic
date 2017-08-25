@@ -18,9 +18,6 @@
 namespace base {
 namespace internal {
 
-class DelayedTaskManager;
-class TaskTracker;
-
 // Interface for a worker pool.
 class BASE_EXPORT SchedulerWorkerPool {
  public:
@@ -29,51 +26,26 @@ class BASE_EXPORT SchedulerWorkerPool {
   // Returns a TaskRunner whose PostTask invocations result in scheduling tasks
   // in this SchedulerWorkerPool using |traits|. Tasks may run in any order and
   // in parallel.
-  scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
-      const TaskTraits& traits);
+  virtual scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
+      const TaskTraits& traits) = 0;
 
   // Returns a SequencedTaskRunner whose PostTask invocations result in
   // scheduling tasks in this SchedulerWorkerPool using |traits|. Tasks run one
   // at a time in posting order.
-  scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunnerWithTraits(
-      const TaskTraits& traits);
+  virtual scoped_refptr<SequencedTaskRunner>
+  CreateSequencedTaskRunnerWithTraits(const TaskTraits& traits) = 0;
 
   // Posts |task| to be executed by this SchedulerWorkerPool as part of
   // |sequence|. |task| won't be executed before its delayed run time, if any.
   // Returns true if |task| is posted.
-  bool PostTaskWithSequence(std::unique_ptr<Task> task,
-                            scoped_refptr<Sequence> sequence);
-
-  // Registers the worker pool in TLS.
-  void BindToCurrentThread();
-
-  // Prevents new tasks from being scheduled and waits for currently scheduled
-  // tasks to complete their execution. It is guaranteed that no thread will
-  // do work on behalf of this SchedulerWorkerPool after this returns.
-  // It is invalid to post a task once this is called. TaskTracker::Flush()
-  // can be called before this to complete existing tasks, which might
-  // otherwise post a task during JoinForTesting(). This can only be called
-  // once.
-  virtual void JoinForTesting() = 0;
-
- protected:
-  SchedulerWorkerPool(TaskTracker* task_tracker,
-                      DelayedTaskManager* delayed_task_manager);
+  virtual bool PostTaskWithSequence(std::unique_ptr<Task> task,
+                                    scoped_refptr<Sequence> sequence) = 0;
 
   // Posts |task| to be executed by this SchedulerWorkerPool as part of
   // |sequence|. This must only be called after |task| has gone through
   // PostTaskWithSequence() and after |task|'s delayed run time.
-  void PostTaskWithSequenceNow(std::unique_ptr<Task> task,
-                               scoped_refptr<Sequence> sequence);
-
-  // Submits |sequence| to the worker pool to be scheduled for execution.
-  virtual void ScheduleSequence(scoped_refptr<Sequence> sequence) = 0;
-
-  TaskTracker* const task_tracker_;
-  DelayedTaskManager* const delayed_task_manager_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SchedulerWorkerPool);
+  virtual void PostTaskWithSequenceNow(std::unique_ptr<Task> task,
+                                       scoped_refptr<Sequence> sequence) = 0;
 };
 
 }  // namespace internal

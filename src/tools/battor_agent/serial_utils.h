@@ -13,7 +13,7 @@ namespace battor {
 // Prints |bytes| as a space separated list of hex numbers (e.g. {'A', 'J'}
 // would return "0x41 0x4A").
 std::string CharArrayToString(const char* bytes, size_t len);
-std::string ByteVectorToString(const std::vector<uint8_t>& bytes);
+std::string CharVectorToString(const std::vector<char> bytes);
 
 }  // namespace battor
 

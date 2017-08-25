@@ -16,14 +16,14 @@ namespace {
 
 std::unique_ptr<PersistentHistogramAllocator> CreateHistogramAllocator(
     size_t bytes) {
-  return std::make_unique<PersistentHistogramAllocator>(
-      std::make_unique<LocalPersistentMemoryAllocator>(bytes, 0, ""));
+  return MakeUnique<PersistentHistogramAllocator>(
+      MakeUnique<LocalPersistentMemoryAllocator>(bytes, 0, ""));
 }
 
 std::unique_ptr<PersistentHistogramAllocator> DuplicateHistogramAllocator(
     PersistentHistogramAllocator* original) {
-  return std::make_unique<PersistentHistogramAllocator>(
-      std::make_unique<PersistentMemoryAllocator>(
+  return MakeUnique<PersistentHistogramAllocator>(
+      MakeUnique<PersistentMemoryAllocator>(
           const_cast<void*>(original->data()), original->length(), 0,
           original->Id(), original->Name(), false));
 }

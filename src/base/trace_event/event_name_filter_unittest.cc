@@ -20,17 +20,16 @@ const TraceEvent& MakeTraceEvent(const char* name) {
 }
 
 TEST(TraceEventNameFilterTest, Whitelist) {
-  auto empty_whitelist =
-      std::make_unique<EventNameFilter::EventNamesWhitelist>();
-  auto filter = std::make_unique<EventNameFilter>(std::move(empty_whitelist));
+  auto empty_whitelist = MakeUnique<EventNameFilter::EventNamesWhitelist>();
+  auto filter = MakeUnique<EventNameFilter>(std::move(empty_whitelist));
 
   // No events should be filtered if the whitelist is empty.
   EXPECT_FALSE(filter->FilterTraceEvent(MakeTraceEvent("foo")));
 
-  auto whitelist = std::make_unique<EventNameFilter::EventNamesWhitelist>();
+  auto whitelist = MakeUnique<EventNameFilter::EventNamesWhitelist>();
   whitelist->insert("foo");
   whitelist->insert("bar");
-  filter = std::make_unique<EventNameFilter>(std::move(whitelist));
+  filter = MakeUnique<EventNameFilter>(std::move(whitelist));
   EXPECT_TRUE(filter->FilterTraceEvent(MakeTraceEvent("foo")));
   EXPECT_FALSE(filter->FilterTraceEvent(MakeTraceEvent("fooz")));
   EXPECT_FALSE(filter->FilterTraceEvent(MakeTraceEvent("afoo")));

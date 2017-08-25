@@ -86,6 +86,7 @@ class _Top25RuntimeStats(perf_benchmark.PerfBenchmark):
     return False
 
 
+@benchmark.Disabled('android', 'win', 'reference')  # crbug.com/664318
 @benchmark.Owner(emails=['cbruni@chromium.org'])
 class V8Top25RuntimeStats(_Top25RuntimeStats):
   """Runtime Stats benchmark for a 25 top V8 web pages.
@@ -104,7 +105,5 @@ class V8Top25RuntimeStats(_Top25RuntimeStats):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        self.PermanentlyDisableBenchmark(
-            [story.expectations.ALL_ANDROID, story.expectations.ALL_WIN],
-            'crbug.com/664318')
+        pass # blank_page.html not disabled.
     return StoryExpectations()

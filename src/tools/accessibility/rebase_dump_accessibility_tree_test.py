@@ -44,13 +44,6 @@ def Fix(line):
       line = re.search('[^@]@([^@]*)@@@', line).group(1)
     except:
       pass
-  # For Android tests:
-  if line[:2] == 'I ':
-    try:
-      line = re.search('I  \d+\.\d+s run_tests_on_device\([0-9a-f]+\)  (.*)',
-                       line).group(1)
-    except:
-      pass
   return line
 
 def ParseLog(logdata):

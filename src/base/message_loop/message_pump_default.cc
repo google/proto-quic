@@ -4,7 +4,6 @@
 
 #include "base/message_loop/message_pump_default.h"
 
-#include "base/auto_reset.h"
 #include "base/logging.h"
 #include "base/threading/thread_restrictions.h"
 #include "build/build_config.h"
@@ -20,10 +19,11 @@ MessagePumpDefault::MessagePumpDefault()
       event_(WaitableEvent::ResetPolicy::AUTOMATIC,
              WaitableEvent::InitialState::NOT_SIGNALED) {}
 
-MessagePumpDefault::~MessagePumpDefault() {}
+MessagePumpDefault::~MessagePumpDefault() {
+}
 
 void MessagePumpDefault::Run(Delegate* delegate) {
-  AutoReset<bool> auto_reset_keep_running(&keep_running_, true);
+  DCHECK(keep_running_) << "Quit must have been called outside of Run!";
 
   for (;;) {
 #if defined(OS_MACOSX)
@@ -61,6 +61,8 @@ void MessagePumpDefault::Run(Delegate* delegate) {
     // Since event_ is auto-reset, we don't need to do anything special here
     // other than service each delegate method.
   }
+
+  keep_running_ = true;
 }
 
 void MessagePumpDefault::Quit() {

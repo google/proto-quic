@@ -26,8 +26,6 @@ namespace x509_util {
 
 // Returns true if two certificate handles refer to identical certificates.
 NET_EXPORT bool IsSameCertificate(CERTCertificate* a, CERTCertificate* b);
-NET_EXPORT bool IsSameCertificate(CERTCertificate* a, const X509Certificate* b);
-NET_EXPORT bool IsSameCertificate(const X509Certificate* a, CERTCertificate* b);
 
 // Returns a CERTCertificate handle from the DER-encoded representation. The
 // returned value may reference an already existing CERTCertificate object.
@@ -41,36 +39,8 @@ CreateCERTCertificateFromBytes(const uint8_t* data, size_t length);
 NET_EXPORT ScopedCERTCertificate
 CreateCERTCertificateFromX509Certificate(const X509Certificate* cert);
 
-// Returns a vector of CERTCertificates corresponding to |cert| and its
-// intermediates (if any). Returns an empty vector on failure.
-NET_EXPORT ScopedCERTCertificateList
-CreateCERTCertificateListFromX509Certificate(const X509Certificate* cert);
-
-// Parses all of the certificates possible from |data|. |format| is a
-// bit-wise OR of X509Certificate::Format, indicating the possible formats the
-// certificates may have been serialized as. If an error occurs, an empty
-// collection will be returned.
-NET_EXPORT ScopedCERTCertificateList
-CreateCERTCertificateListFromBytes(const char* data, size_t length, int format);
-
 // Increments the refcount of |cert| and returns a handle for that reference.
 NET_EXPORT ScopedCERTCertificate DupCERTCertificate(CERTCertificate* cert);
-
-// Creates an X509Certificate from |cert|, with intermediates from |chain|.
-// Returns NULL on failure.
-NET_EXPORT scoped_refptr<X509Certificate>
-CreateX509CertificateFromCERTCertificate(
-    CERTCertificate* cert,
-    const std::vector<CERTCertificate*>& chain);
-
-// Creates an X509Certificate from |cert|, with no intermediates.
-// Returns NULL on failure.
-NET_EXPORT scoped_refptr<X509Certificate>
-CreateX509CertificateFromCERTCertificate(CERTCertificate* cert);
-
-// Obtains the DER encoded certificate data for |cert|. On success, returns
-// true and writes the DER encoded certificate to |*der_encoded|.
-NET_EXPORT bool GetDEREncoded(CERTCertificate* cert, std::string* der_encoded);
 
 // Stores the values of all rfc822Name subjectAltNames from |cert_handle|
 // into |names|. If no names are present, clears |names|.

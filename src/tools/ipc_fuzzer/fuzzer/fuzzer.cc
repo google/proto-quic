@@ -602,13 +602,13 @@ struct FuzzTraits<base::DictionaryValue> {
         case base::Value::Type::DOUBLE: {
           double tmp;
           fuzzer->FuzzDouble(&tmp);
-          p->SetKey(property, base::Value(tmp));
+          p->SetDoubleWithoutPathExpansion(property, tmp);
           break;
         }
         case base::Value::Type::STRING: {
           std::string tmp;
           fuzzer->FuzzString(&tmp);
-          p->SetKey(property, base::Value(tmp));
+          p->SetStringWithoutPathExpansion(property, tmp);
           break;
         }
         case base::Value::Type::BINARY: {
@@ -1758,14 +1758,14 @@ class FuzzerHelper<IPC::MessageT<Meta, std::tuple<Ins...>, void>> {
   using Message = IPC::MessageT<Meta, std::tuple<Ins...>, void>;
 
   static std::unique_ptr<IPC::Message> Fuzz(IPC::Message* msg, Fuzzer* fuzzer) {
-    return FuzzImpl(msg, fuzzer, std::index_sequence_for<Ins...>());
+    return FuzzImpl(msg, fuzzer, base::MakeIndexSequence<sizeof...(Ins)>());
   }
 
  private:
   template <size_t... Ns>
   static std::unique_ptr<IPC::Message> FuzzImpl(IPC::Message* msg,
                                                 Fuzzer* fuzzer,
-                                                std::index_sequence<Ns...>) {
+                                                base::IndexSequence<Ns...>) {
     typename Message::Param p;
     if (msg) {
       Message::Read(static_cast<Message*>(msg), &p);
@@ -1785,14 +1785,14 @@ class FuzzerHelper<
   using Message = IPC::MessageT<Meta, std::tuple<Ins...>, std::tuple<Outs...>>;
 
   static std::unique_ptr<IPC::Message> Fuzz(IPC::Message* msg, Fuzzer* fuzzer) {
-    return FuzzImpl(msg, fuzzer, std::index_sequence_for<Ins...>());
+    return FuzzImpl(msg, fuzzer, base::MakeIndexSequence<sizeof...(Ins)>());
   }
 
  private:
   template <size_t... Ns>
   static std::unique_ptr<IPC::Message> FuzzImpl(IPC::Message* msg,
                                                 Fuzzer* fuzzer,
-                                                std::index_sequence<Ns...>) {
+                                                base::IndexSequence<Ns...>) {
     typename Message::SendParam p;
     Message* real_msg = static_cast<Message*>(msg);
     std::unique_ptr<Message> new_msg;

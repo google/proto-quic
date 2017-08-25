@@ -1,0 +1,45 @@
+{
+    "archives": {
+        "http://en.m.wikipedia.org/wiki/Science": {
+            "DEFAULT": "top_10_mobile_004.wpr"
+        },
+        "http://m.intl.taobao.com/group-purchase.html": {
+            "DEFAULT": "top_10_mobile_004.wpr"
+        },
+        "http://m.taobao.com/channel/act/mobile/20131111-women.html": {
+            "DEFAULT": "top_10_mobile_003.wpr"
+        },
+        "http://m.youtube.com/results?q=science": {
+            "DEFAULT": "top_10_mobile_004.wpr"
+        },
+        "http://search.yahoo.com/search;_ylt=?p=google": {
+            "DEFAULT": "top_10_mobile_004.wpr"
+        },
+        "http://www.amazon.com/gp/aw/s/?k=nexus": {
+            "DEFAULT": "top_10_mobile_004.wpr"
+        },
+        "http://www.baidu.com/s?word=google": {
+            "DEFAULT": "top_10_mobile_004.wpr"
+        },
+        "http://yandex.ru/touchsearch?text=science": {
+            "DEFAULT": "top_10_mobile_004.wpr"
+        },
+        "https://m.facebook.com/rihanna": {
+            "DEFAULT": "top_10_mobile_004.wpr"
+        },
+        "https://mobile.twitter.com/justinbieber&": {
+            "DEFAULT": "top_10_mobile_000.wpr"
+        },
+        "https://mobile.twitter.com/justinbieber?skip_interstitial=true": {
+            "DEFAULT": "top_10_mobile_004.wpr"
+        },
+        "https://www.google.co.uk/#hl=en&q=science": {
+            "DEFAULT": "top_10_mobile_004.wpr"
+        },
+        "https://www.google.com/#hl=en&q=science": {
+            "DEFAULT": "top_10_mobile_003.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
+}
