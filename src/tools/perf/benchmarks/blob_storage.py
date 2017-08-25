@@ -4,6 +4,7 @@
 
 from core import perf_benchmark
 
+from telemetry import benchmark
 from telemetry import story
 from telemetry.timeline import chrome_trace_category_filter
 from telemetry.web_perf import timeline_based_measurement
@@ -15,6 +16,7 @@ BLOB_CATEGORY = 'Blob'
 TIMELINE_REQUIRED_CATEGORY = 'blink.console'
 
 
+@benchmark.Disabled('android')  # crbug.com/739214
 class BlobStorage(perf_benchmark.PerfBenchmark):
   """Timeline based measurement benchmark for Blob Storage."""
 
@@ -50,20 +52,4 @@ class BlobStorage(perf_benchmark.PerfBenchmark):
       def SetExpectations(self):
         self.DisableStory('blob-mass-create-80MBx5', [story.expectations.ALL],
                           'crbug.com/510815')
-        self.DisableStory('blob-create-read-10MBx30',
-                          [story.expectations.ANDROID_ONE], 'crbug.com/739214')
-        self.DisableStory('blob-create-read-80MBx5',
-                          [story.expectations.ANDROID_ONE,
-                           story.expectations.ANDROID_NEXUS5X_WEBVIEW,
-                           story.expectations.ANDROID_NEXUS6_WEBVIEW],
-                          'crbug.com/739214')
-        self.DisableStory('blob-mass-create-10MBx30',
-                          [story.expectations.ANDROID_ONE,
-                           story.expectations.ANDROID_NEXUS5X_WEBVIEW,
-                           story.expectations.ANDROID_NEXUS6_WEBVIEW],
-                          'crbug.com/739214')
-        self.DisableStory('blob-mass-create-1MBx200',
-                          [story.expectations.ANDROID_ONE], 'crbug.com/739214')
-        self.DisableStory('blob-mass-create-150KBx200',
-                          [story.expectations.ANDROID_ONE], 'crbug.com/739214')
     return StoryExpectations()

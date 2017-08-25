@@ -17,6 +17,7 @@ class KeyDesktopMoveCasesPage(page_module.Page):
         url=url, page_set=page_set, name=name,
         credentials_path='data/credentials.json',
         shared_page_state_class=shared_page_state.SharedDesktopPageState)
+    self.archive_data_file = 'data/key_desktop_move_cases.json'
     self.credentials = credentials
 
 

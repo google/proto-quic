@@ -365,44 +365,41 @@ class JSONValueConverter {
 
   void RegisterIntField(const std::string& field_name,
                         int StructType::* field) {
-    fields_.push_back(
-        std::make_unique<internal::FieldConverter<StructType, int>>(
-            field_name, field, new internal::BasicValueConverter<int>));
+    fields_.push_back(MakeUnique<internal::FieldConverter<StructType, int>>(
+        field_name, field, new internal::BasicValueConverter<int>));
   }
 
   void RegisterStringField(const std::string& field_name,
                            std::string StructType::* field) {
     fields_.push_back(
-        std::make_unique<internal::FieldConverter<StructType, std::string>>(
+        MakeUnique<internal::FieldConverter<StructType, std::string>>(
             field_name, field, new internal::BasicValueConverter<std::string>));
   }
 
   void RegisterStringField(const std::string& field_name,
                            string16 StructType::* field) {
     fields_.push_back(
-        std::make_unique<internal::FieldConverter<StructType, string16>>(
+        MakeUnique<internal::FieldConverter<StructType, string16>>(
             field_name, field, new internal::BasicValueConverter<string16>));
   }
 
   void RegisterBoolField(const std::string& field_name,
                          bool StructType::* field) {
-    fields_.push_back(
-        std::make_unique<internal::FieldConverter<StructType, bool>>(
-            field_name, field, new internal::BasicValueConverter<bool>));
+    fields_.push_back(MakeUnique<internal::FieldConverter<StructType, bool>>(
+        field_name, field, new internal::BasicValueConverter<bool>));
   }
 
   void RegisterDoubleField(const std::string& field_name,
                            double StructType::* field) {
-    fields_.push_back(
-        std::make_unique<internal::FieldConverter<StructType, double>>(
-            field_name, field, new internal::BasicValueConverter<double>));
+    fields_.push_back(MakeUnique<internal::FieldConverter<StructType, double>>(
+        field_name, field, new internal::BasicValueConverter<double>));
   }
 
   template <class NestedType>
   void RegisterNestedField(
       const std::string& field_name, NestedType StructType::* field) {
     fields_.push_back(
-        std::make_unique<internal::FieldConverter<StructType, NestedType>>(
+        MakeUnique<internal::FieldConverter<StructType, NestedType>>(
             field_name, field, new internal::NestedValueConverter<NestedType>));
   }
 
@@ -412,7 +409,7 @@ class JSONValueConverter {
       FieldType StructType::* field,
       bool (*convert_func)(const StringPiece&, FieldType*)) {
     fields_.push_back(
-        std::make_unique<internal::FieldConverter<StructType, FieldType>>(
+        MakeUnique<internal::FieldConverter<StructType, FieldType>>(
             field_name, field,
             new internal::CustomFieldConverter<FieldType>(convert_func)));
   }
@@ -423,7 +420,7 @@ class JSONValueConverter {
       FieldType StructType::* field,
       bool (*convert_func)(const base::Value*, FieldType*)) {
     fields_.push_back(
-        std::make_unique<internal::FieldConverter<StructType, FieldType>>(
+        MakeUnique<internal::FieldConverter<StructType, FieldType>>(
             field_name, field,
             new internal::ValueFieldConverter<FieldType>(convert_func)));
   }
@@ -431,16 +428,17 @@ class JSONValueConverter {
   void RegisterRepeatedInt(
       const std::string& field_name,
       std::vector<std::unique_ptr<int>> StructType::*field) {
-    fields_.push_back(std::make_unique<internal::FieldConverter<
-                          StructType, std::vector<std::unique_ptr<int>>>>(
-        field_name, field, new internal::RepeatedValueConverter<int>));
+    fields_.push_back(
+        MakeUnique<internal::FieldConverter<StructType,
+                                            std::vector<std::unique_ptr<int>>>>(
+            field_name, field, new internal::RepeatedValueConverter<int>));
   }
 
   void RegisterRepeatedString(
       const std::string& field_name,
       std::vector<std::unique_ptr<std::string>> StructType::*field) {
     fields_.push_back(
-        std::make_unique<internal::FieldConverter<
+        MakeUnique<internal::FieldConverter<
             StructType, std::vector<std::unique_ptr<std::string>>>>(
             field_name, field,
             new internal::RepeatedValueConverter<std::string>));
@@ -449,7 +447,7 @@ class JSONValueConverter {
   void RegisterRepeatedString(
       const std::string& field_name,
       std::vector<std::unique_ptr<string16>> StructType::*field) {
-    fields_.push_back(std::make_unique<internal::FieldConverter<
+    fields_.push_back(MakeUnique<internal::FieldConverter<
                           StructType, std::vector<std::unique_ptr<string16>>>>(
         field_name, field, new internal::RepeatedValueConverter<string16>));
   }
@@ -457,7 +455,7 @@ class JSONValueConverter {
   void RegisterRepeatedDouble(
       const std::string& field_name,
       std::vector<std::unique_ptr<double>> StructType::*field) {
-    fields_.push_back(std::make_unique<internal::FieldConverter<
+    fields_.push_back(MakeUnique<internal::FieldConverter<
                           StructType, std::vector<std::unique_ptr<double>>>>(
         field_name, field, new internal::RepeatedValueConverter<double>));
   }
@@ -465,7 +463,7 @@ class JSONValueConverter {
   void RegisterRepeatedBool(
       const std::string& field_name,
       std::vector<std::unique_ptr<bool>> StructType::*field) {
-    fields_.push_back(std::make_unique<internal::FieldConverter<
+    fields_.push_back(MakeUnique<internal::FieldConverter<
                           StructType, std::vector<std::unique_ptr<bool>>>>(
         field_name, field, new internal::RepeatedValueConverter<bool>));
   }
@@ -476,7 +474,7 @@ class JSONValueConverter {
       std::vector<std::unique_ptr<NestedType>> StructType::*field,
       bool (*convert_func)(const base::Value*, NestedType*)) {
     fields_.push_back(
-        std::make_unique<internal::FieldConverter<
+        MakeUnique<internal::FieldConverter<
             StructType, std::vector<std::unique_ptr<NestedType>>>>(
             field_name, field,
             new internal::RepeatedCustomValueConverter<NestedType>(
@@ -488,7 +486,7 @@ class JSONValueConverter {
       const std::string& field_name,
       std::vector<std::unique_ptr<NestedType>> StructType::*field) {
     fields_.push_back(
-        std::make_unique<internal::FieldConverter<
+        MakeUnique<internal::FieldConverter<
             StructType, std::vector<std::unique_ptr<NestedType>>>>(
             field_name, field,
             new internal::RepeatedMessageConverter<NestedType>));

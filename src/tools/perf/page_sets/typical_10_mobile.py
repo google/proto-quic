@@ -13,6 +13,7 @@ class Typical10MobilePage(page_module.Page):
         url=url, page_set=page_set, name=name,
         credentials_path = 'data/credentials.json',
         shared_page_state_class=shared_page_state.SharedMobilePageState)
+    self.archive_data_file = 'data/typical_10_mobile.json'
 
   def RunPageInteractions(self, action_runner):
     action_runner.Wait(20)

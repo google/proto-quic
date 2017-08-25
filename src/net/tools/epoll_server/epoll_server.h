@@ -661,7 +661,7 @@ class EpollServer {
   };
 
 
-  // TODO(sushantj): Having this hash_set is avoidable. We currently have it
+  // TOOD(sushantj): Having this hash_set is avoidable. We currently have it
   // only so that we can enforce stringent checks that a caller can not register
   // the same alarm twice. One option is to have an implementation in which
   // this hash_set is used only in the debug mode.

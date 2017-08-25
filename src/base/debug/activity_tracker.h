@@ -33,6 +33,7 @@
 #include "base/strings/utf_string_conversions.h"
 #include "base/task_runner.h"
 #include "base/threading/platform_thread.h"
+#include "base/threading/thread_checker.h"
 #include "base/threading/thread_local_storage.h"
 
 namespace base {
@@ -731,24 +732,17 @@ class BASE_EXPORT ThreadActivityTracker {
  private:
   friend class ActivityTrackerTest;
 
-  bool CalledOnValidThread();
-
   std::unique_ptr<ActivityUserData> CreateUserDataForActivity(
       Activity* activity,
       ActivityTrackerMemoryAllocator* allocator);
 
   Header* const header_;        // Pointer to the Header structure.
   Activity* const stack_;       // The stack of activities.
-
-#if DCHECK_IS_ON()
-  // The ActivityTracker is thread bound, and will be invoked across all the
-  // sequences that run on the thread. A ThreadChecker does not work here, as it
-  // asserts on running in the same sequence each time.
-  const PlatformThreadRef thread_id_;  // The thread this instance is bound to.
-#endif
   const uint32_t stack_slots_;  // The total number of stack slots.
 
   bool valid_ = false;          // Tracks whether the data is valid or not.
+
+  base::ThreadChecker thread_checker_;
 
   DISALLOW_COPY_AND_ASSIGN(ThreadActivityTracker);
 };

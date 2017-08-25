@@ -63,7 +63,7 @@ class ActivityAnalyzerTest : public testing::Test {
 
   std::unique_ptr<ThreadActivityTracker> CreateActivityTracker() {
     std::unique_ptr<char[]> memory(new char[kStackSize]);
-    return std::make_unique<TestActivityTracker>(std::move(memory), kStackSize);
+    return MakeUnique<TestActivityTracker>(std::move(memory), kStackSize);
   }
 
   template <typename Function>
@@ -74,7 +74,7 @@ class ActivityAnalyzerTest : public testing::Test {
 
     PersistentMemoryAllocator* old_allocator = old_global->allocator();
     std::unique_ptr<PersistentMemoryAllocator> new_allocator(
-        std::make_unique<PersistentMemoryAllocator>(
+        MakeUnique<PersistentMemoryAllocator>(
             const_cast<void*>(old_allocator->data()), old_allocator->size(), 0,
             0, "", false));
     GlobalActivityTracker::CreateWithAllocator(std::move(new_allocator), 3,
@@ -168,7 +168,7 @@ TEST_F(ActivityAnalyzerTest, GlobalAnalyzerConstruction) {
 
   PersistentMemoryAllocator* allocator =
       GlobalActivityTracker::Get()->allocator();
-  GlobalActivityAnalyzer analyzer(std::make_unique<PersistentMemoryAllocator>(
+  GlobalActivityAnalyzer analyzer(MakeUnique<PersistentMemoryAllocator>(
       const_cast<void*>(allocator->data()), allocator->size(), 0, 0, "", true));
 
   // The only thread at this point is the test thread of this process.
@@ -227,10 +227,8 @@ TEST_F(ActivityAnalyzerTest, UserDataSnapshotTest) {
 
   PersistentMemoryAllocator* allocator =
       GlobalActivityTracker::Get()->allocator();
-  GlobalActivityAnalyzer global_analyzer(
-      std::make_unique<PersistentMemoryAllocator>(
-          const_cast<void*>(allocator->data()), allocator->size(), 0, 0, "",
-          true));
+  GlobalActivityAnalyzer global_analyzer(MakeUnique<PersistentMemoryAllocator>(
+      const_cast<void*>(allocator->data()), allocator->size(), 0, 0, "", true));
 
   ThreadActivityTracker* tracker =
       GlobalActivityTracker::Get()->GetOrCreateTrackerForCurrentThread();
@@ -328,10 +326,8 @@ TEST_F(ActivityAnalyzerTest, GlobalUserDataTest) {
 
   PersistentMemoryAllocator* allocator =
       GlobalActivityTracker::Get()->allocator();
-  GlobalActivityAnalyzer global_analyzer(
-      std::make_unique<PersistentMemoryAllocator>(
-          const_cast<void*>(allocator->data()), allocator->size(), 0, 0, "",
-          true));
+  GlobalActivityAnalyzer global_analyzer(MakeUnique<PersistentMemoryAllocator>(
+      const_cast<void*>(allocator->data()), allocator->size(), 0, 0, "", true));
 
   ActivityUserData& process_data = GlobalActivityTracker::Get()->process_data();
   ASSERT_NE(0U, process_data.id());
@@ -370,13 +366,11 @@ TEST_F(ActivityAnalyzerTest, GlobalUserDataTest) {
 
 TEST_F(ActivityAnalyzerTest, GlobalModulesTest) {
   GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3, 0);
-  GlobalActivityTracker* global = GlobalActivityTracker::Get();
 
-  PersistentMemoryAllocator* allocator = global->allocator();
-  GlobalActivityAnalyzer global_analyzer(
-      std::make_unique<PersistentMemoryAllocator>(
-          const_cast<void*>(allocator->data()), allocator->size(), 0, 0, "",
-          true));
+  PersistentMemoryAllocator* allocator =
+      GlobalActivityTracker::Get()->allocator();
+  GlobalActivityAnalyzer global_analyzer(MakeUnique<PersistentMemoryAllocator>(
+      const_cast<void*>(allocator->data()), allocator->size(), 0, 0, "", true));
 
   GlobalActivityTracker::ModuleInfo info1;
   info1.is_loaded = true;
@@ -389,9 +383,9 @@ TEST_F(ActivityAnalyzerTest, GlobalModulesTest) {
   info1.file = "anything";
   info1.debug_file = "elsewhere";
 
-  global->RecordModuleInfo(info1);
+  GlobalActivityTracker::Get()->RecordModuleInfo(info1);
   std::vector<GlobalActivityTracker::ModuleInfo> modules1;
-  modules1 = global_analyzer.GetModules(global_analyzer.GetFirstProcess());
+  modules1 = global_analyzer.GetModules();
   ASSERT_EQ(1U, modules1.size());
   GlobalActivityTracker::ModuleInfo& stored1a = modules1[0];
   EXPECT_EQ(info1.is_loaded, stored1a.is_loaded);
@@ -405,8 +399,8 @@ TEST_F(ActivityAnalyzerTest, GlobalModulesTest) {
   EXPECT_EQ(info1.debug_file, stored1a.debug_file);
 
   info1.is_loaded = false;
-  global->RecordModuleInfo(info1);
-  modules1 = global_analyzer.GetModules(global_analyzer.GetFirstProcess());
+  GlobalActivityTracker::Get()->RecordModuleInfo(info1);
+  modules1 = global_analyzer.GetModules();
   ASSERT_EQ(1U, modules1.size());
   GlobalActivityTracker::ModuleInfo& stored1b = modules1[0];
   EXPECT_EQ(info1.is_loaded, stored1b.is_loaded);
@@ -430,9 +424,9 @@ TEST_F(ActivityAnalyzerTest, GlobalModulesTest) {
   info2.file = "nothing";
   info2.debug_file = "farewell";
 
-  global->RecordModuleInfo(info2);
+  GlobalActivityTracker::Get()->RecordModuleInfo(info2);
   std::vector<GlobalActivityTracker::ModuleInfo> modules2;
-  modules2 = global_analyzer.GetModules(global_analyzer.GetFirstProcess());
+  modules2 = global_analyzer.GetModules();
   ASSERT_EQ(2U, modules2.size());
   GlobalActivityTracker::ModuleInfo& stored2 = modules2[1];
   EXPECT_EQ(info2.is_loaded, stored2.is_loaded);
@@ -451,7 +445,7 @@ TEST_F(ActivityAnalyzerTest, GlobalLogMessages) {
 
   PersistentMemoryAllocator* allocator =
       GlobalActivityTracker::Get()->allocator();
-  GlobalActivityAnalyzer analyzer(std::make_unique<PersistentMemoryAllocator>(
+  GlobalActivityAnalyzer analyzer(MakeUnique<PersistentMemoryAllocator>(
       const_cast<void*>(allocator->data()), allocator->size(), 0, 0, "", true));
 
   GlobalActivityTracker::Get()->RecordLogMessage("hello world");
@@ -479,7 +473,7 @@ TEST_F(ActivityAnalyzerTest, GlobalMultiProcess) {
   GlobalActivityTracker::Get()->process_data().SetInt("pid",
                                                       global->process_id());
 
-  GlobalActivityAnalyzer analyzer(std::make_unique<PersistentMemoryAllocator>(
+  GlobalActivityAnalyzer analyzer(MakeUnique<PersistentMemoryAllocator>(
       const_cast<void*>(allocator->data()), allocator->size(), 0, 0, "", true));
 
   AsOtherProcess(2002, [&global]() {

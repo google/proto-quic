@@ -104,19 +104,19 @@ std::unique_ptr<SampleCountIterator> SampleVectorBase::Iterator() const {
   // Handle the single-sample case.
   SingleSample sample = single_sample().Load();
   if (sample.count != 0) {
-    return std::make_unique<SingleSampleIterator>(
+    return MakeUnique<SingleSampleIterator>(
         bucket_ranges_->range(sample.bucket),
         bucket_ranges_->range(sample.bucket + 1), sample.count, sample.bucket);
   }
 
   // Handle the multi-sample case.
   if (counts() || MountExistingCountsStorage()) {
-    return std::make_unique<SampleVectorIterator>(counts(), counts_size(),
-                                                  bucket_ranges_);
+    return MakeUnique<SampleVectorIterator>(counts(), counts_size(),
+                                            bucket_ranges_);
   }
 
   // And the no-value case.
-  return std::make_unique<SampleVectorIterator>(nullptr, 0, bucket_ranges_);
+  return MakeUnique<SampleVectorIterator>(nullptr, 0, bucket_ranges_);
 }
 
 bool SampleVectorBase::AddSubtractImpl(SampleCountIterator* iter,

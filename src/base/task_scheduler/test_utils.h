@@ -8,14 +8,11 @@
 #include <memory>
 
 #include "base/memory/ref_counted.h"
-#include "base/task_runner.h"
-
 #include "base/task_scheduler/sequence.h"
 
 namespace base {
 namespace internal {
 
-class SchedulerWorkerPool;
 struct Task;
 
 namespace test {
@@ -26,13 +23,6 @@ enum class ExecutionMode { PARALLEL, SEQUENCED, SINGLE_THREADED };
 
 // Creates a Sequence and pushes |task| to it. Returns that sequence.
 scoped_refptr<Sequence> CreateSequenceWithTask(std::unique_ptr<Task> task);
-
-// Creates a TaskRunner that posts tasks to |worker_pool| with the
-// |execution_mode| execution mode and the WithBaseSyncPrimitives() trait.
-// Caveat: this does not support ExecutionMode::SINGLE_THREADED.
-scoped_refptr<TaskRunner> CreateTaskRunnerWithExecutionMode(
-    SchedulerWorkerPool* worker_pool,
-    test::ExecutionMode execution_mode);
 
 }  // namespace test
 }  // namespace internal

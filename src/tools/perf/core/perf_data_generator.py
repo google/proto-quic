@@ -593,7 +593,7 @@ def generate_isolate_script_entry(swarming_dimensions, test_args,
       'expiration': 20 * 60 * 60, # 20 hour timeout for now (crbug.com/753367)
       'hard_timeout': swarming_timeout if swarming_timeout else 10800, # 3 hours
       'ignore_task_failure': ignore_task_failure,
-      'io_timeout': 10 * 60,
+      'io_timeout': 3600,
       'dimension_sets': swarming_dimensions,
       'upload_test_results': False,
     }
@@ -682,7 +682,28 @@ def generate_cplusplus_isolate_script_test(dimension):
   ]
 
 
-def ShouldBenchmarksBeScheduled(
+def ShouldBenchmarkBeScheduled(benchmark, platform):
+  disabled_tags = decorators.GetDisabledAttributes(benchmark)
+  enabled_tags = decorators.GetEnabledAttributes(benchmark)
+
+  # Don't run benchmarks which are disabled on all platforms.
+  if 'all' in disabled_tags:
+    return False
+
+  # If we're not on android, don't run mobile benchmarks.
+  if platform != 'android' and 'android' in enabled_tags:
+    return False
+
+  # If we're on android, don't run benchmarks disabled on mobile
+  if platform == 'android' and 'android' in disabled_tags:
+    return False
+
+  return True
+
+
+# TODO(rnephew): Remove when no tests disable using
+# expectations.PermanentlyDisableBenchmark()
+def ShouldBenchmarksBeScheduledViaStoryExpectations(
     benchmark, name, os_name, browser_name):
   # StoryExpectations uses finder_options.browser_type, platform.GetOSName,
   # platform.GetDeviceTypeName, and platform.IsSvelte to determine if the
@@ -732,13 +753,7 @@ def ShouldBenchmarksBeScheduled(
   device_type_name = ANDROID_BOT_TO_DEVICE_TYPE_MAP.get(name)
   os_name = sanitize_os_name(os_name)
   e = ExpectationData(browser_name, os_name, device_type_name)
-
-  # TODO(rnephew): Remove when no tests disable using
-  # expectations.PermanentlyDisableBenchmark()
-  b = benchmark()
-  if b.GetExpectations().IsBenchmarkDisabled(e, e):
-    return False
-  return any(t.ShouldDisable(e, e) for t in b.SUPPORTED_PLATFORMS)
+  return not benchmark().GetExpectations().IsBenchmarkDisabled(e, e)
 
 
 def generate_telemetry_tests(name, tester_config, benchmarks,
@@ -759,6 +774,9 @@ def generate_telemetry_tests(name, tester_config, benchmarks,
     browser_name ='release'
 
   for benchmark in benchmarks:
+    if not ShouldBenchmarkBeScheduled(benchmark, tester_config['platform']):
+      continue
+
     # First figure out swarming dimensions this test needs to be triggered on.
     # For each set of dimensions it is only triggered on one of the devices
     swarming_dimensions = []
@@ -778,7 +796,7 @@ def generate_telemetry_tests(name, tester_config, benchmarks,
 
     # TODO(rnephew): Remove when no tests disable using
     # expectations.PermanentlyDisableBenchmark()
-    if not ShouldBenchmarksBeScheduled(
+    if not ShouldBenchmarksBeScheduledViaStoryExpectations(
         benchmark, name, swarming_dimensions[0]['os'], browser_name):
       continue
 

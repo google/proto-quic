@@ -4,7 +4,12 @@
 from benchmarks import memory
 from core import perf_benchmark
 from telemetry import benchmark
-from contrib.vr_benchmarks.vr_page_sets import webvr_sample_pages
+# TODO(bsheedy): Remove the try/except once the VR-specific run_benchmark
+# is replaced with the regular run_benchmark
+try:
+  from vr_page_sets import webvr_sample_pages
+except ImportError:
+  from contrib.vr_benchmarks.vr_page_sets import webvr_sample_pages
 
 
 @benchmark.Owner(emails=['bsheedy@chromium.org', 'leilei@chromium.org'])

@@ -109,11 +109,6 @@ declare_args() {
   use_cxx11 = false
 }
 
-declare_args() {
-  # C++11 may not be an option if Android test infrastructure is used.
-  use_cxx11_on_android = use_cxx11
-}
-
 if (is_clang && !is_nacl) {
   update_args = [ "--print-revision" ]
   if (llvm_force_head_revision) {
@@ -371,7 +366,13 @@ config("compiler") {
     ldflags += [ "-fuse-ld=lld" ]
   } else if (use_gold) {
     ldflags += [ "-fuse-ld=gold" ]
-    if (!is_android) {
+    if (is_android) {
+      # Use -mstackrealign due to a bug on ia32 Jelly Bean.
+      # See crbug.com/521527
+      if (current_cpu == "x86") {
+        cflags += [ "-mstackrealign" ]
+      }
+    } else {
       # On Android, this isn't needed.  gcc in the NDK knows to look next to
       # it with -fuse-ld=gold, and clang gets a --gcc-toolchain flag passed
       # above.
@@ -454,36 +455,24 @@ config("compiler") {
   # C11/C++11 compiler flags setup.
   # ---------------------------
   if (is_linux || is_android || (is_nacl && is_clang) || current_os == "aix") {
-    if (target_os == "android") {
-      cxx11_override = use_cxx11_on_android
-    } else {
-      cxx11_override = use_cxx11
-    }
-
     # gnu11/gnu++11 instead of c11/c++11 is needed because some code uses typeof()
     # (a GNU extension).
     # TODO(thakis): Eventually switch this to c++11 instead,
     # http://crbug.com/427584
     cflags_c += [ "-std=gnu11" ]
-    if (cxx11_override) {
+    if (use_cxx11) {
       # Override Chromium's default for projects that wish to stay on C++11.
       cflags_cc += [ "-std=gnu++11" ]
     } else {
       cflags_cc += [ "-std=gnu++14" ]
     }
   } else if (!is_win && !is_nacl) {
-    if (target_os == "android") {
-      cxx11_override = use_cxx11_on_android
-    } else {
-      cxx11_override = use_cxx11
-    }
-
     # TODO(mcgrathr) - the NaCl GCC toolchain doesn't support either gnu11/gnu++11
     # or c11/c++11; we technically don't need this toolchain any more, but there
     # are still a few buildbots using it, so until those are turned off
     # we need the !is_nacl clause and the (is_nacl && is_clang) clause, above.
     cflags_c += [ "-std=c11" ]
-    if (cxx11_override) {
+    if (use_cxx11) {
       cflags_cc += [ "-std=c++11" ]
     } else {
       cflags_cc += [ "-std=c++14" ]
@@ -896,14 +885,12 @@ config("compiler_codegen") {
 #   configs -= [ "//build/config/compiler:clang_stackrealign" ]
 # See https://crbug.com/556393 for details of where it must be avoided.
 config("clang_stackrealign") {
-  if (is_clang && current_cpu == "x86" && (is_android || is_linux)) {
-    # Android needs -mstackrealign due to a bug on ia32 Jelly Bean.
-    # See crbug.com/521527
-    cflags = [ "-mstackrealign" ]
-    if (is_linux) {
+  if (is_clang && current_cpu == "x86" && is_linux) {
+    cflags = [
       # Align the stack on 16-byte boundaries, http://crbug.com/418554.
-      cflags += [ "-mstack-alignment=16" ]
-    }
+      "-mstack-alignment=16",
+      "-mstackrealign",
+    ]
   }
 }
 

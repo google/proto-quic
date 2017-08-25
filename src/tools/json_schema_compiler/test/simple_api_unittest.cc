@@ -14,9 +14,9 @@ namespace {
 
 static std::unique_ptr<base::DictionaryValue> CreateTestTypeDictionary() {
   std::unique_ptr<base::DictionaryValue> value(new base::DictionaryValue());
-  value->SetKey("number", base::Value(1.1));
+  value->SetDoubleWithoutPathExpansion("number", 1.1);
   value->SetKey("integer", base::Value(4));
-  value->SetKey("string", base::Value("bling"));
+  value->SetStringWithoutPathExpansion("string", "bling");
   value->SetKey("boolean", base::Value(true));
   return value;
 }

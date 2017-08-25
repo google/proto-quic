@@ -13,7 +13,7 @@
 #include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
 #include "base/single_thread_task_runner.h"
-#include "services/device/public/interfaces/serial.mojom.h"
+#include "device/serial/serial.mojom.h"
 #include "tools/battor_agent/battor_connection.h"
 #include "tools/battor_agent/battor_error.h"
 #include "tools/battor_agent/battor_protocol_types.h"
@@ -59,16 +59,15 @@ class BattOrConnectionImpl
 
   // Reads the specified number of additional bytes and adds them to the pending
   // read buffer.
-  void BeginReadBytesForMessage(size_t bytes_to_read);
+  void BeginReadBytes(size_t bytes_to_read);
 
   // Internal callback for when bytes are read. This method may trigger
   // additional reads if any newly read bytes are escape bytes.
-  void OnBytesReadForMessage(int bytes_read,
-                             device::mojom::SerialReceiveError error);
+  void OnBytesRead(int bytes_read, device::mojom::SerialReceiveError error);
 
-  void EndReadBytesForMessage(bool success,
-                              BattOrMessageType type,
-                              std::unique_ptr<std::vector<char>> data);
+  void EndReadBytes(bool success,
+                    BattOrMessageType type,
+                    std::unique_ptr<std::vector<char>> data);
 
   // Pulls off the next complete message from already_read_buffer_, returning
   // its type and contents through out parameters and any error that occurred

@@ -12,7 +12,6 @@
 #include "base/environment.h"
 #include "base/files/file_path.h"
 #include "base/message_loop/message_loop.h"
-#include "base/path_service.h"
 #include "base/process/launch.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_number_conversions.h"
@@ -126,14 +125,6 @@ bool LocalTestServer::LaunchPython(const base::FilePath& testserver_path) {
       base::IntToString(reinterpret_cast<uintptr_t>(child_write)));
 
   base::LaunchOptions launch_options;
-
-  // Set CWD to source root.
-  if (!PathService::Get(base::DIR_SOURCE_ROOT,
-                        &launch_options.current_directory)) {
-    LOG(ERROR) << "Failed to get DIR_SOURCE_ROOT";
-    return false;
-  }
-
   // TODO(brettw) bug 748258: Share only explicit handles.
   launch_options.inherit_mode = base::LaunchOptions::Inherit::kAll;
   process_ = base::LaunchProcess(python_command, launch_options);

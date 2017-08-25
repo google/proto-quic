@@ -2429,6 +2429,9 @@ class ClientSessionThatDropsBody : public QuicSpdyClientSession {
     return QuicMakeUnique<ClientStreamThatDropsBody>(GetNextOutgoingStreamId(),
                                                      this);
   }
+  std::unique_ptr<QuicStream> CreateStream(QuicStreamId id) override {
+    return QuicMakeUnique<ClientStreamThatDropsBody>(id, this);
+  }
 };
 
 class MockableQuicClientThatDropsBody : public MockableQuicClient {

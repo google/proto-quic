@@ -67,7 +67,7 @@ bool ImportServerCert(
 
 int ImportUserCert(const net::CertificateList& certificates);
 
-bool SetCertTrust(CERTCertificate* cert,
+bool SetCertTrust(const net::X509Certificate* cert,
                   net::CertType type,
                   net::NSSCertDatabase::TrustBits trustBits);
 

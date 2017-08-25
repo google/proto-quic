@@ -1,0 +1,21 @@
+#!/bin/bash
+#
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# If no flags are given, prints the current cast shell flags.
+#
+# Otherwise, the given flags are used to REPLACE (not modify) the cast shell
+# flags. For example:
+#   adb_cast_shell_command_line --enable-media-thread-for-media-playback
+#
+# If multiple devices are connected, use the --device argument to specify the
+# device ID. You can use
+#   adb devices
+# ... to find the device's ID.
+#
+# To remove all content shell flags, pass an empty string for the flags:
+#   adb_cast_shell_command_line ""
+
+exec $(dirname $0)/adb_command_line.py --name castshell-command-line "$@"

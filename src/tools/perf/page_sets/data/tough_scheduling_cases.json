@@ -1,0 +1,99 @@
+{
+    "archives": {
+        "div_touch_handler.html": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "empty_touch_handler.html?baseline": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "empty_touch_handler.html?bounce": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "empty_touch_handler.html?bounce_slow_handler": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "empty_touch_handler.html?slow_handler": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "empty_touch_handler_desktop.html?bounce_desktop_slow_handler": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "empty_touch_handler_desktop.html?desktop_slow_handler": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "http://m.espn.go.com/nhl/rankings": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "http://www.latimes.com": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "raf.html": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "raf.html?gpu_bound": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "raf.html?heavy_first_frame": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "raf_animation.html": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "raf_canvas.html": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "raf_touch_animation.html": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "raf_touch_animation.html?heavy": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "raf_touch_animation.html?medium": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "simple_text_page.html": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "simple_text_page.html?main_busy": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "simple_text_page.html?main_very_busy": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "simple_text_page.html?many_layers": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "simple_text_page.html?medium_layers": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "simple_touch_drag.html": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "split_animation.html": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "sync_scroll_offset.html": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "touch_handler_scrolling.html": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "touch_handler_scrolling.html?janky_handler": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "touch_handler_scrolling.html?medium_handler": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "touch_handler_scrolling.html?occasionally_janky_handler": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "touch_handler_scrolling.html?slow_handler": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        },
+        "touch_handler_scrolling.html?super_slow_handler": {
+            "DEFAULT": "tough_scheduling_cases_001.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
+}

@@ -121,7 +121,6 @@ class NET_EXPORT_PRIVATE QuicStreamRequest {
               const GURL& url,
               QuicStringPiece method,
               const NetLogWithSource& net_log,
-              NetErrorDetails* net_error_details,
               const CompletionCallback& callback);
 
   void OnRequestComplete(int rv);
@@ -137,8 +136,6 @@ class NET_EXPORT_PRIVATE QuicStreamRequest {
   // Sets |session_|.
   void SetSession(std::unique_ptr<QuicChromiumClientSession::Handle> session);
 
-  NetErrorDetails* net_error_details() { return net_error_details_; }
-
   const QuicServerId& server_id() const { return server_id_; }
 
   const NetLogWithSource& net_log() const { return net_log_; }
@@ -148,7 +145,6 @@ class NET_EXPORT_PRIVATE QuicStreamRequest {
   QuicServerId server_id_;
   NetLogWithSource net_log_;
   CompletionCallback callback_;
-  NetErrorDetails* net_error_details_;  // Unowned.
   std::unique_ptr<QuicChromiumClientSession::Handle> session_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicStreamRequest);
@@ -396,6 +392,8 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   typedef std::map<IPEndPoint, SessionSet> IPAliasMap;
   typedef std::map<QuicChromiumClientSession*, IPEndPoint> SessionPeerIPMap;
   typedef std::map<QuicServerId, std::unique_ptr<Job>> JobMap;
+  typedef std::set<QuicStreamRequest*> RequestSet;
+  typedef std::map<QuicServerId, RequestSet> ServerIDRequestsMap;
   typedef std::map<QuicServerId, std::unique_ptr<CertVerifierJob>>
       CertVerifierJobMap;
 
@@ -512,6 +510,8 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   QuicCryptoClientConfig crypto_config_;
 
   JobMap active_jobs_;
+  // Map from QuicServerId to a set of non-owning QuicStreamRequest pointers.
+  ServerIDRequestsMap job_requests_map_;
 
   // Map of QuicServerId to owning CertVerifierJob.
   CertVerifierJobMap active_cert_verifier_jobs_;

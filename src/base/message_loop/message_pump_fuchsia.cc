@@ -7,7 +7,6 @@
 #include <magenta/status.h>
 #include <magenta/syscalls.h>
 
-#include "base/auto_reset.h"
 #include "base/logging.h"
 
 namespace base {
@@ -87,7 +86,8 @@ bool MessagePumpFuchsia::FdWatchController::StopWatchingFileDescriptor() {
   return success;
 }
 
-MessagePumpFuchsia::MessagePumpFuchsia() : weak_factory_(this) {
+MessagePumpFuchsia::MessagePumpFuchsia()
+    : keep_running_(true), weak_factory_(this) {
   CHECK_EQ(MX_OK, mx_port_create(0, port_.receive()));
 }
 
@@ -207,7 +207,7 @@ uint32_t MessagePumpFuchsia::MxHandleWatchController::WaitEnd(
 }
 
 void MessagePumpFuchsia::Run(Delegate* delegate) {
-  AutoReset<bool> auto_reset_keep_running(&keep_running_, true);
+  DCHECK(keep_running_);
 
   for (;;) {
     bool did_work = delegate->DoWork();
@@ -235,11 +235,9 @@ void MessagePumpFuchsia::Run(Delegate* delegate) {
 
     const mx_status_t wait_status =
         mx_port_wait(port_.get(), deadline, &packet, 0);
-    if (wait_status != MX_OK) {
-      if (wait_status != MX_ERR_TIMED_OUT) {
-        NOTREACHED() << "unexpected wait status: "
-                     << mx_status_get_string(wait_status);
-      }
+    if (wait_status != MX_OK && wait_status != MX_ERR_TIMED_OUT) {
+      NOTREACHED() << "unexpected wait status: "
+                   << mx_status_get_string(wait_status);
       continue;
     }
 
@@ -274,6 +272,8 @@ void MessagePumpFuchsia::Run(Delegate* delegate) {
       DCHECK_EQ(MX_PKT_TYPE_USER, packet.type);
     }
   }
+
+  keep_running_ = true;
 }
 
 void MessagePumpFuchsia::Quit() {

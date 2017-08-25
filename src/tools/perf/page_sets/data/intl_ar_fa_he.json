@@ -1,34 +1,34 @@
 {
     "archives": {
         "http://farsnews.com/": {
-            "DEFAULT": "intl_ar_fa_he_000.wprgo"
+            "DEFAULT": "intl_ar_fa_he_000.wpr"
         },
         "http://msn.co.il/": {
-            "DEFAULT": "intl_ar_fa_he_000.wprgo"
+            "DEFAULT": "intl_ar_fa_he_000.wpr"
         },
         "http://www.aljayyash.net/": {
-            "DEFAULT": "intl_ar_fa_he_000.wprgo"
+            "DEFAULT": "intl_ar_fa_he_000.wpr"
         },
         "http://www.google.com.sa/": {
-            "DEFAULT": "intl_ar_fa_he_000.wprgo"
+            "DEFAULT": "intl_ar_fa_he_000.wpr"
         },
         "http://www.islamweb.net/": {
-            "DEFAULT": "intl_ar_fa_he_000.wprgo"
+            "DEFAULT": "intl_ar_fa_he_000.wpr"
         },
         "http://www.kooora.com/default.aspx": {
-            "DEFAULT": "intl_ar_fa_he_000.wprgo"
+            "DEFAULT": "intl_ar_fa_he_000.wpr"
         },
         "http://www.masrawy.com/": {
-            "DEFAULT": "intl_ar_fa_he_000.wprgo"
+            "DEFAULT": "intl_ar_fa_he_000.wpr"
         },
         "http://www.startimes.com/f.aspx": {
-            "DEFAULT": "intl_ar_fa_he_000.wprgo"
+            "DEFAULT": "intl_ar_fa_he_000.wpr"
         },
         "http://www.walla.co.il/": {
-            "DEFAULT": "intl_ar_fa_he_000.wprgo"
+            "DEFAULT": "intl_ar_fa_he_000.wpr"
         },
         "http://ynet.co.il/": {
-            "DEFAULT": "intl_ar_fa_he_000.wprgo"
+            "DEFAULT": "intl_ar_fa_he_000.wpr"
         }
     },
     "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",

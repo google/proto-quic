@@ -134,7 +134,7 @@ MemoryDumpManager::MemoryDumpManager()
     : is_coordinator_(false),
       tracing_process_id_(kInvalidTracingProcessId),
       dumper_registrations_ignored_for_testing_(false),
-      heap_profiling_state_(HeapProfilingState::DISABLED) {
+      heap_profiling_enabled_(false) {
   // At this point the command line may not be initialized but we try to
   // enable the heap profiler to capture allocations as soon as possible.
   EnableHeapProfilingIfNeeded();
@@ -161,7 +161,7 @@ HeapProfilingMode MemoryDumpManager::GetHeapProfilingModeFromCommandLine() {
   if (!CommandLine::InitializedForCurrentProcess() ||
       !CommandLine::ForCurrentProcess()->HasSwitch(
           switches::kEnableHeapProfiling)) {
-    return kHeapProfilingModeDisabled;
+    return kHeapProfilingModeNone;
   }
 #if BUILDFLAG(USE_ALLOCATOR_SHIM) && !defined(OS_NACL)
   std::string profiling_mode =
@@ -178,65 +178,33 @@ HeapProfilingMode MemoryDumpManager::GetHeapProfilingModeFromCommandLine() {
 }
 
 void MemoryDumpManager::EnableHeapProfilingIfNeeded() {
-  {
-    AutoLock lock(lock_);
-    if (heap_profiling_state_ != HeapProfilingState::DISABLED)
-      return;
-  }
+  if (heap_profiling_enabled_)
+    return;
+
   HeapProfilingMode profiling_mode = GetHeapProfilingModeFromCommandLine();
-  if (profiling_mode != kHeapProfilingModeDisabled &&
-      profiling_mode != kHeapProfilingModeInvalid) {
-    EnableHeapProfiling(profiling_mode);
-  }
-}
-
-void MemoryDumpManager::EnableHeapProfiling(HeapProfilingMode profiling_mode) {
-#if BUILDFLAG(USE_ALLOCATOR_SHIM) && !defined(OS_NACL)
-  AutoLock lock(lock_);
-  // Should we not enable heap profiling if tracing is enabled, since
-  // session_state_ will not be initialized.
-  if (heap_profiling_state_ == HeapProfilingState::DISABLED_PERMANENTLY)
-    return;
-
-  if (heap_profiling_state_ == HeapProfilingState::DISABLED) {
-    switch (profiling_mode) {
-      case kHeapProfilingModePseudo:
-        AllocationContextTracker::SetCaptureMode(
-            AllocationContextTracker::CaptureMode::PSEUDO_STACK);
-        break;
-      case kHeapProfilingModeNative:
-        // If we don't have frame pointers then native tracing falls-back to
-        // using base::debug::StackTrace, which may be slow.
-        AllocationContextTracker::SetCaptureMode(
-            AllocationContextTracker::CaptureMode::NATIVE_STACK);
-        break;
-      case kHeapProfilingModeNoStack:
-        AllocationContextTracker::SetCaptureMode(
-            AllocationContextTracker::CaptureMode::NO_STACK);
-        break;
-      case kHeapProfilingModeTaskProfiler:
-        if (!base::debug::ThreadHeapUsageTracker::IsHeapTrackingEnabled())
-          base::debug::ThreadHeapUsageTracker::EnableHeapTracking();
-        return;  // Do not notify dump providers.
-      default:
-        return;  // Do not notify dump providers.
-    }
-    heap_profiling_state_ = HeapProfilingState::ENABLED;
-  } else if (profiling_mode == kHeapProfilingModeDisabled) {
-    heap_profiling_state_ = HeapProfilingState::DISABLED_PERMANENTLY;
-    AllocationContextTracker::SetCaptureMode(
-        AllocationContextTracker::CaptureMode::DISABLED);
-    DCHECK(!base::debug::ThreadHeapUsageTracker::IsHeapTrackingEnabled())
-        << "ThreadHeapUsageTracker cannot be disabled";
-  } else {
-    return;
+  switch (profiling_mode) {
+    case kHeapProfilingModeNone:
+    case kHeapProfilingModeInvalid:
+      return;
+    case kHeapProfilingModePseudo:
+      AllocationContextTracker::SetCaptureMode(
+          AllocationContextTracker::CaptureMode::PSEUDO_STACK);
+      break;
+    case kHeapProfilingModeNative:
+      // If we don't have frame pointers then native tracing falls-back to
+      // using base::debug::StackTrace, which may be slow.
+      AllocationContextTracker::SetCaptureMode(
+          AllocationContextTracker::CaptureMode::NATIVE_STACK);
+      break;
+    case kHeapProfilingModeTaskProfiler:
+      if (!base::debug::ThreadHeapUsageTracker::IsHeapTrackingEnabled())
+        base::debug::ThreadHeapUsageTracker::EnableHeapTracking();
+      break;
   }
 
-  for (auto mdp : dump_providers_) {
-    mdp->dump_provider->OnHeapProfilingEnabled(heap_profiling_state_ ==
-                                               HeapProfilingState::ENABLED);
-  }
-#endif  // BUILDFLAG(USE_ALLOCATOR_SHIM) && !defined(OS_NACL)
+  for (auto mdp : dump_providers_)
+    mdp->dump_provider->OnHeapProfilingEnabled(true);
+  heap_profiling_enabled_ = true;
 }
 
 void MemoryDumpManager::Initialize(
@@ -248,8 +216,8 @@ void MemoryDumpManager::Initialize(
     DCHECK(request_dump_function_.is_null());
     request_dump_function_ = request_dump_function;
     is_coordinator_ = is_coordinator;
+    EnableHeapProfilingIfNeeded();
   }
-  EnableHeapProfilingIfNeeded();
 
 // Enable the core dump providers.
 #if defined(MALLOC_MEMORY_TRACING_SUPPORTED)
@@ -348,7 +316,6 @@ void MemoryDumpManager::RegisterDumpProviderInternal(
                                      "polling must NOT be thread bound.";
   }
 
-  bool heap_profiling_enabled = false;
   {
     AutoLock lock(lock_);
     bool already_registered = !dump_providers_.insert(mdpinfo).second;
@@ -359,12 +326,9 @@ void MemoryDumpManager::RegisterDumpProviderInternal(
 
     if (options.is_fast_polling_supported)
       MemoryPeakDetector::GetInstance()->NotifyMemoryDumpProvidersChanged();
-
-    heap_profiling_enabled =
-        heap_profiling_state_ == HeapProfilingState::ENABLED;
   }
 
-  if (heap_profiling_enabled)
+  if (heap_profiling_enabled_)
     mdp->OnHeapProfilingEnabled(true);
 }
 
@@ -461,7 +425,7 @@ MemoryDumpManager::GetOrCreateBgTaskRunnerLocked() {
   if (dump_thread_)
     return dump_thread_->task_runner();
 
-  dump_thread_ = std::make_unique<Thread>("MemoryInfra");
+  dump_thread_ = MakeUnique<Thread>("MemoryInfra");
   bool started = dump_thread_->Start();
   CHECK(started);
 
@@ -505,8 +469,7 @@ void MemoryDumpManager::CreateProcessDump(
     // require session state so if heap profiling is on and session state is
     // absent we fail the dump immediately.
     if (args.dump_type != MemoryDumpType::SUMMARY_ONLY &&
-        heap_profiling_state_ == HeapProfilingState::ENABLED &&
-        !heap_profiler_serialization_state_) {
+        heap_profiling_enabled_ && !heap_profiler_serialization_state_) {
       callback.Run(false /* success */, args.dump_guid,
                    ProcessMemoryDumpsMap());
       return;
@@ -713,14 +676,12 @@ void MemoryDumpManager::FinalizeDumpAndAddToTrace(
 
 void MemoryDumpManager::SetupForTracing(
     const TraceConfig::MemoryDumpConfig& memory_dump_config) {
-  AutoLock lock(lock_);
-
   scoped_refptr<HeapProfilerSerializationState>
       heap_profiler_serialization_state = new HeapProfilerSerializationState;
   heap_profiler_serialization_state
       ->set_heap_profiler_breakdown_threshold_bytes(
           memory_dump_config.heap_profiler_options.breakdown_threshold_bytes);
-  if (heap_profiling_state_ == HeapProfilingState::ENABLED) {
+  if (heap_profiling_enabled_) {
     // If heap profiling is enabled, the stack frame deduplicator and type name
     // deduplicator will be in use. Add a metadata events to write the frames
     // and type IDs.
@@ -733,17 +694,19 @@ void MemoryDumpManager::SetupForTracing(
     TRACE_EVENT_API_ADD_METADATA_EVENT(
         TraceLog::GetCategoryGroupEnabled("__metadata"), "stackFrames",
         "stackFrames",
-        std::make_unique<SessionStateConvertableProxy<StackFrameDeduplicator>>(
+        MakeUnique<SessionStateConvertableProxy<StackFrameDeduplicator>>(
             heap_profiler_serialization_state,
             &HeapProfilerSerializationState::stack_frame_deduplicator));
 
     TRACE_EVENT_API_ADD_METADATA_EVENT(
         TraceLog::GetCategoryGroupEnabled("__metadata"), "typeNames",
         "typeNames",
-        std::make_unique<SessionStateConvertableProxy<TypeNameDeduplicator>>(
+        MakeUnique<SessionStateConvertableProxy<TypeNameDeduplicator>>(
             heap_profiler_serialization_state,
             &HeapProfilerSerializationState::type_name_deduplicator));
   }
+
+  AutoLock lock(lock_);
 
   // At this point we must have the ability to request global dumps.
   DCHECK(!request_dump_function_.is_null());

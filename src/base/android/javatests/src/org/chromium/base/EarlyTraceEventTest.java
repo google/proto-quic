@@ -5,14 +5,13 @@
 package org.chromium.base;
 
 import android.os.Process;
+import android.os.SystemClock;
 import android.support.test.filters.SmallTest;
 
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import static org.chromium.base.EarlyTraceEvent.Event;
 
 import org.chromium.base.library_loader.LibraryLoader;
 import org.chromium.base.library_loader.LibraryProcessType;
@@ -21,8 +20,6 @@ import org.chromium.base.test.util.Feature;
 
 /**
  * Tests for {@link EarlyTraceEvent}.
- *
- * TODO(lizeb): Move to roboelectric tests.
  */
 @RunWith(BaseJUnit4ClassRunner.class)
 public class EarlyTraceEventTest {
@@ -32,7 +29,9 @@ public class EarlyTraceEventTest {
     @Before
     public void setUp() throws Exception {
         LibraryLoader.get(LibraryProcessType.PROCESS_BROWSER).ensureInitialized();
-        EarlyTraceEvent.resetForTesting();
+        EarlyTraceEvent.sState = EarlyTraceEvent.STATE_DISABLED;
+        EarlyTraceEvent.sCompletedEvents = null;
+        EarlyTraceEvent.sPendingEvents = null;
     }
 
     @Test
@@ -41,43 +40,19 @@ public class EarlyTraceEventTest {
     public void testCanRecordEvent() {
         EarlyTraceEvent.enable();
         long myThreadId = Process.myTid();
-        long beforeNanos = Event.elapsedRealtimeNanos();
+        long beforeMs = SystemClock.elapsedRealtime();
         EarlyTraceEvent.begin(EVENT_NAME);
         EarlyTraceEvent.end(EVENT_NAME);
-        long afterNanos = Event.elapsedRealtimeNanos();
+        long afterMs = SystemClock.elapsedRealtime();
 
         Assert.assertEquals(1, EarlyTraceEvent.sCompletedEvents.size());
         Assert.assertTrue(EarlyTraceEvent.sPendingEvents.isEmpty());
-        Event event = EarlyTraceEvent.sCompletedEvents.get(0);
+        EarlyTraceEvent.Event event = EarlyTraceEvent.sCompletedEvents.get(0);
         Assert.assertEquals(EVENT_NAME, event.mName);
         Assert.assertEquals(myThreadId, event.mThreadId);
-        Assert.assertTrue(
-                beforeNanos <= event.mBeginTimeNanos && event.mBeginTimeNanos <= afterNanos);
-        Assert.assertTrue(event.mBeginTimeNanos <= event.mEndTimeNanos);
-        Assert.assertTrue(beforeNanos <= event.mEndTimeNanos && event.mEndTimeNanos <= afterNanos);
-    }
-
-    @Test
-    @SmallTest
-    @Feature({"Android-AppBase"})
-    public void testCanRecordEventUsingTryWith() {
-        EarlyTraceEvent.enable();
-        long myThreadId = Process.myTid();
-        long beforeNanos = Event.elapsedRealtimeNanos();
-        try (TraceEvent e = TraceEvent.scoped(EVENT_NAME)) {
-            // Required comment to pass presubmit checks.
-        }
-        long afterNanos = Event.elapsedRealtimeNanos();
-
-        Assert.assertEquals(1, EarlyTraceEvent.sCompletedEvents.size());
-        Assert.assertTrue(EarlyTraceEvent.sPendingEvents.isEmpty());
-        Event event = EarlyTraceEvent.sCompletedEvents.get(0);
-        Assert.assertEquals(EVENT_NAME, event.mName);
-        Assert.assertEquals(myThreadId, event.mThreadId);
-        Assert.assertTrue(
-                beforeNanos <= event.mBeginTimeNanos && event.mBeginTimeNanos <= afterNanos);
-        Assert.assertTrue(event.mBeginTimeNanos <= event.mEndTimeNanos);
-        Assert.assertTrue(beforeNanos <= event.mEndTimeNanos && event.mEndTimeNanos <= afterNanos);
+        Assert.assertTrue(beforeMs <= event.mBeginTimeMs && event.mBeginTimeMs <= afterMs);
+        Assert.assertTrue(event.mBeginTimeMs <= event.mEndTimeMs);
+        Assert.assertTrue(beforeMs <= event.mEndTimeMs && event.mEndTimeMs <= afterMs);
     }
 
     @Test
@@ -114,9 +89,6 @@ public class EarlyTraceEventTest {
     public void testIgnoreEventsWhenDisabled() {
         EarlyTraceEvent.begin(EVENT_NAME);
         EarlyTraceEvent.end(EVENT_NAME);
-        try (TraceEvent e = TraceEvent.scoped(EVENT_NAME2)) {
-            // Required comment to pass presubmit checks.
-        }
         Assert.assertNull(EarlyTraceEvent.sCompletedEvents);
     }
 

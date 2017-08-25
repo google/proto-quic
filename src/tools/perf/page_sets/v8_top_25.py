@@ -10,6 +10,7 @@ class V8Top25(page_module.Page):
   def __init__(self, url, page_set, name=''):
     super(V8Top25, self).__init__(
         url=url, page_set=page_set, name=name)
+    self.archive_data_file = 'data/v8_top_25.json'
 
   def RunPageInteractions(self, action_runner):
     # We wait for 20 seconds to make sure we capture enough information

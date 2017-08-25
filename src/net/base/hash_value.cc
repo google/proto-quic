@@ -8,6 +8,7 @@
 
 #include "base/base64.h"
 #include "base/logging.h"
+#include "base/sha1.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "crypto/sha2.h"
@@ -16,10 +17,10 @@ namespace net {
 
 namespace {
 
-// CompareSHA256Hashes is a helper function for using bsearch() with an array
-// of SHA256 hashes.
-int CompareSHA256Hashes(const void* a, const void* b) {
-  return memcmp(a, b, crypto::kSHA256Length);
+// CompareSHA1Hashes is a helper function for using bsearch() with an array of
+// SHA1 hashes.
+int CompareSHA1Hashes(const void* a, const void* b) {
+  return memcmp(a, b, base::kSHA1Length);
 }
 
 }  // namespace
@@ -69,7 +70,7 @@ size_t HashValue::size() const {
       // While an invalid tag should not happen, return a non-zero length
       // to avoid compiler warnings when the result of size() is
       // used with functions like memset.
-      return sizeof(fingerprint.sha256.data);
+      return sizeof(fingerprint.sha1.data);
   }
 }
 
@@ -93,7 +94,7 @@ bool IsSHA256HashInSortedArray(const SHA256HashValue& hash,
   DCHECK_EQ(0u, array_byte_len % crypto::kSHA256Length);
   const size_t arraylen = array_byte_len / crypto::kSHA256Length;
   return NULL != bsearch(hash.data, array, arraylen, crypto::kSHA256Length,
-                         CompareSHA256Hashes);
+                         CompareSHA1Hashes);
 }
 
 }  // namespace net

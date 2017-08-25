@@ -155,11 +155,10 @@ class SSLPlatformKeyNSS : public ThreadedSSLPrivateKey::Delegate {
 
 scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
     const X509Certificate* certificate,
-    CERTCertificate* cert_certificate,
     crypto::CryptoModuleBlockingPasswordDelegate* password_delegate) {
   void* wincx = password_delegate ? password_delegate->wincx() : nullptr;
   crypto::ScopedSECKEYPrivateKey key(
-      PK11_FindKeyByAnyCert(cert_certificate, wincx));
+      PK11_FindKeyByAnyCert(certificate->os_cert_handle(), wincx));
   if (!key)
     return nullptr;
 

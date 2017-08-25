@@ -10,8 +10,6 @@
 #include "base/memory/ref_counted.h"
 #include "net/base/net_export.h"
 
-typedef struct CERTCertificateStr CERTCertificate;
-
 namespace crypto {
 class CryptoModuleBlockingPasswordDelegate;
 }
@@ -26,7 +24,6 @@ class X509Certificate;
 // used to prompt for a password if necessary to unlock a slot.
 NET_EXPORT scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
     const X509Certificate* certificate,
-    CERTCertificate* cert_certificate,
     crypto::CryptoModuleBlockingPasswordDelegate* password_delegate);
 
 }  // namespace net

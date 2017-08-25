@@ -28,6 +28,8 @@ class QuicSentPacketManagerPeer {
 
   static bool GetUseNewRto(QuicSentPacketManager* sent_packet_manager);
 
+  static bool GetUndoRetransmits(QuicSentPacketManager* sent_packet_manager);
+
   static void SetPerspective(QuicSentPacketManager* sent_packet_manager,
                              Perspective perspective);
 

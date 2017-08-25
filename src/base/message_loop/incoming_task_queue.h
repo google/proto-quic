@@ -40,6 +40,10 @@ class BASE_EXPORT IncomingTaskQueue
                           TimeDelta delay,
                           bool nestable);
 
+  // Returns true if the queue contains tasks that require higher than default
+  // timer resolution. Currently only needed for Windows.
+  bool HasHighResolutionTasks();
+
   // Returns true if the message loop is "idle". Provided for testing.
   bool IsIdleForTesting();
 

@@ -364,13 +364,16 @@ TEST_P(HttpServerPropertiesManagerTest,
   auto quic_servers_dict = base::MakeUnique<base::DictionaryValue>();
   auto quic_server_pref_dict1 = base::MakeUnique<base::DictionaryValue>();
   std::string quic_server_info1("quic_server_info1");
-  quic_server_pref_dict1->SetKey("server_info", base::Value(quic_server_info1));
+  quic_server_pref_dict1->SetStringWithoutPathExpansion("server_info",
+                                                        quic_server_info1);
   auto quic_server_pref_dict2 = base::MakeUnique<base::DictionaryValue>();
   std::string quic_server_info2("quic_server_info2");
-  quic_server_pref_dict2->SetKey("server_info", base::Value(quic_server_info2));
+  quic_server_pref_dict2->SetStringWithoutPathExpansion("server_info",
+                                                        quic_server_info2);
   auto quic_server_pref_dict3 = base::MakeUnique<base::DictionaryValue>();
   std::string quic_server_info3("quic_server_info3");
-  quic_server_pref_dict3->SetKey("server_info", base::Value(quic_server_info3));
+  quic_server_pref_dict3->SetStringWithoutPathExpansion("server_info",
+                                                        quic_server_info3);
   // Set the quic_server_info1 for https://www.google.com.
   QuicServerId google_quic_server_id("www.google.com", 443);
   quic_servers_dict->SetWithoutPathExpansion(google_quic_server_id.ToString(),
@@ -514,8 +517,8 @@ TEST_P(HttpServerPropertiesManagerTest, BadCachedHostPortPair) {
   // Set quic_server_info for www.google.com:65536.
   auto quic_servers_dict = base::MakeUnique<base::DictionaryValue>();
   auto quic_server_pref_dict1 = base::MakeUnique<base::DictionaryValue>();
-  quic_server_pref_dict1->SetKey("server_info",
-                                 base::Value("quic_server_info1"));
+  quic_server_pref_dict1->SetStringWithoutPathExpansion("server_info",
+                                                        "quic_server_info1");
   quic_servers_dict->SetWithoutPathExpansion("http://mail.google.com:65536",
                                              std::move(quic_server_pref_dict1));
 
@@ -1248,7 +1251,7 @@ TEST_P(HttpServerPropertiesManagerTest, UpdatePrefsWithCache) {
   // A copy of |pref_delegate_|'s server dict will be created, and the broken
   // alternative service's "broken_until" field is removed and verified
   // separately. The rest of the server dict copy is verified afterwards.
-  base::Value server_value_copy = pref_delegate_->GetServerProperties().Clone();
+  base::Value server_value_copy(pref_delegate_->GetServerProperties());
 
   // Extract and remove the "broken_until" string for "www.google.com:1234".
   base::DictionaryValue* server_dict;

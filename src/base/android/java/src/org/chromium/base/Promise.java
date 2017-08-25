@@ -37,8 +37,8 @@ public class Promise<T> {
     private Exception mRejectReason;
     private final List<Callback<Exception>> mRejectCallbacks = new LinkedList<>();
 
-    private final Thread mThread = Thread.currentThread();
-    private final Handler mHandler = new Handler();
+    private final Thread mThread;
+    private final Handler mHandler;
 
     private boolean mThrowingRejectionHandler;
 
@@ -71,6 +71,14 @@ public class Promise<T> {
     }
 
     /**
+     * Creates an unfulfilled promise.
+     */
+    public Promise() {
+        mThread = Thread.currentThread();
+        mHandler = new Handler();
+    }
+
+    /**
      * Convenience method that calls {@link #then(Callback, Callback)} providing a rejection
      * {@link Callback} that throws a {@link UnhandledRejectionException}. Only use this on
      * Promises that do not have rejection handlers or dependant Promises.
@@ -88,9 +96,12 @@ public class Promise<T> {
         assert mRejectCallbacks.size() == 0 : "Do not call the single argument "
             + "Promise.then(Callback) on a Promise that already has a rejection handler.";
 
-        Callback<Exception> onReject = reason -> {
-            throw new UnhandledRejectionException(
-                    "Promise was rejected without a rejection handler.", reason);
+        Callback<Exception> onReject = new Callback<Exception>() {
+            @Override
+            public void onResult(Exception reason) {
+                throw new UnhandledRejectionException(
+                        "Promise was rejected without a rejection handler.", reason);
+            }
         };
 
         then(onFulfill, onReject);
@@ -108,6 +119,7 @@ public class Promise<T> {
      */
     public void then(Callback<T> onFulfill, Callback<Exception> onReject) {
         checkThread();
+
         thenInner(onFulfill);
         exceptInner(onReject);
     }
@@ -120,7 +132,20 @@ public class Promise<T> {
      */
     public void except(Callback<Exception> onReject) {
         checkThread();
+
         exceptInner(onReject);
+    }
+
+    /**
+     * A convenience method that returns a Callback that fulfills this Promise with its result.
+     */
+    public Callback<T> fulfillmentCallback() {
+        return new Callback<T>() {
+            @Override
+            public void onResult(T result) {
+                fulfill(result);
+            }
+        };
     }
 
     private void thenInner(Callback<T> onFulfill) {
@@ -155,17 +180,20 @@ public class Promise<T> {
         // Once this Promise is fulfilled:
         // - Apply the given function to the result.
         // - Fulfill the new Promise.
-        thenInner(result -> {
-            try {
-                promise.fulfill(function.apply(result));
-            } catch (Exception e) {
-                // If function application fails, reject the next Promise.
-                promise.reject(e);
+        thenInner(new Callback<T>(){
+            @Override
+            public void onResult(T result) {
+                try {
+                    promise.fulfill(function.apply(result));
+                } catch (Exception e) {
+                    // If function application fails, reject the next Promise.
+                    promise.reject(e);
+                }
             }
         });
 
         // If this Promise is rejected, reject the next Promise.
-        exceptInner(promise::reject);
+        exceptInner(rejectPromiseCallback(promise));
 
         return promise;
     }
@@ -184,19 +212,28 @@ public class Promise<T> {
         // Once this Promise is fulfilled:
         // - Apply the given function to the result (giving us an inner Promise).
         // - On fulfillment of this inner Promise, fulfill our return Promise.
-        thenInner(result -> {
-            try {
-                // When the inner Promise is fulfilled, fulfill the return Promise.
-                // Alternatively, if the inner Promise is rejected, reject the return Promise.
-                function.apply(result).then(promise::fulfill, promise::reject);
-            } catch (Exception e) {
-                // If creating the inner Promise failed, reject the next Promise.
-                promise.reject(e);
+        thenInner(new Callback<T>() {
+            @Override
+            public void onResult(T result) {
+                try {
+                    // When the inner Promise is fulfilled, fulfill the return Promise.
+                    // Alternatively, if the inner Promise is rejected, reject the return Promise.
+                    function.apply(result).then(new Callback<R>() {
+                        @Override
+                        public void onResult(R result) {
+                            promise.fulfill(result);
+                        }
+                    }, rejectPromiseCallback(promise));
+                } catch (Exception e) {
+                    // If creating the inner Promise failed, reject the next Promise.
+                    promise.reject(e);
+                }
+
             }
         });
 
         // If this Promise is rejected, reject the next Promise.
-        exceptInner(promise::reject);
+        exceptInner(rejectPromiseCallback(promise));
 
         return promise;
     }
@@ -251,6 +288,7 @@ public class Promise<T> {
      */
     public boolean isFulfilled() {
         checkThread();
+
         return mState == FULFILLED;
     }
 
@@ -259,6 +297,7 @@ public class Promise<T> {
      */
     public boolean isRejected() {
         checkThread();
+
         return mState == REJECTED;
     }
 
@@ -289,6 +328,23 @@ public class Promise<T> {
     private <S> void postCallbackToLooper(final Callback<S> callback, final S result) {
         // Post the callbacks to the Thread looper so we don't get a long chain of callbacks
         // holding up the thread.
-        mHandler.post(() -> callback.onResult(result));
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                callback.onResult(result);
+            }
+        });
+    }
+
+    /**
+     * Convenience method to construct a callback that rejects the given Promise.
+     */
+    private static <T> Callback<Exception> rejectPromiseCallback(final Promise<T> promise) {
+        return new Callback<Exception>() {
+            @Override
+            public void onResult(Exception reason) {
+                promise.reject(reason);
+            }
+        };
     }
 }

@@ -102,7 +102,7 @@ void HttpAuthHandler::OnGenerateAuthTokenComplete(int rv) {
 }
 
 void HttpAuthHandler::FinishGenerateAuthToken() {
-  // TODO(cbentzel): Should this be done in OK case only?
+  // TOOD(cbentzel): Should this be done in OK case only?
   net_log_.EndEvent(EventTypeFromAuthTarget(target_));
   callback_.Reset();
 }

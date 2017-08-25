@@ -26,10 +26,14 @@ class WebIDLParser(unittest.TestCase):
     comments = node.GetListOf('SpecialComment')
     for comment in comments:
       check, value = ParseCommentTest(comment.GetName())
+      if check == 'BUILD':
+        msg = 'Expecting %s, but found %s.\n' % (value, str(node))
+        self.assertEqual(value, str(node), msg)
+
       if check == 'ERROR':
         msg = node.GetLogLine('Expecting\n\t%s\nbut found \n\t%s\n' % (
-            value, str(node)))
-        self.assertEqual(value, node.GetName() ,msg)
+                              value, str(node)))
+        self.assertEqual(value, node.GetName(), msg)
 
       if check == 'TREE':
         quick = '\n'.join(node.Tree())
@@ -43,7 +47,7 @@ class WebIDLParser(unittest.TestCase):
       filenode = ParseFile(self.parser, filename)
       children = filenode.GetChildren()
       self.assertTrue(len(children) > 2, 'Expecting children in %s.' %
-          filename)
+                      filename)
 
       for node in filenode.GetChildren():
         self._TestNode(node)
@@ -79,7 +83,7 @@ class TestImplements(unittest.TestCase):
     self.assertEqual('Error', node.GetClass())
     error_message = node.GetName()
     self.assertEqual('Unexpected ";" after keyword "implements".',
-        error_message)
+                     error_message)
 
   def testUnexpectedImplements(self):
     idl_text = 'implements C;'
@@ -87,7 +91,7 @@ class TestImplements(unittest.TestCase):
     self.assertEqual('Error', node.GetClass())
     error_message = node.GetName()
     self.assertEqual('Unexpected implements.',
-        error_message)
+                     error_message)
 
   def testUnexpectedImplementsAfterBracket(self):
     idl_text = '[foo] implements B;'
@@ -95,7 +99,7 @@ class TestImplements(unittest.TestCase):
     self.assertEqual('Error', node.GetClass())
     error_message = node.GetName()
     self.assertEqual('Unexpected keyword "implements" after "]".',
-        error_message)
+                     error_message)
 
 
 class TestEnums(unittest.TestCase):
@@ -104,12 +108,13 @@ class TestEnums(unittest.TestCase):
     self.parser = IDLParser(IDLLexer(), mute_error=True)
 
   def _ParseEnums(self, idl_text):
-    filenode = self.parser.ParseText(filename='', data=idl_text)
+    filenode = self.parser.ParseText(
+        filename='', data=idl_text)
     self.assertEqual(1, len(filenode.GetChildren()))
     return filenode.GetChildren()[0]
 
   def testBasic(self):
-    idl_text = 'enum MealType {"rice","noodles","other"};'
+    idl_text = 'enum MealType { "rice", "noodles", "other" };'
     node = self._ParseEnums(idl_text)
     children = node.GetChildren()
     self.assertEqual('Enum', node.GetClass())
@@ -129,7 +134,7 @@ class TestEnums(unittest.TestCase):
     self.assertEqual('Enum missing name.', error_message)
 
   def testTrailingCommaIsAllowed(self):
-    idl_text = 'enum TrailingComma {"rice","noodles","other",};'
+    idl_text = 'enum TrailingComma { "rice", "noodles", "other",};'
     node = self._ParseEnums(idl_text)
     children = node.GetChildren()
     self.assertEqual('Enum', node.GetClass())
@@ -142,167 +147,36 @@ class TestEnums(unittest.TestCase):
     self.assertEqual('other', children[2].GetName())
 
   def testErrorMissingCommaBetweenIdentifiers(self):
-    idl_text = 'enum MissingComma {"rice" "noodles","other"};'
+    idl_text = 'enum MissingComma { "rice" "noodles", "other" };'
     node = self._ParseEnums(idl_text)
     self.assertEqual('Error', node.GetClass())
     error_message = node.GetName()
     self.assertEqual('Unexpected string "noodles" after string "rice".',
-        error_message)
+      error_message)
 
   def testErrorExtraCommaBetweenIdentifiers(self):
-    idl_text = 'enum ExtraComma {"rice","noodles",,"other"};'
+    idl_text = 'enum ExtraComma {"rice", "noodles",, "other"};'
     node = self._ParseEnums(idl_text)
     self.assertEqual('Error', node.GetClass())
     error_message = node.GetName()
     self.assertEqual('Unexpected "," after ",".', error_message)
 
   def testErrorUnexpectedKeyword(self):
-    idl_text = 'enum TestEnum {interface,"noodles","other"};'
+    idl_text = 'enum TestEnum { interface, "noodles", "other"};'
     node = self._ParseEnums(idl_text)
     self.assertEqual('Error', node.GetClass())
     error_message = node.GetName()
     self.assertEqual('Unexpected keyword "interface" after "{".',
-        error_message)
+      error_message)
 
   def testErrorUnexpectedIdentifier(self):
-    idl_text = 'enum TestEnum {somename,"noodles","other"};'
+    idl_text = 'enum TestEnum { somename, "noodles", "other"};'
     node = self._ParseEnums(idl_text)
     self.assertEqual('Error', node.GetClass())
     error_message = node.GetName()
     self.assertEqual('Unexpected identifier "somename" after "{".',
-        error_message)
+      error_message)
 
-class TestExtendedAttribute(unittest.TestCase):
-  def setUp(self):
-    self.parser = IDLParser(IDLLexer(), mute_error=True)
-
-  def _ParseIdlWithExtendedAttributes(self, extended_attribute_text):
-    idl_text = extended_attribute_text + ' enum MealType {"rice"};'
-    filenode = self.parser.ParseText(filename='', data=idl_text)
-    self.assertEqual(1, len(filenode.GetChildren()))
-    node = filenode.GetChildren()[0]
-    self.assertEqual('Enum', node.GetClass())
-    children = node.GetChildren()
-    self.assertEqual(2, len(children))
-    self.assertEqual('EnumItem', children[0].GetClass())
-    self.assertEqual('rice', children[0].GetName())
-    return children[1]
-
-  def testNoArguments(self):
-    extended_attribute_text = '[Replacable]'
-    attributes = self._ParseIdlWithExtendedAttributes(extended_attribute_text)
-    self.assertEqual('ExtAttributes', attributes.GetClass())
-    self.assertEqual(1, len(attributes.GetChildren()) )
-    attribute = attributes.GetChildren()[0]
-    self.assertEqual('ExtAttribute', attribute.GetClass())
-    self.assertEqual('Replacable', attribute.GetName())
-
-  def testArgumentList(self):
-    extended_attribute_text = '[Constructor(double x, double y)]'
-    attributes = self._ParseIdlWithExtendedAttributes(extended_attribute_text)
-    self.assertEqual('ExtAttributes', attributes.GetClass())
-    self.assertEqual(1, len(attributes.GetChildren()))
-    attribute = attributes.GetChildren()[0]
-    self.assertEqual('ExtAttribute', attribute.GetClass())
-    self.assertEqual('Constructor', attribute.GetName())
-    self.assertEqual('Arguments', attribute.GetChildren()[0].GetClass())
-    arguments = attributes.GetChildren()[0].GetChildren()[0]
-    self.assertEqual(2, len(arguments.GetChildren()))
-    self.assertEqual('Argument', arguments.GetChildren()[0].GetClass())
-    self.assertEqual('x', arguments.GetChildren()[0].GetName())
-    self.assertEqual('Argument', arguments.GetChildren()[1].GetClass())
-    self.assertEqual('y', arguments.GetChildren()[1].GetName())
-
-  def testNamedArgumentList(self):
-    extended_attribute_text = '[NamedConstructor=Image(DOMString src)]'
-    attributes = self._ParseIdlWithExtendedAttributes(extended_attribute_text)
-    self.assertEqual('ExtAttributes', attributes.GetClass())
-    self.assertEqual(1, len(attributes.GetChildren()))
-    attribute = attributes.GetChildren()[0]
-    self.assertEqual('ExtAttribute', attribute.GetClass())
-    self.assertEqual('NamedConstructor',attribute.GetName())
-    self.assertEqual(1, len(attribute.GetChildren()))
-    self.assertEqual('Call', attribute.GetChildren()[0].GetClass())
-    self.assertEqual('Image', attribute.GetChildren()[0].GetName())
-    arguments = attribute.GetChildren()[0].GetChildren()[0]
-    self.assertEqual('Arguments', arguments.GetClass())
-    self.assertEqual(1, len(arguments.GetChildren()))
-    self.assertEqual('Argument', arguments.GetChildren()[0].GetClass())
-    self.assertEqual('src', arguments.GetChildren()[0].GetName())
-    argument = arguments.GetChildren()[0]
-    self.assertEqual(1, len(argument.GetChildren()))
-    self.assertEqual('Type', argument.GetChildren()[0].GetClass())
-    arg = argument.GetChildren()[0]
-    self.assertEqual(1, len(arg.GetChildren()))
-    argType = arg.GetChildren()[0]
-    self.assertEqual('StringType', argType.GetClass())
-    self.assertEqual('DOMString', argType.GetName())
-
-  def testIdentifier(self):
-    extended_attribute_text = '[PutForwards=name]'
-    attributes = self._ParseIdlWithExtendedAttributes(extended_attribute_text)
-    self.assertEqual('ExtAttributes', attributes.GetClass())
-    self.assertEqual(1, len(attributes.GetChildren()))
-    attribute = attributes.GetChildren()[0]
-    self.assertEqual('ExtAttribute', attribute.GetClass())
-    self.assertEqual('PutForwards', attribute.GetName())
-    identifier = attribute.GetProperty('VALUE')
-    self.assertEqual('name', identifier)
-
-  def testIdentifierList(self):
-    extended_attribute_text = '[Exposed=(Window,Worker)]'
-    attributes = self._ParseIdlWithExtendedAttributes(extended_attribute_text)
-    self.assertEqual('ExtAttributes', attributes.GetClass())
-    self.assertEqual(1, len(attributes.GetChildren()))
-    attribute = attributes.GetChildren()[0]
-    self.assertEqual('ExtAttribute', attribute.GetClass())
-    self.assertEqual('Exposed', attribute.GetName())
-    identifierList = attribute.GetProperty('VALUE')
-    self.assertEqual(2, len(identifierList))
-    self.assertEqual('Window', identifierList[0])
-    self.assertEqual('Worker', identifierList[1])
-
-  def testCombinationOfExtendedAttributes(self):
-    extended_attribute_text = '[Replacable, Exposed=(Window,Worker)]'
-    attributes = self._ParseIdlWithExtendedAttributes(extended_attribute_text)
-    self.assertEqual('ExtAttributes', attributes.GetClass())
-    self.assertEqual(2, len(attributes.GetChildren()))
-    attribute0 = attributes.GetChildren()[0]
-    self.assertEqual('ExtAttribute', attribute0.GetClass())
-    self.assertEqual('Replacable', attribute0.GetName())
-    attribute1 = attributes.GetChildren()[1]
-    self.assertEqual('ExtAttribute', attribute1.GetClass())
-    self.assertEqual('Exposed', attribute1.GetName())
-    identifierList = attribute1.GetProperty('VALUE')
-    self.assertEqual(2, len(identifierList))
-    self.assertEqual('Window', identifierList[0])
-    self.assertEqual('Worker', identifierList[1])
-
-  def testErrorTrailingComma(self):
-    extended_attribute_text = '[Replacable, Exposed=(Window,Worker),]'
-    error = self._ParseIdlWithExtendedAttributes(extended_attribute_text)
-    self.assertEqual('Error', error.GetClass())
-    error_message = error.GetName()
-    self.assertEqual('Unexpected "]" after ",".', error_message)
-    self.assertEqual('ExtendedAttributeList', error.GetProperty('PROD'))
-
-  def testErrorMultipleExtendedAttributes(self):
-    extended_attribute_text = '[Attribute1][Attribute2]'
-    idl_text = extended_attribute_text + ' enum MealType {"rice"};'
-    filenode = self.parser.ParseText(filename='', data=idl_text)
-    self.assertEqual(1, len(filenode.GetChildren()))
-    node = filenode.GetChildren()[0]
-    self.assertEqual('Error', node.GetClass())
-    self.assertEqual('Unexpected "[" after "]".', node.GetName())
-    self.assertEqual('Definition', node.GetProperty('PROD'))
-    children = node.GetChildren()
-    self.assertEqual(1, len(children))
-    attributes = children[0]
-    self.assertEqual('ExtAttributes', attributes.GetClass())
-    self.assertEqual(1, len(attributes.GetChildren()))
-    attribute = attributes.GetChildren()[0]
-    self.assertEqual('ExtAttribute', attribute.GetClass())
-    self.assertEqual('Attribute1', attribute.GetName())
 
 if __name__ == '__main__':
   unittest.main(verbosity=2)

@@ -17,15 +17,13 @@
 
 namespace net {
 
-class X509Certificate;
-
 // Checks if |cert| matches |cert_authorities|. If so, it sets |*intermediates|
 // to a list of intermediates to send and returns true. Otherwise, it returns
 // false.
 bool MatchClientCertificateIssuers(
-    X509Certificate* cert,
+    CERTCertificate* cert,
     const std::vector<std::string>& cert_authorities,
-    ScopedCERTCertificateList* intermediates);
+    std::vector<ScopedCERTCertificate>* intermediates);
 
 }  // namespace net
 

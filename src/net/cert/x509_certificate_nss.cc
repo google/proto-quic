@@ -284,7 +284,11 @@ bool X509Certificate::IsIssuedByEncoded(
 // static
 bool X509Certificate::GetDEREncoded(X509Certificate::OSCertHandle cert_handle,
                                     std::string* encoded) {
-  return x509_util::GetDEREncoded(cert_handle, encoded);
+  if (!cert_handle || !cert_handle->derCert.len)
+    return false;
+  encoded->assign(reinterpret_cast<char*>(cert_handle->derCert.data),
+                  cert_handle->derCert.len);
+  return true;
 }
 
 // static

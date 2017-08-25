@@ -13,6 +13,7 @@ class ToughAnimationCasesPage(page_module.Page):
       name = url.split('/')[-2]
     super(ToughAnimationCasesPage, self).__init__(
         url=url, page_set=page_set, name=name)
+    self.archive_data_file = 'data/tough_animation_cases.json'
     self._need_measurement_ready = need_measurement_ready
 
   def RunNavigateSteps(self, action_runner):

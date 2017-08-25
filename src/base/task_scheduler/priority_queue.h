@@ -55,9 +55,6 @@ class BASE_EXPORT PriorityQueue {
     // Returns true if the PriorityQueue is empty.
     bool IsEmpty() const;
 
-    // Returns the number of Sequences in the PriorityQueue.
-    size_t Size() const;
-
    private:
     friend class PriorityQueue;
 

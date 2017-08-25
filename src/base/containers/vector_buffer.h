@@ -38,16 +38,9 @@ template <typename T>
 class VectorBuffer {
  public:
   VectorBuffer() {}
-
-#if defined(__clang__) && !defined(__native_client__)
-  // This constructor converts an uninitialized void* to a T* which triggers
-  // clang Control Flow Integrity. Since this is as-designed, disable.
-  __attribute__((no_sanitize("cfi-unrelated-cast", "vptr")))
-#endif
   VectorBuffer(size_t count)
       : buffer_(reinterpret_cast<T*>(malloc(sizeof(T) * count))),
-        capacity_(count) {
-  }
+        capacity_(count) {}
   VectorBuffer(VectorBuffer&& other) noexcept
       : buffer_(other.buffer_), capacity_(other.capacity_) {
     other.buffer_ = nullptr;

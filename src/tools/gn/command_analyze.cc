@@ -110,10 +110,11 @@ int RunAnalyze(const std::vector<std::string>& args) {
   if (!setup->DoSetup(args[0], false) || !setup->Run())
     return 1;
 
-  Analyzer analyzer(setup->builder());
-
   Err err;
-  std::string output = Analyzer(setup->builder()).Analyze(input, &err);
+  Analyzer analyzer(setup->builder(),
+                    setup->build_settings().build_config_file(),
+                    setup->dotfile_input_file()->name());
+  std::string output = analyzer.Analyze(input, &err);
   if (err.has_error()) {
     err.PrintToStdout();
     return 1;

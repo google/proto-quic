@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include "base/files/file_util.h"
-#include "base/strings/string_split.h"
-#include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
 #include "build/build_config.h"
@@ -12,9 +10,6 @@
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "third_party/protobuf/src/google/protobuf/text_format.h"
 #include "tools/traffic_annotation/auditor/traffic_annotation_auditor.h"
-#include "tools/traffic_annotation/auditor/traffic_annotation_exporter.h"
-
-namespace {
 
 const char* HELP_TEXT = R"(
 Traffic Annotation Auditor
@@ -41,207 +36,13 @@ Options:
                       repository without text filtering files. Using this flag
                       may increase processing time x40.
   --summary-file      Optional path to the output file with all annotations.
-  --annotations-file  Optional path to a TSV output file with all annotations.
+  --ids-file          Optional path to the output file with the list of unique
+                      ids and their hash codes.
   path_filters        Optional paths to filter what files the tool is run on.
 
 Example:
   traffic_annotation_auditor --build-dir=out/Debug summary-file=report.txt
 )";
-
-const base::FilePath kAnnotationsXmlPath(
-    FILE_PATH_LITERAL("tools/traffic_annotation/summary/annotations.xml"));
-
-}  // namespace
-
-// Writes a summary of annotations, calls, and errors.
-bool WriteSummaryFile(const base::FilePath& filepath,
-                      const std::vector<AnnotationInstance>& annotations,
-                      const std::vector<CallInstance>& calls,
-                      const std::vector<AuditorResult>& errors) {
-  std::string report;
-  std::vector<std::string> items;
-
-  report = "[Errors]\n";
-  for (const auto& error : errors)
-    items.push_back(error.ToText());
-  std::sort(items.begin(), items.end());
-  for (const std::string& item : items)
-    report += item + "\n";
-
-  report += "\n[Annotations]\n";
-  items.clear();
-  for (const auto& instance : annotations) {
-    std::string serialized;
-    google::protobuf::TextFormat::PrintToString(instance.proto, &serialized);
-    items.push_back(serialized +
-                    "\n----------------------------------------\n");
-  }
-  std::sort(items.begin(), items.end());
-  for (const std::string& item : items)
-    report += item;
-
-  report += "\n[Calls]\n";
-  items.clear();
-  for (const auto& instance : calls) {
-    items.push_back(base::StringPrintf(
-        "File:%s:%i\nFunction:%s\nAnnotated: %i\n", instance.file_path.c_str(),
-        instance.line_number, instance.function_name.c_str(),
-        instance.is_annotated));
-  }
-  std::sort(items.begin(), items.end());
-  for (const std::string& item : items)
-    report += item;
-
-  return base::WriteFile(filepath, report.c_str(), report.length()) != -1;
-}
-
-// Changes double quotations to single quotations, and adds quotations if the
-// text includes end of lines or tabs.
-std::string UpdateTextForTSV(std::string text) {
-  base::ReplaceChars(text, "\"", "'", &text);
-  if (text.find('\n') != std::string::npos ||
-      text.find('\t') != std::string::npos)
-    return base::StringPrintf("\"%s\"", text.c_str());
-  return text;
-}
-
-// TODO(rhalavati): Update this function to extract the policy name and value
-// directly from the ChromeSettingsProto object (gen/components/policy/proto/
-// chrome_settings.proto). Since ChromeSettingsProto has over 300+
-// implementations, the required output is now extracted from debug output as
-// the debug output has the following format:
-//   POLICY_NAME {
-//    ...
-//   POLICY_NAME: POLICY_VALUE (policy value may extend to several lines.)
-//   }
-std::string PolicyToText(std::string debug_string) {
-  std::vector<std::string> lines = base::SplitString(
-      debug_string, "\n", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
-  DCHECK(lines.size() && lines[0].length() > 3);
-  DCHECK_EQ(lines[0].substr(lines[0].length() - 2, 2), " {");
-  // Get the title, remove the open curly bracket.
-  std::string title = lines[0].substr(0, lines[0].length() - 2);
-  std::string output;
-  // Find the first line that has the title in it, keep adding all next lines
-  // to have the full value description.
-  for (unsigned int i = 1; i < lines.size(); i++) {
-    if (!output.empty()) {
-      output += lines[i] + " ";
-    } else if (lines[i].find(title) != std::string::npos) {
-      output += lines[i] + " ";
-    }
-  }
-
-  // Trim trailing spaces and curly bracket.
-  base::TrimString(output, " ", &output);
-  DCHECK(!output.empty());
-  if (output[output.length() - 1] == '}')
-    output.pop_back();
-
-  return output;
-}
-
-// Writes a TSV file of all annotations and their content.
-bool WriteAnnotationsFile(const base::FilePath& filepath,
-                          const std::vector<AnnotationInstance>& annotations) {
-  std::vector<std::string> lines;
-  std::string title =
-      "Unique ID\tReview by pconunsel\tEmpty Policy Justification\t"
-      "Sender\tDescription\tTrigger\tData\tDestination\tCookies Allowed\t"
-      "Cookies Store\tSetting\tChrome Policy\tComments\tSource File\tHash Code";
-
-  for (auto& instance : annotations) {
-    // Unique ID
-    std::string line = instance.proto.unique_id();
-
-    // Place holder for Review by pcounsel.
-    line += "\t";
-
-    // Semantics.
-    const auto semantics = instance.proto.semantics();
-    line += base::StringPrintf("\t%s",
-                               semantics.empty_policy_justification().c_str());
-    line += base::StringPrintf("\t%s", semantics.sender().c_str());
-    line += base::StringPrintf(
-        "\t%s", UpdateTextForTSV(semantics.description()).c_str());
-    line += base::StringPrintf("\t%s",
-                               UpdateTextForTSV(semantics.trigger()).c_str());
-    line +=
-        base::StringPrintf("\t%s", UpdateTextForTSV(semantics.data()).c_str());
-    switch (semantics.destination()) {
-      case traffic_annotation::
-          NetworkTrafficAnnotation_TrafficSemantics_Destination_WEBSITE:
-        line += "\tWebsite";
-        break;
-      case traffic_annotation::
-          NetworkTrafficAnnotation_TrafficSemantics_Destination_GOOGLE_OWNED_SERVICE:
-        line += "\tGoogle";
-        break;
-      case traffic_annotation::
-          NetworkTrafficAnnotation_TrafficSemantics_Destination_LOCAL:
-        line += "\tLocal";
-        break;
-      case traffic_annotation::
-          NetworkTrafficAnnotation_TrafficSemantics_Destination_OTHER:
-        if (!semantics.destination_other().empty())
-          line += UpdateTextForTSV(base::StringPrintf(
-              "\tOther: %s", semantics.destination_other().c_str()));
-        else
-          line += "\tOther";
-        break;
-
-      default:
-        NOTREACHED();
-        line += "\tInvalid value";
-    }
-
-    // Policy.
-    const auto policy = instance.proto.policy();
-    line +=
-        policy.cookies_allowed() ==
-                traffic_annotation::
-                    NetworkTrafficAnnotation_TrafficPolicy_CookiesAllowed_YES
-            ? "\tYes"
-            : "\tNo";
-    line += base::StringPrintf(
-        "\t%s", UpdateTextForTSV(policy.cookies_store()).c_str());
-    line +=
-        base::StringPrintf("\t%s", UpdateTextForTSV(policy.setting()).c_str());
-
-    // Chrome Policies.
-    std::string policies_text;
-    if (policy.chrome_policy_size()) {
-      for (int i = 0; i < policy.chrome_policy_size(); i++) {
-        if (i)
-          policies_text += "\n";
-        policies_text += PolicyToText(policy.chrome_policy(i).DebugString());
-      }
-    } else {
-      policies_text = policy.policy_exception_justification();
-    }
-    line += base::StringPrintf("\t%s", UpdateTextForTSV(policies_text).c_str());
-
-    // Comments.
-    line += "\t" + instance.proto.comments();
-
-    // Source.
-    const auto source = instance.proto.source();
-    line += base::StringPrintf("\t%s:%i", source.file().c_str(), source.line());
-
-    // Hash code.
-    line += base::StringPrintf("\t%i", instance.unique_id_hash_code);
-
-    lines.push_back(line);
-  }
-
-  std::sort(lines.begin(), lines.end());
-  lines.insert(lines.begin(), title);
-  std::string report;
-  for (const std::string& line : lines)
-    report += line + "\n";
-
-  return base::WriteFile(filepath, report.c_str(), report.length()) != -1;
-}
 
 #if defined(OS_WIN)
 int wmain(int argc, wchar_t* argv[]) {
@@ -263,8 +64,7 @@ int main(int argc, char* argv[]) {
       command_line.GetSwitchValuePath("extractor-input");
   bool full_run = command_line.HasSwitch("full-run");
   base::FilePath summary_file = command_line.GetSwitchValuePath("summary-file");
-  base::FilePath annotations_file =
-      command_line.GetSwitchValuePath("annotations-file");
+  base::FilePath ids_file = command_line.GetSwitchValuePath("ids-file");
   std::vector<std::string> path_filters;
 
 #if defined(OS_WIN)
@@ -324,37 +124,87 @@ int main(int argc, char* argv[]) {
   auditor.RunAllChecks();
 
   // Write the summary file.
-  if (!summary_file.empty() &&
-      !WriteSummaryFile(summary_file, auditor.extracted_annotations(),
-                        auditor.extracted_calls(), auditor.errors())) {
-    LOG(ERROR) << "Could not write summary file.";
-    return 1;
+  if (!summary_file.empty()) {
+    const std::vector<AnnotationInstance>& annotation_instances =
+        auditor.extracted_annotations();
+    const std::vector<CallInstance>& call_instances = auditor.extracted_calls();
+    const std::vector<AuditorResult>& errors = auditor.errors();
+
+    std::string report;
+    std::vector<std::string> items;
+
+    report = "[Errors]\n";
+    for (const auto& error : errors)
+      items.push_back(error.ToText());
+    std::sort(items.begin(), items.end());
+    for (const std::string& item : items)
+      report += item + "\n";
+
+    report += "\n[Annotations]\n";
+    items.clear();
+    for (const auto& instance : annotation_instances) {
+      std::string serialized;
+      google::protobuf::TextFormat::PrintToString(instance.proto, &serialized);
+      items.push_back(serialized +
+                      "\n----------------------------------------\n");
+    }
+    std::sort(items.begin(), items.end());
+    for (const std::string& item : items)
+      report += item;
+
+    report += "\n[Calls]\n";
+    items.clear();
+    for (const auto& instance : call_instances) {
+      items.push_back(base::StringPrintf(
+          "File:%s:%i\nFunction:%s\nAnnotated: %i\n",
+          instance.file_path.c_str(), instance.line_number,
+          instance.function_name.c_str(), instance.is_annotated));
+    }
+    std::sort(items.begin(), items.end());
+    for (const std::string& item : items)
+      report += item;
+
+    if (base::WriteFile(summary_file, report.c_str(), report.length()) == -1) {
+      LOG(ERROR) << "Could not write summary file.";
+      return 1;
+    }
   }
 
-  // Update annotations list.
-  if (!TrafficAnnotationExporter().UpdateAnnotationsXML(
-          source_path.Append(kAnnotationsXmlPath),
-          auditor.extracted_annotations(),
-          TrafficAnnotationAuditor::GetReservedUniqueIDs())) {
-    LOG(ERROR) << "Could not update annotations XML.";
-    return 1;
-  }
+  // Write ids file.
+  if (!ids_file.empty()) {
+    std::string report;
+    std::vector<std::pair<int, std::string>> items;
+    const std::vector<AnnotationInstance>& annotation_instances =
+        auditor.extracted_annotations();
+    for (auto& instance : annotation_instances) {
+      items.push_back(make_pair(TrafficAnnotationAuditor::ComputeHashValue(
+                                    instance.proto.unique_id()),
+                                instance.proto.unique_id()));
+    }
 
-  // Write annotations TSV file.
-  if (!annotations_file.empty() &&
-      !WriteAnnotationsFile(annotations_file,
-                            auditor.extracted_annotations())) {
-    LOG(ERROR) << "Could not write TSV file.";
-    return 1;
+    const std::map<int, std::string> reserved_ids =
+        TrafficAnnotationAuditor::GetReservedUniqueIDs();
+    for (const auto& item : reserved_ids)
+      items.push_back(item);
+
+    std::sort(items.begin(), items.end());
+    for (const auto& item : items)
+      report += base::StringPrintf("<int value=\"%i\" label=\"%s\" />\n",
+                                   item.first, item.second.c_str());
+
+    if (base::WriteFile(ids_file, report.c_str(), report.length()) == -1) {
+      LOG(ERROR) << "Could not write ids file.";
+      return 1;
+    }
   }
 
   // Dump Errors and Warnings to stdout.
   const std::vector<AuditorResult>& errors = auditor.errors();
   for (const auto& error : errors) {
-    printf(
-        "%s: %s\n",
-        error.type() == AuditorResult::Type::ERROR_SYNTAX ? "Error" : "Warning",
-        error.ToText().c_str());
+    printf("%s: %s\n",
+           error.type() == AuditorResult::ResultType::ERROR_SYNTAX ? "Error"
+                                                                   : "Warning",
+           error.ToText().c_str());
   }
 
   return 0;

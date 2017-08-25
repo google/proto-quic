@@ -52,10 +52,7 @@ QuicChromiumPacketWriter::QuicChromiumPacketWriter(DatagramClientSocket* socket)
       delegate_(nullptr),
       packet_(new ReusableIOBuffer(kMaxPacketSize)),
       write_blocked_(false),
-      weak_factory_(this) {
-  write_callback_ = base::Bind(&QuicChromiumPacketWriter::OnWriteComplete,
-                               weak_factory_.GetWeakPtr());
-}
+      weak_factory_(this) {}
 
 QuicChromiumPacketWriter::~QuicChromiumPacketWriter() {}
 
@@ -96,7 +93,9 @@ WriteResult QuicChromiumPacketWriter::WritePacketToSocket(
 
 WriteResult QuicChromiumPacketWriter::WritePacketToSocketImpl() {
   base::TimeTicks now = base::TimeTicks::Now();
-  int rv = socket_->Write(packet_.get(), packet_->size(), write_callback_);
+  int rv = socket_->Write(packet_.get(), packet_->size(),
+                          base::Bind(&QuicChromiumPacketWriter::OnWriteComplete,
+                                     weak_factory_.GetWeakPtr()));
 
   if (rv < 0 && rv != ERR_IO_PENDING && delegate_ != nullptr) {
     // If write error, then call delegate's HandleWriteError, which

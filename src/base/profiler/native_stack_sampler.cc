@@ -24,7 +24,7 @@ NativeStackSampler::CreateStackBuffer() {
   size_t size = GetStackBufferSize();
   if (size == 0)
     return nullptr;
-  return std::make_unique<StackBuffer>(size);
+  return MakeUnique<StackBuffer>(size);
 }
 
 NativeStackSamplerTestDelegate::~NativeStackSamplerTestDelegate() {}

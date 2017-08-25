@@ -17,7 +17,7 @@ class QuicVersionManagerTest : public QuicTest {};
 
 TEST_F(QuicVersionManagerTest, QuicVersionManager) {
   SetQuicFlag(&FLAGS_quic_enable_version_41, false);
-  FLAGS_quic_reloadable_flag_quic_enable_version_40 = false;
+  SetQuicFlag(&FLAGS_quic_enable_version_40, false);
   FLAGS_quic_reloadable_flag_quic_enable_version_39 = false;
   FLAGS_quic_reloadable_flag_quic_enable_version_38 = false;
   FLAGS_quic_reloadable_flag_quic_disable_version_36 = false;
@@ -49,7 +49,7 @@ TEST_F(QuicVersionManagerTest, QuicVersionManager) {
   EXPECT_EQ(QUIC_VERSION_37, manager.GetSupportedVersions()[2]);
   EXPECT_EQ(QUIC_VERSION_35, manager.GetSupportedVersions()[3]);
 
-  FLAGS_quic_reloadable_flag_quic_enable_version_40 = true;
+  SetQuicFlag(&FLAGS_quic_enable_version_40, true);
   ASSERT_EQ(5u, manager.GetSupportedVersions().size());
   EXPECT_EQ(QUIC_VERSION_40, manager.GetSupportedVersions()[0]);
   EXPECT_EQ(QUIC_VERSION_39, manager.GetSupportedVersions()[1]);

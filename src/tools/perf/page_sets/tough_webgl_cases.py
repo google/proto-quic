@@ -17,6 +17,7 @@ class ToughWebglCasesPage(page_module.Page):
             webgl_supported_shared_state.WebGLSupportedSharedState),
         make_javascript_deterministic=False,
         name=url)
+    self.archive_data_file = 'data/tough_webgl_cases.json'
 
 
   @property

@@ -788,6 +788,7 @@ void QuicDispatcher::ProcessChlo() {
     return;
   }
   if (FLAGS_quic_allow_chlo_buffering &&
+      FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop &&
       new_sessions_allowed_per_event_loop_ <= 0) {
     // Can't create new session any more. Wait till next event loop.
     QUIC_BUG_IF(buffered_packets_.HasChloForConnection(current_connection_id_));
@@ -815,7 +816,9 @@ void QuicDispatcher::ProcessChlo() {
   // Do this even when flag is off because there might be still some packets
   // buffered in the store before flag is turned off.
   DeliverPacketsToSession(packets, session);
-  --new_sessions_allowed_per_event_loop_;
+  if (FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop) {
+    --new_sessions_allowed_per_event_loop_;
+  }
 }
 
 const QuicSocketAddress QuicDispatcher::GetClientAddress() const {

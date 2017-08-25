@@ -8,7 +8,6 @@
 #include <magenta/syscalls.h>
 
 #include "base/debug/activity_tracker.h"
-#include "base/strings/stringprintf.h"
 
 namespace base {
 
@@ -114,7 +113,7 @@ Process Process::Duplicate() const {
 
 ProcessId Process::Pid() const {
   DCHECK(IsValid());
-  return GetProcId(Handle());
+  return GetProcId(process_.get());
 }
 
 bool Process::is_current() const {
@@ -128,12 +127,12 @@ void Process::Close() {
 
 bool Process::Terminate(int exit_code, bool wait) const {
   // exit_code isn't supportable. https://crbug.com/753490.
-  mx_status_t status = mx_task_kill(Handle());
+  mx_status_t status = mx_task_kill(process_.get());
   // TODO(scottmg): Put these LOG/CHECK back to DLOG/DCHECK after
   // https://crbug.com/750756 is diagnosed.
   if (status == MX_OK && wait) {
     mx_signals_t signals;
-    status = mx_object_wait_one(Handle(), MX_TASK_TERMINATED,
+    status = mx_object_wait_one(process_.get(), MX_TASK_TERMINATED,
                                 mx_deadline_after(MX_SEC(60)), &signals);
     if (status != MX_OK) {
       LOG(ERROR) << "Error waiting for process exit: " << status;
@@ -152,21 +151,12 @@ bool Process::WaitForExit(int* exit_code) const {
 }
 
 bool Process::WaitForExitWithTimeout(TimeDelta timeout, int* exit_code) const {
-  DCHECK(!is_current_process_);
-
   // Record the event that this thread is blocking upon (for hang diagnosis).
   base::debug::ScopedProcessWaitActivity process_activity(this);
 
   mx_time_t deadline = timeout == TimeDelta::Max()
                            ? MX_TIME_INFINITE
                            : (TimeTicks::Now() + timeout).ToMXTime();
-  // TODO(scottmg): https://crbug.com/755282
-  const bool kOnBot = getenv("CHROME_HEADLESS") != nullptr;
-  if (kOnBot) {
-    LOG(ERROR) << base::StringPrintf(
-        "going to wait for process %x (deadline=%zu, now=%zu)", process_.get(),
-        deadline, TimeTicks::Now().ToMXTime());
-  }
   mx_signals_t signals_observed = 0;
   mx_status_t status = mx_object_wait_one(process_.get(), MX_TASK_TERMINATED,
                                           deadline, &signals_observed);
@@ -178,11 +168,8 @@ bool Process::WaitForExitWithTimeout(TimeDelta timeout, int* exit_code) const {
     LOG(ERROR) << "mx_object_wait_one failed, status=" << status;
     return false;
   }
-  if (status == MX_ERR_TIMED_OUT) {
-    mx_time_t now = TimeTicks::Now().ToMXTime();
-    LOG(ERROR) << "mx_object_wait_one timed out, signals=" << signals_observed
-               << ", deadline=" << deadline << ", now=" << now
-               << ", delta=" << (now - deadline);
+  if (status == MX_ERR_TIMED_OUT && !signals_observed) {
+    LOG(ERROR) << "mx_object_wait_one timed out, and no signals";
     return false;
   }
 

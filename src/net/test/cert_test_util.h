@@ -13,12 +13,8 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 #if defined(USE_NSS_CERTS)
-#include "net/cert/scoped_nss_types.h"
-
 // From <pk11pub.h>
 typedef struct PK11SlotInfoStr PK11SlotInfo;
-
-#include "net/cert/scoped_nss_types.h"
 #endif
 
 namespace base {
@@ -37,30 +33,14 @@ bool ImportSensitiveKeyFromFile(const base::FilePath& dir,
                                 const std::string& key_filename,
                                 PK11SlotInfo* slot);
 
-ScopedCERTCertificate ImportClientCertToSlot(
-    const scoped_refptr<X509Certificate>& cert,
-    PK11SlotInfo* slot);
+bool ImportClientCertToSlot(const scoped_refptr<X509Certificate>& cert,
+                            PK11SlotInfo* slot);
 
 scoped_refptr<X509Certificate> ImportClientCertAndKeyFromFile(
     const base::FilePath& dir,
     const std::string& cert_filename,
     const std::string& key_filename,
-    PK11SlotInfo* slot,
-    ScopedCERTCertificate* nss_cert);
-scoped_refptr<X509Certificate> ImportClientCertAndKeyFromFile(
-    const base::FilePath& dir,
-    const std::string& cert_filename,
-    const std::string& key_filename,
     PK11SlotInfo* slot);
-
-ScopedCERTCertificate ImportCERTCertificateFromFile(
-    const base::FilePath& certs_dir,
-    const std::string& cert_file);
-
-ScopedCERTCertificateList CreateCERTCertificateListFromFile(
-    const base::FilePath& certs_dir,
-    const std::string& cert_file,
-    int format);
 #endif
 
 // Imports all of the certificates in |cert_file|, a file in |certs_dir|, into a
@@ -100,12 +80,12 @@ scoped_refptr<X509Certificate> ImportCertFromFile(const base::FilePath& certs_di
 class ScopedTestEVPolicy {
  public:
   ScopedTestEVPolicy(EVRootCAMetadata* ev_root_ca_metadata,
-                     const SHA256HashValue& fingerprint,
+                     const SHA1HashValue& fingerprint,
                      const char* policy);
   ~ScopedTestEVPolicy();
 
  private:
-  SHA256HashValue fingerprint_;
+  SHA1HashValue fingerprint_;
   EVRootCAMetadata* const ev_root_ca_metadata_;
 };
 

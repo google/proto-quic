@@ -6,7 +6,6 @@ import re
 
 from core import perf_benchmark
 from telemetry import benchmark
-from telemetry import story
 from telemetry.timeline import chrome_trace_config
 from telemetry.timeline import chrome_trace_category_filter
 from telemetry.web_perf import timeline_based_measurement
@@ -72,8 +71,6 @@ class _V8BrowsingBenchmark(_v8BrowsingBenchmarkBaseClass):
       # which enables memory-infra V8 code stats in V8 code size benchmarks
       # only (to not slow down detailed memory dumps in other benchmarks).
       'disabled-by-default-memory-infra.v8.code_stats',
-      # Blink categories.
-      'blink_gc',
     ]
     options = timeline_based_measurement.Options(
         chrome_trace_category_filter.ChromeTraceCategoryFilter(
@@ -84,7 +81,7 @@ class _V8BrowsingBenchmark(_v8BrowsingBenchmarkBaseClass):
     memory_dump_config.AddTrigger('light', 1000)
     options.config.chrome_trace_config.SetMemoryDumpConfig(memory_dump_config)
     options.SetTimelineBasedMetrics([
-      'expectedQueueingTimeMetric', 'v8AndMemoryMetrics', 'blinkGcMetric'])
+      'expectedQueueingTimeMetric', 'v8AndMemoryMetrics'])
     return options
 
   @classmethod
@@ -129,8 +126,6 @@ class _V8RuntimeStatsBrowsingBenchmark(_v8BrowsingBenchmarkBaseClass):
       'v8',
       'webkit.console',
       'disabled-by-default-v8.runtime_stats',
-      # Blink categories.
-      'blink_gc',
     ]
     options = timeline_based_measurement.Options(
         chrome_trace_category_filter.ChromeTraceCategoryFilter(
@@ -142,15 +137,14 @@ class _V8RuntimeStatsBrowsingBenchmark(_v8BrowsingBenchmarkBaseClass):
     options.config.chrome_trace_config.SetMemoryDumpConfig(memory_dump_config)
 
     options.SetTimelineBasedMetrics([
-      'expectedQueueingTimeMetric', 'runtimeStatsTotalMetric', 'gcMetric',
-      'blinkGcMetric'])
+      'expectedQueueingTimeMetric', 'runtimeStatsTotalMetric', 'gcMetric'])
     return options
 
 
 @benchmark.Owner(emails=['ulan@chromium.org'])
+@benchmark.Disabled('android')
 class V8DesktopBrowsingBenchmark(_V8BrowsingBenchmark):
   PLATFORM = 'desktop'
-  SUPPORTED_PLATFORMS = [story.expectations.ALL_DESKTOP]
 
   @classmethod
   def Name(cls):
@@ -158,31 +152,31 @@ class V8DesktopBrowsingBenchmark(_V8BrowsingBenchmark):
 
 
 @benchmark.Owner(emails=['ulan@chromium.org'])
+@benchmark.Enabled('android')
 class V8MobileBrowsingBenchmark(_V8BrowsingBenchmark):
   PLATFORM = 'mobile'
-  SUPPORTED_PLATFORMS = [story.expectations.ALL_MOBILE]
 
   @classmethod
   def Name(cls):
     return 'v8.browsing_mobile'
 
 
+@benchmark.Disabled('android')
 @benchmark.Owner(emails=['mythria@chromium.org'])
 class V8RuntimeStatsDesktopBrowsingBenchmark(
     _V8RuntimeStatsBrowsingBenchmark):
   PLATFORM = 'desktop'
-  SUPPORTED_PLATFORMS = [story.expectations.ALL_DESKTOP]
 
   @classmethod
   def Name(cls):
     return 'v8.runtimestats.browsing_desktop'
 
 
+@benchmark.Enabled('android')
 @benchmark.Owner(emails=['mythria@chromium.org'])
 class V8RuntimeStatsMobileBrowsingBenchmark(
     _V8RuntimeStatsBrowsingBenchmark):
   PLATFORM = 'mobile'
-  SUPPORTED_PLATFORMS = [story.expectations.ALL_MOBILE]
 
   @classmethod
   def Name(cls):

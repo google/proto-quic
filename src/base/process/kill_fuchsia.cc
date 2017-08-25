@@ -21,8 +21,6 @@ bool KillProcessGroup(ProcessHandle process_group_id) {
 }
 
 TerminationStatus GetTerminationStatus(ProcessHandle handle, int* exit_code) {
-  DCHECK(exit_code);
-
   mx_info_process_t process_info;
   mx_status_t status =
       mx_object_get_info(handle, MX_INFO_PROCESS, &process_info,
@@ -33,11 +31,9 @@ TerminationStatus GetTerminationStatus(ProcessHandle handle, int* exit_code) {
     return TERMINATION_STATUS_NORMAL_TERMINATION;
   }
   if (!process_info.started) {
-    *exit_code = 0;
     return TERMINATION_STATUS_LAUNCH_FAILED;
   }
   if (!process_info.exited) {
-    *exit_code = 0;
     return TERMINATION_STATUS_STILL_RUNNING;
   }
 

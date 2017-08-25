@@ -15,8 +15,7 @@ interface IChildProcessService {
   boolean bindToCaller();
 
   // Sets up the initial IPC channel.
-  oneway void setupConnection(in Bundle args, ICallbackInt pidCallback,
-          in List<IBinder>  clientInterfaces);
+  oneway void setupConnection(in Bundle args, ICallbackInt pidCallback, IBinder callback);
 
   // Asks the child service to crash so that we can test the termination logic.
   oneway void crashIntentionallyForTesting();

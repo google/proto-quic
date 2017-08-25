@@ -246,9 +246,8 @@ void BidirectionalStreamQuicImpl::OnStreamReady(int rv) {
   }
 
   stream_ = session_->ReleaseStream();
-  DCHECK(stream_);
 
-  if (!stream_->IsOpen()) {
+  if (!stream_) {
     NotifyError(ERR_CONNECTION_CLOSED);
     return;
   }

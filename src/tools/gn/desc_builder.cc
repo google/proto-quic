@@ -186,10 +186,9 @@ class ConfigDescBuilder : public BaseDescBuilder {
     const ConfigValues& values = config_->resolved_values();
 
     if (what_.empty())
-      res->SetKey(
+      res->SetStringWithoutPathExpansion(
           "toolchain",
-          base::Value(
-              config_->label().GetToolchainLabel().GetUserVisibleName(false)));
+          config_->label().GetToolchainLabel().GetUserVisibleName(false));
 
     if (what(variables::kConfigs) && !config_->configs().empty()) {
       auto configs = base::MakeUnique<base::ListValue>();
@@ -260,13 +259,12 @@ class TargetDescBuilder : public BaseDescBuilder {
     bool is_binary_output = target_->IsBinary();
 
     if (what_.empty()) {
-      res->SetKey(
+      res->SetStringWithoutPathExpansion(
           "type",
-          base::Value(Target::GetStringForOutputType(target_->output_type())));
-      res->SetKey(
+          Target::GetStringForOutputType(target_->output_type()));
+      res->SetStringWithoutPathExpansion(
           "toolchain",
-          base::Value(
-              target_->label().GetToolchainLabel().GetUserVisibleName(false)));
+          target_->label().GetToolchainLabel().GetUserVisibleName(false));
     }
 
     // General target meta variables.
@@ -297,19 +295,20 @@ class TargetDescBuilder : public BaseDescBuilder {
                                    RenderValue(target_->sources()));
 
     if (what(variables::kOutputName) && !target_->output_name().empty())
-      res->SetKey(variables::kOutputName, base::Value(target_->output_name()));
+      res->SetStringWithoutPathExpansion(variables::kOutputName,
+                                         target_->output_name());
 
     if (what(variables::kOutputDir) && !target_->output_dir().is_null())
       res->SetWithoutPathExpansion(variables::kOutputDir,
                                    RenderValue(target_->output_dir()));
 
     if (what(variables::kOutputExtension) && target_->output_extension_set())
-      res->SetKey(variables::kOutputExtension,
-                  base::Value(target_->output_extension()));
+      res->SetStringWithoutPathExpansion(variables::kOutputExtension,
+                                         target_->output_extension());
 
     if (what(variables::kPublic)) {
       if (target_->all_headers_public())
-        res->SetKey(variables::kPublic, base::Value("*"));
+        res->SetStringWithoutPathExpansion(variables::kPublic, "*");
       else
         res->SetWithoutPathExpansion(variables::kPublic,
                                      RenderValue(target_->public_headers()));
@@ -345,8 +344,9 @@ class TargetDescBuilder : public BaseDescBuilder {
     if (target_->output_type() == Target::ACTION ||
         target_->output_type() == Target::ACTION_FOREACH) {
       if (what(variables::kScript))
-        res->SetKey(variables::kScript,
-                    base::Value(target_->action_values().script().value()));
+        res->SetStringWithoutPathExpansion(
+            variables::kScript,
+            target_->action_values().script().value());
 
       if (what(variables::kArgs)) {
         auto args = base::MakeUnique<base::ListValue>();
@@ -357,8 +357,9 @@ class TargetDescBuilder : public BaseDescBuilder {
       }
       if (what(variables::kDepfile) &&
           !target_->action_values().depfile().empty()) {
-        res->SetKey(variables::kDepfile,
-                    base::Value(target_->action_values().depfile().AsString()));
+        res->SetStringWithoutPathExpansion(
+            variables::kDepfile,
+            target_->action_values().depfile().AsString());
       }
     }
 
@@ -568,9 +569,9 @@ class TargetDescBuilder : public BaseDescBuilder {
     BundleData::SourceFiles sources;
     bundle_data.GetSourceFiles(&sources);
     data->SetWithoutPathExpansion("source_files", RenderValue(sources));
-    data->SetKey(
+    data->SetStringWithoutPathExpansion(
         "root_dir_output",
-        base::Value(bundle_data.GetBundleRootDirOutput(settings).value()));
+        bundle_data.GetBundleRootDirOutput(settings).value());
     data->SetWithoutPathExpansion("root_dir",
                                   RenderValue(bundle_data.root_dir()));
     data->SetWithoutPathExpansion("resources_dir",
@@ -579,7 +580,8 @@ class TargetDescBuilder : public BaseDescBuilder {
                                   RenderValue(bundle_data.executable_dir()));
     data->SetWithoutPathExpansion("plugins_dir",
                                   RenderValue(bundle_data.plugins_dir()));
-    data->SetKey("product_type", base::Value(bundle_data.product_type()));
+    data->SetStringWithoutPathExpansion("product_type",
+                                        bundle_data.product_type());
 
     auto deps = base::MakeUnique<base::ListValue>();
     for (const auto* dep : bundle_data.bundle_deps())

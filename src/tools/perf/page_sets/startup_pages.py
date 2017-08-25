@@ -13,6 +13,7 @@ class StartedPage(page_module.Page):
         url=url, page_set=page_set, startup_url=url,
         shared_page_state_class=shared_page_state.SharedPageState,
         name=url)
+    self.archive_data_file = 'data/startup_pages.json'
 
   def RunNavigateSteps(self, action_runner):
     # Do not call super.RunNavigateSteps() to avoid reloading the page that has

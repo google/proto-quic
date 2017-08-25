@@ -826,8 +826,9 @@ int HttpStreamFactoryImpl::Job::DoEvaluateThrottle() {
 void HttpStreamFactoryImpl::Job::ResumeInitConnection() {
   if (init_connection_already_resumed_)
     return;
-  DCHECK_EQ(next_state_, STATE_INIT_CONNECTION);
   net_log_.AddEvent(NetLogEventType::HTTP_STREAM_JOB_RESUME_INIT_CONNECTION);
+  // TODO(xunjieli): Change this to a DCHECK once crbug.com/718576 is stable.
+  CHECK_EQ(next_state_, STATE_INIT_CONNECTION);
   init_connection_already_resumed_ = true;
   OnIOComplete(OK);
 }
@@ -908,7 +909,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionImpl() {
     int rv = quic_request_.Request(
         destination, quic_version_, request_info_.privacy_mode,
         ssl_config->GetCertVerifyFlags(), url, request_info_.method, net_log_,
-        &net_error_details_, io_callback_);
+        io_callback_);
     if (rv == OK) {
       using_existing_quic_session_ = true;
     } else {

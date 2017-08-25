@@ -329,7 +329,7 @@ TEST_P(WaitableEventWatcherDeletionTest, SignalAndDelete) {
   {
     WaitableEventWatcher watcher;
 
-    auto event = std::make_unique<WaitableEvent>(
+    auto event = base::MakeUnique<WaitableEvent>(
         WaitableEvent::ResetPolicy::AUTOMATIC,
         WaitableEvent::InitialState::NOT_SIGNALED);
 
@@ -367,7 +367,7 @@ TEST_P(WaitableEventWatcherDeletionTest, DeleteWatcherBeforeCallback) {
 
   WaitableEvent event(WaitableEvent::ResetPolicy::AUTOMATIC,
                       WaitableEvent::InitialState::NOT_SIGNALED);
-  auto watcher = std::make_unique<WaitableEventWatcher>();
+  auto watcher = MakeUnique<WaitableEventWatcher>();
 
   // Queue up a series of tasks:
   // 1. StartWatching the WaitableEvent

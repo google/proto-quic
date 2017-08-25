@@ -5,6 +5,7 @@
 -*QuicEndToEndTest.Uber*
 -*QuicHttpStreamTest*
 -*RootCert*
+-*Socket*
 -BbrSenderTest.SimpleTransferAckDecimation2
 -BidirectionalStreamTest.TestHonorAlternativeServiceHeader
 -CertNetFetcherImplTest*
@@ -13,16 +14,13 @@
 -DiskCache*
 -EffectiveConnectionTypeTest*
 -EmbeddedTestServer*
--HostResolverImplDnsTest.DnsTask
-
-# https://crbug.com/755552
--HttpCache.RangeGET_ParallelValidationDifferentRanges
-
+-HttpCache.RangeGET_ParallelValidationDifferentRanges  # crbug.com/755552
 -HttpNetworkTransactionTest.UploadUnreadableFile
 -HttpServerTest.*
 -NetworkInterfacesTest.GetNetworkList
 -NetworkQualitiesPrefManager*
 -NetworkQualityEstimatorTest*
+-NetworkThrottleManager*
 -Proxy*
 -PythonUtils*
 -QuicSimpleClientTest*
@@ -33,11 +31,9 @@
 -SSL*
 -ThroughputAnalyzerTest*
 -TokenBindingURLRequest*
--TransportClientSocketPoolTest.RequestTwice
--UnixDomain*Socket*
 -URLFetcher*
 -URLRequest*
--WebSocket*
+-HostResolverImplDnsTest.DnsTask
 
 # TODO(fuchsia): These run too slowly at present. crbug.com/745094
 -BbrSenderTest.*

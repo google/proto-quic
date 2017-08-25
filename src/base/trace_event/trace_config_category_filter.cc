@@ -214,7 +214,7 @@ void TraceConfigCategoryFilter::AddCategoriesToDict(
   if (categories.empty())
     return;
 
-  auto list = std::make_unique<ListValue>();
+  auto list = MakeUnique<ListValue>();
   for (const std::string& category : categories)
     list->AppendString(category);
   dict->Set(param, std::move(list));

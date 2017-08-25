@@ -37,7 +37,6 @@ class BASE_EXPORT SupportsUserData {
   // Multiple user data values can be stored under different keys.
   // This object will TAKE OWNERSHIP of the given data pointer, and will
   // delete the object if it is changed or the object is destroyed.
-  // |key| must not be null--that value is too vulnerable for collision.
   Data* GetUserData(const void* key) const;
   void SetUserData(const void* key, std::unique_ptr<Data> data);
   void RemoveUserData(const void* key);

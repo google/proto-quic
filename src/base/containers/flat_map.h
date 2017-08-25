@@ -5,7 +5,6 @@
 #ifndef BASE_CONTAINERS_FLAT_MAP_H_
 #define BASE_CONTAINERS_FLAT_MAP_H_
 
-#include <functional>
 #include <utility>
 
 #include "base/containers/flat_tree.h"
@@ -139,7 +138,7 @@ struct GetKeyFromValuePairFirst {
 //   bool operator>=(const flat_map&, const flat_map);
 //   bool operator<=(const flat_map&, const flat_map);
 //
-template <class Key, class Mapped, class Compare = std::less<>>
+template <class Key, class Mapped, class Compare = ::base::less>
 // Meets the requirements of Container, AssociativeContainer,
 // ReversibleContainer.
 // Requires: Key is Movable, Compare is a StrictWeakOrdering on Key.

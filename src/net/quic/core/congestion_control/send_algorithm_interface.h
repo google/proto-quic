@@ -29,26 +29,6 @@ const QuicPacketCount kDefaultMaxCongestionWindowPackets = 2000;
 
 class QUIC_EXPORT_PRIVATE SendAlgorithmInterface {
  public:
-  struct AckedPacket {
-    AckedPacket(QuicPacketNumber packet_number,
-                QuicPacketLength bytes_acked,
-                QuicTime receive_timestamp)
-        : packet_number(packet_number),
-          bytes_acked(bytes_acked),
-          receive_timestamp(receive_timestamp) {}
-
-    QuicPacketNumber packet_number;
-    // Number of bytes sent in the packet that was acknowledged.
-    QuicPacketLength bytes_acked;
-    // The time |packet_number| was received by the peer, according to the
-    // optional timestamp the peer included in the ACK frame which acknowledged
-    // |packet_number|. Zero if no timestamp was available for this packet.
-    QuicTime receive_timestamp;
-  };
-
-  // A vector of acked packets.
-  typedef std::vector<AckedPacket> AckedPacketVector;
-
   // A sorted vector of packets.
   typedef std::vector<std::pair<QuicPacketNumber, QuicPacketLength>>
       CongestionVector;
@@ -79,7 +59,7 @@ class QUIC_EXPORT_PRIVATE SendAlgorithmInterface {
   virtual void OnCongestionEvent(bool rtt_updated,
                                  QuicByteCount prior_in_flight,
                                  QuicTime event_time,
-                                 const AckedPacketVector& acked_packets,
+                                 const CongestionVector& acked_packets,
                                  const CongestionVector& lost_packets) = 0;
 
   // Inform that we sent |bytes| to the wire, and if the packet is
@@ -124,12 +104,9 @@ class QUIC_EXPORT_PRIVATE SendAlgorithmInterface {
   // Whether the send algorithm is currently in recovery.
   virtual bool InRecovery() const = 0;
 
-  // True when the congestion control is probing for more bandwidth and needs
-  // enough data to not be app-limited to do so.
-  virtual bool IsProbingForMoreBandwidth() const = 0;
-
   // Returns the size of the slow start congestion window in bytes,
-  // aka ssthresh.  Only defined for Cubic and Reno, other algorithms return 0.
+  // aka ssthresh.  Some send algorithms do not define a slow start
+  // threshold and will return 0.
   virtual QuicByteCount GetSlowStartThreshold() const = 0;
 
   virtual CongestionControlType GetCongestionControlType() const = 0;

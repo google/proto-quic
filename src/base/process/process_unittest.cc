@@ -42,25 +42,24 @@ class ProcessTest : public MultiProcessTest {
 };
 
 TEST_F(ProcessTest, Create) {
-  Process process(SpawnChild("SimpleChildProcess"));
-  ASSERT_TRUE(process.IsValid());
-  ASSERT_FALSE(process.is_current());
-  EXPECT_NE(process.Pid(), kNullProcessId);
-  process.Close();
-  ASSERT_FALSE(process.IsValid());
+  SpawnChildResult spawn_child = SpawnChild("SimpleChildProcess");
+  ASSERT_TRUE(spawn_child.process.IsValid());
+  ASSERT_FALSE(spawn_child.process.is_current());
+  spawn_child.process.Close();
+  ASSERT_FALSE(spawn_child.process.IsValid());
 }
 
 TEST_F(ProcessTest, CreateCurrent) {
   Process process = Process::Current();
   ASSERT_TRUE(process.IsValid());
   ASSERT_TRUE(process.is_current());
-  EXPECT_NE(process.Pid(), kNullProcessId);
   process.Close();
   ASSERT_FALSE(process.IsValid());
 }
 
 TEST_F(ProcessTest, Move) {
-  Process process1(SpawnChild("SimpleChildProcess"));
+  SpawnChildResult spawn_result = SpawnChild("SimpleChildProcess");
+  Process& process1 = spawn_result.process;
   EXPECT_TRUE(process1.IsValid());
 
   Process process2;
@@ -79,7 +78,8 @@ TEST_F(ProcessTest, Move) {
 }
 
 TEST_F(ProcessTest, Duplicate) {
-  Process process1(SpawnChild("SimpleChildProcess"));
+  SpawnChildResult spawn_result = SpawnChild("SimpleChildProcess");
+  Process& process1 = spawn_result.process;
   ASSERT_TRUE(process1.IsValid());
 
   Process process2 = process1.Duplicate();
@@ -109,7 +109,8 @@ TEST_F(ProcessTest, DuplicateCurrent) {
 }
 
 TEST_F(ProcessTest, DeprecatedGetProcessFromHandle) {
-  Process process1(SpawnChild("SimpleChildProcess"));
+  SpawnChildResult spawn_result = SpawnChild("SimpleChildProcess");
+  Process& process1 = spawn_result.process;
   ASSERT_TRUE(process1.IsValid());
 
   Process process2 = Process::DeprecatedGetProcessFromHandle(process1.Handle());
@@ -129,7 +130,8 @@ MULTIPROCESS_TEST_MAIN(SleepyChildProcess) {
 }
 
 TEST_F(ProcessTest, Terminate) {
-  Process process(SpawnChild("SleepyChildProcess"));
+  SpawnChildResult spawn_result = SpawnChild("SleepyChildProcess");
+  Process& process = spawn_result.process;
   ASSERT_TRUE(process.IsValid());
 
   const int kDummyExitCode = 42;
@@ -175,11 +177,12 @@ MULTIPROCESS_TEST_MAIN(TerminateCurrentProcessImmediatelyWithCode0) {
 }
 
 TEST_F(ProcessTest, TerminateCurrentProcessImmediatelyWithZeroExitCode) {
-  Process process(SpawnChild("TerminateCurrentProcessImmediatelyWithCode0"));
-  ASSERT_TRUE(process.IsValid());
+  SpawnChildResult spawn_child =
+      SpawnChild("TerminateCurrentProcessImmediatelyWithCode0");
+  ASSERT_TRUE(spawn_child.process.IsValid());
   int exit_code = 42;
-  ASSERT_TRUE(process.WaitForExitWithTimeout(TestTimeouts::action_max_timeout(),
-                                             &exit_code));
+  ASSERT_TRUE(spawn_child.process.WaitForExitWithTimeout(
+      TestTimeouts::action_max_timeout(), &exit_code));
   EXPECT_EQ(0, exit_code);
 }
 
@@ -190,11 +193,12 @@ MULTIPROCESS_TEST_MAIN(TerminateCurrentProcessImmediatelyWithCode250) {
 }
 
 TEST_F(ProcessTest, TerminateCurrentProcessImmediatelyWithNonZeroExitCode) {
-  Process process(SpawnChild("TerminateCurrentProcessImmediatelyWithCode250"));
-  ASSERT_TRUE(process.IsValid());
+  SpawnChildResult spawn_child =
+      SpawnChild("TerminateCurrentProcessImmediatelyWithCode250");
+  ASSERT_TRUE(spawn_child.process.IsValid());
   int exit_code = 42;
-  ASSERT_TRUE(process.WaitForExitWithTimeout(TestTimeouts::action_max_timeout(),
-                                             &exit_code));
+  ASSERT_TRUE(spawn_child.process.WaitForExitWithTimeout(
+      TestTimeouts::action_max_timeout(), &exit_code));
   EXPECT_EQ(250, exit_code);
 }
 
@@ -204,26 +208,26 @@ MULTIPROCESS_TEST_MAIN(FastSleepyChildProcess) {
 }
 
 TEST_F(ProcessTest, WaitForExit) {
-  Process process(SpawnChild("FastSleepyChildProcess"));
-  ASSERT_TRUE(process.IsValid());
+  SpawnChildResult spawn_child = SpawnChild("FastSleepyChildProcess");
+  ASSERT_TRUE(spawn_child.process.IsValid());
 
   const int kDummyExitCode = 42;
   int exit_code = kDummyExitCode;
-  EXPECT_TRUE(process.WaitForExit(&exit_code));
+  EXPECT_TRUE(spawn_child.process.WaitForExit(&exit_code));
   EXPECT_EQ(0, exit_code);
 }
 
 TEST_F(ProcessTest, WaitForExitWithTimeout) {
-  Process process(SpawnChild("SleepyChildProcess"));
-  ASSERT_TRUE(process.IsValid());
+  SpawnChildResult spawn_child = SpawnChild("SleepyChildProcess");
+  ASSERT_TRUE(spawn_child.process.IsValid());
 
   const int kDummyExitCode = 42;
   int exit_code = kDummyExitCode;
   TimeDelta timeout = TestTimeouts::tiny_timeout();
-  EXPECT_FALSE(process.WaitForExitWithTimeout(timeout, &exit_code));
+  EXPECT_FALSE(spawn_child.process.WaitForExitWithTimeout(timeout, &exit_code));
   EXPECT_EQ(kDummyExitCode, exit_code);
 
-  process.Terminate(kDummyExitCode, false);
+  spawn_child.process.Terminate(kDummyExitCode, false);
 }
 
 // Ensure that the priority of a process is restored correctly after
@@ -233,13 +237,13 @@ TEST_F(ProcessTest, WaitForExitWithTimeout) {
 TEST_F(ProcessTest, SetProcessBackgrounded) {
   if (!Process::CanBackgroundProcesses())
     return;
-  Process process(SpawnChild("SimpleChildProcess"));
-  int old_priority = process.GetPriority();
+  SpawnChildResult spawn_child = SpawnChild("SimpleChildProcess");
+  int old_priority = spawn_child.process.GetPriority();
 #if defined(OS_WIN)
-  EXPECT_TRUE(process.SetProcessBackgrounded(true));
-  EXPECT_TRUE(process.IsProcessBackgrounded());
-  EXPECT_TRUE(process.SetProcessBackgrounded(false));
-  EXPECT_FALSE(process.IsProcessBackgrounded());
+  EXPECT_TRUE(spawn_child.process.SetProcessBackgrounded(true));
+  EXPECT_TRUE(spawn_child.process.IsProcessBackgrounded());
+  EXPECT_TRUE(spawn_child.process.SetProcessBackgrounded(false));
+  EXPECT_FALSE(spawn_child.process.IsProcessBackgrounded());
 #elif defined(OS_MACOSX)
   // On the Mac, backgrounding a process requires a port to that process.
   // In the browser it's available through the MachBroker class, which is not
@@ -248,16 +252,16 @@ TEST_F(ProcessTest, SetProcessBackgrounded) {
   // the ability to background/foreground a process, we can use the current
   // process's port instead.
   FakePortProvider provider;
-  EXPECT_TRUE(process.SetProcessBackgrounded(&provider, true));
-  EXPECT_TRUE(process.IsProcessBackgrounded(&provider));
-  EXPECT_TRUE(process.SetProcessBackgrounded(&provider, false));
-  EXPECT_FALSE(process.IsProcessBackgrounded(&provider));
+  EXPECT_TRUE(spawn_child.process.SetProcessBackgrounded(&provider, true));
+  EXPECT_TRUE(spawn_child.process.IsProcessBackgrounded(&provider));
+  EXPECT_TRUE(spawn_child.process.SetProcessBackgrounded(&provider, false));
+  EXPECT_FALSE(spawn_child.process.IsProcessBackgrounded(&provider));
 
 #else
-  process.SetProcessBackgrounded(true);
-  process.SetProcessBackgrounded(false);
+  spawn_child.process.SetProcessBackgrounded(true);
+  spawn_child.process.SetProcessBackgrounded(false);
 #endif
-  int new_priority = process.GetPriority();
+  int new_priority = spawn_child.process.GetPriority();
   EXPECT_EQ(old_priority, new_priority);
 }
 
