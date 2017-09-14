@@ -550,9 +550,8 @@ void InFlightBackendIO::OnOperationComplete(BackgroundIO* operation,
     op->callback().Run(op->result());
 }
 
-void InFlightBackendIO::PostOperation(
-    const tracked_objects::Location& from_here,
-    BackendIO* operation) {
+void InFlightBackendIO::PostOperation(const base::Location& from_here,
+                                      BackendIO* operation) {
   background_thread_->PostTask(
       from_here, base::Bind(&BackendIO::ExecuteOperation, operation));
   OnOperationPosted(operation);

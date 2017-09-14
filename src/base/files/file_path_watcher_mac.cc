@@ -32,10 +32,10 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate {
       if (!FilePathWatcher::RecursiveWatchAvailable())
         return false;
 #if !defined(OS_IOS)
-      impl_ = MakeUnique<FilePathWatcherFSEvents>();
+      impl_ = std::make_unique<FilePathWatcherFSEvents>();
 #endif  // OS_IOS
     } else {
-      impl_ = MakeUnique<FilePathWatcherKQueue>();
+      impl_ = std::make_unique<FilePathWatcherKQueue>();
     }
     DCHECK(impl_.get());
     return impl_->Watch(path, recursive, callback);
@@ -57,7 +57,7 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate {
 
 FilePathWatcher::FilePathWatcher() {
   sequence_checker_.DetachFromSequence();
-  impl_ = MakeUnique<FilePathWatcherImpl>();
+  impl_ = std::make_unique<FilePathWatcherImpl>();
 }
 
 }  // namespace base

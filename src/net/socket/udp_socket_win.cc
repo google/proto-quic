@@ -258,10 +258,11 @@ UDPSocketWin::UDPSocketWin(DatagramSocket::BindType bind_type,
       use_non_blocking_io_(false),
       read_iobuffer_len_(0),
       write_iobuffer_len_(0),
-      recv_from_address_(NULL),
+      recv_from_address_(nullptr),
       net_log_(NetLogWithSource::Make(net_log, NetLogSourceType::UDP_SOCKET)),
-      qos_handle_(NULL),
-      qos_flow_id_(0) {
+      qos_handle_(nullptr),
+      qos_flow_id_(0),
+      event_pending_(this) {
   EnsureWinsockInit();
   net_log_.BeginEvent(NetLogEventType::SOCKET_ALIVE,
                       source.ToEventParametersCallback());
@@ -298,9 +299,8 @@ void UDPSocketWin::Close() {
   if (socket_ == INVALID_SOCKET)
     return;
 
-  if (qos_handle_) {
+  if (qos_handle_)
     QwaveAPI::Get().CloseHandle(qos_handle_);
-  }
 
   // Zero out any pending read/write callback state.
   read_callback_.Reset();
@@ -315,8 +315,16 @@ void UDPSocketWin::Close() {
   addr_family_ = 0;
   is_connected_ = false;
 
+  // Release buffers to free up memory.
+  read_iobuffer_ = nullptr;
+  read_iobuffer_len_ = 0;
+  write_iobuffer_ = nullptr;
+  write_iobuffer_len_ = 0;
+
   read_write_watcher_.StopWatching();
   read_write_event_.Close();
+
+  event_pending_.InvalidateWeakPtrs();
 
   if (core_) {
     core_->Detach();
@@ -641,34 +649,43 @@ void UDPSocketWin::OnObjectSignaled(HANDLE object) {
   int os_error = 0;
   int rv =
       WSAEnumNetworkEvents(socket_, read_write_event_.Get(), &network_events);
+  // Protects against trying to call the write callback if the read callback
+  // either closes or destroys |this|.
+  base::WeakPtr<UDPSocketWin> event_pending = event_pending_.GetWeakPtr();
   if (rv == SOCKET_ERROR) {
     os_error = WSAGetLastError();
     rv = MapSystemError(os_error);
+
     if (read_iobuffer_) {
-      read_iobuffer_ = NULL;
+      read_iobuffer_ = nullptr;
       read_iobuffer_len_ = 0;
-      recv_from_address_ = NULL;
+      recv_from_address_ = nullptr;
       DoReadCallback(rv);
     }
-    if (write_iobuffer_) {
-      write_iobuffer_ = NULL;
+
+    // Socket may have been closed or destroyed here.
+    if (event_pending && write_iobuffer_) {
+      write_iobuffer_ = nullptr;
       write_iobuffer_len_ = 0;
       send_to_address_.reset();
       DoWriteCallback(rv);
     }
     return;
   }
-  if ((network_events.lNetworkEvents & FD_READ) && read_iobuffer_) {
+
+  if ((network_events.lNetworkEvents & FD_READ) && read_iobuffer_)
     OnReadSignaled();
-  }
-  if ((network_events.lNetworkEvents & FD_WRITE) && write_iobuffer_) {
+  if (!event_pending)
+    return;
+
+  if ((network_events.lNetworkEvents & FD_WRITE) && write_iobuffer_)
     OnWriteSignaled();
-  }
+  if (!event_pending)
+    return;
 
   // There's still pending read / write. Watch for further events.
-  if (read_iobuffer_ || write_iobuffer_) {
+  if (read_iobuffer_ || write_iobuffer_)
     WatchForReadWrite();
-  }
 }
 
 void UDPSocketWin::OnReadSignaled() {

@@ -18,6 +18,7 @@
 #include "base/strings/string_piece.h"
 #include "base/task_scheduler/post_task.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 #include "net/base/address_list.h"
 #include "net/base/io_buffer.h"
 #include "net/base/ip_endpoint.h"
@@ -35,8 +36,15 @@
 #include "net/socket/socket_posix.h"
 
 // If we don't have a definition for TCPI_OPT_SYN_DATA, create one.
-#ifndef TCPI_OPT_SYN_DATA
+#if !defined(TCPI_OPT_SYN_DATA)
 #define TCPI_OPT_SYN_DATA 32
+#endif
+
+// Fuchsia defines TCP_INFO, but it's not implemented.
+// TODO(crbug.com/758294): Enable TCP_INFO on Fuchsia once it's implemented
+// there (see NET-160).
+#if defined(TCP_INFO) && !defined(OS_FUCHSIA)
+#define HAVE_TCP_INFO
 #endif
 
 namespace net {
@@ -114,7 +122,7 @@ void RegisterTCPFastOpenIntentAndSupport(bool user_enabled,
 }
 #endif
 
-#if defined(TCP_INFO)
+#if defined(HAVE_TCP_INFO)
 bool GetTcpInfo(SocketDescriptor fd, tcp_info* info) {
   socklen_t info_len = sizeof(tcp_info);
   return getsockopt(fd, IPPROTO_TCP, TCP_INFO, info, &info_len) == 0 &&
@@ -391,8 +399,12 @@ void TCPSocketPosix::SetDefaultOptionsForClient() {
   // If SetTCPNoDelay fails, we don't care.
   SetTCPNoDelay(socket_->socket_fd(), true);
 
-  // TCP keep alive wakes up the radio, which is expensive on mobile. Do not
-  // enable it there. It's useful to prevent TCP middleboxes from timing out
+#if !defined(OS_ANDROID) && !defined(OS_IOS) && !defined(OS_FUCHSIA)
+  // TCP keep alive wakes up the radio, which is expensive on mobile.
+  // It's also not implemented on Fuchsia. Do not enable it there.
+  // TODO(crbug.com/758706): Consider enabling keep-alive on Fuchsia.
+  //
+  // It's useful to prevent TCP middleboxes from timing out
   // connection mappings. Packets for timed out connection mappings at
   // middleboxes will either lead to:
   // a) Middleboxes sending TCP RSTs. It's up to higher layers to check for this
@@ -402,7 +414,6 @@ void TCPSocketPosix::SetDefaultOptionsForClient() {
   // are very high (on the order of seconds). Given the number of
   // retransmissions required before killing the connection, this can lead to
   // tens of seconds or even minutes of delay, depending on OS.
-#if !defined(OS_ANDROID) && !defined(OS_IOS)
   const int kTCPKeepAliveSeconds = 45;
 
   SetTCPKeepAlive(socket_->socket_fd(), true, kTCPKeepAliveSeconds);
@@ -751,7 +762,7 @@ int TCPSocketPosix::TcpFastOpenWrite(IOBuffer* buf,
 }
 
 void TCPSocketPosix::NotifySocketPerformanceWatcher() {
-#if defined(TCP_INFO)
+#if defined(HAVE_TCP_INFO)
   // Check if |socket_performance_watcher_| is interested in receiving a RTT
   // update notification.
   if (!socket_performance_watcher_ ||
@@ -791,7 +802,7 @@ void TCPSocketPosix::UpdateTCPFastOpenStatusAfterRead() {
 
   bool getsockopt_success = false;
   bool server_acked_data = false;
-#if defined(TCP_INFO)
+#if defined(HAVE_TCP_INFO)
   // Probe to see the if the socket used TCP FastOpen.
   tcp_info info;
   getsockopt_success = GetTcpInfo(socket_->socket_fd(), &info);
@@ -822,7 +833,7 @@ bool TCPSocketPosix::GetEstimatedRoundTripTime(base::TimeDelta* out_rtt) const {
   if (!socket_)
     return false;
 
-#if defined(TCP_INFO)
+#if defined(HAVE_TCP_INFO)
   tcp_info info;
   if (GetTcpInfo(socket_->socket_fd(), &info)) {
     // tcpi_rtt is zero when the kernel doesn't have an RTT estimate,

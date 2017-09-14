@@ -21,15 +21,9 @@ class BASE_EXPORT MemoryDumpProvider {
   // Optional arguments for MemoryDumpManager::RegisterDumpProvider().
   struct Options {
     Options()
-        : target_pid(kNullProcessId),
-          dumps_on_single_thread_task_runner(false),
-          is_fast_polling_supported(false) {}
-
-    // If the dump provider generates dumps on behalf of another process,
-    // |target_pid| contains the pid of that process.
-    // The default value is kNullProcessId, which means that the dump provider
-    // generates dumps for the current process.
-    ProcessId target_pid;
+        : dumps_on_single_thread_task_runner(false),
+          is_fast_polling_supported(false),
+          supports_heap_profiling(false) {}
 
     // |dumps_on_single_thread_task_runner| is true if the dump provider runs on
     // a SingleThreadTaskRunner, which is usually the case. It is faster to run
@@ -40,6 +34,10 @@ class BASE_EXPORT MemoryDumpProvider {
     // polling. Only providers running without task runner affinity are
     // supported.
     bool is_fast_polling_supported;
+
+    // Set to true when the dump provider supports heap profiling. MDM sends
+    // OnHeapProfiling() notifications only if this is set to true.
+    bool supports_heap_profiling;
   };
 
   virtual ~MemoryDumpProvider() {}
@@ -55,7 +53,8 @@ class BASE_EXPORT MemoryDumpProvider {
                             ProcessMemoryDump* pmd) = 0;
 
   // Called by the MemoryDumpManager when an allocator should start or stop
-  // collecting extensive allocation data, if supported.
+  // collecting extensive allocation data, if supported. Called only when
+  // |supports_heap_profiling| is set to true.
   virtual void OnHeapProfilingEnabled(bool enabled) {}
 
   // Quickly record the total memory usage in |memory_total|. This method will

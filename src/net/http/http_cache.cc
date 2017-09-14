@@ -295,7 +295,7 @@ void HttpCache::MetadataWriter::OnIOComplete(int result) {
 HttpCache::HttpCache(HttpNetworkSession* session,
                      std::unique_ptr<BackendFactory> backend_factory,
                      bool is_main_cache)
-    : HttpCache(base::MakeUnique<HttpNetworkLayer>(session),
+    : HttpCache(std::make_unique<HttpNetworkLayer>(session),
                 std::move(backend_factory),
                 is_main_cache) {}
 
@@ -324,7 +324,7 @@ HttpCache::HttpCache(std::unique_ptr<HttpTransactionFactory> network_layer,
     return;
 
   session->SetServerPushDelegate(
-      base::MakeUnique<HttpCacheLookupManager>(this));
+      std::make_unique<HttpCacheLookupManager>(this));
 }
 
 HttpCache::~HttpCache() {
@@ -513,7 +513,7 @@ int HttpCache::CreateBackend(disk_cache::Backend** backend,
   building_backend_ = true;
 
   std::unique_ptr<WorkItem> item =
-      base::MakeUnique<WorkItem>(WI_CREATE_BACKEND, nullptr, callback, backend);
+      std::make_unique<WorkItem>(WI_CREATE_BACKEND, nullptr, callback, backend);
 
   // This is the only operation that we can do that is not related to any given
   // entry, so we use an empty key for it.
@@ -547,7 +547,7 @@ int HttpCache::GetBackendForTransaction(Transaction* trans) {
   if (!building_backend_)
     return ERR_FAILED;
 
-  std::unique_ptr<WorkItem> item = base::MakeUnique<WorkItem>(
+  std::unique_ptr<WorkItem> item = std::make_unique<WorkItem>(
       WI_CREATE_BACKEND, trans, CompletionCallback(), nullptr);
   PendingOp* pending_op = GetPendingOp(std::string());
   DCHECK(pending_op->writer);
@@ -613,7 +613,7 @@ int HttpCache::DoomEntry(const std::string& key, Transaction* trans) {
 
 int HttpCache::AsyncDoomEntry(const std::string& key, Transaction* trans) {
   std::unique_ptr<WorkItem> item =
-      base::MakeUnique<WorkItem>(WI_DOOM_ENTRY, trans, nullptr);
+      std::make_unique<WorkItem>(WI_DOOM_ENTRY, trans, nullptr);
   PendingOp* pending_op = GetPendingOp(key);
   if (pending_op->writer) {
     pending_op->pending_queue.push_back(std::move(item));
@@ -744,7 +744,7 @@ int HttpCache::OpenEntry(const std::string& key, ActiveEntry** entry,
   }
 
   std::unique_ptr<WorkItem> item =
-      base::MakeUnique<WorkItem>(WI_OPEN_ENTRY, trans, entry);
+      std::make_unique<WorkItem>(WI_OPEN_ENTRY, trans, entry);
   PendingOp* pending_op = GetPendingOp(key);
   if (pending_op->writer) {
     pending_op->pending_queue.push_back(std::move(item));
@@ -774,7 +774,7 @@ int HttpCache::CreateEntry(const std::string& key, ActiveEntry** entry,
   }
 
   std::unique_ptr<WorkItem> item =
-      base::MakeUnique<WorkItem>(WI_CREATE_ENTRY, trans, entry);
+      std::make_unique<WorkItem>(WI_CREATE_ENTRY, trans, entry);
   PendingOp* pending_op = GetPendingOp(key);
   if (pending_op->writer) {
     pending_op->pending_queue.push_back(std::move(item));

@@ -1,6 +1,7 @@
 // Copyright (c) 2013 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #include "tools/gn/loader.h"
 
 #include "base/bind.h"
@@ -250,11 +251,6 @@ void LoaderImpl::BackgroundLoadFile(const Settings* settings,
   }
 
   Scope our_scope(settings->base_config());
-
-  const auto location = root->GetRange().begin();
-  if (!location.is_null())
-    our_scope.AddInputFile(location.file());
-
   ScopePerFileProvider per_file_provider(&our_scope, true);
   our_scope.set_source_dir(file_name.GetDir());
 

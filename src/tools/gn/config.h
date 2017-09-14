@@ -21,9 +21,7 @@
 // flags.
 class Config : public Item {
  public:
-  Config(const Settings* settings,
-         const Label& label,
-         const InputFileSet& input_files);
+  Config(const Settings* settings, const Label& label);
   ~Config() override;
 
   // Item implementation.

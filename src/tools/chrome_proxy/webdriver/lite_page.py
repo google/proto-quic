@@ -5,6 +5,7 @@
 import common
 from common import TestDriver
 from common import IntegrationTest
+from decorators import ChromeVersionBeforeM
 from decorators import ChromeVersionEqualOrAfterM
 
 import time
@@ -58,6 +59,8 @@ class LitePage(IntegrationTest):
 
   # Checks that a Lite Page is served and the force_lite_page experiment
   # directive is provided when always-on.
+  # Note: this test is only on M-60+ which supports exp=force_lite_page
+  @ChromeVersionEqualOrAfterM(60)
   def testLitePageForcedExperiment(self):
     # If it was attempted to run with another experiment, skip this test.
     if common.ParseFlags().browser_args and ('--data-reduction-proxy-experiment'
@@ -177,6 +180,7 @@ class LitePage(IntegrationTest):
   # Lo-Fi fallback is not supported without the
   # DataReductionProxyDecidesTransform feature. Check that no Lo-Fi response
   # is received if a Lite Page is not served.
+  @ChromeVersionBeforeM(62)
   def testLitePageNoFallback(self):
     with TestDriver() as test_driver:
       test_driver.AddChromeArg('--enable-spdy-proxy-auth')

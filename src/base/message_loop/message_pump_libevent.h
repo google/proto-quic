@@ -38,7 +38,7 @@ class BASE_EXPORT MessagePumpLibevent : public MessagePump {
   // Object returned by WatchFileDescriptor to manage further watching.
   class FileDescriptorWatcher {
    public:
-    explicit FileDescriptorWatcher(const tracked_objects::Location& from_here);
+    explicit FileDescriptorWatcher(const Location& from_here);
     ~FileDescriptorWatcher();  // Implicitly calls StopWatchingFileDescriptor.
 
     // NOTE: These methods aren't called StartWatching()/StopWatching() to
@@ -48,9 +48,7 @@ class BASE_EXPORT MessagePumpLibevent : public MessagePump {
     // to do.
     bool StopWatchingFileDescriptor();
 
-    const tracked_objects::Location& created_from_location() {
-      return created_from_location_;
-    }
+    const Location& created_from_location() { return created_from_location_; }
 
    private:
     friend class MessagePumpLibevent;
@@ -78,7 +76,7 @@ class BASE_EXPORT MessagePumpLibevent : public MessagePump {
     // destructor.
     bool* was_destroyed_;
 
-    const tracked_objects::Location created_from_location_;
+    const Location created_from_location_;
 
     DISALLOW_COPY_AND_ASSIGN(FileDescriptorWatcher);
   };

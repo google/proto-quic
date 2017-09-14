@@ -275,7 +275,7 @@ int ProxyResolverMojo::GetProxyForURL(const GURL& url,
   if (!mojo_proxy_resolver_ptr_)
     return ERR_PAC_SCRIPT_TERMINATED;
 
-  *request = base::MakeUnique<Job>(this, url, results, callback, net_log);
+  *request = std::make_unique<Job>(this, url, results, callback, net_log);
 
   return ERR_IO_PENDING;
 }

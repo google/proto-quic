@@ -155,7 +155,7 @@ class LocationPrinter(Printer):
         return '%s()@%s:%s' % (self.val['function_name_'].string(),
                                self.val['file_name_'].string(),
                                self.val['line_number_'])
-pp_set.add_printer('tracked_objects::Location', '^tracked_objects::Location$',
+pp_set.add_printer('base::Location', '^base::Location$',
                    LocationPrinter)
 
 

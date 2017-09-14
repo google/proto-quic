@@ -79,11 +79,11 @@ void TestURLRequestContext::Init() {
     context_storage_.set_cert_verifier(CertVerifier::CreateDefault());
   if (!transport_security_state()) {
     context_storage_.set_transport_security_state(
-        base::MakeUnique<TransportSecurityState>());
+        std::make_unique<TransportSecurityState>());
   }
   if (!cert_transparency_verifier()) {
     context_storage_.set_cert_transparency_verifier(
-        base::MakeUnique<MultiLogCTVerifier>());
+        std::make_unique<MultiLogCTVerifier>());
   }
   if (!ct_policy_enforcer()) {
     context_storage_.set_ct_policy_enforcer(
@@ -100,15 +100,14 @@ void TestURLRequestContext::Init() {
         std::unique_ptr<HttpServerProperties>(new HttpServerPropertiesImpl()));
   }
   // In-memory cookie store.
-  if (!cookie_store()) {
-    context_storage_.set_cookie_store(
-        base::MakeUnique<CookieMonster>(nullptr, nullptr));
-  }
+  if (!cookie_store())
+    context_storage_.set_cookie_store(std::make_unique<CookieMonster>(nullptr));
+
   // In-memory Channel ID service.  Must be created before the
   // HttpNetworkSession.
   if (!channel_id_service()) {
     context_storage_.set_channel_id_service(
-        base::MakeUnique<ChannelIDService>(new DefaultChannelIDStore(nullptr)));
+        std::make_unique<ChannelIDService>(new DefaultChannelIDStore(nullptr)));
   }
   if (http_transaction_factory()) {
     // Make sure we haven't been passed an object we're not going to use.
@@ -135,19 +134,19 @@ void TestURLRequestContext::Init() {
     session_context.net_log = net_log();
     session_context.channel_id_service = channel_id_service();
     context_storage_.set_http_network_session(
-        base::MakeUnique<HttpNetworkSession>(session_params, session_context));
-    context_storage_.set_http_transaction_factory(base::MakeUnique<HttpCache>(
+        std::make_unique<HttpNetworkSession>(session_params, session_context));
+    context_storage_.set_http_transaction_factory(std::make_unique<HttpCache>(
         context_storage_.http_network_session(),
         HttpCache::DefaultBackend::InMemory(0), true /* is_main_cache */));
   }
   if (!http_user_agent_settings()) {
     context_storage_.set_http_user_agent_settings(
-        base::MakeUnique<StaticHttpUserAgentSettings>("en-us,fr",
+        std::make_unique<StaticHttpUserAgentSettings>("en-us,fr",
                                                       std::string()));
   }
   if (!job_factory()) {
     context_storage_.set_job_factory(
-        base::MakeUnique<URLRequestJobFactoryImpl>());
+        std::make_unique<URLRequestJobFactoryImpl>());
   }
 }
 

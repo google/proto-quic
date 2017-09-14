@@ -81,17 +81,8 @@ struct MemoryDumpArgs {
   MemoryDumpLevelOfDetail level_of_detail;
 };
 
-using GlobalMemoryDumpCallback =
-    Callback<void(bool success, uint64_t dump_guid)>;
-
-// TODO(ssid): This should just sent a single PMD once the support for multi
-// process dumps are removed from MemoryDumpManager.
-using ProcessMemoryDumpsMap =
-    std::map<ProcessId, std::unique_ptr<ProcessMemoryDump>>;
-using ProcessMemoryDumpCallback =
-    Callback<void(bool success,
-                  uint64_t dump_guid,
-                  const ProcessMemoryDumpsMap& process_dumps)>;
+using ProcessMemoryDumpCallback = Callback<
+    void(bool success, uint64_t dump_guid, std::unique_ptr<ProcessMemoryDump>)>;
 
 BASE_EXPORT const char* MemoryDumpTypeToString(const MemoryDumpType& dump_type);
 

@@ -372,7 +372,7 @@ void URLRequestFtpJob::HandleAuthNeededResponse() {
     if (ftp_transaction_ && auth_data_->state == AUTH_STATE_HAVE_AUTH)
       ftp_auth_cache_->Remove(origin, auth_data_->credentials);
   } else {
-    auth_data_ = base::MakeUnique<AuthData>();
+    auth_data_ = std::make_unique<AuthData>();
   }
   auth_data_->state = AUTH_STATE_NEED_AUTH;
 

@@ -72,8 +72,6 @@ class NET_EXPORT_PRIVATE NetworkChangeNotifierAndroid
   void OnNetworkDisconnected(NetworkHandle network) override;
   void OnNetworkMadeDefault(NetworkHandle network) override;
 
-  static bool Register(JNIEnv* env);
-
   // Promote GetMaxBandwidthForConnectionSubtype to public for the Android
   // delegate class.
   using NetworkChangeNotifier::GetMaxBandwidthForConnectionSubtype;

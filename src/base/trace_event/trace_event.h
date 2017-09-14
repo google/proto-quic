@@ -15,6 +15,7 @@
 #include <string>
 
 #include "base/atomicops.h"
+#include "base/debug/debugging_flags.h"
 #include "base/macros.h"
 #include "base/time/time.h"
 #include "base/trace_event/common/trace_event_common.h"
@@ -426,14 +427,29 @@
   INTERNAL_TRACE_EVENT_UID(ScopedContext)                                  \
   INTERNAL_TRACE_EVENT_UID(scoped_context)(context);
 
+#if BUILDFLAG(ENABLE_LOCATION_SOURCE)
+
 // Implementation detail: internal macro to trace a task execution with the
 // location where it was posted from.
+//
+// This implementation is for when location sources are available.
 #define INTERNAL_TRACE_TASK_EXECUTION(run_function, task)                 \
   TRACE_EVENT2("toplevel", run_function, "src_file",                      \
                (task).posted_from.file_name(), "src_func",                \
                (task).posted_from.function_name());                       \
   TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION INTERNAL_TRACE_EVENT_UID( \
       task_event)((task).posted_from.file_name());
+
+#else
+
+// TODO(http://crbug.com760702) remove file name and just pass the program
+// counter to the heap profiler macro.
+#define INTERNAL_TRACE_TASK_EXECUTION(run_function, task)                      \
+  TRACE_EVENT1("toplevel", run_function, "src", (task).posted_from.ToString()) \
+  TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION INTERNAL_TRACE_EVENT_UID(      \
+      task_event)((task).posted_from.file_name());
+
+#endif
 
 namespace trace_event_internal {
 

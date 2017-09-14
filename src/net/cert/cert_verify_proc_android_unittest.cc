@@ -66,19 +66,19 @@ std::unique_ptr<CertNetFetcher::Request> CreateMockRequestFromX509Certificate(
     const scoped_refptr<X509Certificate>& cert) {
   std::string der;
   EXPECT_TRUE(X509Certificate::GetDEREncoded(cert->os_cert_handle(), &der));
-  return base::MakeUnique<TestCertNetFetcherRequest>(
+  return std::make_unique<TestCertNetFetcherRequest>(
       error, std::vector<uint8_t>(der.data(), der.data() + der.length()));
 }
 
 std::unique_ptr<CertNetFetcher::Request> CreateMockRequestWithError(
     Error error) {
-  return base::MakeUnique<TestCertNetFetcherRequest>(error,
+  return std::make_unique<TestCertNetFetcherRequest>(error,
                                                      std::vector<uint8_t>({}));
 }
 
 std::unique_ptr<CertNetFetcher::Request>
 CreateMockRequestWithInvalidCertificate() {
-  return base::MakeUnique<TestCertNetFetcherRequest>(
+  return std::make_unique<TestCertNetFetcherRequest>(
       OK, std::vector<uint8_t>({1, 2, 3}));
 }
 

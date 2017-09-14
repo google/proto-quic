@@ -1008,8 +1008,10 @@ class SSLClientSocketReadTest : public SSLClientSocketTest,
       : SSLClientSocketTest(), read_if_ready_enabled_(GetParam()) {}
 
   void SetUp() override {
-    if (read_if_ready_enabled())
-      scoped_feature_list_.InitAndEnableFeature(Socket::kReadIfReadyExperiment);
+    if (!read_if_ready_enabled()) {
+      scoped_feature_list_.InitAndDisableFeature(
+          Socket::kReadIfReadyExperiment);
+    }
   }
 
   // Convienient wrapper to call Read()/ReadIfReady() depending on whether

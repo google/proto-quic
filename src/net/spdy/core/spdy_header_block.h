@@ -247,14 +247,6 @@ SPDY_EXPORT_PRIVATE std::unique_ptr<base::Value> SpdyHeaderBlockNetLogCallback(
     const SpdyHeaderBlock* headers,
     NetLogCaptureMode capture_mode);
 
-// Converts NetLog event parameters into a SPDY header block and writes them
-// to |headers|.  |event_param| must have been created by
-// SpdyHeaderBlockNetLogCallback.  On failure, returns false and clears
-// |headers|.
-SPDY_EXPORT_PRIVATE bool SpdyHeaderBlockFromNetLogParam(
-    const base::Value* event_param,
-    SpdyHeaderBlock* headers);
-
 }  // namespace net
 
 #endif  // NET_SPDY_CORE_SPDY_HEADER_BLOCK_H_

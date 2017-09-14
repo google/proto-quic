@@ -15,6 +15,13 @@ sourceSets {
             "{{ path }}",
 {% endfor %}
         ]
+{% if main.java_excludes is defined %}
+        java.filter.exclude(
+{% for path in main.java_excludes %}
+            "{{ path }}",
+{% endfor %}
+        )
+{% endif %}
     }
 }
 

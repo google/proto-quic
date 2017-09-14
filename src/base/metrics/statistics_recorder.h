@@ -25,6 +25,7 @@
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
 #include "base/metrics/histogram_base.h"
+#include "base/metrics/record_histogram_checker.h"
 #include "base/strings/string_piece.h"
 #include "base/synchronization/lock.h"
 
@@ -75,34 +76,6 @@ class BASE_EXPORT StatisticsRecorder {
   typedef std::map<StringKey, HistogramBase*> HistogramMap;
   typedef std::vector<HistogramBase*> Histograms;
   typedef std::vector<WeakPtr<HistogramProvider>> HistogramProviders;
-
-  // A class for iterating over the histograms held within this global resource.
-  class BASE_EXPORT HistogramIterator {
-   public:
-    HistogramIterator(const HistogramMap::iterator& iter,
-                      bool include_persistent);
-    HistogramIterator(const HistogramIterator& rhs);  // Must be copyable.
-    ~HistogramIterator();
-
-    HistogramIterator& operator++();
-    HistogramIterator operator++(int) {
-      HistogramIterator tmp(*this);
-      operator++();
-      return tmp;
-    }
-
-    bool operator==(const HistogramIterator& rhs) const {
-      return iter_ == rhs.iter_;
-    }
-    bool operator!=(const HistogramIterator& rhs) const {
-      return iter_ != rhs.iter_;
-    }
-    HistogramBase* operator*() { return iter_->second; }
-
-   private:
-    HistogramMap::iterator iter_;
-    const bool include_persistent_;
-  };
 
   ~StatisticsRecorder();
 
@@ -165,7 +138,7 @@ class BASE_EXPORT StatisticsRecorder {
                             HistogramSnapshotManager* snapshot_manager);
 
   // TODO(asvitkine): Remove this after crbug/736675.
-  static void ValidateAllHistograms();
+  static void ValidateAllHistograms(int identifier = 0);
 
   // GetSnapshot copies some of the pointers to registered histograms into the
   // caller supplied vector (Histograms). Only histograms which have |query| as
@@ -217,6 +190,21 @@ class BASE_EXPORT StatisticsRecorder {
   // by a call to Initialize().
   static void UninitializeForTesting();
 
+  // Sets the record checker for determining if a histogram should be recorded.
+  // Record checker doesn't affect any already recorded histograms, so this
+  // method must be called very early, before any threads have started.
+  // Record checker methods can be called on any thread, so they shouldn't
+  // mutate any state.
+  // TODO(iburak): This is not yet hooked up to histogram recording
+  // infrastructure.
+  static void SetRecordChecker(
+      std::unique_ptr<RecordHistogramChecker> record_checker);
+
+  // Returns true iff the given histogram should be recorded based on
+  // the ShouldRecord() method of the record checker.
+  // If the record checker is not set, returns true.
+  static bool ShouldRecordHistogram(uint64_t histogram_hash);
+
  private:
   // We keep a map of callbacks to histograms, so that as histograms are
   // created, we can set the callback properly.
@@ -231,9 +219,10 @@ class BASE_EXPORT StatisticsRecorder {
   friend class StatisticsRecorderTest;
   FRIEND_TEST_ALL_PREFIXES(StatisticsRecorderTest, IterationTest);
 
-  // Support for iterating over known histograms.
-  static HistogramIterator begin(bool include_persistent);
-  static HistogramIterator end();
+  // Fetch set of existing histograms. Ownership of the individual histograms
+  // remains with the StatisticsRecorder.
+  static std::vector<HistogramBase*> GetKnownHistograms(
+      bool include_persistent);
 
   // Imports histograms from global persistent memory. The global lock must
   // not be held during this call.
@@ -255,6 +244,7 @@ class BASE_EXPORT StatisticsRecorder {
   std::unique_ptr<CallbackMap> existing_callbacks_;
   std::unique_ptr<RangesMap> existing_ranges_;
   std::unique_ptr<HistogramProviders> existing_providers_;
+  std::unique_ptr<RecordHistogramChecker> existing_record_checker_;
 
   bool vlog_initialized_ = false;
 
@@ -265,6 +255,7 @@ class BASE_EXPORT StatisticsRecorder {
   static CallbackMap* callbacks_;
   static RangesMap* ranges_;
   static HistogramProviders* providers_;
+  static RecordHistogramChecker* record_checker_;
 
   // Lock protects access to above maps. This is a LazyInstance to avoid races
   // when the above methods are used before Initialize(). Previously each method

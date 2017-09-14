@@ -53,8 +53,17 @@ class TimelineController(object):
       self._interaction.End()
     # Stop tracing.
     timeline_data = tab.browser.platform.tracing_controller.StopTracing()
+
+    # TODO(#763375): Rely on results.telemetry_info.trace_local_path/etc.
+    kwargs = {}
+    if hasattr(results.telemetry_info, 'trace_local_path'):
+      kwargs['file_path'] = results.telemetry_info.trace_local_path
+      kwargs['remote_path'] = results.telemetry_info.trace_remote_path
+      kwargs['upload_bucket'] = results.telemetry_info.upload_bucket
+      kwargs['cloud_url'] = results.telemetry_info.trace_remote_url
     results.AddValue(trace.TraceValue(
-        results.current_page, timeline_data))
+        results.current_page, timeline_data, **kwargs))
+
     self._model = TimelineModel(timeline_data)
     self._renderer_process = self._model.GetRendererProcessFromTabId(tab.id)
     renderer_thread = self.model.GetRendererThreadFromTabId(tab.id)

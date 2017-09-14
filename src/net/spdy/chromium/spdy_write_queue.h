@@ -5,9 +5,9 @@
 #ifndef NET_SPDY_CHROMIUM_SPDY_WRITE_QUEUE_H_
 #define NET_SPDY_CHROMIUM_SPDY_WRITE_QUEUE_H_
 
-#include <deque>
 #include <memory>
 
+#include "base/containers/circular_deque.h"
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
 #include "net/base/net_export.h"
@@ -88,7 +88,7 @@ class NET_EXPORT_PRIVATE SpdyWriteQueue {
   bool removing_writes_;
 
   // The actual write queue, binned by priority.
-  std::deque<PendingWrite> queue_[NUM_PRIORITIES];
+  base::circular_deque<PendingWrite> queue_[NUM_PRIORITIES];
 
   DISALLOW_COPY_AND_ASSIGN(SpdyWriteQueue);
 };

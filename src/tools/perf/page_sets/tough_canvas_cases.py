@@ -13,7 +13,6 @@ class ToughCanvasCasesPage(page_module.Page):
       name = url[7:]
     super(ToughCanvasCasesPage, self).__init__(url=url, page_set=page_set,
                                                name=name)
-    self.archive_data_file = 'data/tough_canvas_cases.json'
 
   def RunNavigateSteps(self, action_runner):
     super(ToughCanvasCasesPage, self).RunNavigateSteps(action_runner)

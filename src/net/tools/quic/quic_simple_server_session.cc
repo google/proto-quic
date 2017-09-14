@@ -114,11 +114,6 @@ QuicSimpleServerStream* QuicSimpleServerSession::CreateOutgoingDynamicStream(
   return stream;
 }
 
-std::unique_ptr<QuicStream> QuicSimpleServerSession::CreateStream(
-    QuicStreamId id) {
-  return QuicMakeUnique<QuicSimpleServerStream>(id, this, response_cache_);
-}
-
 void QuicSimpleServerSession::CloseStreamInner(QuicStreamId stream_id,
                                                bool locally_reset) {
   QuicSpdySession::CloseStreamInner(stream_id, locally_reset);
@@ -187,10 +182,7 @@ void QuicSimpleServerSession::SendPushPromise(QuicStreamId original_stream_id,
 }
 
 void QuicSimpleServerSession::HandlePromisedPushRequests() {
-  while (!promised_streams_.empty() &&
-         (FLAGS_quic_reloadable_flag_quic_refactor_stream_creation
-              ? ShouldCreateOutgoingDynamicStream2()
-              : ShouldCreateOutgoingDynamicStream())) {
+  while (!promised_streams_.empty() && ShouldCreateOutgoingDynamicStream()) {
     PromisedStreamInfo& promised_info = promised_streams_.front();
     DCHECK_EQ(next_outgoing_stream_id(), promised_info.stream_id);
 
@@ -203,9 +195,7 @@ void QuicSimpleServerSession::HandlePromisedPushRequests() {
 
     QuicSimpleServerStream* promised_stream =
         static_cast<QuicSimpleServerStream*>(
-            FLAGS_quic_reloadable_flag_quic_refactor_stream_creation
-                ? MaybeCreateOutgoingDynamicStream(promised_info.priority)
-                : CreateOutgoingDynamicStream(promised_info.priority));
+            CreateOutgoingDynamicStream(promised_info.priority));
     DCHECK_NE(promised_stream, nullptr);
     DCHECK_EQ(promised_info.stream_id, promised_stream->id());
     QUIC_DLOG(INFO) << "created server push stream " << promised_stream->id();

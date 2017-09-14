@@ -742,7 +742,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
 
   def testGenerateTestResults_noStatus(self):
     results = instrumentation_test_instance.GenerateTestResults(
-        None, None, [], 0, 1000)
+        None, None, [], 0, 1000, None, None)
     self.assertEqual([], results)
 
   def testGenerateTestResults_testPassed(self):
@@ -757,7 +757,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
       }),
     ]
     results = instrumentation_test_instance.GenerateTestResults(
-        None, None, statuses, 0, 1000)
+        None, None, statuses, 0, 1000, None, None)
     self.assertEqual(1, len(results))
     self.assertEqual(base_test_result.ResultType.PASS, results[0].GetType())
 
@@ -778,7 +778,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
       }),
     ]
     results = instrumentation_test_instance.GenerateTestResults(
-        None, None, statuses, 0, 1000)
+        None, None, statuses, 0, 1000, None, None)
     self.assertEqual(1, len(results))
     self.assertEqual(base_test_result.ResultType.SKIP, results[0].GetType())
 
@@ -797,7 +797,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
       }),
     ]
     results = instrumentation_test_instance.GenerateTestResults(
-        None, None, statuses, 0, 1000)
+        None, None, statuses, 0, 1000, None, None)
     self.assertEqual(1, len(results))
     self.assertEqual(base_test_result.ResultType.PASS, results[0].GetType())
 
@@ -813,7 +813,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
       }),
     ]
     results = instrumentation_test_instance.GenerateTestResults(
-        None, None, statuses, 0, 1000)
+        None, None, statuses, 0, 1000, None, None)
     self.assertEqual(1, len(results))
     self.assertEqual(base_test_result.ResultType.FAIL, results[0].GetType())
 
@@ -831,7 +831,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
       }),
     ]
     results = instrumentation_test_instance.GenerateTestResults(
-        None, None, statuses, 0, 1000)
+        None, None, statuses, 0, 1000, None, None)
     self.assertEqual(1, len(results))
     self.assertEqual(base_test_result.ResultType.FAIL, results[0].GetType())
     self.assertEqual(stacktrace, results[0].GetLog())
@@ -848,7 +848,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
       }),
     ]
     results = instrumentation_test_instance.GenerateTestResults(
-        None, None, statuses, 0, 1000)
+        None, None, statuses, 0, 1000, None, None)
     self.assertEqual(1, len(results))
     self.assertEqual(base_test_result.ResultType.SKIP, results[0].GetType())
 

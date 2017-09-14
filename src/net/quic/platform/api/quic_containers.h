@@ -40,6 +40,20 @@ using QuicSmallMap = QuicSmallMapImpl<Key, Value, Size>;
 template <typename T>
 using QuicIntervalSet = QuicIntervalSetImpl<T>;
 
+// Represents a simple queue which may be backed by a list or
+// a flat circular buffer.
+//
+// DOES NOT GUARANTEE POINTER OR ITERATOR STABILITY!
+template <typename T>
+using QuicQueue = QuicQueueImpl<T>;
+
+// Represents a double-ended queue which may be backed by a list or
+// a flat circular buffer.
+//
+// DOES NOT GUARANTEE POINTER OR ITERATOR STABILITY!
+template <typename T>
+using QuicDeque = QuicDequeImpl<T>;
+
 }  // namespace net
 
 #endif  // NET_QUIC_PLATFORM_API_QUIC_CONTAINERS_H_

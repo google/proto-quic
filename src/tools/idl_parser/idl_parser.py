@@ -8,7 +8,7 @@
 #
 # IDL Parser
 #
-# The parser is uses the PLY yacc library to build a set of parsing rules based
+# The parser uses the PLY yacc library to build a set of parsing rules based
 # on Web IDL.
 #
 # Web IDL, and Web IDL grammar can be found at:
@@ -58,6 +58,9 @@ ERROR_REMAP = {
   'Unexpected "{" after keyword "struct".' : 'Struct missing name.',
   'Unexpected "{" after keyword "interface".' : 'Interface missing name.',
 }
+
+_EXTENDED_ATTRIBUTES_APPLICABLE_TO_TYPES = [
+    'Clamp', 'EnforceRange', 'TreatNullAs']
 
 
 def Boolean(val):
@@ -134,6 +137,24 @@ def ExtractSpecialComment(comment):
     lines.append(line)
   return '\n'.join(lines)
 
+# There are two groups of ExtendedAttributes.
+# One group can apply to types (It is said "applicable to types"),
+# but the other cannot apply to types.
+# This function is intended to divide ExtendedAttributes into those 2 groups.
+# For more details at
+#    https://heycam.github.io/webidl/#extended-attributes-applicable-to-types
+def DivideExtAttrsIntoApplicableAndNonApplicable(extended_attribute_list):
+  if not extended_attribute_list:
+    return [[], []]
+  else:
+    applicable_to_types = []
+    non_applicable_to_types = []
+    for ext_attribute in extended_attribute_list.GetChildren():
+      if ext_attribute.GetName() in _EXTENDED_ATTRIBUTES_APPLICABLE_TO_TYPES:
+        applicable_to_types.append(ext_attribute)
+      else:
+        non_applicable_to_types.append(ext_attribute)
+    return [applicable_to_types, non_applicable_to_types]
 
 #
 # IDL Parser
@@ -220,9 +241,14 @@ def ExtractSpecialComment(comment):
 # the Web IDL spec, such as allowing string list in extended attributes.
 class IDLParser(object):
   def p_Definitions(self, p):
-    """Definitions : ExtendedAttributeList Definition Definitions
+    """Definitions : SpecialComments ExtendedAttributeList Definition Definitions
+                   | ExtendedAttributeList Definition Definitions
                    | """
-    if len(p) > 1:
+    if len(p) > 4:
+      special_comments_and_attribs = ListFromConcat(p[1], p[2])
+      p[3].AddChildren(special_comments_and_attribs)
+      p[0] = ListFromConcat(p[3], p[4])
+    elif len(p) > 1:
       p[2].AddChildren(p[1])
       p[0] = ListFromConcat(p[2], p[3])
 
@@ -244,7 +270,8 @@ class IDLParser(object):
     """CallbackOrInterface : CALLBACK CallbackRestOrInterface
                            | Interface"""
     if len(p) > 2:
-      p[2].AddChildren(self.BuildTrue('CALLBACK'))
+      if p[2].GetClass() != 'Callback':
+        p[2].AddChildren(self.BuildTrue('CALLBACK'))
       p[0] = p[2]
     else:
       p[0] = p[1]
@@ -265,7 +292,7 @@ class IDLParser(object):
 
   def p_Partial(self, p):
     """Partial : PARTIAL PartialDefinition"""
-    p[2].AddChildren(self.BuildTrue('Partial'))
+    p[2].AddChildren(self.BuildTrue('PARTIAL'))
     p[0] = p[2]
 
   # Error recovery for Partial
@@ -324,11 +351,10 @@ class IDLParser(object):
     p[0] = self.BuildError(p, 'Dictionary')
 
   def p_DictionaryMembers(self, p):
-    """DictionaryMembers : ExtendedAttributeList DictionaryMember DictionaryMembers
+    """DictionaryMembers : DictionaryMember DictionaryMembers
                          |"""
     if len(p) > 1:
-      p[2].AddChildren(p[1])
-      p[0] = ListFromConcat(p[2], p[3])
+      p[0] = ListFromConcat(p[1], p[2])
 
   # Error recovery for DictionaryMembers
   def p_DictionaryMembersError(self, p):
@@ -336,19 +362,28 @@ class IDLParser(object):
     p[0] = self.BuildError(p, 'DictionaryMembers')
 
   def p_DictionaryMember(self, p):
-    """DictionaryMember : Required Type identifier Default ';'"""
-    p[0] = self.BuildNamed('Key', p, 3, ListFromConcat(p[1], p[2], p[4]))
-
-  def p_Required(self, p):
-    """Required : REQUIRED
-                |"""
-    if len(p) > 1:
-      p[0] = self.BuildTrue('REQUIRED')
+    """DictionaryMember : ExtendedAttributeList REQUIRED TypeWithExtendedAttributes identifier Default ';'
+                        | ExtendedAttributeList Type identifier Default ';'"""
+    if len(p) > 6:
+      p[2] = self.BuildTrue('REQUIRED')
+      p[0] = self.BuildNamed('Key', p, 4, ListFromConcat(p[2], p[3], p[5]))
+      p[0].AddChildren(p[1])
+    else:
+      applicable_to_types, non_applicable_to_types = \
+          DivideExtAttrsIntoApplicableAndNonApplicable(p[1])
+      if applicable_to_types:
+        attributes = self.BuildProduction('ExtAttributes', p, 1,
+            applicable_to_types)
+        p[2].AddChildren(attributes)
+      p[0] = self.BuildNamed('Key', p, 3, ListFromConcat(p[2], p[4]))
+      if non_applicable_to_types:
+        attributes = self.BuildProduction('ExtAttributes', p, 1,
+            non_applicable_to_types)
+        p[0].AddChildren(attributes)
 
   def p_PartialDictionary(self, p):
     """PartialDictionary : DICTIONARY identifier '{' DictionaryMembers '}' ';'"""
-    partial = self.BuildTrue('Partial')
-    p[0] = self.BuildNamed('Dictionary', p, 2, ListFromConcat(p[4], partial))
+    p[0] = self.BuildNamed('Dictionary', p, 2, p[4])
 
   # Error recovery for Partial Dictionary
   def p_PartialDictionaryError(self, p):
@@ -370,7 +405,7 @@ class IDLParser(object):
                             self.BuildAttribute('VALUE', '[]'))
     elif type(p[1]) == str:
       p[0] = ListFromConcat(self.BuildAttribute('TYPE', 'DOMString'),
-                            self.BuildAttribute('NAME', p[1]))
+                            self.BuildAttribute('VALUE', p[1]))
     else:
       p[0] = p[1]
 
@@ -438,7 +473,7 @@ class IDLParser(object):
                   | null"""
     if type(p[1]) == str:
       p[0] = ListFromConcat(self.BuildAttribute('TYPE', 'integer'),
-                            self.BuildAttribute('NAME', p[1]))
+                            self.BuildAttribute('VALUE', p[1]))
     else:
       p[0] = p[1]
 
@@ -446,7 +481,7 @@ class IDLParser(object):
   def p_null(self, p):
     """null : NULL"""
     p[0] = ListFromConcat(self.BuildAttribute('TYPE', 'NULL'),
-                          self.BuildAttribute('NAME', 'NULL'))
+                          self.BuildAttribute('VALUE', 'NULL'))
 
   def p_BooleanLiteral(self, p):
     """BooleanLiteral : TRUE
@@ -578,7 +613,7 @@ class IDLParser(object):
       p[0] = p[1]
 
   def p_AttributeRest(self, p):
-    """AttributeRest : ATTRIBUTE Type AttributeName ';'"""
+    """AttributeRest : ATTRIBUTE TypeWithExtendedAttributes AttributeName ';'"""
     p[0] = self.BuildNamed('Attribute', p, 3, p[2])
 
   def p_AttributeName(self, p):
@@ -660,19 +695,24 @@ class IDLParser(object):
     p[0] = self.BuildError(p, 'Arguments')
 
   def p_Argument(self, p):
-    """Argument : ExtendedAttributeList OptionalOrRequiredArgument"""
-    p[2].AddChildren(p[1])
-    p[0] = p[2]
-
-  def p_OptionalOrRequiredArgument(self, p):
-    """OptionalOrRequiredArgument : OPTIONAL Type ArgumentName Default
-                                  | Type Ellipsis ArgumentName"""
-    if len(p) > 4:
-      arg = self.BuildNamed('Argument', p, 3, ListFromConcat(p[2], p[4]))
-      arg.AddChildren(self.BuildTrue('OPTIONAL'))
+    """Argument : ExtendedAttributeList OPTIONAL TypeWithExtendedAttributes ArgumentName Default
+                | ExtendedAttributeList Type Ellipsis ArgumentName"""
+    if len(p) > 5:
+      p[0] = self.BuildNamed('Argument', p, 4, ListFromConcat(p[3], p[5]))
+      p[0].AddChildren(self.BuildTrue('OPTIONAL'))
+      p[0].AddChildren(p[1])
     else:
-      arg = self.BuildNamed('Argument', p, 3, ListFromConcat(p[1], p[2]))
-    p[0] = arg
+      applicable_to_types, non_applicable_to_types = \
+          DivideExtAttrsIntoApplicableAndNonApplicable(p[1])
+      if applicable_to_types:
+        attributes = self.BuildProduction('ExtAttributes', p, 1,
+            applicable_to_types)
+        p[2].AddChildren(attributes)
+      p[0] = self.BuildNamed('Argument', p, 4, ListFromConcat(p[2], p[3]))
+      if non_applicable_to_types:
+        attributes = self.BuildProduction('ExtAttributes', p, 1,
+            non_applicable_to_types)
+        p[0].AddChildren(attributes)
 
   def p_ArgumentName(self, p):
     """ArgumentName : ArgumentNameKeyword
@@ -687,12 +727,12 @@ class IDLParser(object):
       p[0].AddChildren(self.BuildTrue('ELLIPSIS'))
 
   def p_Iterable(self, p):
-    """Iterable : ITERABLE '<' Type OptionalType '>' ';'"""
+    """Iterable : ITERABLE '<' TypeWithExtendedAttributes OptionalType '>' ';'"""
     childlist = ListFromConcat(p[3], p[4])
     p[0] = self.BuildProduction('Iterable', p, 2, childlist)
 
   def p_OptionalType(self, p):
-    """OptionalType : ',' Type
+    """OptionalType : ',' TypeWithExtendedAttributes
                     |"""
     if len(p) > 1:
       p[0] = p[2]
@@ -706,29 +746,21 @@ class IDLParser(object):
     p[0] = p[1]
 
   def p_MaplikeRest(self, p):
-    """MaplikeRest : MAPLIKE '<' Type ',' Type '>' ';'"""
+    """MaplikeRest : MAPLIKE '<' TypeWithExtendedAttributes ',' TypeWithExtendedAttributes '>' ';'"""
     childlist = ListFromConcat(p[3], p[5])
     p[0] = self.BuildProduction('Maplike', p, 2, childlist)
 
   def p_SetlikeRest(self, p):
-    """SetlikeRest : SETLIKE '<' Type '>' ';'"""
+    """SetlikeRest : SETLIKE '<' TypeWithExtendedAttributes '>' ';'"""
     p[0] = self.BuildProduction('Setlike', p, 2, p[3])
 
   # This rule has custom additions (i.e. SpecialComments).
   def p_ExtendedAttributeList(self, p):
-    """ExtendedAttributeList : SpecialComments '[' ExtendedAttribute ExtendedAttributes ']'
-                             | '[' ExtendedAttribute ExtendedAttributes ']'
-                             | SpecialComments
+    """ExtendedAttributeList : '[' ExtendedAttribute ExtendedAttributes ']'
                              | """
-    if len(p) > 5:
-      items = ListFromConcat(p[3], p[4])
-      attribs = self.BuildProduction('ExtAttributes', p, 2, items)
-      p[0] = ListFromConcat(p[1], attribs)
-    elif len(p) > 4:
+    if len(p) > 4:
       items = ListFromConcat(p[2], p[3])
       p[0] = self.BuildProduction('ExtAttributes', p, 1, items)
-    elif len(p) > 1:
-      p[0] = p[1]
 
   # Error recovery for ExtendedAttributeList
   def p_ExtendedAttributeListError(self, p):
@@ -785,19 +817,28 @@ class IDLParser(object):
 
   def p_Type(self, p):
     """Type : SingleType
-            | UnionType TypeSuffix"""
+            | UnionType Null"""
     if len(p) == 2:
       p[0] = self.BuildProduction('Type', p, 1, p[1])
     else:
       p[0] = self.BuildProduction('Type', p, 1, ListFromConcat(p[1], p[2]))
 
+  def p_TypeWithExtendedAttributes(self, p):
+    """ TypeWithExtendedAttributes : ExtendedAttributeList SingleType
+                                   | ExtendedAttributeList UnionType Null"""
+    if len(p) < 4:
+      p[0] = self.BuildProduction('Type', p, 2, p[2])
+    else:
+      p[0] = self.BuildProduction('Type', p, 2, ListFromConcat(p[2], p[3]))
+    p[0].AddChildren(p[1])
+
   def p_SingleType(self, p):
     """SingleType : NonAnyType
-                  | ANY TypeSuffixStartingWithArray"""
-    if len(p) == 2:
+                  | ANY"""
+    if p[1] != 'any':
       p[0] = p[1]
     else:
-      p[0] = ListFromConcat(self.BuildProduction('Any', p, 1), p[2])
+      p[0] = self.BuildProduction('Any', p, 1)
 
   def p_UnionType(self, p):
     """UnionType : '(' UnionMemberType OR UnionMemberType UnionMemberTypes ')'"""
@@ -806,15 +847,11 @@ class IDLParser(object):
 
   def p_UnionMemberType(self, p):
     """UnionMemberType : NonAnyType
-                       | UnionType TypeSuffix
-                       | ANY '[' ']' TypeSuffix"""
+                       | UnionType Null"""
     if len(p) == 2:
       p[0] = self.BuildProduction('Type', p, 1, p[1])
-    elif len(p) == 3:
-      p[0] = self.BuildProduction('Type', p, 1, ListFromConcat(p[1], p[2]))
     else:
-      any_node = ListFromConcat(self.BuildProduction('Any', p, 1), p[4])
-      p[0] = self.BuildProduction('Type', p, 1, any_node)
+      p[0] = self.BuildProduction('Type', p, 1, ListFromConcat(p[1], p[2]))
 
   def p_UnionMemberTypes(self, p):
     """UnionMemberTypes : OR UnionMemberType UnionMemberTypes
@@ -827,9 +864,9 @@ class IDLParser(object):
   # differentiate between them and 'identifier', since p[1] would be a string in
   # both cases.
   def p_NonAnyType(self, p):
-    """NonAnyType : PrimitiveType TypeSuffix
+    """NonAnyType : PrimitiveType Null
                   | PromiseType Null
-                  | identifier TypeSuffix
+                  | identifier Null
                   | SEQUENCE '<' Type '>' Null
                   | FROZENARRAY '<' Type '>' Null
                   | RecordType Null"""
@@ -922,27 +959,6 @@ class IDLParser(object):
       p[0] = self.BuildNamed('Promise', p, 1, resolution_type)
     else:
       p[0] = self.BuildNamed('Promise', p, 1, p[3])
-
-  # Add support for sized array
-  def p_TypeSuffix(self, p):
-    """TypeSuffix : '[' integer ']' TypeSuffix
-                  | '[' ']' TypeSuffix
-                  | '?' TypeSuffixStartingWithArray
-                  | """
-    if len(p) == 5:
-      p[0] = self.BuildNamed('Array', p, 2, p[4])
-
-    if len(p) == 4:
-      p[0] = self.BuildProduction('Array', p, 1, p[3])
-
-    if len(p) == 3:
-      p[0] = ListFromConcat(self.BuildTrue('NULLABLE'), p[2])
-
-  def p_TypeSuffixStartingWithArray(self, p):
-    """TypeSuffixStartingWithArray : '[' ']' TypeSuffix
-                                   | """
-    if len(p) > 1:
-      p[0] = self.BuildProduction('Array', p, 0, p[3])
 
   def p_Null(self, p):
     """Null : '?'
@@ -1038,7 +1054,7 @@ class IDLParser(object):
     p[0] = self.BuildNamed('StringType', p, 1)
 
   def p_RecordType(self, p):
-    """RecordType : RECORD '<' StringType ',' Type '>'"""
+    """RecordType : RECORD '<' StringType ',' TypeWithExtendedAttributes '>'"""
     p[0] = self.BuildProduction('Record', p, 2, ListFromConcat(p[3], p[5]))
 
   # Error recovery for RecordType.
@@ -1157,8 +1173,8 @@ class IDLParser(object):
   def BuildError(self, p, prod):
     self._parse_errors += 1
     name = self.BuildAttribute('NAME', self._last_error_msg)
-    line = self.BuildAttribute('LINE', self._last_error_lineno)
-    pos = self.BuildAttribute('POS', self._last_error_pos)
+    line = self.BuildAttribute('LINENO', self._last_error_lineno)
+    pos = self.BuildAttribute('POSITION', self._last_error_pos)
     prod = self.BuildAttribute('PROD', prod)
 
     node = self.BuildProduction('Error', p, 1,
@@ -1240,7 +1256,7 @@ def main(argv):
 
   ast = IDLNode('AST', '__AST__', 0, 0, nodes)
 
-  print '\n'.join(ast.Tree(accept_props=['PROD']))
+  print '\n'.join(ast.Tree())
   if errors:
     print '\nFound %d errors.\n' % errors
 

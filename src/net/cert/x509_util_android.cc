@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/cert/x509_util_android.h"
-
 #include "base/android/build_info.h"
 #include "base/metrics/histogram_macros.h"
 #include "jni/X509Util_jni.h"
@@ -26,10 +24,6 @@ void RecordCertVerifyCapabilitiesHistogram(JNIEnv* env,
     UMA_HISTOGRAM_BOOLEAN("Net.FoundSystemTrustRootsAndroid",
                           found_system_trust_roots);
   }
-}
-
-bool RegisterX509Util(JNIEnv* env) {
-  return RegisterNativesImpl(env);
 }
 
 }  // namespace net

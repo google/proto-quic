@@ -75,6 +75,10 @@ if (is_android) {
     google_play_services_package = "//third_party/android_tools"
   }
 
+  if (!defined(android_support_library_package)) {
+    android_support_library_package = "//third_party/android_tools/support"
+  }
+
   if (!defined(system_webview_apk_target)) {
     system_webview_apk_target = "//android_webview:system_webview_apk"
   }
@@ -101,10 +105,10 @@ if (is_android) {
     # Libc++ library directory. Override to use a custom libc++ binary.
     android_libcpp_lib_dir = ""
 
-    # Android versionCode for android_apk()s that don't expclitly set one.
+    # Android versionCode for android_apk()s that don't explicitly set one.
     android_default_version_code = "1"
 
-    # Android versionName for android_apk()s that don't expclitly set one.
+    # Android versionName for android_apk()s that don't explicitly set one.
     android_default_version_name = "Developer Build"
 
     # The path to the keystore to use for signing builds.
@@ -164,11 +168,21 @@ if (is_android) {
     # Ex. with this arg set to true, the chrome_public_apk target result in
     # chrome_public_apk_incremental being built.
     incremental_apk_by_default = false
+
+    # When true, updates all android_aar_prebuilt() .info files during gn gen.
+    # Refer to android_aar_prebuilt() for more details.
+    update_android_aar_prebuilts = false
   }
 
   # We need a second declare_args block to make sure we are using the overridden
   # value of the arguments set above.
   declare_args() {
+    if (defined(default_android_sdk_platform_version)) {
+      android_sdk_platform_version = default_android_sdk_platform_version
+    } else {
+      android_sdk_platform_version = android_sdk_version
+    }
+
     # Speed up dexing using dx --incremental.
     enable_incremental_dx = is_java_debug
   }
@@ -210,7 +224,8 @@ if (is_android) {
   # than just the current one) since these are needed by the Android toolchain
   # file to define toolchains for all possible targets in one pass.
 
-  android_sdk = "${android_sdk_root}/platforms/android-${android_sdk_version}"
+  android_sdk =
+      "${android_sdk_root}/platforms/android-${android_sdk_platform_version}"
 
   # Path to the Android NDK and SDK.
   android_ndk_include_dir = "$android_ndk_root/usr/include"

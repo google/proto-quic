@@ -63,8 +63,7 @@ CRYPTO_EXPORT void EnsureOpenSSLInit();
 // Drains the OpenSSL ERR_get_error stack. On a debug build the error codes
 // are send to VLOG(1), on a release build they are disregarded. In most
 // cases you should pass FROM_HERE as the |location|.
-CRYPTO_EXPORT void ClearOpenSSLERRStack(
-    const tracked_objects::Location& location);
+CRYPTO_EXPORT void ClearOpenSSLERRStack(const base::Location& location);
 
 // Place an instance of this class on the call stack to automatically clear
 // the OpenSSL error stack on function exit.
@@ -73,7 +72,7 @@ class OpenSSLErrStackTracer {
   // Pass FROM_HERE as |location|, to help track the source of OpenSSL error
   // messages. Note any diagnostic emitted will be tagged with the location of
   // the constructor call as it's not possible to trace a destructor's callsite.
-  explicit OpenSSLErrStackTracer(const tracked_objects::Location& location)
+  explicit OpenSSLErrStackTracer(const base::Location& location)
       : location_(location) {
     EnsureOpenSSLInit();
   }
@@ -82,7 +81,7 @@ class OpenSSLErrStackTracer {
   }
 
  private:
-  const tracked_objects::Location location_;
+  const base::Location location_;
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(OpenSSLErrStackTracer);
 };

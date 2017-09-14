@@ -179,6 +179,7 @@ SimpleEntryImpl::SimpleEntryImpl(
       path_(path),
       entry_hash_(entry_hash),
       use_optimistic_operations_(operations_mode == OPTIMISTIC_OPERATIONS),
+      is_initial_stream1_read_(true),
       last_used_(Time::Now()),
       last_modified_(last_used_),
       sparse_data_size_(0),
@@ -550,7 +551,8 @@ size_t SimpleEntryImpl::EstimateMemoryUsage() const {
   return sizeof(SimpleSynchronousEntry) +
          base::trace_event::EstimateMemoryUsage(pending_operations_) +
          base::trace_event::EstimateMemoryUsage(executing_operation_) +
-         (stream_0_data_ ? stream_0_data_->capacity() : 0);
+         (stream_0_data_ ? stream_0_data_->capacity() : 0) +
+         (stream_1_prefetch_data_ ? stream_1_prefetch_data_->capacity() : 0);
 }
 
 SimpleEntryImpl::~SimpleEntryImpl() {
@@ -851,12 +853,24 @@ void SimpleEntryImpl::ReadDataInternal(int stream_index,
 
   // Since stream 0 data is kept in memory, it is read immediately.
   if (stream_index == 0) {
-    int ret_value = ReadStream0Data(buf, offset, buf_len);
-    if (!callback.is_null()) {
-      base::ThreadTaskRunnerHandle::Get()->PostTask(
-          FROM_HERE, base::Bind(callback, ret_value));
-    }
+    ReadFromBufferAndPostReply(stream_0_data_.get(), offset, buf_len, buf,
+                               callback);
     return;
+  }
+
+  // Sometimes we can read in-ram prefetched stream 1 data immediately, too.
+  if (stream_index == 1) {
+    if (is_initial_stream1_read_) {
+      SIMPLE_CACHE_UMA(BOOLEAN, "ReadStream1FromPrefetched", cache_type_,
+                       stream_1_prefetch_data_ != nullptr);
+    }
+    is_initial_stream1_read_ = false;
+
+    if (stream_1_prefetch_data_) {
+      ReadFromBufferAndPostReply(stream_1_prefetch_data_.get(), offset, buf_len,
+                                 buf, callback);
+      return;
+    }
   }
 
   state_ = STATE_IO_PENDING;
@@ -949,6 +963,10 @@ void SimpleEntryImpl::WriteDataInternal(int stream_index,
   state_ = STATE_IO_PENDING;
   if (!doomed_ && backend_.get())
     backend_->index()->UseIfExists(entry_hash_);
+
+  // Any stream 1 write invalidates the prefetched data.
+  if (stream_index == 1)
+    stream_1_prefetch_data_ = nullptr;
 
   AdvanceCrc(buf, offset, buf_len, stream_index);
 
@@ -1147,13 +1165,24 @@ void SimpleEntryImpl::CreationOperationComplete(
 
   state_ = STATE_READY;
   synchronous_entry_ = in_results->sync_entry;
-  if (in_results->stream_0_data.get()) {
-    stream_0_data_ = in_results->stream_0_data;
-    // The crc was read in SimpleSynchronousEntry.
-    crc_check_state_[0] = CRC_CHECK_DONE;
-    crc32s_[0] = in_results->stream_0_crc32;
-    crc32s_end_offset_[0] = in_results->entry_stat.data_size(0);
+
+  // Copy over any pre-fetched data and its CRCs.
+  for (int stream = 0; stream < 2; ++stream) {
+    const SimpleStreamPrefetchData& prefetched =
+        in_results->stream_prefetch_data[stream];
+    if (prefetched.data.get()) {
+      if (stream == 0)
+        stream_0_data_ = prefetched.data;
+      else
+        stream_1_prefetch_data_ = prefetched.data;
+
+      // The crc was read in SimpleSynchronousEntry.
+      crc_check_state_[stream] = CRC_CHECK_DONE;
+      crc32s_[stream] = prefetched.stream_crc32;
+      crc32s_end_offset_[stream] = in_results->entry_stat.data_size(stream);
+    }
   }
+
   // If this entry was opened by hash, key_ could still be empty. If so, update
   // it with the key read from the synchronous entry.
   if (key_.empty()) {
@@ -1449,19 +1478,27 @@ void SimpleEntryImpl::RecordWriteDependencyType(
                    type, WRITE_DEPENDENCY_TYPE_MAX);
 }
 
-int SimpleEntryImpl::ReadStream0Data(net::IOBuffer* buf,
-                                     int offset,
-                                     int buf_len) {
+void SimpleEntryImpl::ReadFromBufferAndPostReply(
+    net::GrowableIOBuffer* in_buf,
+    int offset,
+    int buf_len,
+    net::IOBuffer* out_buf,
+    const CompletionCallback& callback) {
+  int rv;
   if (buf_len < 0) {
     RecordReadResult(cache_type_, READ_RESULT_SYNC_READ_FAILURE);
-    return 0;
+    rv = 0;
+  } else {
+    memcpy(out_buf->data(), in_buf->data() + offset, buf_len);
+    UpdateDataFromEntryStat(SimpleEntryStat(base::Time::Now(), last_modified_,
+                                            data_size_, sparse_data_size_));
+    RecordReadResult(cache_type_, READ_RESULT_SUCCESS);
+    rv = buf_len;
   }
-  memcpy(buf->data(), stream_0_data_->data() + offset, buf_len);
-  UpdateDataFromEntryStat(
-      SimpleEntryStat(base::Time::Now(), last_modified_, data_size_,
-                      sparse_data_size_));
-  RecordReadResult(cache_type_, READ_RESULT_SUCCESS);
-  return buf_len;
+  if (!callback.is_null()) {
+    base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
+                                                  base::Bind(callback, rv));
+  }
 }
 
 int SimpleEntryImpl::SetStream0Data(net::IOBuffer* buf,

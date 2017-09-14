@@ -56,7 +56,7 @@ bool TestRootCerts::Add(X509Certificate* certificate) {
   }
 
   trust_cache_.push_back(
-      base::MakeUnique<TrustEntry>(std::move(cert_handle), original_trust));
+      std::make_unique<TrustEntry>(std::move(cert_handle), original_trust));
   return true;
 }
 

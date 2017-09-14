@@ -201,7 +201,7 @@ const char* NetLog::EventTypeToString(NetLogEventType event) {
 
 // static
 std::unique_ptr<base::Value> NetLog::GetEventTypesAsValue() {
-  auto dict = base::MakeUnique<base::DictionaryValue>();
+  auto dict = std::make_unique<base::DictionaryValue>();
   for (int i = 0; i < static_cast<int>(NetLogEventType::COUNT); ++i) {
     dict->SetInteger(EventTypeToString(static_cast<NetLogEventType>(i)), i);
   }
@@ -224,7 +224,7 @@ const char* NetLog::SourceTypeToString(NetLogSourceType source) {
 
 // static
 std::unique_ptr<base::Value> NetLog::GetSourceTypesAsValue() {
-  auto dict = base::MakeUnique<base::DictionaryValue>();
+  auto dict = std::make_unique<base::DictionaryValue>();
   for (int i = 0; i < static_cast<int>(NetLogSourceType::COUNT); ++i) {
     dict->SetInteger(SourceTypeToString(static_cast<NetLogSourceType>(i)), i);
   }

@@ -2058,8 +2058,14 @@ class ServerRunner(testserver_base.TestServerRunner):
       if self.options.cert_and_key_file:
         scheme = "wss"
         websocket_options.use_tls = True
-        websocket_options.private_key = self.options.cert_and_key_file
-        websocket_options.certificate = self.options.cert_and_key_file
+        key_path = os.path.join(ROOT_DIR, self.options.cert_and_key_file)
+        if not os.path.isfile(key_path):
+          raise testserver_base.OptionError(
+              'specified server cert file not found: ' +
+              self.options.cert_and_key_file + ' exiting...')
+        websocket_options.private_key = key_path
+        websocket_options.certificate = key_path
+
       if self.options.ssl_client_auth:
         websocket_options.tls_client_cert_optional = False
         websocket_options.tls_client_auth = True

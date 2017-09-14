@@ -38,7 +38,7 @@ int GetNetworkQualityChangedEntriesCount(BoundTestNetLog* net_log) {
 // Verify that the net log events are recorded correctly.
 TEST(NetworkQualityEstimatorEventCreatorTest, Notified) {
   // std::unique_ptr<BoundTestNetLog>
-  // net_log(base::MakeUnique<BoundTestNetLog>());
+  // net_log(std::make_unique<BoundTestNetLog>());
   BoundTestNetLog net_log;
 
   EventCreator event_creator(net_log.bound());

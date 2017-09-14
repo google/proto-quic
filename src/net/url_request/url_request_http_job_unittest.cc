@@ -21,7 +21,6 @@
 #include "base/test/histogram_tester.h"
 #include "net/base/auth.h"
 #include "net/base/request_priority.h"
-#include "net/base/sdch_observer.h"
 #include "net/cookies/cookie_store_test_helpers.h"
 #include "net/http/http_transaction_factory.h"
 #include "net/http/http_transaction_test_util.h"
@@ -145,7 +144,7 @@ TEST_F(URLRequestHttpJobSetUpSourceTest, SetUpSourceFails) {
   std::unique_ptr<URLRequest> request =
       context_.CreateRequest(GURL("http://www.example.com"), DEFAULT_PRIORITY,
                              &delegate_, TRAFFIC_ANNOTATION_FOR_TESTS);
-  auto job = base::MakeUnique<TestURLRequestHttpJob>(request.get());
+  auto job = std::make_unique<TestURLRequestHttpJob>(request.get());
   job->set_use_null_source_stream(true);
   test_job_interceptor_->set_main_intercept_job(std::move(job));
   request->Start();
@@ -170,7 +169,7 @@ TEST_F(URLRequestHttpJobSetUpSourceTest, UnknownEncoding) {
   std::unique_ptr<URLRequest> request =
       context_.CreateRequest(GURL("http://www.example.com"), DEFAULT_PRIORITY,
                              &delegate_, TRAFFIC_ANNOTATION_FOR_TESTS);
-  auto job = base::MakeUnique<TestURLRequestHttpJob>(request.get());
+  auto job = std::make_unique<TestURLRequestHttpJob>(request.get());
   test_job_interceptor_->set_main_intercept_job(std::move(job));
   request->Start();
 
@@ -179,7 +178,7 @@ TEST_F(URLRequestHttpJobSetUpSourceTest, UnknownEncoding) {
   EXPECT_EQ("Test Content", delegate_.data_received());
 }
 
-// Received a malformed SDCH encoded response when there is no SdchManager.
+// Received a SDCH encoded response when Sdch is not advertised.
 TEST_F(URLRequestHttpJobSetUpSourceTest, SdchNotAdvertisedGotSdchResponse) {
   MockWrite writes[] = {MockWrite(kSimpleGetMockWrite)};
   MockRead reads[] = {MockRead("HTTP/1.1 200 OK\r\n"
@@ -197,7 +196,7 @@ TEST_F(URLRequestHttpJobSetUpSourceTest, SdchNotAdvertisedGotSdchResponse) {
   std::unique_ptr<URLRequest> request =
       context_.CreateRequest(GURL("http://www.example.com"), DEFAULT_PRIORITY,
                              &delegate_, TRAFFIC_ANNOTATION_FOR_TESTS);
-  auto job = base::MakeUnique<TestURLRequestHttpJob>(request.get());
+  auto job = std::make_unique<TestURLRequestHttpJob>(request.get());
   test_job_interceptor_->set_main_intercept_job(std::move(job));
   request->Start();
 
@@ -221,37 +220,6 @@ class URLRequestHttpJobTest : public ::testing::Test {
     req_ =
         context_.CreateRequest(GURL("http://www.example.com"), DEFAULT_PRIORITY,
                                &delegate_, TRAFFIC_ANNOTATION_FOR_TESTS);
-  }
-
-  bool TransactionAcceptsSdchEncoding() {
-    base::WeakPtr<MockNetworkTransaction> transaction(
-        network_layer_.last_transaction());
-    EXPECT_TRUE(transaction);
-    if (!transaction) return false;
-
-    const HttpRequestInfo* request_info = transaction->request();
-    EXPECT_TRUE(request_info);
-    if (!request_info) return false;
-
-    std::string encoding_headers;
-    bool get_success = request_info->extra_headers.GetHeader(
-        "Accept-Encoding", &encoding_headers);
-    EXPECT_TRUE(get_success);
-    if (!get_success) return false;
-
-    // This check isn't wrapped with EXPECT* macros because different
-    // results from this function may be expected in different tests.
-    for (const std::string& token :
-         base::SplitString(encoding_headers, ", ", base::KEEP_WHITESPACE,
-                           base::SPLIT_WANT_NONEMPTY)) {
-      if (base::EqualsCaseInsensitiveASCII(token, "sdch"))
-        return true;
-    }
-    return false;
-  }
-
-  void EnableSdch() {
-    context_.SetSdchManager(base::MakeUnique<SdchManager>());
   }
 
   MockNetworkLayer network_layer_;
@@ -873,7 +841,7 @@ TEST_F(URLRequestHttpJobTest, TestCancelWhileReadingCookies) {
 // Make sure that SetPriority actually sets the URLRequestHttpJob's
 // priority, before start.  Other tests handle the after start case.
 TEST_F(URLRequestHttpJobTest, SetPriorityBasic) {
-  auto job = base::MakeUnique<TestURLRequestHttpJob>(req_.get());
+  auto job = std::make_unique<TestURLRequestHttpJob>(req_.get());
   EXPECT_EQ(DEFAULT_PRIORITY, job->priority());
 
   job->SetPriority(LOWEST);
@@ -887,7 +855,7 @@ TEST_F(URLRequestHttpJobTest, SetPriorityBasic) {
 // transaction on start.
 TEST_F(URLRequestHttpJobTest, SetTransactionPriorityOnStart) {
   test_job_interceptor_->set_main_intercept_job(
-      base::MakeUnique<TestURLRequestHttpJob>(req_.get()));
+      std::make_unique<TestURLRequestHttpJob>(req_.get()));
   req_->SetPriority(LOW);
 
   EXPECT_FALSE(network_layer_.last_transaction());
@@ -902,7 +870,7 @@ TEST_F(URLRequestHttpJobTest, SetTransactionPriorityOnStart) {
 // its transaction.
 TEST_F(URLRequestHttpJobTest, SetTransactionPriority) {
   test_job_interceptor_->set_main_intercept_job(
-      base::MakeUnique<TestURLRequestHttpJob>(req_.get()));
+      std::make_unique<TestURLRequestHttpJob>(req_.get()));
   req_->SetPriority(LOW);
   req_->Start();
   ASSERT_TRUE(network_layer_.last_transaction());
@@ -910,26 +878,6 @@ TEST_F(URLRequestHttpJobTest, SetTransactionPriority) {
 
   req_->SetPriority(HIGHEST);
   EXPECT_EQ(HIGHEST, network_layer_.last_transaction()->priority());
-}
-
-// Confirm we do advertise SDCH encoding in the case of a GET.
-TEST_F(URLRequestHttpJobTest, SdchAdvertisementGet) {
-  EnableSdch();
-  req_->set_method("GET");  // Redundant with default.
-  test_job_interceptor_->set_main_intercept_job(
-      base::MakeUnique<TestURLRequestHttpJob>(req_.get()));
-  req_->Start();
-  EXPECT_TRUE(TransactionAcceptsSdchEncoding());
-}
-
-// Confirm we don't advertise SDCH encoding in the case of a POST.
-TEST_F(URLRequestHttpJobTest, SdchAdvertisementPost) {
-  EnableSdch();
-  req_->set_method("POST");
-  test_job_interceptor_->set_main_intercept_job(
-      base::MakeUnique<TestURLRequestHttpJob>(req_.get()));
-  req_->Start();
-  EXPECT_FALSE(TransactionAcceptsSdchEncoding());
 }
 
 TEST_F(URLRequestHttpJobTest, HSTSInternalRedirectTest) {
@@ -993,124 +941,11 @@ TEST_F(URLRequestHttpJobTest, HSTSInternalRedirectTest) {
   }
 }
 
-class MockSdchObserver : public SdchObserver {
- public:
-  MockSdchObserver() {}
-  MOCK_METHOD2(OnDictionaryAdded,
-               void(const GURL& request_url, const std::string& server_hash));
-  MOCK_METHOD1(OnDictionaryRemoved, void(const std::string& server_hash));
-  MOCK_METHOD1(OnDictionaryUsed, void(const std::string& server_hash));
-  MOCK_METHOD2(OnGetDictionary,
-               void(const GURL& request_url, const GURL& dictionary_url));
-  MOCK_METHOD0(OnClearDictionaries, void());
-};
-
-class URLRequestHttpJobWithSdchSupportTest : public ::testing::Test {
- protected:
-  URLRequestHttpJobWithSdchSupportTest() : context_(true) {
-    auto params = base::MakeUnique<HttpNetworkSession::Params>();
-    context_.set_http_network_session_params(std::move(params));
-    context_.set_client_socket_factory(&socket_factory_);
-    context_.Init();
-  }
-
-  MockClientSocketFactory socket_factory_;
-  TestURLRequestContext context_;
-};
-
-// Received a malformed SDCH encoded response that has no valid dictionary id.
-TEST_F(URLRequestHttpJobWithSdchSupportTest,
-       SdchAdvertisedGotMalformedSdchResponse) {
-  MockWrite writes[] = {
-      MockWrite("GET / HTTP/1.1\r\n"
-                "Host: www.example.com\r\n"
-                "Connection: keep-alive\r\n"
-                "User-Agent:\r\n"
-                "Accept-Encoding: gzip, deflate, sdch\r\n"
-                "Accept-Language: en-us,fr\r\n\r\n")};
-  MockRead reads[] = {MockRead("HTTP/1.1 200 OK\r\n"
-                               "Content-Encoding: sdch\r\n"
-                               "Content-Length: 12\r\n\r\n"),
-                      MockRead("Test Content")};
-
-  StaticSocketDataProvider socket_data(reads, arraysize(reads), writes,
-                                       arraysize(writes));
-  socket_factory_.AddSocketDataProvider(&socket_data);
-
-  MockSdchObserver sdch_observer;
-  SdchManager sdch_manager;
-  sdch_manager.AddObserver(&sdch_observer);
-  context_.set_sdch_manager(&sdch_manager);
-  TestDelegate delegate;
-  std::unique_ptr<URLRequest> request =
-      context_.CreateRequest(GURL("http://www.example.com"), DEFAULT_PRIORITY,
-                             &delegate, TRAFFIC_ANNOTATION_FOR_TESTS);
-  request->Start();
-
-  base::RunLoop().Run();
-  // SdchPolicyDelegate::OnDictionaryIdError() detects that the response is
-  // malformed (missing dictionary), and will issue a pass-through of the raw
-  // response.
-  EXPECT_EQ(OK, delegate.request_status());
-  EXPECT_EQ("Test Content", delegate.data_received());
-  // Cleanup manager.
-  sdch_manager.RemoveObserver(&sdch_observer);
-}
-
-TEST_F(URLRequestHttpJobWithSdchSupportTest, GetDictionary) {
-  MockWrite writes[] = {
-      MockWrite("GET / HTTP/1.1\r\n"
-                "Host: example.com\r\n"
-                "Connection: keep-alive\r\n"
-                "User-Agent:\r\n"
-                "Accept-Encoding: gzip, deflate, sdch\r\n"
-                "Accept-Language: en-us,fr\r\n\r\n")};
-
-  MockRead reads[] = {MockRead("HTTP/1.1 200 OK\r\n"
-                               "Get-Dictionary: /sdch.dict\r\n"
-                               "Cache-Control: max-age=120\r\n"
-                               "Content-Length: 12\r\n\r\n"),
-                      MockRead("Test Content")};
-  StaticSocketDataProvider socket_data(reads, arraysize(reads), writes,
-                                       arraysize(writes));
-  socket_factory_.AddSocketDataProvider(&socket_data);
-
-  MockSdchObserver sdch_observer;
-  SdchManager sdch_manager;
-  sdch_manager.AddObserver(&sdch_observer);
-  context_.set_sdch_manager(&sdch_manager);
-
-  // First response will be "from network" and we should have OnGetDictionary
-  // invoked.
-  GURL url("http://example.com");
-  EXPECT_CALL(sdch_observer,
-              OnGetDictionary(url, GURL("http://example.com/sdch.dict")));
-  TestDelegate delegate;
-  std::unique_ptr<URLRequest> request = context_.CreateRequest(
-      url, DEFAULT_PRIORITY, &delegate, TRAFFIC_ANNOTATION_FOR_TESTS);
-  request->Start();
-  base::RunLoop().RunUntilIdle();
-
-  EXPECT_THAT(delegate.request_status(), IsOk());
-
-  // Second response should be from cache without notification of SdchObserver
-  TestDelegate delegate2;
-  std::unique_ptr<URLRequest> request2 = context_.CreateRequest(
-      url, DEFAULT_PRIORITY, &delegate2, TRAFFIC_ANNOTATION_FOR_TESTS);
-  request2->Start();
-  base::RunLoop().RunUntilIdle();
-
-  EXPECT_THAT(delegate2.request_status(), IsOk());
-
-  // Cleanup manager.
-  sdch_manager.RemoveObserver(&sdch_observer);
-}
-
 class URLRequestHttpJobWithBrotliSupportTest : public ::testing::Test {
  protected:
   URLRequestHttpJobWithBrotliSupportTest()
       : context_(new TestURLRequestContext(true)) {
-    auto params = base::MakeUnique<HttpNetworkSession::Params>();
+    auto params = std::make_unique<HttpNetworkSession::Params>();
     context_->set_enable_brotli(true);
     context_->set_http_network_session_params(std::move(params));
     context_->set_client_socket_factory(&socket_factory_);
@@ -1367,7 +1202,7 @@ TEST_F(URLRequestHttpJobWebSocketTest, RejectedWithoutCreateHelper) {
 
 TEST_F(URLRequestHttpJobWebSocketTest, CreateHelperPassedThrough) {
   std::unique_ptr<MockCreateHelper> create_helper =
-      base::MakeUnique<::testing::StrictMock<MockCreateHelper>>();
+      std::make_unique<::testing::StrictMock<MockCreateHelper>>();
   FakeWebSocketHandshakeStream* fake_handshake_stream(
       new FakeWebSocketHandshakeStream);
   // Ownership of fake_handshake_stream is transferred when CreateBasicStream()

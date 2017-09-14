@@ -158,13 +158,16 @@ def _DoSCMKeys(plist, add_keys):
   return True
 
 
-def _AddBreakpadKeys(plist, branding, platform):
+def _AddBreakpadKeys(plist, branding, platform, staging):
   """Adds the Breakpad keys. This must be called AFTER _AddVersionKeys() and
   also requires the |branding| argument."""
   plist['BreakpadReportInterval'] = '3600'  # Deliberately a string.
   plist['BreakpadProduct'] = '%s_%s' % (branding, platform)
   plist['BreakpadProductDisplay'] = branding
-  plist['BreakpadURL'] = 'https://clients2.google.com/cr/report'
+  if staging:
+    plist['BreakpadURL'] = 'https://clients2.google.com/cr/staging_report'
+  else:
+    plist['BreakpadURL'] = 'https://clients2.google.com/cr/report'
 
   # These are both deliberately strings and not boolean.
   plist['BreakpadSendAndExit'] = 'YES'
@@ -236,6 +239,9 @@ def Main(argv):
       'the tweaked plist, rather than overwriting the input.')
   parser.add_option('--breakpad', dest='use_breakpad', action='store',
       type='int', default=False, help='Enable Breakpad [1 or 0]')
+  parser.add_option('--breakpad_staging', dest='use_breakpad_staging',
+      action='store_true', default=False,
+      help='Use staging breakpad to upload reports. Ignored if --breakpad=0.')
   parser.add_option('--keystone', dest='use_keystone', action='store',
       type='int', default=False, help='Enable Keystone [1 or 0]')
   parser.add_option('--scm', dest='add_scm_info', action='store', type='int',
@@ -322,10 +328,11 @@ def Main(argv):
     if options.branding is None:
       print >>sys.stderr, 'Use of Breakpad requires branding.'
       return 1
-    # Map gyp "OS" / gn "target_os" passed via the --platform parameter to
-    # the platform as known by breakpad.
+    # Map "target_os" passed from gn via the --platform parameter
+    # to the platform as known by breakpad.
     platform = {'mac': 'Mac', 'ios': 'iOS'}[options.platform]
-    _AddBreakpadKeys(plist, options.branding, platform)
+    _AddBreakpadKeys(plist, options.branding, platform,
+        options.use_breakpad_staging)
   else:
     _RemoveBreakpadKeys(plist)
 

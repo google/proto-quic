@@ -103,6 +103,18 @@ struct CommittedKBytes {
   size_t image;
 };
 
+#if defined(OS_LINUX) || defined(OS_ANDROID)
+// Minor and major page fault counts since the process creation.
+// Both counts are process-wide, and exclude child processes.
+//
+// minor: Number of page faults that didn't require disk IO.
+// major: Number of page faults that required disk IO.
+struct PageFaultCounts {
+  int64_t minor;
+  int64_t major;
+};
+#endif  // defined(OS_LINUX) || defined(OS_ANDROID)
+
 // Convert a POSIX timeval to microseconds.
 BASE_EXPORT int64_t TimeValToMicroseconds(const struct timeval& tv);
 
@@ -191,22 +203,23 @@ class BASE_EXPORT ProcessMetrics {
                       size_t* locked_bytes) const;
 #endif
 
-  // Returns the CPU usage in percent since the last time this method or
-  // GetPlatformIndependentCPUUsage() was called. The first time this method
-  // is called it returns 0 and will return the actual CPU info on subsequent
-  // calls. On Windows, the CPU usage value is for all CPUs. So if you have
-  // 2 CPUs and your process is using all the cycles of 1 CPU and not the other
-  // CPU, this method returns 50.
-  double GetCPUUsage();
+  // Returns the percentage of time spent executing, across all threads of the
+  // process, in the interval since the last time the method was called. Since
+  // this considers the total execution time across all threads in a process,
+  // the result can easily exceed 100% in multi-thread processes running on
+  // multi-core systems. In general the result is therefore a value in the
+  // range 0% to SysInfo::NumberOfProcessors() * 100%.
+  //
+  // To obtain the percentage of total available CPU resources consumed by this
+  // process over the interval, the caller must divide by NumberOfProcessors().
+  //
+  // Since this API measures usage over an interval, it will return zero on the
+  // first call, and an actual value only on the second and subsequent calls.
+  double GetPlatformIndependentCPUUsage();
 
   // Returns the number of average idle cpu wakeups per second since the last
   // call.
   int GetIdleWakeupsPerSecond();
-
-  // Same as GetCPUUsage(), but will return consistent values on all platforms
-  // (cancelling the Windows exception mentioned above) by returning a value in
-  // the range of 0 to (100 * numCPUCores) everywhere.
-  double GetPlatformIndependentCPUUsage();
 
   // Retrieves accounting information for all I/O operations performed by the
   // process.
@@ -228,6 +241,10 @@ class BASE_EXPORT ProcessMetrics {
 #if defined(OS_LINUX) || defined(OS_ANDROID)
   // Bytes of swap as reported by /proc/[pid]/status.
   uint64_t GetVmSwapBytes() const;
+
+  // Minor and major page fault count as reported by /proc/[pid]/stat.
+  // Returns true for success.
+  bool GetPageFaultCounts(PageFaultCounts* counts) const;
 #endif  // defined(OS_LINUX) || defined(OS_ANDROID)
 
   // Returns total memory usage of malloc.
@@ -257,8 +274,6 @@ class BASE_EXPORT ProcessMetrics {
 #else
   ProcessHandle process_;
 #endif
-
-  int processor_count_;
 
   // Used to store the previous times and CPU usage counts so we can
   // compute the CPU usage between calls.
@@ -296,11 +311,11 @@ BASE_EXPORT size_t GetSystemCommitCharge();
 // returned by GetPageSize().
 BASE_EXPORT size_t GetPageSize();
 
-#if defined(OS_POSIX)
 // Returns the maximum number of file descriptors that can be open by a process
 // at once. If the number is unavailable, a conservative best guess is returned.
 BASE_EXPORT size_t GetMaxFds();
 
+#if defined(OS_POSIX)
 // Sets the file descriptor soft limit to |max_descriptors| or the OS hard
 // limit, whichever is lower.
 BASE_EXPORT void SetFdLimit(unsigned int max_descriptors);
@@ -396,7 +411,7 @@ struct BASE_EXPORT SystemMemoryInfoKB {
 BASE_EXPORT bool GetSystemMemoryInfo(SystemMemoryInfoKB* meminfo);
 
 #endif  // defined(OS_WIN) || defined(OS_MACOSX) || defined(OS_LINUX) ||
-        // defined(OS_ANDROID)
+        // defined(OS_ANDROID) || defined(OS_AIX) || defined(OS_FUCHSIA)
 
 #if defined(OS_LINUX) || defined(OS_ANDROID) || defined(OS_AIX)
 // Parse the data found in /proc/<pid>/stat and return the sum of the

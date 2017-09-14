@@ -186,9 +186,9 @@ allows for conditional test disabling based on values in
 allows for conditional test disabling based on whether
 a device is a phone, a tablet, or a "large tablet" as determined by
 [org.chromium.ui.base.DeviceFormFactor](https://chromium.googlesource.com/chromium/src/+/master/ui/android/java/src/org/chromium/ui/base/DeviceFormFactor.java).
-Note that this is currently only available to tests in
-[//chrome](https://chromium.googlesource.com/chromium/src/+/master/chrome/)
-or code that uses //chrome.
+This is available to tests in
+[//ui](https://chromium.googlesource.com/chromium/src/+/master/ui/)
+or code that uses //ui.
 
 ```java
 @DisableIf.Device(
@@ -221,14 +221,15 @@ up to date, and whether the build was an official one.
     //  - ChromeRestriction.RESTRICTION_TYPE_GOOGLE_PLAY_SERVICES
     //    Restricts the test to devices with up-to-date versions of Google Play Services.
     //
-    //  - ChromeRestriction.RESTRICTION_TYPE_PHONE
-    //    Restricts the test to phones as determined by DeviceFormFactor.
-    //
-    //  - ChromeRestriction.RESTRICTION_TYPE_TABLET
-    //    Restricts the test to tablets as determined by DeviceFormFactor.
-    //
     //  - ChromeRestriction.RESTRICTION_TYPE_OFFICIAL_BUILD
     //    Restricts the test to official builds as determined by ChromeVersionInfo.isOfficialBuild().
+    //
+    // ui:
+    //  - UiRestriction.RESTRICTION_TYPE_PHONE
+    //    Restricts the test to phones as determined by DeviceFormFactor.
+    //
+    //  - UiRestriction.RESTRICTION_TYPE_TABLET
+    //    Restricts the test to tablets as determined by DeviceFormFactor.
     value = {}
 )
 ```

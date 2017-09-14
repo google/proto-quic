@@ -9,10 +9,10 @@
 
 #include <stddef.h>
 
-#include <deque>
 #include <vector>
 
 #include "base/callback_forward.h"
+#include "base/containers/circular_deque.h"
 #include "base/macros.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_export.h"
@@ -116,6 +116,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
     uint64_t stream_bytes_read() const;
     uint64_t stream_bytes_written() const;
     size_t NumBytesConsumed() const;
+    bool HasBytesToRead() const;
     bool IsDoneReading() const;
     bool IsFirstStream() const;
 
@@ -125,6 +126,8 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
                              const QuicHeaderList& header_list);
     SpdyPriority priority() const;
     bool can_migrate();
+
+    const NetLogWithSource& net_log() const;
 
    private:
     friend class QuicChromiumClientStream;
@@ -183,6 +186,8 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
     SpdyPriority priority_;
 
     int net_error_;
+
+    NetLogWithSource net_log_;
 
     base::WeakPtrFactory<Handle> weak_factory_;
 

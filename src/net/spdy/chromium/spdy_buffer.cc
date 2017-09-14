@@ -30,9 +30,9 @@ std::unique_ptr<SpdySerializedFrame> MakeSpdySerializedFrame(const char* data,
   CHECK_GT(size, 0u);
   CHECK_LE(size, kMaxSpdyFrameSize);
 
-  auto frame_data = base::MakeUnique<char[]>(size);
+  auto frame_data = std::make_unique<char[]>(size);
   std::memcpy(frame_data.get(), data, size);
-  return base::MakeUnique<SpdySerializedFrame>(frame_data.release(), size,
+  return std::make_unique<SpdySerializedFrame>(frame_data.release(), size,
                                                true /* owns_buffer */);
 }
 

@@ -7,7 +7,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <deque>
 #include <iterator>
 #include <memory>
 #include <string>
@@ -15,6 +14,7 @@
 #include <vector>
 
 #include "base/bind.h"
+#include "base/containers/circular_deque.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
@@ -216,11 +216,11 @@ class WebSocketDeflatePredictorMock : public WebSocketDeflatePredictor {
   // Data frames which will be recorded by |RecordInputFrames|.
   // Pushed by |AddFrameToBeInput| and popped and verified by
   // |RecordInputFrames|.
-  std::deque<const WebSocketFrame*> frames_to_be_input_;
+  base::circular_deque<const WebSocketFrame*> frames_to_be_input_;
   // Data frames recorded by |RecordWrittenFrames|.
   // Pushed by |RecordWrittenFrames| and popped and verified by
   // |VerifySentFrame|.
-  std::deque<const WebSocketFrame*> frames_written_;
+  base::circular_deque<const WebSocketFrame*> frames_written_;
 
   DISALLOW_COPY_AND_ASSIGN(WebSocketDeflatePredictorMock);
 };

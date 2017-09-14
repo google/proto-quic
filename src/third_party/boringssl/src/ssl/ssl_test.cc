@@ -40,7 +40,7 @@
 #include "../crypto/test/test_util.h"
 
 #if defined(OPENSSL_WINDOWS)
-/* Windows defines struct timeval in winsock2.h. */
+// Windows defines struct timeval in winsock2.h.
 OPENSSL_MSVC_PRAGMA(warning(push, 3))
 #include <winsock2.h>
 OPENSSL_MSVC_PRAGMA(warning(pop))
@@ -48,6 +48,40 @@ OPENSSL_MSVC_PRAGMA(warning(pop))
 #include <sys/time.h>
 #endif
 
+
+namespace bssl {
+
+namespace {
+
+#define TRACED_CALL(code)                     \
+  do {                                        \
+    SCOPED_TRACE("<- called from here");      \
+    code;                                     \
+    if (::testing::Test::HasFatalFailure()) { \
+      return;                                 \
+    }                                         \
+  } while (false)
+
+struct VersionParam {
+  uint16_t version;
+  enum { is_tls, is_dtls } ssl_method;
+  const char name[8];
+};
+
+static const size_t kTicketKeyLen = 48;
+
+static const VersionParam kAllVersions[] = {
+    {SSL3_VERSION, VersionParam::is_tls, "SSL3"},
+    {TLS1_VERSION, VersionParam::is_tls, "TLS1"},
+    {TLS1_1_VERSION, VersionParam::is_tls, "TLS1_1"},
+    {TLS1_2_VERSION, VersionParam::is_tls, "TLS1_2"},
+// TLS 1.3 requires RSA-PSS, which is disabled for Android system builds.
+#if !defined(BORINGSSL_ANDROID_SYSTEM)
+    {TLS1_3_VERSION, VersionParam::is_tls, "TLS1_3"},
+#endif
+    {DTLS1_VERSION, VersionParam::is_dtls, "DTLS1"},
+    {DTLS1_2_VERSION, VersionParam::is_dtls, "DTLS1_2"},
+};
 
 struct ExpectedCipher {
   unsigned long id;
@@ -442,7 +476,7 @@ TEST(SSLTest, CipherRules) {
 
     ASSERT_TRUE(SSL_CTX_set_strict_cipher_list(ctx.get(), rule));
     for (const SSL_CIPHER *cipher : SSL_CTX_get_ciphers(ctx.get())) {
-      EXPECT_FALSE(SSL_CIPHER_is_NULL(cipher));
+      EXPECT_NE(NID_undef, SSL_CIPHER_get_cipher_nid(cipher));
     }
   }
 }
@@ -508,14 +542,14 @@ static const char kOpenSSLSession[] =
 // filling in missing fields from |kOpenSSLSession|. This includes
 // providing |peer_sha256|, so |peer| is not serialized.
 static const char kCustomSession[] =
-    "MIIBdgIBAQICAwMEAsAvBCAG5Q1ndq4Yfmbeo1zwLkNRKmCXGdNgWvGT3cskV0yQ"
+    "MIIBZAIBAQICAwMEAsAvBCAG5Q1ndq4Yfmbeo1zwLkNRKmCXGdNgWvGT3cskV0yQ"
     "kAQwJlrlzkAWBOWiLj/jJ76D7l+UXoizP2KI2C7I2FccqMmIfFmmkUy32nIJ0mZH"
-    "IWoJoQYCBFRDO46iBAICASykAwQBAqUDAgEUphAEDnd3dy5nb29nbGUuY29tqAcE"
-    "BXdvcmxkqQUCAwGJwKqBpwSBpBwUQvoeOk0Kg36SYTcLEkXqKwOBfF9vE4KX0Nxe"
-    "LwjcDTpsuh3qXEaZ992r1N38VDcyS6P7I6HBYN9BsNHM362zZnY27GpTw+Kwd751"
-    "CLoXFPoaMOe57dbBpXoro6Pd3BTbf/Tzr88K06yEOTDKPNj3+inbMaVigtK4PLyP"
-    "q+Topyzvx9USFgRvyuoxn0Hgb+R0A3j6SLRuyOdAi4gv7Y5oliynrSIEIAYGBgYG"
-    "BgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGrgMEAQevAwQBBLADBAEF";
+    "IWoJoQYCBFRDO46iBAICASykAwQBAqUDAgEUqAcEBXdvcmxkqQUCAwGJwKqBpwSB"
+    "pBwUQvoeOk0Kg36SYTcLEkXqKwOBfF9vE4KX0NxeLwjcDTpsuh3qXEaZ992r1N38"
+    "VDcyS6P7I6HBYN9BsNHM362zZnY27GpTw+Kwd751CLoXFPoaMOe57dbBpXoro6Pd"
+    "3BTbf/Tzr88K06yEOTDKPNj3+inbMaVigtK4PLyPq+Topyzvx9USFgRvyuoxn0Hg"
+    "b+R0A3j6SLRuyOdAi4gv7Y5oliynrSIEIAYGBgYGBgYGBgYGBgYGBgYGBgYGBgYG"
+    "BgYGBgYGBgYGrgMEAQevAwQBBLADBAEF";
 
 // kBoringSSLSession is a serialized SSL_SESSION generated from bssl client.
 static const char kBoringSSLSession[] =
@@ -1070,149 +1104,6 @@ static bool TestPaddingExtension(uint16_t max_version,
   return true;
 }
 
-// Test that |SSL_get_client_CA_list| echoes back the configured parameter even
-// before configuring as a server.
-TEST(SSLTest, ClientCAList) {
-  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method()));
-  ASSERT_TRUE(ctx);
-  bssl::UniquePtr<SSL> ssl(SSL_new(ctx.get()));
-  ASSERT_TRUE(ssl);
-
-  bssl::UniquePtr<X509_NAME> name(X509_NAME_new());
-  ASSERT_TRUE(name);
-
-  bssl::UniquePtr<X509_NAME> name_dup(X509_NAME_dup(name.get()));
-  ASSERT_TRUE(name_dup);
-
-  bssl::UniquePtr<STACK_OF(X509_NAME)> stack(sk_X509_NAME_new_null());
-  ASSERT_TRUE(stack);
-
-  ASSERT_TRUE(sk_X509_NAME_push(stack.get(), name_dup.get()));
-  name_dup.release();
-
-  // |SSL_set_client_CA_list| takes ownership.
-  SSL_set_client_CA_list(ssl.get(), stack.release());
-
-  STACK_OF(X509_NAME) *result = SSL_get_client_CA_list(ssl.get());
-  ASSERT_TRUE(result);
-  ASSERT_EQ(1u, sk_X509_NAME_num(result));
-  EXPECT_EQ(0, X509_NAME_cmp(sk_X509_NAME_value(result, 0), name.get()));
-}
-
-static void AppendSession(SSL_SESSION *session, void *arg) {
-  std::vector<SSL_SESSION*> *out =
-      reinterpret_cast<std::vector<SSL_SESSION*>*>(arg);
-  out->push_back(session);
-}
-
-// CacheEquals returns true if |ctx|'s session cache consists of |expected|, in
-// order.
-static bool CacheEquals(SSL_CTX *ctx,
-                        const std::vector<SSL_SESSION*> &expected) {
-  // Check the linked list.
-  SSL_SESSION *ptr = ctx->session_cache_head;
-  for (SSL_SESSION *session : expected) {
-    if (ptr != session) {
-      return false;
-    }
-    // TODO(davidben): This is an absurd way to denote the end of the list.
-    if (ptr->next ==
-        reinterpret_cast<SSL_SESSION *>(&ctx->session_cache_tail)) {
-      ptr = nullptr;
-    } else {
-      ptr = ptr->next;
-    }
-  }
-  if (ptr != nullptr) {
-    return false;
-  }
-
-  // Check the hash table.
-  std::vector<SSL_SESSION*> actual, expected_copy;
-  lh_SSL_SESSION_doall_arg(SSL_CTX_sessions(ctx), AppendSession, &actual);
-  expected_copy = expected;
-
-  std::sort(actual.begin(), actual.end());
-  std::sort(expected_copy.begin(), expected_copy.end());
-
-  return actual == expected_copy;
-}
-
-static bssl::UniquePtr<SSL_SESSION> CreateTestSession(uint32_t number) {
-  bssl::UniquePtr<SSL_CTX> ssl_ctx(SSL_CTX_new(TLS_method()));
-  if (!ssl_ctx) {
-    return nullptr;
-  }
-  bssl::UniquePtr<SSL_SESSION> ret(SSL_SESSION_new(ssl_ctx.get()));
-  if (!ret) {
-    return nullptr;
-  }
-
-  ret->session_id_length = SSL3_SSL_SESSION_ID_LENGTH;
-  OPENSSL_memset(ret->session_id, 0, ret->session_id_length);
-  OPENSSL_memcpy(ret->session_id, &number, sizeof(number));
-  return ret;
-}
-
-// Test that the internal session cache behaves as expected.
-TEST(SSLTest, InternalSessionCache) {
-  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method()));
-  ASSERT_TRUE(ctx);
-
-  // Prepare 10 test sessions.
-  std::vector<bssl::UniquePtr<SSL_SESSION>> sessions;
-  for (int i = 0; i < 10; i++) {
-    bssl::UniquePtr<SSL_SESSION> session = CreateTestSession(i);
-    ASSERT_TRUE(session);
-    sessions.push_back(std::move(session));
-  }
-
-  SSL_CTX_sess_set_cache_size(ctx.get(), 5);
-
-  // Insert all the test sessions.
-  for (const auto &session : sessions) {
-    ASSERT_TRUE(SSL_CTX_add_session(ctx.get(), session.get()));
-  }
-
-  // Only the last five should be in the list.
-  ASSERT_TRUE(CacheEquals(
-      ctx.get(), {sessions[9].get(), sessions[8].get(), sessions[7].get(),
-                  sessions[6].get(), sessions[5].get()}));
-
-  // Inserting an element already in the cache should fail and leave the cache
-  // unchanged.
-  ASSERT_FALSE(SSL_CTX_add_session(ctx.get(), sessions[7].get()));
-  ASSERT_TRUE(CacheEquals(
-      ctx.get(), {sessions[9].get(), sessions[8].get(), sessions[7].get(),
-                  sessions[6].get(), sessions[5].get()}));
-
-  // Although collisions should be impossible (256-bit session IDs), the cache
-  // must handle them gracefully.
-  bssl::UniquePtr<SSL_SESSION> collision(CreateTestSession(7));
-  ASSERT_TRUE(collision);
-  ASSERT_TRUE(SSL_CTX_add_session(ctx.get(), collision.get()));
-  ASSERT_TRUE(CacheEquals(
-      ctx.get(), {collision.get(), sessions[9].get(), sessions[8].get(),
-                  sessions[6].get(), sessions[5].get()}));
-
-  // Removing sessions behaves correctly.
-  ASSERT_TRUE(SSL_CTX_remove_session(ctx.get(), sessions[6].get()));
-  ASSERT_TRUE(CacheEquals(ctx.get(), {collision.get(), sessions[9].get(),
-                                      sessions[8].get(), sessions[5].get()}));
-
-  // Removing sessions requires an exact match.
-  ASSERT_FALSE(SSL_CTX_remove_session(ctx.get(), sessions[0].get()));
-  ASSERT_FALSE(SSL_CTX_remove_session(ctx.get(), sessions[7].get()));
-
-  // The cache remains unchanged.
-  ASSERT_TRUE(CacheEquals(ctx.get(), {collision.get(), sessions[9].get(),
-                                      sessions[8].get(), sessions[5].get()}));
-}
-
-static uint16_t EpochFromSequence(uint64_t seq) {
-  return static_cast<uint16_t>(seq >> 48);
-}
-
 static bssl::UniquePtr<X509> GetTestCertificate() {
   static const char kCertPEM[] =
       "-----BEGIN CERTIFICATE-----\n"
@@ -1403,6 +1294,180 @@ static bssl::UniquePtr<EVP_PKEY> GetChainTestKey() {
       PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr));
 }
 
+// Test that |SSL_get_client_CA_list| echoes back the configured parameter even
+// before configuring as a server.
+TEST(SSLTest, ClientCAList) {
+  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method()));
+  ASSERT_TRUE(ctx);
+  bssl::UniquePtr<SSL> ssl(SSL_new(ctx.get()));
+  ASSERT_TRUE(ssl);
+
+  bssl::UniquePtr<X509_NAME> name(X509_NAME_new());
+  ASSERT_TRUE(name);
+
+  bssl::UniquePtr<X509_NAME> name_dup(X509_NAME_dup(name.get()));
+  ASSERT_TRUE(name_dup);
+
+  bssl::UniquePtr<STACK_OF(X509_NAME)> stack(sk_X509_NAME_new_null());
+  ASSERT_TRUE(stack);
+
+  ASSERT_TRUE(sk_X509_NAME_push(stack.get(), name_dup.get()));
+  name_dup.release();
+
+  // |SSL_set_client_CA_list| takes ownership.
+  SSL_set_client_CA_list(ssl.get(), stack.release());
+
+  STACK_OF(X509_NAME) *result = SSL_get_client_CA_list(ssl.get());
+  ASSERT_TRUE(result);
+  ASSERT_EQ(1u, sk_X509_NAME_num(result));
+  EXPECT_EQ(0, X509_NAME_cmp(sk_X509_NAME_value(result, 0), name.get()));
+}
+
+TEST(SSLTest, AddClientCA) {
+  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method()));
+  ASSERT_TRUE(ctx);
+  bssl::UniquePtr<SSL> ssl(SSL_new(ctx.get()));
+  ASSERT_TRUE(ssl);
+
+  bssl::UniquePtr<X509> cert1 = GetTestCertificate();
+  bssl::UniquePtr<X509> cert2 = GetChainTestCertificate();
+  ASSERT_TRUE(cert1 && cert2);
+  X509_NAME *name1 = X509_get_subject_name(cert1.get());
+  X509_NAME *name2 = X509_get_subject_name(cert2.get());
+
+  EXPECT_EQ(0u, sk_X509_NAME_num(SSL_get_client_CA_list(ssl.get())));
+
+  ASSERT_TRUE(SSL_add_client_CA(ssl.get(), cert1.get()));
+  ASSERT_TRUE(SSL_add_client_CA(ssl.get(), cert2.get()));
+
+  STACK_OF(X509_NAME) *list = SSL_get_client_CA_list(ssl.get());
+  ASSERT_EQ(2u, sk_X509_NAME_num(list));
+  EXPECT_EQ(0, X509_NAME_cmp(sk_X509_NAME_value(list, 0), name1));
+  EXPECT_EQ(0, X509_NAME_cmp(sk_X509_NAME_value(list, 1), name2));
+
+  ASSERT_TRUE(SSL_add_client_CA(ssl.get(), cert1.get()));
+
+  list = SSL_get_client_CA_list(ssl.get());
+  ASSERT_EQ(3u, sk_X509_NAME_num(list));
+  EXPECT_EQ(0, X509_NAME_cmp(sk_X509_NAME_value(list, 0), name1));
+  EXPECT_EQ(0, X509_NAME_cmp(sk_X509_NAME_value(list, 1), name2));
+  EXPECT_EQ(0, X509_NAME_cmp(sk_X509_NAME_value(list, 2), name1));
+}
+
+static void AppendSession(SSL_SESSION *session, void *arg) {
+  std::vector<SSL_SESSION*> *out =
+      reinterpret_cast<std::vector<SSL_SESSION*>*>(arg);
+  out->push_back(session);
+}
+
+// CacheEquals returns true if |ctx|'s session cache consists of |expected|, in
+// order.
+static bool CacheEquals(SSL_CTX *ctx,
+                        const std::vector<SSL_SESSION*> &expected) {
+  // Check the linked list.
+  SSL_SESSION *ptr = ctx->session_cache_head;
+  for (SSL_SESSION *session : expected) {
+    if (ptr != session) {
+      return false;
+    }
+    // TODO(davidben): This is an absurd way to denote the end of the list.
+    if (ptr->next ==
+        reinterpret_cast<SSL_SESSION *>(&ctx->session_cache_tail)) {
+      ptr = nullptr;
+    } else {
+      ptr = ptr->next;
+    }
+  }
+  if (ptr != nullptr) {
+    return false;
+  }
+
+  // Check the hash table.
+  std::vector<SSL_SESSION*> actual, expected_copy;
+  lh_SSL_SESSION_doall_arg(SSL_CTX_sessions(ctx), AppendSession, &actual);
+  expected_copy = expected;
+
+  std::sort(actual.begin(), actual.end());
+  std::sort(expected_copy.begin(), expected_copy.end());
+
+  return actual == expected_copy;
+}
+
+static bssl::UniquePtr<SSL_SESSION> CreateTestSession(uint32_t number) {
+  bssl::UniquePtr<SSL_CTX> ssl_ctx(SSL_CTX_new(TLS_method()));
+  if (!ssl_ctx) {
+    return nullptr;
+  }
+  bssl::UniquePtr<SSL_SESSION> ret(SSL_SESSION_new(ssl_ctx.get()));
+  if (!ret) {
+    return nullptr;
+  }
+
+  ret->session_id_length = SSL3_SSL_SESSION_ID_LENGTH;
+  OPENSSL_memset(ret->session_id, 0, ret->session_id_length);
+  OPENSSL_memcpy(ret->session_id, &number, sizeof(number));
+  return ret;
+}
+
+// Test that the internal session cache behaves as expected.
+TEST(SSLTest, InternalSessionCache) {
+  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method()));
+  ASSERT_TRUE(ctx);
+
+  // Prepare 10 test sessions.
+  std::vector<bssl::UniquePtr<SSL_SESSION>> sessions;
+  for (int i = 0; i < 10; i++) {
+    bssl::UniquePtr<SSL_SESSION> session = CreateTestSession(i);
+    ASSERT_TRUE(session);
+    sessions.push_back(std::move(session));
+  }
+
+  SSL_CTX_sess_set_cache_size(ctx.get(), 5);
+
+  // Insert all the test sessions.
+  for (const auto &session : sessions) {
+    ASSERT_TRUE(SSL_CTX_add_session(ctx.get(), session.get()));
+  }
+
+  // Only the last five should be in the list.
+  ASSERT_TRUE(CacheEquals(
+      ctx.get(), {sessions[9].get(), sessions[8].get(), sessions[7].get(),
+                  sessions[6].get(), sessions[5].get()}));
+
+  // Inserting an element already in the cache should fail and leave the cache
+  // unchanged.
+  ASSERT_FALSE(SSL_CTX_add_session(ctx.get(), sessions[7].get()));
+  ASSERT_TRUE(CacheEquals(
+      ctx.get(), {sessions[9].get(), sessions[8].get(), sessions[7].get(),
+                  sessions[6].get(), sessions[5].get()}));
+
+  // Although collisions should be impossible (256-bit session IDs), the cache
+  // must handle them gracefully.
+  bssl::UniquePtr<SSL_SESSION> collision(CreateTestSession(7));
+  ASSERT_TRUE(collision);
+  ASSERT_TRUE(SSL_CTX_add_session(ctx.get(), collision.get()));
+  ASSERT_TRUE(CacheEquals(
+      ctx.get(), {collision.get(), sessions[9].get(), sessions[8].get(),
+                  sessions[6].get(), sessions[5].get()}));
+
+  // Removing sessions behaves correctly.
+  ASSERT_TRUE(SSL_CTX_remove_session(ctx.get(), sessions[6].get()));
+  ASSERT_TRUE(CacheEquals(ctx.get(), {collision.get(), sessions[9].get(),
+                                      sessions[8].get(), sessions[5].get()}));
+
+  // Removing sessions requires an exact match.
+  ASSERT_FALSE(SSL_CTX_remove_session(ctx.get(), sessions[0].get()));
+  ASSERT_FALSE(SSL_CTX_remove_session(ctx.get(), sessions[7].get()));
+
+  // The cache remains unchanged.
+  ASSERT_TRUE(CacheEquals(ctx.get(), {collision.get(), sessions[9].get(),
+                                      sessions[8].get(), sessions[5].get()}));
+}
+
+static uint16_t EpochFromSequence(uint64_t seq) {
+  return static_cast<uint16_t>(seq >> 48);
+}
+
 static const uint8_t kTestName[] = {
     0x30, 0x45, 0x31, 0x0b, 0x30, 0x09, 0x06, 0x03, 0x55, 0x04, 0x06, 0x13,
     0x02, 0x41, 0x55, 0x31, 0x13, 0x30, 0x11, 0x06, 0x03, 0x55, 0x04, 0x08,
@@ -1443,10 +1508,15 @@ static bool CompleteHandshakes(SSL *client, SSL *server) {
   return true;
 }
 
+struct ClientConfig {
+  SSL_SESSION *session = nullptr;
+  std::string servername;
+};
+
 static bool ConnectClientAndServer(bssl::UniquePtr<SSL> *out_client,
                                    bssl::UniquePtr<SSL> *out_server,
                                    SSL_CTX *client_ctx, SSL_CTX *server_ctx,
-                                   SSL_SESSION *session) {
+                                   const ClientConfig &config = ClientConfig()) {
   bssl::UniquePtr<SSL> client(SSL_new(client_ctx)), server(SSL_new(server_ctx));
   if (!client || !server) {
     return false;
@@ -1454,7 +1524,13 @@ static bool ConnectClientAndServer(bssl::UniquePtr<SSL> *out_client,
   SSL_set_connect_state(client.get());
   SSL_set_accept_state(server.get());
 
-  SSL_set_session(client.get(), session);
+  if (config.session) {
+    SSL_set_session(client.get(), config.session);
+  }
+  if (!config.servername.empty() &&
+      !SSL_set_tlsext_host_name(client.get(), config.servername.c_str())) {
+    return false;
+  }
 
   BIO *bio1, *bio2;
   if (!BIO_new_bio_pair(&bio1, 0, &bio2, 0)) {
@@ -1473,148 +1549,130 @@ static bool ConnectClientAndServer(bssl::UniquePtr<SSL> *out_client,
   return true;
 }
 
-static bool TestSequenceNumber(bool is_dtls, const SSL_METHOD *method,
-                               uint16_t version) {
-  bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(method));
-  bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(method));
-  if (!server_ctx || !client_ctx ||
-      !SSL_CTX_set_min_proto_version(client_ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(client_ctx.get(), version) ||
-      !SSL_CTX_set_min_proto_version(server_ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(server_ctx.get(), version)) {
-    return false;
+// SSLVersionTest executes its test cases under all available protocol versions.
+// Test cases call |Connect| to create a connection using context objects with
+// the protocol version fixed to the current version under test.
+class SSLVersionTest : public ::testing::TestWithParam<VersionParam> {
+ protected:
+  SSLVersionTest() : cert_(GetTestCertificate()), key_(GetTestKey()) {}
+
+  void SetUp() { ResetContexts(); }
+
+  bssl::UniquePtr<SSL_CTX> CreateContext() const {
+    const SSL_METHOD *method = is_dtls() ? DTLS_method() : TLS_method();
+    bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(method));
+    if (!ctx || !SSL_CTX_set_min_proto_version(ctx.get(), version()) ||
+        !SSL_CTX_set_max_proto_version(ctx.get(), version())) {
+      return nullptr;
+    }
+    return ctx;
   }
 
-  bssl::UniquePtr<X509> cert = GetTestCertificate();
-  bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
-  if (!cert || !key || !SSL_CTX_use_certificate(server_ctx.get(), cert.get()) ||
-      !SSL_CTX_use_PrivateKey(server_ctx.get(), key.get())) {
-    return false;
+  void ResetContexts() {
+    ASSERT_TRUE(cert_);
+    ASSERT_TRUE(key_);
+    client_ctx_ = CreateContext();
+    ASSERT_TRUE(client_ctx_);
+    server_ctx_ = CreateContext();
+    ASSERT_TRUE(server_ctx_);
+    // Set up a server cert. Client certs can be set up explicitly.
+    ASSERT_TRUE(UseCertAndKey(server_ctx_.get()));
   }
 
-  bssl::UniquePtr<SSL> client, server;
-  if (!ConnectClientAndServer(&client, &server, client_ctx.get(),
-                              server_ctx.get(), nullptr /* no session */)) {
-    return false;
+  bool UseCertAndKey(SSL_CTX *ctx) const {
+    return SSL_CTX_use_certificate(ctx, cert_.get()) &&
+           SSL_CTX_use_PrivateKey(ctx, key_.get());
   }
+
+  bool Connect(const ClientConfig &config = ClientConfig()) {
+    return ConnectClientAndServer(&client_, &server_, client_ctx_.get(),
+                                  server_ctx_.get(), config);
+  }
+
+  uint16_t version() const { return GetParam().version; }
+
+  bool is_dtls() const {
+    return GetParam().ssl_method == VersionParam::is_dtls;
+  }
+
+  bssl::UniquePtr<SSL> client_, server_;
+  bssl::UniquePtr<SSL_CTX> server_ctx_, client_ctx_;
+  bssl::UniquePtr<X509> cert_;
+  bssl::UniquePtr<EVP_PKEY> key_;
+};
+
+INSTANTIATE_TEST_CASE_P(WithVersion, SSLVersionTest,
+                        testing::ValuesIn(kAllVersions),
+                        [](const testing::TestParamInfo<VersionParam> &i) {
+                          return i.param.name;
+                        });
+
+TEST_P(SSLVersionTest, SequenceNumber) {
+  ASSERT_TRUE(Connect());
 
   // Drain any post-handshake messages to ensure there are no unread records
   // on either end.
   uint8_t byte = 0;
-  if (SSL_read(client.get(), &byte, 1) > 0 ||
-      SSL_read(server.get(), &byte, 1) > 0) {
-    fprintf(stderr, "Received unexpected data.\n");
-    return false;
-  }
+  ASSERT_LE(SSL_read(client_.get(), &byte, 1), 0);
+  ASSERT_LE(SSL_read(server_.get(), &byte, 1), 0);
 
-  uint64_t client_read_seq = SSL_get_read_sequence(client.get());
-  uint64_t client_write_seq = SSL_get_write_sequence(client.get());
-  uint64_t server_read_seq = SSL_get_read_sequence(server.get());
-  uint64_t server_write_seq = SSL_get_write_sequence(server.get());
+  uint64_t client_read_seq = SSL_get_read_sequence(client_.get());
+  uint64_t client_write_seq = SSL_get_write_sequence(client_.get());
+  uint64_t server_read_seq = SSL_get_read_sequence(server_.get());
+  uint64_t server_write_seq = SSL_get_write_sequence(server_.get());
 
-  if (is_dtls) {
+  if (is_dtls()) {
     // Both client and server must be at epoch 1.
-    if (EpochFromSequence(client_read_seq) != 1 ||
-        EpochFromSequence(client_write_seq) != 1 ||
-        EpochFromSequence(server_read_seq) != 1 ||
-        EpochFromSequence(server_write_seq) != 1) {
-      fprintf(stderr, "Bad epochs.\n");
-      return false;
-    }
+    EXPECT_EQ(EpochFromSequence(client_read_seq), 1);
+    EXPECT_EQ(EpochFromSequence(client_write_seq), 1);
+    EXPECT_EQ(EpochFromSequence(server_read_seq), 1);
+    EXPECT_EQ(EpochFromSequence(server_write_seq), 1);
 
     // The next record to be written should exceed the largest received.
-    if (client_write_seq <= server_read_seq ||
-        server_write_seq <= client_read_seq) {
-      fprintf(stderr, "Inconsistent sequence numbers.\n");
-      return false;
-    }
+    EXPECT_GT(client_write_seq, server_read_seq);
+    EXPECT_GT(server_write_seq, client_read_seq);
   } else {
     // The next record to be written should equal the next to be received.
-    if (client_write_seq != server_read_seq ||
-        server_write_seq != client_read_seq) {
-      fprintf(stderr, "Inconsistent sequence numbers.\n");
-      return false;
-    }
+    EXPECT_EQ(client_write_seq, server_read_seq);
+    EXPECT_EQ(server_write_seq, client_read_seq);
   }
 
   // Send a record from client to server.
-  if (SSL_write(client.get(), &byte, 1) != 1 ||
-      SSL_read(server.get(), &byte, 1) != 1) {
-    fprintf(stderr, "Could not send byte.\n");
-    return false;
-  }
+  EXPECT_EQ(SSL_write(client_.get(), &byte, 1), 1);
+  EXPECT_EQ(SSL_read(server_.get(), &byte, 1), 1);
 
   // The client write and server read sequence numbers should have
   // incremented.
-  if (client_write_seq + 1 != SSL_get_write_sequence(client.get()) ||
-      server_read_seq + 1 != SSL_get_read_sequence(server.get())) {
-    fprintf(stderr, "Sequence numbers did not increment.\n");
-    return false;
-  }
-
-  return true;
+  EXPECT_EQ(client_write_seq + 1, SSL_get_write_sequence(client_.get()));
+  EXPECT_EQ(server_read_seq + 1, SSL_get_read_sequence(server_.get()));
 }
 
-static bool TestOneSidedShutdown(bool is_dtls, const SSL_METHOD *method,
-                                 uint16_t version) {
+TEST_P(SSLVersionTest, OneSidedShutdown) {
   // SSL_shutdown is a no-op in DTLS.
-  if (is_dtls) {
-    return true;
+  if (is_dtls()) {
+    return;
   }
-
-  bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(method));
-  bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(method));
-  bssl::UniquePtr<X509> cert = GetTestCertificate();
-  bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
-  if (!client_ctx || !server_ctx || !cert || !key ||
-      !SSL_CTX_set_min_proto_version(server_ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(server_ctx.get(), version) ||
-      !SSL_CTX_set_min_proto_version(client_ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(client_ctx.get(), version) ||
-      !SSL_CTX_use_certificate(server_ctx.get(), cert.get()) ||
-      !SSL_CTX_use_PrivateKey(server_ctx.get(), key.get())) {
-    return false;
-  }
-
-  bssl::UniquePtr<SSL> client, server;
-  if (!ConnectClientAndServer(&client, &server, client_ctx.get(),
-                              server_ctx.get(), nullptr /* no session */)) {
-    return false;
-  }
+  ASSERT_TRUE(Connect());
 
   // Shut down half the connection. SSL_shutdown will return 0 to signal only
   // one side has shut down.
-  if (SSL_shutdown(client.get()) != 0) {
-    fprintf(stderr, "Could not shutdown.\n");
-    return false;
-  }
+  ASSERT_EQ(SSL_shutdown(client_.get()), 0);
 
   // Reading from the server should consume the EOF.
   uint8_t byte;
-  if (SSL_read(server.get(), &byte, 1) != 0 ||
-      SSL_get_error(server.get(), 0) != SSL_ERROR_ZERO_RETURN) {
-    fprintf(stderr, "Connection was not shut down cleanly.\n");
-    return false;
-  }
+  ASSERT_EQ(SSL_read(server_.get(), &byte, 1), 0);
+  ASSERT_EQ(SSL_get_error(server_.get(), 0), SSL_ERROR_ZERO_RETURN);
 
   // However, the server may continue to write data and then shut down the
   // connection.
   byte = 42;
-  if (SSL_write(server.get(), &byte, 1) != 1 ||
-      SSL_read(client.get(), &byte, 1) != 1 ||
-      byte != 42) {
-    fprintf(stderr, "Could not send byte.\n");
-    return false;
-  }
+  ASSERT_EQ(SSL_write(server_.get(), &byte, 1), 1);
+  ASSERT_EQ(SSL_read(client_.get(), &byte, 1), 1);
+  ASSERT_EQ(byte, 42);
 
   // The server may then shutdown the connection.
-  if (SSL_shutdown(server.get()) != 1 ||
-      SSL_shutdown(client.get()) != 1) {
-    fprintf(stderr, "Could not complete shutdown.\n");
-    return false;
-  }
-
-  return true;
+  EXPECT_EQ(SSL_shutdown(server_.get()), 1);
+  EXPECT_EQ(SSL_shutdown(client_.get()), 1);
 }
 
 TEST(SSLTest, SessionDuplication) {
@@ -1632,8 +1690,7 @@ TEST(SSLTest, SessionDuplication) {
 
   bssl::UniquePtr<SSL> client, server;
   ASSERT_TRUE(ConnectClientAndServer(&client, &server, client_ctx.get(),
-                                     server_ctx.get(),
-                                     nullptr /* no session */));
+                                     server_ctx.get()));
 
   SSL_SESSION *session0 = SSL_get_session(client.get());
   bssl::UniquePtr<SSL_SESSION> session1 =
@@ -1786,164 +1843,87 @@ TEST(SSLTest, SetBIO) {
 
 static int VerifySucceed(X509_STORE_CTX *store_ctx, void *arg) { return 1; }
 
-static bool TestGetPeerCertificate(bool is_dtls, const SSL_METHOD *method,
-                                   uint16_t version) {
-  bssl::UniquePtr<X509> cert = GetTestCertificate();
-  bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
-  if (!cert || !key) {
-    return false;
-  }
+TEST_P(SSLVersionTest, GetPeerCertificate) {
+  ASSERT_TRUE(UseCertAndKey(client_ctx_.get()));
 
   // Configure both client and server to accept any certificate.
-  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(method));
-  if (!ctx ||
-      !SSL_CTX_use_certificate(ctx.get(), cert.get()) ||
-      !SSL_CTX_use_PrivateKey(ctx.get(), key.get()) ||
-      !SSL_CTX_set_min_proto_version(ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(ctx.get(), version)) {
-    return false;
-  }
-  SSL_CTX_set_verify(
-      ctx.get(), SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
-  SSL_CTX_set_cert_verify_callback(ctx.get(), VerifySucceed, NULL);
+  SSL_CTX_set_verify(client_ctx_.get(),
+                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                     nullptr);
+  SSL_CTX_set_cert_verify_callback(client_ctx_.get(), VerifySucceed, NULL);
+  SSL_CTX_set_verify(server_ctx_.get(),
+                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                     nullptr);
+  SSL_CTX_set_cert_verify_callback(server_ctx_.get(), VerifySucceed, NULL);
 
-  bssl::UniquePtr<SSL> client, server;
-  if (!ConnectClientAndServer(&client, &server, ctx.get(), ctx.get(),
-                              nullptr /* no session */)) {
-    return false;
-  }
+  ASSERT_TRUE(Connect());
 
   // Client and server should both see the leaf certificate.
-  bssl::UniquePtr<X509> peer(SSL_get_peer_certificate(server.get()));
-  if (!peer || X509_cmp(cert.get(), peer.get()) != 0) {
-    fprintf(stderr, "Server peer certificate did not match.\n");
-    return false;
-  }
+  bssl::UniquePtr<X509> peer(SSL_get_peer_certificate(server_.get()));
+  ASSERT_TRUE(peer);
+  ASSERT_EQ(X509_cmp(cert_.get(), peer.get()), 0);
 
-  peer.reset(SSL_get_peer_certificate(client.get()));
-  if (!peer || X509_cmp(cert.get(), peer.get()) != 0) {
-    fprintf(stderr, "Client peer certificate did not match.\n");
-    return false;
-  }
+  peer.reset(SSL_get_peer_certificate(client_.get()));
+  ASSERT_TRUE(peer);
+  ASSERT_EQ(X509_cmp(cert_.get(), peer.get()), 0);
 
   // However, for historical reasons, the X509 chain includes the leaf on the
   // client, but does not on the server.
-  if (sk_X509_num(SSL_get_peer_cert_chain(client.get())) != 1 ||
-      sk_CRYPTO_BUFFER_num(SSL_get0_peer_certificates(client.get())) != 1) {
-    fprintf(stderr, "Client peer chain was incorrect.\n");
-    return false;
-  }
+  EXPECT_EQ(sk_X509_num(SSL_get_peer_cert_chain(client_.get())), 1u);
+  EXPECT_EQ(sk_CRYPTO_BUFFER_num(SSL_get0_peer_certificates(client_.get())),
+            1u);
 
-  if (sk_X509_num(SSL_get_peer_cert_chain(server.get())) != 0 ||
-      sk_CRYPTO_BUFFER_num(SSL_get0_peer_certificates(server.get())) != 1) {
-    fprintf(stderr, "Server peer chain was incorrect.\n");
-    return false;
-  }
-
-  return true;
+  EXPECT_EQ(sk_X509_num(SSL_get_peer_cert_chain(server_.get())), 0u);
+  EXPECT_EQ(sk_CRYPTO_BUFFER_num(SSL_get0_peer_certificates(server_.get())),
+            1u);
 }
 
-static bool TestNoPeerCertificate(bool is_dtls, const SSL_METHOD *method,
-                                  uint16_t version) {
-  bssl::UniquePtr<X509> cert = GetTestCertificate();
-  bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
-  if (!cert || !key) {
-    return false;
-  }
+TEST_P(SSLVersionTest, NoPeerCertificate) {
+  SSL_CTX_set_verify(server_ctx_.get(), SSL_VERIFY_PEER, nullptr);
+  SSL_CTX_set_cert_verify_callback(server_ctx_.get(), VerifySucceed, NULL);
+  SSL_CTX_set_cert_verify_callback(client_ctx_.get(), VerifySucceed, NULL);
 
-  // Configure an anonymous client.
-  bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(method)),
-      client_ctx(SSL_CTX_new(method));
-  if (!server_ctx || !client_ctx ||
-      !SSL_CTX_use_certificate(server_ctx.get(), cert.get()) ||
-      !SSL_CTX_use_PrivateKey(server_ctx.get(), key.get()) ||
-      !SSL_CTX_set_min_proto_version(server_ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(server_ctx.get(), version) ||
-      !SSL_CTX_set_min_proto_version(client_ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(client_ctx.get(), version)) {
-    return false;
-  }
-  SSL_CTX_set_verify(
-      server_ctx.get(), SSL_VERIFY_PEER, nullptr);
-  SSL_CTX_set_cert_verify_callback(server_ctx.get(), VerifySucceed, NULL);
-  SSL_CTX_set_cert_verify_callback(client_ctx.get(), VerifySucceed, NULL);
+  ASSERT_TRUE(Connect());
 
-  bssl::UniquePtr<SSL> client, server;
-  if (!ConnectClientAndServer(&client, &server, client_ctx.get(),
-                              server_ctx.get(), nullptr /* no session */)) {
-    return false;
-  }
-
-  // Client and server should both see the leaf certificate.
-  bssl::UniquePtr<X509> peer(SSL_get_peer_certificate(server.get()));
-  if (peer ||
-      SSL_get0_peer_certificates(server.get()) != nullptr) {
-    fprintf(stderr, "Server peer certificate was non-null.\n");
-    return false;
-  }
-
-  return true;
+  // Server should not see a peer certificate.
+  bssl::UniquePtr<X509> peer(SSL_get_peer_certificate(server_.get()));
+  ASSERT_FALSE(peer);
+  ASSERT_FALSE(SSL_get0_peer_certificates(server_.get()));
 }
 
-static bool TestRetainOnlySHA256OfCerts(bool is_dtls, const SSL_METHOD *method,
-                                        uint16_t version) {
-  bssl::UniquePtr<X509> cert = GetTestCertificate();
-  bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
-  if (!cert || !key) {
-    return false;
-  }
-
+TEST_P(SSLVersionTest, RetainOnlySHA256OfCerts) {
   uint8_t *cert_der = NULL;
-  int cert_der_len = i2d_X509(cert.get(), &cert_der);
-  if (cert_der_len < 0) {
-    return false;
-  }
+  int cert_der_len = i2d_X509(cert_.get(), &cert_der);
+  ASSERT_GE(cert_der_len, 0);
   bssl::UniquePtr<uint8_t> free_cert_der(cert_der);
 
   uint8_t cert_sha256[SHA256_DIGEST_LENGTH];
   SHA256(cert_der, cert_der_len, cert_sha256);
 
+  ASSERT_TRUE(UseCertAndKey(client_ctx_.get()));
+
   // Configure both client and server to accept any certificate, but the
   // server must retain only the SHA-256 of the peer.
-  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(method));
-  if (!ctx ||
-      !SSL_CTX_use_certificate(ctx.get(), cert.get()) ||
-      !SSL_CTX_use_PrivateKey(ctx.get(), key.get()) ||
-      !SSL_CTX_set_min_proto_version(ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(ctx.get(), version)) {
-    return false;
-  }
-  SSL_CTX_set_verify(
-      ctx.get(), SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
-  SSL_CTX_set_cert_verify_callback(ctx.get(), VerifySucceed, NULL);
-  SSL_CTX_set_retain_only_sha256_of_client_certs(ctx.get(), 1);
+  SSL_CTX_set_verify(client_ctx_.get(),
+                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                     nullptr);
+  SSL_CTX_set_verify(server_ctx_.get(),
+                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                     nullptr);
+  SSL_CTX_set_cert_verify_callback(client_ctx_.get(), VerifySucceed, NULL);
+  SSL_CTX_set_cert_verify_callback(server_ctx_.get(), VerifySucceed, NULL);
+  SSL_CTX_set_retain_only_sha256_of_client_certs(server_ctx_.get(), 1);
 
-  bssl::UniquePtr<SSL> client, server;
-  if (!ConnectClientAndServer(&client, &server, ctx.get(), ctx.get(),
-                              nullptr /* no session */)) {
-    return false;
-  }
+  ASSERT_TRUE(Connect());
 
   // The peer certificate has been dropped.
-  bssl::UniquePtr<X509> peer(SSL_get_peer_certificate(server.get()));
-  if (peer) {
-    fprintf(stderr, "Peer certificate was retained.\n");
-    return false;
-  }
+  bssl::UniquePtr<X509> peer(SSL_get_peer_certificate(server_.get()));
+  EXPECT_FALSE(peer);
 
-  SSL_SESSION *session = SSL_get_session(server.get());
-  if (!session->peer_sha256_valid) {
-    fprintf(stderr, "peer_sha256_valid was not set.\n");
-    return false;
-  }
+  SSL_SESSION *session = SSL_get_session(server_.get());
+  EXPECT_TRUE(session->peer_sha256_valid);
 
-  if (OPENSSL_memcmp(cert_sha256, session->peer_sha256, SHA256_DIGEST_LENGTH) !=
-      0) {
-    fprintf(stderr, "peer_sha256 did not match.\n");
-    return false;
-  }
-
-  return true;
+  EXPECT_EQ(Bytes(cert_sha256), Bytes(session->peer_sha256));
 }
 
 static bool ClientHelloMatches(uint16_t version, const uint8_t *expected,
@@ -2147,15 +2127,16 @@ static int SaveLastSession(SSL *ssl, SSL_SESSION *session) {
   return 1;
 }
 
-static bssl::UniquePtr<SSL_SESSION> CreateClientSession(SSL_CTX *client_ctx,
-                                                        SSL_CTX *server_ctx) {
+static bssl::UniquePtr<SSL_SESSION> CreateClientSession(
+    SSL_CTX *client_ctx, SSL_CTX *server_ctx,
+    const ClientConfig &config = ClientConfig()) {
   g_last_session = nullptr;
   SSL_CTX_sess_set_new_cb(client_ctx, SaveLastSession);
 
   // Connect client and server to get a session.
   bssl::UniquePtr<SSL> client, server;
   if (!ConnectClientAndServer(&client, &server, client_ctx, server_ctx,
-                              nullptr /* no session */)) {
+                              config)) {
     fprintf(stderr, "Failed to connect client and server.\n");
     return nullptr;
   }
@@ -2172,29 +2153,18 @@ static bssl::UniquePtr<SSL_SESSION> CreateClientSession(SSL_CTX *client_ctx,
   return std::move(g_last_session);
 }
 
-static bool ExpectSessionReused(SSL_CTX *client_ctx, SSL_CTX *server_ctx,
-                                SSL_SESSION *session,
-                                bool reused) {
+static void ExpectSessionReused(SSL_CTX *client_ctx, SSL_CTX *server_ctx,
+                                SSL_SESSION *session, bool want_reused) {
   bssl::UniquePtr<SSL> client, server;
-  if (!ConnectClientAndServer(&client, &server, client_ctx,
-                              server_ctx, session)) {
-    fprintf(stderr, "Failed to connect client and server.\n");
-    return false;
-  }
+  ClientConfig config;
+  config.session = session;
+  EXPECT_TRUE(
+      ConnectClientAndServer(&client, &server, client_ctx, server_ctx, config));
 
-  if (SSL_session_reused(client.get()) != SSL_session_reused(server.get())) {
-    fprintf(stderr, "Client and server were inconsistent.\n");
-    return false;
-  }
+  EXPECT_EQ(SSL_session_reused(client.get()), SSL_session_reused(server.get()));
 
   bool was_reused = !!SSL_session_reused(client.get());
-  if (was_reused != reused) {
-    fprintf(stderr, "Session was%s reused, but we expected the opposite.\n",
-            was_reused ? "" : " not");
-    return false;
-  }
-
-  return true;
+  EXPECT_EQ(was_reused, want_reused);
 }
 
 static bssl::UniquePtr<SSL_SESSION> ExpectSessionRenewed(SSL_CTX *client_ctx,
@@ -2204,8 +2174,10 @@ static bssl::UniquePtr<SSL_SESSION> ExpectSessionRenewed(SSL_CTX *client_ctx,
   SSL_CTX_sess_set_new_cb(client_ctx, SaveLastSession);
 
   bssl::UniquePtr<SSL> client, server;
-  if (!ConnectClientAndServer(&client, &server, client_ctx,
-                              server_ctx, session)) {
+  ClientConfig config;
+  config.session = session;
+  if (!ConnectClientAndServer(&client, &server, client_ctx, server_ctx,
+                              config)) {
     fprintf(stderr, "Failed to connect client and server.\n");
     return nullptr;
   }
@@ -2232,6 +2204,19 @@ static bssl::UniquePtr<SSL_SESSION> ExpectSessionRenewed(SSL_CTX *client_ctx,
   return std::move(g_last_session);
 }
 
+static void ExpectTicketKeyChanged(SSL_CTX *ctx, uint8_t *inout_key,
+                                   bool changed) {
+  uint8_t new_key[kTicketKeyLen];
+  // May return 0, 1 or 48.
+  ASSERT_EQ(SSL_CTX_get_tlsext_ticket_keys(ctx, new_key, kTicketKeyLen), 1);
+  if (changed) {
+    ASSERT_NE(Bytes(inout_key, kTicketKeyLen), Bytes(new_key));
+  } else {
+    ASSERT_EQ(Bytes(inout_key, kTicketKeyLen), Bytes(new_key));
+  }
+  OPENSSL_memcpy(inout_key, new_key, kTicketKeyLen);
+}
+
 static int SwitchSessionIDContextSNI(SSL *ssl, int *out_alert, void *arg) {
   static const uint8_t kContext[] = {3};
 
@@ -2242,79 +2227,48 @@ static int SwitchSessionIDContextSNI(SSL *ssl, int *out_alert, void *arg) {
   return SSL_TLSEXT_ERR_OK;
 }
 
-static bool TestSessionIDContext(bool is_dtls, const SSL_METHOD *method,
-                                 uint16_t version) {
-  bssl::UniquePtr<X509> cert = GetTestCertificate();
-  bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
-  if (!cert || !key) {
-    return false;
-  }
-
+TEST_P(SSLVersionTest, SessionIDContext) {
   static const uint8_t kContext1[] = {1};
   static const uint8_t kContext2[] = {2};
 
-  bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(method));
-  bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(method));
-  if (!server_ctx || !client_ctx ||
-      !SSL_CTX_use_certificate(server_ctx.get(), cert.get()) ||
-      !SSL_CTX_use_PrivateKey(server_ctx.get(), key.get()) ||
-      !SSL_CTX_set_session_id_context(server_ctx.get(), kContext1,
-                                      sizeof(kContext1)) ||
-      !SSL_CTX_set_min_proto_version(client_ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(client_ctx.get(), version) ||
-      !SSL_CTX_set_min_proto_version(server_ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(server_ctx.get(), version)) {
-    return false;
-  }
+  ASSERT_TRUE(SSL_CTX_set_session_id_context(server_ctx_.get(), kContext1,
+                                             sizeof(kContext1)));
 
-  SSL_CTX_set_session_cache_mode(client_ctx.get(), SSL_SESS_CACHE_BOTH);
-  SSL_CTX_set_session_cache_mode(server_ctx.get(), SSL_SESS_CACHE_BOTH);
+  SSL_CTX_set_session_cache_mode(client_ctx_.get(), SSL_SESS_CACHE_BOTH);
+  SSL_CTX_set_session_cache_mode(server_ctx_.get(), SSL_SESS_CACHE_BOTH);
 
   bssl::UniquePtr<SSL_SESSION> session =
-      CreateClientSession(client_ctx.get(), server_ctx.get());
-  if (!session) {
-    fprintf(stderr, "Error getting session.\n");
-    return false;
-  }
+      CreateClientSession(client_ctx_.get(), server_ctx_.get());
+  ASSERT_TRUE(session);
 
-  if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(), session.get(),
-                           true /* expect session reused */)) {
-    fprintf(stderr, "Error resuming session.\n");
-    return false;
-  }
+  TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                  session.get(),
+                                  true /* expect session reused */));
 
   // Change the session ID context.
-  if (!SSL_CTX_set_session_id_context(server_ctx.get(), kContext2,
-                                      sizeof(kContext2))) {
-    return false;
-  }
+  ASSERT_TRUE(SSL_CTX_set_session_id_context(server_ctx_.get(), kContext2,
+                                             sizeof(kContext2)));
 
-  if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(), session.get(),
-                           false /* expect session not reused */)) {
-    fprintf(stderr, "Error connecting with a different context.\n");
-    return false;
-  }
+  TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                  session.get(),
+                                  false /* expect session not reused */));
 
   // Change the session ID context back and install an SNI callback to switch
   // it.
-  if (!SSL_CTX_set_session_id_context(server_ctx.get(), kContext1,
-                                      sizeof(kContext1))) {
-    return false;
-  }
+  ASSERT_TRUE(SSL_CTX_set_session_id_context(server_ctx_.get(), kContext1,
+                                             sizeof(kContext1)));
 
-  SSL_CTX_set_tlsext_servername_callback(server_ctx.get(),
+  SSL_CTX_set_tlsext_servername_callback(server_ctx_.get(),
                                          SwitchSessionIDContextSNI);
 
-  if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(), session.get(),
-                           false /* expect session not reused */)) {
-    fprintf(stderr, "Error connecting with a context switch on SNI callback.\n");
-    return false;
-  }
+  TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                  session.get(),
+                                  false /* expect session not reused */));
 
   // Switch the session ID context with the early callback instead.
-  SSL_CTX_set_tlsext_servername_callback(server_ctx.get(), nullptr);
+  SSL_CTX_set_tlsext_servername_callback(server_ctx_.get(), nullptr);
   SSL_CTX_set_select_certificate_cb(
-      server_ctx.get(),
+      server_ctx_.get(),
       [](const SSL_CLIENT_HELLO *client_hello) -> ssl_select_cert_result_t {
         static const uint8_t kContext[] = {3};
 
@@ -2326,14 +2280,9 @@ static bool TestSessionIDContext(bool is_dtls, const SSL_METHOD *method,
         return ssl_select_cert_success;
       });
 
-  if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(), session.get(),
-                           false /* expect session not reused */)) {
-    fprintf(stderr,
-            "Error connecting with a context switch on early callback.\n");
-    return false;
-  }
-
-  return true;
+  TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                  session.get(),
+                                  false /* expect session not reused */));
 }
 
 static timeval g_current_time;
@@ -2409,142 +2358,99 @@ static bool GetServerTicketTime(long *out, const SSL_SESSION *session) {
   return true;
 }
 
-static bool TestSessionTimeout(bool is_dtls, const SSL_METHOD *method,
-                               uint16_t version) {
-  bssl::UniquePtr<X509> cert = GetTestCertificate();
-  bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
-  if (!cert || !key) {
-    return false;
-  }
+TEST_P(SSLVersionTest, SessionTimeout) {
+  for (bool server_test : {false, true}) {
+    SCOPED_TRACE(server_test);
 
-  for (bool server_test : std::vector<bool>{false, true}) {
+    ResetContexts();
+    SSL_CTX_set_session_cache_mode(client_ctx_.get(), SSL_SESS_CACHE_BOTH);
+    SSL_CTX_set_session_cache_mode(server_ctx_.get(), SSL_SESS_CACHE_BOTH);
+
     static const time_t kStartTime = 1000;
     g_current_time.tv_sec = kStartTime;
 
     // We are willing to use a longer lifetime for TLS 1.3 sessions as
     // resumptions still perform ECDHE.
-    const time_t timeout = version == TLS1_3_VERSION
+    const time_t timeout = version() == TLS1_3_VERSION
                                ? SSL_DEFAULT_SESSION_PSK_DHE_TIMEOUT
                                : SSL_DEFAULT_SESSION_TIMEOUT;
-
-    bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(method));
-    bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(method));
-    if (!server_ctx || !client_ctx ||
-        !SSL_CTX_use_certificate(server_ctx.get(), cert.get()) ||
-        !SSL_CTX_use_PrivateKey(server_ctx.get(), key.get()) ||
-        !SSL_CTX_set_min_proto_version(client_ctx.get(), version) ||
-        !SSL_CTX_set_max_proto_version(client_ctx.get(), version) ||
-        !SSL_CTX_set_min_proto_version(server_ctx.get(), version) ||
-        !SSL_CTX_set_max_proto_version(server_ctx.get(), version)) {
-      return false;
-    }
-
-    SSL_CTX_set_session_cache_mode(client_ctx.get(), SSL_SESS_CACHE_BOTH);
-    SSL_CTX_set_session_cache_mode(server_ctx.get(), SSL_SESS_CACHE_BOTH);
 
     // Both client and server must enforce session timeouts. We configure the
     // other side with a frozen clock so it never expires tickets.
     if (server_test) {
-      SSL_CTX_set_current_time_cb(client_ctx.get(), FrozenTimeCallback);
-      SSL_CTX_set_current_time_cb(server_ctx.get(), CurrentTimeCallback);
+      SSL_CTX_set_current_time_cb(client_ctx_.get(), FrozenTimeCallback);
+      SSL_CTX_set_current_time_cb(server_ctx_.get(), CurrentTimeCallback);
     } else {
-      SSL_CTX_set_current_time_cb(client_ctx.get(), CurrentTimeCallback);
-      SSL_CTX_set_current_time_cb(server_ctx.get(), FrozenTimeCallback);
+      SSL_CTX_set_current_time_cb(client_ctx_.get(), CurrentTimeCallback);
+      SSL_CTX_set_current_time_cb(server_ctx_.get(), FrozenTimeCallback);
     }
 
     // Configure a ticket callback which renews tickets.
-    SSL_CTX_set_tlsext_ticket_key_cb(server_ctx.get(), RenewTicketCallback);
+    SSL_CTX_set_tlsext_ticket_key_cb(server_ctx_.get(), RenewTicketCallback);
 
     bssl::UniquePtr<SSL_SESSION> session =
-        CreateClientSession(client_ctx.get(), server_ctx.get());
-    if (!session) {
-      fprintf(stderr, "Error getting session.\n");
-      return false;
-    }
+        CreateClientSession(client_ctx_.get(), server_ctx_.get());
+    ASSERT_TRUE(session);
 
     // Advance the clock just behind the timeout.
     g_current_time.tv_sec += timeout - 1;
 
-    if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(), session.get(),
-                             true /* expect session reused */)) {
-      fprintf(stderr, "Error resuming session.\n");
-      return false;
-    }
+    TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                    session.get(),
+                                    true /* expect session reused */));
 
     // Advance the clock one more second.
     g_current_time.tv_sec++;
 
-    if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(), session.get(),
-                             false /* expect session not reused */)) {
-      fprintf(stderr, "Error resuming session.\n");
-      return false;
-    }
+    TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                    session.get(),
+                                    false /* expect session not reused */));
 
     // Rewind the clock to before the session was minted.
     g_current_time.tv_sec = kStartTime - 1;
 
-    if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(), session.get(),
-                             false /* expect session not reused */)) {
-      fprintf(stderr, "Error resuming session.\n");
-      return false;
-    }
+    TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                    session.get(),
+                                    false /* expect session not reused */));
 
     // SSL 3.0 cannot renew sessions.
-    if (version == SSL3_VERSION) {
+    if (version() == SSL3_VERSION) {
       continue;
     }
 
     // Renew the session 10 seconds before expiration.
     time_t new_start_time = kStartTime + timeout - 10;
     g_current_time.tv_sec = new_start_time;
-    bssl::UniquePtr<SSL_SESSION> new_session =
-        ExpectSessionRenewed(client_ctx.get(), server_ctx.get(), session.get());
-    if (!new_session) {
-      fprintf(stderr, "Error renewing session.\n");
-      return false;
-    }
+    bssl::UniquePtr<SSL_SESSION> new_session = ExpectSessionRenewed(
+        client_ctx_.get(), server_ctx_.get(), session.get());
+    ASSERT_TRUE(new_session);
 
     // This new session is not the same object as before.
-    if (session.get() == new_session.get()) {
-      fprintf(stderr, "New and old sessions alias.\n");
-      return false;
-    }
+    EXPECT_NE(session.get(), new_session.get());
 
     // Check the sessions have timestamps measured from issuance.
     long session_time = 0;
     if (server_test) {
-      if (!GetServerTicketTime(&session_time, new_session.get())) {
-        fprintf(stderr, "Failed to decode session ticket.\n");
-        return false;
-      }
+      ASSERT_TRUE(GetServerTicketTime(&session_time, new_session.get()));
     } else {
       session_time = new_session->time;
     }
 
-    if (session_time != g_current_time.tv_sec) {
-      fprintf(stderr, "New session is not measured from issuance.\n");
-      return false;
-    }
+    ASSERT_EQ(session_time, g_current_time.tv_sec);
 
-    if (version == TLS1_3_VERSION) {
+    if (version() == TLS1_3_VERSION) {
       // Renewal incorporates fresh key material in TLS 1.3, so we extend the
       // lifetime TLS 1.3.
       g_current_time.tv_sec = new_start_time + timeout - 1;
-      if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(),
-                               new_session.get(),
-                               true /* expect session reused */)) {
-        fprintf(stderr, "Error resuming renewed session.\n");
-        return false;
-      }
+      TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                      new_session.get(),
+                                      true /* expect session reused */));
 
       // The new session expires after the new timeout.
       g_current_time.tv_sec = new_start_time + timeout + 1;
-      if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(),
-                               new_session.get(),
-                               false /* expect session ot reused */)) {
-        fprintf(stderr, "Renewed session's lifetime is too long.\n");
-        return false;
-      }
+      TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                      new_session.get(),
+                                      false /* expect session ot reused */));
 
       // Renew the session until it begins just past the auth timeout.
       time_t auth_end_time = kStartTime + SSL_DEFAULT_SESSION_AUTH_TIMEOUT;
@@ -2553,75 +2459,129 @@ static bool TestSessionTimeout(bool is_dtls, const SSL_METHOD *method,
         new_start_time =
             std::min(auth_end_time - 1000, new_start_time + timeout - 1);
         g_current_time.tv_sec = new_start_time;
-        new_session = ExpectSessionRenewed(client_ctx.get(), server_ctx.get(),
+        new_session = ExpectSessionRenewed(client_ctx_.get(), server_ctx_.get(),
                                            new_session.get());
-        if (!new_session) {
-          fprintf(stderr, "Error renewing session.\n");
-          return false;
-        }
+        ASSERT_TRUE(new_session);
       }
 
       // Now the session's lifetime is bound by the auth timeout.
       g_current_time.tv_sec = auth_end_time - 1;
-      if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(),
-                               new_session.get(),
-                               true /* expect session reused */)) {
-        fprintf(stderr, "Error resuming renewed session.\n");
-        return false;
-      }
+      TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                      new_session.get(),
+                                      true /* expect session reused */));
 
       g_current_time.tv_sec = auth_end_time + 1;
-      if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(),
-                               new_session.get(),
-                               false /* expect session ot reused */)) {
-        fprintf(stderr, "Renewed session's lifetime is too long.\n");
-        return false;
-      }
+      TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                      new_session.get(),
+                                      false /* expect session ot reused */));
     } else {
       // The new session is usable just before the old expiration.
       g_current_time.tv_sec = kStartTime + timeout - 1;
-      if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(),
-                               new_session.get(),
-                               true /* expect session reused */)) {
-        fprintf(stderr, "Error resuming renewed session.\n");
-        return false;
-      }
+      TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                      new_session.get(),
+                                      true /* expect session reused */));
 
       // Renewal does not extend the lifetime, so it is not usable beyond the
       // old expiration.
       g_current_time.tv_sec = kStartTime + timeout + 1;
-      if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(),
-                               new_session.get(),
-                               false /* expect session not reused */)) {
-        fprintf(stderr, "Renewed session's lifetime is too long.\n");
-        return false;
-      }
+      TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                      new_session.get(),
+                                      false /* expect session not reused */));
     }
   }
+}
 
-  return true;
+TEST_P(SSLVersionTest, DefaultTicketKeyInitialization) {
+  static const uint8_t kZeroKey[kTicketKeyLen] = {};
+  uint8_t ticket_key[kTicketKeyLen];
+  ASSERT_EQ(1, SSL_CTX_get_tlsext_ticket_keys(server_ctx_.get(), ticket_key,
+                                              kTicketKeyLen));
+  ASSERT_NE(0, OPENSSL_memcmp(ticket_key, kZeroKey, kTicketKeyLen));
+}
+
+TEST_P(SSLVersionTest, DefaultTicketKeyRotation) {
+  if (GetParam().version == SSL3_VERSION) {
+    return;
+  }
+
+  static const time_t kStartTime = 1001;
+  g_current_time.tv_sec = kStartTime;
+  uint8_t ticket_key[kTicketKeyLen];
+
+  // We use session reuse as a proxy for ticket decryption success, hence
+  // disable session timeouts.
+  SSL_CTX_set_timeout(server_ctx_.get(), std::numeric_limits<uint32_t>::max());
+  SSL_CTX_set_session_psk_dhe_timeout(server_ctx_.get(),
+                                      std::numeric_limits<uint32_t>::max());
+
+  SSL_CTX_set_current_time_cb(client_ctx_.get(), FrozenTimeCallback);
+  SSL_CTX_set_current_time_cb(server_ctx_.get(), CurrentTimeCallback);
+
+  SSL_CTX_set_session_cache_mode(client_ctx_.get(), SSL_SESS_CACHE_BOTH);
+  SSL_CTX_set_session_cache_mode(server_ctx_.get(), SSL_SESS_CACHE_OFF);
+
+  // Initialize ticket_key with the current key.
+  TRACED_CALL(ExpectTicketKeyChanged(server_ctx_.get(), ticket_key,
+                                     true /* changed */));
+
+  // Verify ticket resumption actually works.
+  bssl::UniquePtr<SSL> client, server;
+  bssl::UniquePtr<SSL_SESSION> session =
+      CreateClientSession(client_ctx_.get(), server_ctx_.get());
+  ASSERT_TRUE(session);
+  TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                  session.get(), true /* reused */));
+
+  // Advance time to just before key rotation.
+  g_current_time.tv_sec += SSL_DEFAULT_TICKET_KEY_ROTATION_INTERVAL - 1;
+  TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                  session.get(), true /* reused */));
+  TRACED_CALL(ExpectTicketKeyChanged(server_ctx_.get(), ticket_key,
+                                     false /* NOT changed */));
+
+  // Force key rotation.
+  g_current_time.tv_sec += 1;
+  bssl::UniquePtr<SSL_SESSION> new_session =
+      CreateClientSession(client_ctx_.get(), server_ctx_.get());
+  TRACED_CALL(ExpectTicketKeyChanged(server_ctx_.get(), ticket_key,
+                                     true /* changed */));
+
+  // Resumption with both old and new ticket should work.
+  TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                  session.get(), true /* reused */));
+  TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                  new_session.get(), true /* reused */));
+  TRACED_CALL(ExpectTicketKeyChanged(server_ctx_.get(), ticket_key,
+                                     false /* NOT changed */));
+
+  // Force key rotation again. Resumption with the old ticket now fails.
+  g_current_time.tv_sec += SSL_DEFAULT_TICKET_KEY_ROTATION_INTERVAL;
+  TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                  session.get(), false /* NOT reused */));
+  TRACED_CALL(ExpectTicketKeyChanged(server_ctx_.get(), ticket_key,
+                                     true /* changed */));
+
+  // But resumption with the newer session still works.
+  TRACED_CALL(ExpectSessionReused(client_ctx_.get(), server_ctx_.get(),
+                                  new_session.get(), true /* reused */));
 }
 
 static int SwitchContext(SSL *ssl, int *out_alert, void *arg) {
-  SSL_CTX *ctx = reinterpret_cast<SSL_CTX*>(arg);
+  SSL_CTX *ctx = reinterpret_cast<SSL_CTX *>(arg);
   SSL_set_SSL_CTX(ssl, ctx);
   return SSL_TLSEXT_ERR_OK;
 }
 
-static bool TestSNICallback(bool is_dtls, const SSL_METHOD *method,
-                            uint16_t version) {
+TEST_P(SSLVersionTest, SNICallback) {
   // SSL 3.0 lacks extensions.
-  if (version == SSL3_VERSION) {
-    return true;
+  if (version() == SSL3_VERSION) {
+    return;
   }
 
-  bssl::UniquePtr<X509> cert = GetTestCertificate();
-  bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
   bssl::UniquePtr<X509> cert2 = GetECDSATestCertificate();
+  ASSERT_TRUE(cert2);
   bssl::UniquePtr<EVP_PKEY> key2 = GetECDSATestKey();
-  if (!cert || !key || !cert2 || !key2) {
-    return false;
-  }
+  ASSERT_TRUE(key2);
 
   // Test that switching the |SSL_CTX| at the SNI callback behaves correctly.
   static const uint16_t kECDSAWithSHA256 = SSL_SIGN_ECDSA_SECP256R1_SHA256;
@@ -2629,70 +2589,43 @@ static bool TestSNICallback(bool is_dtls, const SSL_METHOD *method,
   static const uint8_t kSCTList[] = {0, 6, 0, 4, 5, 6, 7, 8};
   static const uint8_t kOCSPResponse[] = {1, 2, 3, 4};
 
-  bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(method));
-  bssl::UniquePtr<SSL_CTX> server_ctx2(SSL_CTX_new(method));
-  bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(method));
-  if (!server_ctx || !server_ctx2 || !client_ctx ||
-      !SSL_CTX_use_certificate(server_ctx.get(), cert.get()) ||
-      !SSL_CTX_use_PrivateKey(server_ctx.get(), key.get()) ||
-      !SSL_CTX_use_certificate(server_ctx2.get(), cert2.get()) ||
-      !SSL_CTX_use_PrivateKey(server_ctx2.get(), key2.get()) ||
-      !SSL_CTX_set_signed_cert_timestamp_list(server_ctx2.get(), kSCTList,
-                                              sizeof(kSCTList)) ||
-      !SSL_CTX_set_ocsp_response(server_ctx2.get(), kOCSPResponse,
-                                 sizeof(kOCSPResponse)) ||
-      // Historically signing preferences would be lost in some cases with the
-      // SNI callback, which triggers the TLS 1.2 SHA-1 default. To ensure
-      // this doesn't happen when |version| is TLS 1.2, configure the private
-      // key to only sign SHA-256.
-      !SSL_CTX_set_signing_algorithm_prefs(server_ctx2.get(), &kECDSAWithSHA256,
-                                           1) ||
-      !SSL_CTX_set_min_proto_version(client_ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(client_ctx.get(), version) ||
-      !SSL_CTX_set_min_proto_version(server_ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(server_ctx.get(), version) ||
-      !SSL_CTX_set_min_proto_version(server_ctx2.get(), version) ||
-      !SSL_CTX_set_max_proto_version(server_ctx2.get(), version)) {
-    return false;
-  }
+  bssl::UniquePtr<SSL_CTX> server_ctx2 = CreateContext();
+  ASSERT_TRUE(server_ctx2);
+  ASSERT_TRUE(SSL_CTX_use_certificate(server_ctx2.get(), cert2.get()));
+  ASSERT_TRUE(SSL_CTX_use_PrivateKey(server_ctx2.get(), key2.get()));
+  ASSERT_TRUE(SSL_CTX_set_signed_cert_timestamp_list(
+      server_ctx2.get(), kSCTList, sizeof(kSCTList)));
+  ASSERT_TRUE(SSL_CTX_set_ocsp_response(server_ctx2.get(), kOCSPResponse,
+                                        sizeof(kOCSPResponse)));
+  // Historically signing preferences would be lost in some cases with the
+  // SNI callback, which triggers the TLS 1.2 SHA-1 default. To ensure
+  // this doesn't happen when |version| is TLS 1.2, configure the private
+  // key to only sign SHA-256.
+  ASSERT_TRUE(SSL_CTX_set_signing_algorithm_prefs(server_ctx2.get(),
+                                                  &kECDSAWithSHA256, 1));
 
-  SSL_CTX_set_tlsext_servername_callback(server_ctx.get(), SwitchContext);
-  SSL_CTX_set_tlsext_servername_arg(server_ctx.get(), server_ctx2.get());
+  SSL_CTX_set_tlsext_servername_callback(server_ctx_.get(), SwitchContext);
+  SSL_CTX_set_tlsext_servername_arg(server_ctx_.get(), server_ctx2.get());
 
-  SSL_CTX_enable_signed_cert_timestamps(client_ctx.get());
-  SSL_CTX_enable_ocsp_stapling(client_ctx.get());
+  SSL_CTX_enable_signed_cert_timestamps(client_ctx_.get());
+  SSL_CTX_enable_ocsp_stapling(client_ctx_.get());
 
-  bssl::UniquePtr<SSL> client, server;
-  if (!ConnectClientAndServer(&client, &server, client_ctx.get(),
-                              server_ctx.get(), nullptr)) {
-    fprintf(stderr, "Handshake failed.\n");
-    return false;
-  }
+  ASSERT_TRUE(Connect());
 
   // The client should have received |cert2|.
-  bssl::UniquePtr<X509> peer(SSL_get_peer_certificate(client.get()));
-  if (!peer || X509_cmp(peer.get(), cert2.get()) != 0) {
-    fprintf(stderr, "Incorrect certificate received.\n");
-    return false;
-  }
+  bssl::UniquePtr<X509> peer(SSL_get_peer_certificate(client_.get()));
+  ASSERT_TRUE(peer);
+  EXPECT_EQ(X509_cmp(peer.get(), cert2.get()), 0);
 
   // The client should have received |server_ctx2|'s SCT list.
   const uint8_t *data;
   size_t len;
-  SSL_get0_signed_cert_timestamp_list(client.get(), &data, &len);
-  if (Bytes(kSCTList) != Bytes(data, len)) {
-    fprintf(stderr, "Incorrect SCT list received.\n");
-    return false;
-  }
+  SSL_get0_signed_cert_timestamp_list(client_.get(), &data, &len);
+  EXPECT_EQ(Bytes(kSCTList), Bytes(data, len));
 
   // The client should have received |server_ctx2|'s OCSP response.
-  SSL_get0_ocsp_response(client.get(), &data, &len);
-  if (Bytes(kOCSPResponse) != Bytes(data, len)) {
-    fprintf(stderr, "Incorrect OCSP response received.\n");
-    return false;
-  }
-
-  return true;
+  SSL_get0_ocsp_response(client_.get(), &data, &len);
+  EXPECT_EQ(Bytes(kOCSPResponse), Bytes(data, len));
 }
 
 // Test that the early callback can swap the maximum version.
@@ -2722,7 +2655,7 @@ TEST(SSLTest, EarlyCallbackVersionSwitch) {
 
   bssl::UniquePtr<SSL> client, server;
   ASSERT_TRUE(ConnectClientAndServer(&client, &server, client_ctx.get(),
-                                     server_ctx.get(), nullptr));
+                                     server_ctx.get()));
   EXPECT_EQ(TLS1_2_VERSION, SSL_version(client.get()));
 }
 
@@ -2804,95 +2737,46 @@ static const char *GetVersionName(uint16_t version) {
   }
 }
 
-static bool TestVersion(bool is_dtls, const SSL_METHOD *method,
-                        uint16_t version) {
-  bssl::UniquePtr<X509> cert = GetTestCertificate();
-  bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
-  if (!cert || !key) {
-    return false;
-  }
+TEST_P(SSLVersionTest, Version) {
+  ASSERT_TRUE(Connect());
 
-  bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(method));
-  bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(method));
-  bssl::UniquePtr<SSL> client, server;
-  if (!server_ctx || !client_ctx ||
-      !SSL_CTX_use_certificate(server_ctx.get(), cert.get()) ||
-      !SSL_CTX_use_PrivateKey(server_ctx.get(), key.get()) ||
-      !SSL_CTX_set_min_proto_version(client_ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(client_ctx.get(), version) ||
-      !SSL_CTX_set_min_proto_version(server_ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(server_ctx.get(), version) ||
-      !ConnectClientAndServer(&client, &server, client_ctx.get(),
-                              server_ctx.get(), nullptr /* no session */)) {
-    fprintf(stderr, "Failed to connect.\n");
-    return false;
-  }
-
-  if (SSL_version(client.get()) != version ||
-      SSL_version(server.get()) != version) {
-    fprintf(stderr, "Version mismatch. Got %04x and %04x, wanted %04x.\n",
-            SSL_version(client.get()), SSL_version(server.get()), version);
-    return false;
-  }
+  EXPECT_EQ(SSL_version(client_.get()), version());
+  EXPECT_EQ(SSL_version(server_.get()), version());
 
   // Test the version name is reported as expected.
-  const char *version_name = GetVersionName(version);
-  if (strcmp(version_name, SSL_get_version(client.get())) != 0 ||
-      strcmp(version_name, SSL_get_version(server.get())) != 0) {
-    fprintf(stderr, "Version name mismatch. Got '%s' and '%s', wanted '%s'.\n",
-            SSL_get_version(client.get()), SSL_get_version(server.get()),
-            version_name);
-    return false;
-  }
+  const char *version_name = GetVersionName(version());
+  EXPECT_EQ(strcmp(version_name, SSL_get_version(client_.get())), 0);
+  EXPECT_EQ(strcmp(version_name, SSL_get_version(server_.get())), 0);
 
   // Test SSL_SESSION reports the same name.
   const char *client_name =
-      SSL_SESSION_get_version(SSL_get_session(client.get()));
+      SSL_SESSION_get_version(SSL_get_session(client_.get()));
   const char *server_name =
-      SSL_SESSION_get_version(SSL_get_session(server.get()));
-  if (strcmp(version_name, client_name) != 0 ||
-      strcmp(version_name, server_name) != 0) {
-    fprintf(stderr,
-            "Session version name mismatch. Got '%s' and '%s', wanted '%s'.\n",
-            client_name, server_name, version_name);
-    return false;
-  }
-
-  return true;
+      SSL_SESSION_get_version(SSL_get_session(server_.get()));
+  EXPECT_EQ(strcmp(version_name, client_name), 0);
+  EXPECT_EQ(strcmp(version_name, server_name), 0);
 }
 
 // Tests that that |SSL_get_pending_cipher| is available during the ALPN
 // selection callback.
-static bool TestALPNCipherAvailable(bool is_dtls, const SSL_METHOD *method,
-                                    uint16_t version) {
+TEST_P(SSLVersionTest, ALPNCipherAvailable) {
   // SSL 3.0 lacks extensions.
-  if (version == SSL3_VERSION) {
-    return true;
+  if (version() == SSL3_VERSION) {
+    return;
   }
+
+  ASSERT_TRUE(UseCertAndKey(client_ctx_.get()));
 
   static const uint8_t kALPNProtos[] = {0x03, 'f', 'o', 'o'};
-
-  bssl::UniquePtr<X509> cert = GetTestCertificate();
-  bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
-  if (!cert || !key) {
-    return false;
-  }
-
-  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(method));
-  if (!ctx || !SSL_CTX_use_certificate(ctx.get(), cert.get()) ||
-      !SSL_CTX_use_PrivateKey(ctx.get(), key.get()) ||
-      !SSL_CTX_set_min_proto_version(ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(ctx.get(), version) ||
-      SSL_CTX_set_alpn_protos(ctx.get(), kALPNProtos, sizeof(kALPNProtos)) !=
-          0) {
-    return false;
-  }
+  ASSERT_EQ(SSL_CTX_set_alpn_protos(client_ctx_.get(), kALPNProtos,
+                                    sizeof(kALPNProtos)),
+            0);
 
   // The ALPN callback does not fail the handshake on error, so have the
   // callback write a boolean.
-  std::pair<uint16_t, bool> callback_state(version, false);
+  std::pair<uint16_t, bool> callback_state(version(), false);
   SSL_CTX_set_alpn_select_cb(
-      ctx.get(),
+      server_ctx_.get(),
       [](SSL *ssl, const uint8_t **out, uint8_t *out_len, const uint8_t *in,
          unsigned in_len, void *arg) -> int {
         auto state = reinterpret_cast<std::pair<uint16_t, bool> *>(arg);
@@ -2904,81 +2788,37 @@ static bool TestALPNCipherAvailable(bool is_dtls, const SSL_METHOD *method,
       },
       &callback_state);
 
-  bssl::UniquePtr<SSL> client, server;
-  if (!ConnectClientAndServer(&client, &server, ctx.get(), ctx.get(),
-                              nullptr /* no session */)) {
-    return false;
-  }
+  ASSERT_TRUE(Connect());
 
-  if (!callback_state.second) {
-    fprintf(stderr, "The pending cipher was not known in the ALPN callback.\n");
-    return false;
-  }
-
-  return true;
+  ASSERT_TRUE(callback_state.second);
 }
 
-static bool TestSSLClearSessionResumption(bool is_dtls,
-                                          const SSL_METHOD *method,
-                                          uint16_t version) {
+TEST_P(SSLVersionTest, SSLClearSessionResumption) {
   // Skip this for TLS 1.3. TLS 1.3's ticket mechanism is incompatible with this
   // API pattern.
-  if (version == TLS1_3_VERSION) {
-    return true;
+  if (version() == TLS1_3_VERSION) {
+    return;
   }
 
-  bssl::UniquePtr<X509> cert = GetTestCertificate();
-  bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
-  bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(method));
-  bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(method));
-  if (!cert || !key || !server_ctx || !client_ctx ||
-      !SSL_CTX_use_certificate(server_ctx.get(), cert.get()) ||
-      !SSL_CTX_use_PrivateKey(server_ctx.get(), key.get()) ||
-      !SSL_CTX_set_min_proto_version(client_ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(client_ctx.get(), version) ||
-      !SSL_CTX_set_min_proto_version(server_ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(server_ctx.get(), version)) {
-    return false;
-  }
+  ASSERT_TRUE(Connect());
 
-  // Connect a client and a server.
-  bssl::UniquePtr<SSL> client, server;
-  if (!ConnectClientAndServer(&client, &server, client_ctx.get(),
-                              server_ctx.get(), nullptr /* no session */)) {
-    return false;
-  }
-
-  if (SSL_session_reused(client.get()) ||
-      SSL_session_reused(server.get())) {
-    fprintf(stderr, "Session unexpectedly reused.\n");
-    return false;
-  }
+  EXPECT_FALSE(SSL_session_reused(client_.get()));
+  EXPECT_FALSE(SSL_session_reused(server_.get()));
 
   // Reset everything.
-  if (!SSL_clear(client.get()) ||
-      !SSL_clear(server.get())) {
-    fprintf(stderr, "SSL_clear failed.\n");
-    return false;
-  }
+  ASSERT_TRUE(SSL_clear(client_.get()));
+  ASSERT_TRUE(SSL_clear(server_.get()));
 
   // Attempt to connect a second time.
-  if (!CompleteHandshakes(client.get(), server.get())) {
-    fprintf(stderr, "Could not reuse SSL objects.\n");
-    return false;
-  }
+  ASSERT_TRUE(CompleteHandshakes(client_.get(), server_.get()));
 
   // |SSL_clear| should implicitly offer the previous session to the server.
-  if (!SSL_session_reused(client.get()) ||
-      !SSL_session_reused(server.get())) {
-    fprintf(stderr, "Session was not reused in second try.\n");
-    return false;
-  }
-
-  return true;
+  EXPECT_TRUE(SSL_session_reused(client_.get()));
+  EXPECT_TRUE(SSL_session_reused(server_.get()));
 }
 
-static bool ChainsEqual(STACK_OF(X509) *chain,
-                         const std::vector<X509 *> &expected) {
+static bool ChainsEqual(STACK_OF(X509) * chain,
+                        const std::vector<X509 *> &expected) {
   if (sk_X509_num(chain) != expected.size()) {
     return false;
   }
@@ -2992,91 +2832,60 @@ static bool ChainsEqual(STACK_OF(X509) *chain,
   return true;
 }
 
-static bool TestAutoChain(bool is_dtls, const SSL_METHOD *method,
-                          uint16_t version) {
-  bssl::UniquePtr<X509> cert = GetChainTestCertificate();
+TEST_P(SSLVersionTest, AutoChain) {
+  cert_ = GetChainTestCertificate();
+  ASSERT_TRUE(cert_);
+  key_ = GetChainTestKey();
+  ASSERT_TRUE(key_);
   bssl::UniquePtr<X509> intermediate = GetChainTestIntermediate();
-  bssl::UniquePtr<EVP_PKEY> key = GetChainTestKey();
-  if (!cert || !intermediate || !key) {
-    return false;
-  }
+  ASSERT_TRUE(intermediate);
+
+  ASSERT_TRUE(UseCertAndKey(client_ctx_.get()));
+  ASSERT_TRUE(UseCertAndKey(server_ctx_.get()));
 
   // Configure both client and server to accept any certificate. Add
   // |intermediate| to the cert store.
-  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(method));
-  if (!ctx ||
-      !SSL_CTX_use_certificate(ctx.get(), cert.get()) ||
-      !SSL_CTX_use_PrivateKey(ctx.get(), key.get()) ||
-      !SSL_CTX_set_min_proto_version(ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(ctx.get(), version) ||
-      !X509_STORE_add_cert(SSL_CTX_get_cert_store(ctx.get()),
-                           intermediate.get())) {
-    return false;
-  }
-  SSL_CTX_set_verify(
-      ctx.get(), SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
-  SSL_CTX_set_cert_verify_callback(ctx.get(), VerifySucceed, NULL);
+  ASSERT_TRUE(X509_STORE_add_cert(SSL_CTX_get_cert_store(client_ctx_.get()),
+                                  intermediate.get()));
+  ASSERT_TRUE(X509_STORE_add_cert(SSL_CTX_get_cert_store(server_ctx_.get()),
+                                  intermediate.get()));
+  SSL_CTX_set_verify(client_ctx_.get(),
+                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                     nullptr);
+  SSL_CTX_set_verify(server_ctx_.get(),
+                     SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                     nullptr);
+  SSL_CTX_set_cert_verify_callback(client_ctx_.get(), VerifySucceed, NULL);
+  SSL_CTX_set_cert_verify_callback(server_ctx_.get(), VerifySucceed, NULL);
 
   // By default, the client and server should each only send the leaf.
-  bssl::UniquePtr<SSL> client, server;
-  if (!ConnectClientAndServer(&client, &server, ctx.get(), ctx.get(),
-                              nullptr /* no session */)) {
-    return false;
-  }
+  ASSERT_TRUE(Connect());
 
-  if (!ChainsEqual(SSL_get_peer_full_cert_chain(client.get()), {cert.get()})) {
-    fprintf(stderr, "Client-received chain did not match.\n");
-    return false;
-  }
-
-  if (!ChainsEqual(SSL_get_peer_full_cert_chain(server.get()), {cert.get()})) {
-    fprintf(stderr, "Server-received chain did not match.\n");
-    return false;
-  }
+  EXPECT_TRUE(
+      ChainsEqual(SSL_get_peer_full_cert_chain(client_.get()), {cert_.get()}));
+  EXPECT_TRUE(
+      ChainsEqual(SSL_get_peer_full_cert_chain(server_.get()), {cert_.get()}));
 
   // If auto-chaining is enabled, then the intermediate is sent.
-  SSL_CTX_clear_mode(ctx.get(), SSL_MODE_NO_AUTO_CHAIN);
-  if (!ConnectClientAndServer(&client, &server, ctx.get(), ctx.get(),
-                              nullptr /* no session */)) {
-    return false;
-  }
+  SSL_CTX_clear_mode(client_ctx_.get(), SSL_MODE_NO_AUTO_CHAIN);
+  SSL_CTX_clear_mode(server_ctx_.get(), SSL_MODE_NO_AUTO_CHAIN);
+  ASSERT_TRUE(Connect());
 
-  if (!ChainsEqual(SSL_get_peer_full_cert_chain(client.get()),
-                   {cert.get(), intermediate.get()})) {
-    fprintf(stderr, "Client-received chain did not match (auto-chaining).\n");
-    return false;
-  }
-
-  if (!ChainsEqual(SSL_get_peer_full_cert_chain(server.get()),
-                   {cert.get(), intermediate.get()})) {
-    fprintf(stderr, "Server-received chain did not match (auto-chaining).\n");
-    return false;
-  }
+  EXPECT_TRUE(ChainsEqual(SSL_get_peer_full_cert_chain(client_.get()),
+                          {cert_.get(), intermediate.get()}));
+  EXPECT_TRUE(ChainsEqual(SSL_get_peer_full_cert_chain(server_.get()),
+                          {cert_.get(), intermediate.get()}));
 
   // Auto-chaining does not override explicitly-configured intermediates.
-  if (!SSL_CTX_add1_chain_cert(ctx.get(), cert.get()) ||
-      !ConnectClientAndServer(&client, &server, ctx.get(), ctx.get(),
-                              nullptr /* no session */)) {
-    return false;
-  }
+  ASSERT_TRUE(SSL_CTX_add1_chain_cert(client_ctx_.get(), cert_.get()));
+  ASSERT_TRUE(SSL_CTX_add1_chain_cert(server_ctx_.get(), cert_.get()));
+  ASSERT_TRUE(Connect());
 
-  if (!ChainsEqual(SSL_get_peer_full_cert_chain(client.get()),
-                   {cert.get(), cert.get()})) {
-    fprintf(stderr,
-            "Client-received chain did not match (auto-chaining, explicit "
-            "intermediate).\n");
-    return false;
-  }
+  EXPECT_TRUE(ChainsEqual(SSL_get_peer_full_cert_chain(client_.get()),
+                          {cert_.get(), cert_.get()}));
 
-  if (!ChainsEqual(SSL_get_peer_full_cert_chain(server.get()),
-                   {cert.get(), cert.get()})) {
-    fprintf(stderr,
-            "Server-received chain did not match (auto-chaining, explicit "
-            "intermediate).\n");
-    return false;
-  }
-
-  return true;
+  EXPECT_TRUE(ChainsEqual(SSL_get_peer_full_cert_chain(server_.get()),
+                          {cert_.get(), cert_.get()}));
 }
 
 static bool ExpectBadWriteRetry() {
@@ -3097,30 +2906,21 @@ static bool ExpectBadWriteRetry() {
   return true;
 }
 
-static bool TestSSLWriteRetry(bool is_dtls, const SSL_METHOD *method,
-                              uint16_t version) {
-  if (is_dtls) {
-    return true;
+TEST_P(SSLVersionTest, SSLWriteRetry) {
+  if (is_dtls()) {
+    return;
   }
 
-  for (bool enable_partial_write : std::vector<bool>{false, true}) {
+  for (bool enable_partial_write : {false, true}) {
+    SCOPED_TRACE(enable_partial_write);
+
     // Connect a client and server.
-    bssl::UniquePtr<X509> cert = GetTestCertificate();
-    bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
-    bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(method));
-    bssl::UniquePtr<SSL> client, server;
-    if (!cert || !key || !ctx ||
-        !SSL_CTX_use_certificate(ctx.get(), cert.get()) ||
-        !SSL_CTX_use_PrivateKey(ctx.get(), key.get()) ||
-        !SSL_CTX_set_min_proto_version(ctx.get(), version) ||
-        !SSL_CTX_set_max_proto_version(ctx.get(), version) ||
-        !ConnectClientAndServer(&client, &server, ctx.get(), ctx.get(),
-                                nullptr /* no session */)) {
-      return false;
-    }
+    ASSERT_TRUE(UseCertAndKey(client_ctx_.get()));
+
+    ASSERT_TRUE(Connect());
 
     if (enable_partial_write) {
-      SSL_set_mode(client.get(), SSL_MODE_ENABLE_PARTIAL_WRITE);
+      SSL_set_mode(client_.get(), SSL_MODE_ENABLE_PARTIAL_WRITE);
     }
 
     // Write without reading until the buffer is full and we have an unfinished
@@ -3130,83 +2930,57 @@ static bool TestSSLWriteRetry(bool is_dtls, const SSL_METHOD *method,
     static const int kChunkLen = 5;  // The length of "hello".
     unsigned count = 0;
     for (;;) {
-      int ret = SSL_write(client.get(), data, kChunkLen);
+      int ret = SSL_write(client_.get(), data, kChunkLen);
       if (ret <= 0) {
-        int err = SSL_get_error(client.get(), ret);
-        if (SSL_get_error(client.get(), ret) == SSL_ERROR_WANT_WRITE) {
-          break;
-        }
-        fprintf(stderr, "SSL_write failed in unexpected way: %d\n", err);
-        return false;
+        ASSERT_EQ(SSL_get_error(client_.get(), ret), SSL_ERROR_WANT_WRITE);
+        break;
       }
 
-      if (ret != 5) {
-        fprintf(stderr, "SSL_write wrote %d bytes, expected 5.\n", ret);
-        return false;
-      }
+      ASSERT_EQ(ret, 5);
 
       count++;
     }
 
     // Retrying with the same parameters is legal.
-    if (SSL_get_error(client.get(), SSL_write(client.get(), data, kChunkLen)) !=
-        SSL_ERROR_WANT_WRITE) {
-      fprintf(stderr, "SSL_write retry unexpectedly failed.\n");
-      return false;
-    }
+    ASSERT_EQ(
+        SSL_get_error(client_.get(), SSL_write(client_.get(), data, kChunkLen)),
+        SSL_ERROR_WANT_WRITE);
 
     // Retrying with the same buffer but shorter length is not legal.
-    if (SSL_get_error(client.get(),
-                      SSL_write(client.get(), data, kChunkLen - 1)) !=
-            SSL_ERROR_SSL ||
-        !ExpectBadWriteRetry()) {
-      fprintf(stderr, "SSL_write retry did not fail as expected.\n");
-      return false;
-    }
+    ASSERT_EQ(SSL_get_error(client_.get(),
+                            SSL_write(client_.get(), data, kChunkLen - 1)),
+              SSL_ERROR_SSL);
+    ASSERT_TRUE(ExpectBadWriteRetry());
 
     // Retrying with a different buffer pointer is not legal.
     char data2[] = "hello";
-    if (SSL_get_error(client.get(), SSL_write(client.get(), data2,
-                                              kChunkLen)) != SSL_ERROR_SSL ||
-        !ExpectBadWriteRetry()) {
-      fprintf(stderr, "SSL_write retry did not fail as expected.\n");
-      return false;
-    }
+    ASSERT_EQ(SSL_get_error(client_.get(),
+                            SSL_write(client_.get(), data2, kChunkLen)),
+              SSL_ERROR_SSL);
+    ASSERT_TRUE(ExpectBadWriteRetry());
 
     // With |SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER|, the buffer may move.
-    SSL_set_mode(client.get(), SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
-    if (SSL_get_error(client.get(),
-                      SSL_write(client.get(), data2, kChunkLen)) !=
-        SSL_ERROR_WANT_WRITE) {
-      fprintf(stderr, "SSL_write retry unexpectedly failed.\n");
-      return false;
-    }
+    SSL_set_mode(client_.get(), SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+    ASSERT_EQ(SSL_get_error(client_.get(),
+                            SSL_write(client_.get(), data2, kChunkLen)),
+              SSL_ERROR_WANT_WRITE);
 
     // |SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER| does not disable length checks.
-    if (SSL_get_error(client.get(),
-                      SSL_write(client.get(), data2, kChunkLen - 1)) !=
-            SSL_ERROR_SSL ||
-        !ExpectBadWriteRetry()) {
-      fprintf(stderr, "SSL_write retry did not fail as expected.\n");
-      return false;
-    }
+    ASSERT_EQ(SSL_get_error(client_.get(),
+                            SSL_write(client_.get(), data2, kChunkLen - 1)),
+              SSL_ERROR_SSL);
+    ASSERT_TRUE(ExpectBadWriteRetry());
 
     // Retrying with a larger buffer is legal.
-    if (SSL_get_error(client.get(),
-                      SSL_write(client.get(), data, kChunkLen + 1)) !=
-        SSL_ERROR_WANT_WRITE) {
-      fprintf(stderr, "SSL_write retry unexpectedly failed.\n");
-      return false;
-    }
+    ASSERT_EQ(SSL_get_error(client_.get(),
+                            SSL_write(client_.get(), data, kChunkLen + 1)),
+              SSL_ERROR_WANT_WRITE);
 
     // Drain the buffer.
     char buf[20];
     for (unsigned i = 0; i < count; i++) {
-      if (SSL_read(server.get(), buf, sizeof(buf)) != kChunkLen ||
-          OPENSSL_memcmp(buf, "hello", kChunkLen) != 0) {
-        fprintf(stderr, "Failed to read initial records.\n");
-        return false;
-      }
+      ASSERT_EQ(SSL_read(server_.get(), buf, sizeof(buf)), kChunkLen);
+      ASSERT_EQ(OPENSSL_memcmp(buf, "hello", kChunkLen), 0);
     }
 
     // Now that there is space, a retry with a larger buffer should flush the
@@ -3215,138 +2989,129 @@ static bool TestSSLWriteRetry(bool is_dtls, const SSL_METHOD *method,
     // is set, this will complete in two steps.
     char data3[] = "_____!";
     if (enable_partial_write) {
-      if (SSL_write(client.get(), data3, kChunkLen + 1) != kChunkLen ||
-          SSL_write(client.get(), data3 + kChunkLen, 1) != 1) {
-        fprintf(stderr, "SSL_write retry failed.\n");
-        return false;
-      }
-    } else if (SSL_write(client.get(), data3, kChunkLen + 1) != kChunkLen + 1) {
-      fprintf(stderr, "SSL_write retry failed.\n");
-      return false;
+      ASSERT_EQ(SSL_write(client_.get(), data3, kChunkLen + 1), kChunkLen);
+      ASSERT_EQ(SSL_write(client_.get(), data3 + kChunkLen, 1), 1);
+    } else {
+      ASSERT_EQ(SSL_write(client_.get(), data3, kChunkLen + 1), kChunkLen + 1);
     }
 
     // Check the last write was correct. The data will be spread over two
     // records, so SSL_read returns twice.
-    if (SSL_read(server.get(), buf, sizeof(buf)) != kChunkLen ||
-        OPENSSL_memcmp(buf, "hello", kChunkLen) != 0 ||
-        SSL_read(server.get(), buf, sizeof(buf)) != 1 ||
-        buf[0] != '!') {
-      fprintf(stderr, "Failed to read write retry.\n");
-      return false;
-    }
+    ASSERT_EQ(SSL_read(server_.get(), buf, sizeof(buf)), kChunkLen);
+    ASSERT_EQ(OPENSSL_memcmp(buf, "hello", kChunkLen), 0);
+    ASSERT_EQ(SSL_read(server_.get(), buf, sizeof(buf)), 1);
+    ASSERT_EQ(buf[0], '!');
   }
-
-  return true;
 }
 
-static bool TestRecordCallback(bool is_dtls, const SSL_METHOD *method,
-                               uint16_t version) {
-  bssl::UniquePtr<X509> cert = GetChainTestCertificate();
-  bssl::UniquePtr<X509> intermediate = GetChainTestIntermediate();
-  bssl::UniquePtr<EVP_PKEY> key = GetChainTestKey();
-  if (!cert || !intermediate || !key) {
-    return false;
+TEST_P(SSLVersionTest, RecordCallback) {
+  for (bool test_server : {true, false}) {
+    SCOPED_TRACE(test_server);
+    ResetContexts();
+
+    bool read_seen = false;
+    bool write_seen = false;
+    auto cb = [&](int is_write, int cb_version, int cb_type, const void *buf,
+                  size_t len, SSL *ssl) {
+      if (cb_type != SSL3_RT_HEADER) {
+        return;
+      }
+
+      // The callback does not report a version for records.
+      EXPECT_EQ(0, cb_version);
+
+      if (is_write) {
+        write_seen = true;
+      } else {
+        read_seen = true;
+      }
+
+      // Sanity-check that the record header is plausible.
+      CBS cbs;
+      CBS_init(&cbs, reinterpret_cast<const uint8_t *>(buf), len);
+      uint8_t type;
+      uint16_t record_version, length;
+      ASSERT_TRUE(CBS_get_u8(&cbs, &type));
+      ASSERT_TRUE(CBS_get_u16(&cbs, &record_version));
+      EXPECT_TRUE(record_version == version() ||
+                  record_version == (is_dtls() ? DTLS1_VERSION : TLS1_VERSION))
+          << "Invalid record version: " << record_version;
+      if (is_dtls()) {
+        uint16_t epoch;
+        ASSERT_TRUE(CBS_get_u16(&cbs, &epoch));
+        EXPECT_TRUE(epoch == 0 || epoch == 1) << "Invalid epoch: " << epoch;
+        ASSERT_TRUE(CBS_skip(&cbs, 6));
+      }
+      ASSERT_TRUE(CBS_get_u16(&cbs, &length));
+      EXPECT_EQ(0u, CBS_len(&cbs));
+    };
+    using CallbackType = decltype(cb);
+    SSL_CTX *ctx = test_server ? server_ctx_.get() : client_ctx_.get();
+    SSL_CTX_set_msg_callback(
+        ctx, [](int is_write, int cb_version, int cb_type, const void *buf,
+                size_t len, SSL *ssl, void *arg) {
+          CallbackType *cb_ptr = reinterpret_cast<CallbackType *>(arg);
+          (*cb_ptr)(is_write, cb_version, cb_type, buf, len, ssl);
+        });
+    SSL_CTX_set_msg_callback_arg(ctx, &cb);
+
+    ASSERT_TRUE(Connect());
+
+    EXPECT_TRUE(read_seen);
+    EXPECT_TRUE(write_seen);
+  }
+}
+
+TEST_P(SSLVersionTest, GetServerName) {
+  // No extensions in SSL 3.0.
+  if (version() == SSL3_VERSION) {
+    return;
   }
 
-  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(method));
-  if (!ctx ||
-      !SSL_CTX_use_certificate(ctx.get(), cert.get()) ||
-      !SSL_CTX_use_PrivateKey(ctx.get(), key.get()) ||
-      !SSL_CTX_set_min_proto_version(ctx.get(), version) ||
-      !SSL_CTX_set_max_proto_version(ctx.get(), version)) {
-    return false;
-  }
+  ClientConfig config;
+  config.servername = "host1";
 
-  bool read_seen = false;
-  bool write_seen = false;
-  auto cb = [&](int is_write, int cb_version, int cb_type, const void *buf,
-                size_t len, SSL *ssl) {
-    if (cb_type != SSL3_RT_HEADER) {
-      return;
-    }
-
-    // The callback does not report a version for records.
-    EXPECT_EQ(0, cb_version);
-
-    if (is_write) {
-      write_seen = true;
-    } else {
-      read_seen = true;
-    }
-
-    // Sanity-check that the record header is plausible.
-    CBS cbs;
-    CBS_init(&cbs, reinterpret_cast<const uint8_t *>(buf), len);
-    uint8_t type;
-    uint16_t record_version, length;
-    ASSERT_TRUE(CBS_get_u8(&cbs, &type));
-    ASSERT_TRUE(CBS_get_u16(&cbs, &record_version));
-    EXPECT_TRUE(record_version == version ||
-                record_version == (is_dtls ? DTLS1_VERSION : TLS1_VERSION))
-        << "Invalid record version: " << record_version;
-    if (is_dtls) {
-      uint16_t epoch;
-      ASSERT_TRUE(CBS_get_u16(&cbs, &epoch));
-      EXPECT_TRUE(epoch == 0 || epoch == 1) << "Invalid epoch: " << epoch;
-      ASSERT_TRUE(CBS_skip(&cbs, 6));
-    }
-    ASSERT_TRUE(CBS_get_u16(&cbs, &length));
-    EXPECT_EQ(0u, CBS_len(&cbs));
-  };
-  using CallbackType = decltype(cb);
-  SSL_CTX_set_msg_callback(
-      ctx.get(), [](int is_write, int cb_version, int cb_type, const void *buf,
-                    size_t len, SSL *ssl, void *arg) {
-        CallbackType *cb_ptr = reinterpret_cast<CallbackType *>(arg);
-        (*cb_ptr)(is_write, cb_version, cb_type, buf, len, ssl);
+  SSL_CTX_set_tlsext_servername_callback(
+      server_ctx_.get(), [](SSL *ssl, int *out_alert, void *arg) -> int {
+        // During the handshake, |SSL_get_servername| must match |config|.
+        ClientConfig *config_p = reinterpret_cast<ClientConfig *>(arg);
+        EXPECT_STREQ(config_p->servername.c_str(),
+                     SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name));
+        return SSL_TLSEXT_ERR_OK;
       });
-  SSL_CTX_set_msg_callback_arg(ctx.get(), &cb);
+  SSL_CTX_set_tlsext_servername_arg(server_ctx_.get(), &config);
 
-  bssl::UniquePtr<SSL> client, server;
-  if (!ConnectClientAndServer(&client, &server, ctx.get(), ctx.get(),
-                              nullptr /* no session */)) {
-    return false;
-  }
+  ASSERT_TRUE(Connect(config));
+  // After the handshake, it must also be available.
+  EXPECT_STREQ(config.servername.c_str(),
+               SSL_get_servername(server_.get(), TLSEXT_NAMETYPE_host_name));
 
-  EXPECT_TRUE(read_seen);
-  EXPECT_TRUE(write_seen);
-  return true;
+  // Establish a session under host1.
+  SSL_CTX_set_session_cache_mode(client_ctx_.get(), SSL_SESS_CACHE_BOTH);
+  SSL_CTX_set_session_cache_mode(server_ctx_.get(), SSL_SESS_CACHE_BOTH);
+  bssl::UniquePtr<SSL_SESSION> session =
+      CreateClientSession(client_ctx_.get(), server_ctx_.get(), config);
+
+  // If the client resumes a session with a different name, |SSL_get_servername|
+  // must return the new name.
+  ASSERT_TRUE(session);
+  config.session = session.get();
+  config.servername = "host2";
+  ASSERT_TRUE(Connect(config));
+  EXPECT_STREQ(config.servername.c_str(),
+               SSL_get_servername(server_.get(), TLSEXT_NAMETYPE_host_name));
 }
 
+// Test that session cache mode bits are honored in the client session callback.
+TEST_P(SSLVersionTest, ClientSessionCacheMode) {
+  SSL_CTX_set_session_cache_mode(client_ctx_.get(), SSL_SESS_CACHE_OFF);
+  EXPECT_FALSE(CreateClientSession(client_ctx_.get(), server_ctx_.get()));
 
-static bool ForEachVersion(bool (*test_func)(bool is_dtls,
-                                             const SSL_METHOD *method,
-                                             uint16_t version)) {
-  static uint16_t kTLSVersions[] = {
-      SSL3_VERSION,
-      TLS1_VERSION,
-      TLS1_1_VERSION,
-      TLS1_2_VERSION,
-// TLS 1.3 requires RSA-PSS, which is disabled for Android system builds.
-#if !defined(BORINGSSL_ANDROID_SYSTEM)
-      TLS1_3_VERSION,
-#endif
-  };
+  SSL_CTX_set_session_cache_mode(client_ctx_.get(), SSL_SESS_CACHE_CLIENT);
+  EXPECT_TRUE(CreateClientSession(client_ctx_.get(), server_ctx_.get()));
 
-  static uint16_t kDTLSVersions[] = {
-      DTLS1_VERSION, DTLS1_2_VERSION,
-  };
-
-  for (uint16_t version : kTLSVersions) {
-    if (!test_func(false, TLS_method(), version)) {
-      fprintf(stderr, "Test failed at TLS version %04x.\n", version);
-      return false;
-    }
-  }
-
-  for (uint16_t version : kDTLSVersions) {
-    if (!test_func(true, DTLS_method(), version)) {
-      fprintf(stderr, "Test failed at DTLS version %04x.\n", version);
-      return false;
-    }
-  }
-
-  return true;
+  SSL_CTX_set_session_cache_mode(client_ctx_.get(), SSL_SESS_CACHE_SERVER);
+  EXPECT_FALSE(CreateClientSession(client_ctx_.get(), server_ctx_.get()));
 }
 
 TEST(SSLTest, AddChainCertHack) {
@@ -3447,8 +3212,7 @@ TEST(SSLTest, SetChainAndKey) {
 
   bssl::UniquePtr<SSL> client, server;
   ASSERT_TRUE(ConnectClientAndServer(&client, &server, client_ctx.get(),
-                                     server_ctx.get(),
-                                     nullptr /* no session */));
+                                     server_ctx.get()));
 }
 
 TEST(SSLTest, ClientCABuffers) {
@@ -3510,8 +3274,7 @@ TEST(SSLTest, ClientCABuffers) {
 
   bssl::UniquePtr<SSL> client, server;
   ASSERT_TRUE(ConnectClientAndServer(&client, &server, client_ctx.get(),
-                                     server_ctx.get(),
-                                     nullptr /* no session */));
+                                     server_ctx.get()));
   EXPECT_TRUE(cert_cb_called);
 }
 
@@ -3789,16 +3552,14 @@ TEST(SSLTest, SSL3Method) {
   // way to enable SSL 3.0.
   bssl::UniquePtr<SSL> client, server;
   EXPECT_FALSE(ConnectClientAndServer(&client, &server, tls_ctx.get(),
-                                      ssl3_ctx.get(),
-                                      nullptr /* no session */));
+                                      ssl3_ctx.get()));
   uint32_t err = ERR_get_error();
   EXPECT_EQ(ERR_LIB_SSL, ERR_GET_LIB(err));
   EXPECT_EQ(SSL_R_NO_SUPPORTED_VERSIONS_ENABLED, ERR_GET_REASON(err));
 
   // Likewise for SSLv3_method clients.
   EXPECT_FALSE(ConnectClientAndServer(&client, &server, ssl3_ctx.get(),
-                                      tls_ctx.get(),
-                                      nullptr /* no session */));
+                                      tls_ctx.get()));
   err = ERR_get_error();
   EXPECT_EQ(ERR_LIB_SSL, ERR_GET_LIB(err));
   EXPECT_EQ(SSL_R_NO_SUPPORTED_VERSIONS_ENABLED, ERR_GET_REASON(err));
@@ -3862,8 +3623,7 @@ TEST(SSLTest, SealRecord) {
 
   bssl::UniquePtr<SSL> client, server;
   ASSERT_TRUE(ConnectClientAndServer(&client, &server, client_ctx.get(),
-                                     server_ctx.get(),
-                                     nullptr /* no session */));
+                                     server_ctx.get()));
 
   const std::vector<uint8_t> record = {1, 2, 3, 4, 5};
   std::vector<uint8_t> prefix(
@@ -3906,8 +3666,7 @@ TEST(SSLTest, SealRecordInPlace) {
 
   bssl::UniquePtr<SSL> client, server;
   ASSERT_TRUE(ConnectClientAndServer(&client, &server, client_ctx.get(),
-                                     server_ctx.get(),
-                                     nullptr /* no session */));
+                                     server_ctx.get()));
 
   const std::vector<uint8_t> plaintext = {1, 2, 3, 4, 5};
   std::vector<uint8_t> record = plaintext;
@@ -3945,8 +3704,7 @@ TEST(SSLTest, SealRecordTrailingData) {
 
   bssl::UniquePtr<SSL> client, server;
   ASSERT_TRUE(ConnectClientAndServer(&client, &server, client_ctx.get(),
-                                     server_ctx.get(),
-                                     nullptr /* no session */));
+                                     server_ctx.get()));
 
   const std::vector<uint8_t> plaintext = {1, 2, 3, 4, 5};
   std::vector<uint8_t> record = plaintext;
@@ -3985,8 +3743,7 @@ TEST(SSLTest, SealRecordInvalidSpanSize) {
 
   bssl::UniquePtr<SSL> client, server;
   ASSERT_TRUE(ConnectClientAndServer(&client, &server, client_ctx.get(),
-                                     server_ctx.get(),
-                                     nullptr /* no session */));
+                                     server_ctx.get()));
 
   std::vector<uint8_t> record = {1, 2, 3, 4, 5};
   std::vector<uint8_t> prefix(
@@ -4030,6 +3787,208 @@ TEST(SSLTest, SealRecordInvalidSpanSize) {
   expect_err();
 }
 
+// The client should gracefully handle no suitable ciphers being enabled.
+TEST(SSLTest, NoCiphersAvailable) {
+  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method()));
+  ASSERT_TRUE(ctx);
+
+  // Configure |client_ctx| with a cipher list that does not intersect with its
+  // version configuration.
+  ASSERT_TRUE(SSL_CTX_set_strict_cipher_list(
+      ctx.get(), "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"));
+  ASSERT_TRUE(SSL_CTX_set_max_proto_version(ctx.get(), TLS1_1_VERSION));
+
+  bssl::UniquePtr<SSL> ssl(SSL_new(ctx.get()));
+  ASSERT_TRUE(ssl);
+  SSL_set_connect_state(ssl.get());
+
+  UniquePtr<BIO> rbio(BIO_new(BIO_s_mem())), wbio(BIO_new(BIO_s_mem()));
+  ASSERT_TRUE(rbio);
+  ASSERT_TRUE(wbio);
+  SSL_set0_rbio(ssl.get(), rbio.release());
+  SSL_set0_wbio(ssl.get(), wbio.release());
+
+  int ret = SSL_do_handshake(ssl.get());
+  EXPECT_EQ(-1, ret);
+  EXPECT_EQ(SSL_ERROR_SSL, SSL_get_error(ssl.get(), ret));
+  uint32_t err = ERR_get_error();
+  EXPECT_EQ(ERR_LIB_SSL, ERR_GET_LIB(err));
+  EXPECT_EQ(SSL_R_NO_CIPHERS_AVAILABLE, ERR_GET_REASON(err));
+}
+
+TEST(SSLTest, IsProbablyJava) {
+  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method()));
+  ASSERT_TRUE(ctx);
+  bssl::UniquePtr<SSL> ssl(SSL_new(ctx.get()));
+  ASSERT_TRUE(ssl);
+
+  const struct {
+    const char *name;
+    std::vector<uint8_t> in;
+    bool is_probably_java;
+  } kTests[] = {
+      {"JDK 6 with IcedTea curve list",
+       {0x03, 0x01, 0x59, 0xb3, 0x10, 0xea, 0x17, 0xfe, 0x9e, 0x69, 0x7e, 0x79,
+        0xc7, 0x33, 0x10, 0x81, 0x73, 0x9e, 0xe7, 0xbf, 0x78, 0x4a, 0x33, 0x76,
+        0x12, 0x1f, 0xc5, 0x6d, 0x28, 0x8d, 0xd7, 0x60, 0xf0, 0x5e, 0x00, 0x00,
+        0x2c, 0xc0, 0x0a, 0xc0, 0x14, 0x00, 0x35, 0xc0, 0x05, 0xc0, 0x0f, 0x00,
+        0x39, 0x00, 0x38, 0xc0, 0x09, 0xc0, 0x13, 0x00, 0x2f, 0xc0, 0x04, 0xc0,
+        0x0e, 0x00, 0x33, 0x00, 0x32, 0xc0, 0x08, 0xc0, 0x12, 0x00, 0x0a, 0xc0,
+        0x03, 0xc0, 0x0d, 0x00, 0x16, 0x00, 0x13, 0x00, 0xff, 0x01, 0x00, 0x00,
+        0x12, 0x00, 0x0a, 0x00, 0x08, 0x00, 0x06, 0x00, 0x17, 0x00, 0x18, 0x00,
+        0x19, 0x00, 0x0b, 0x00, 0x02, 0x01, 0x00},
+       true},
+      {"JDK 7 with IcedTea curve list",
+       {0x03, 0x03, 0x59, 0xb3, 0x10, 0xc8, 0x03, 0x7d, 0x10, 0x5a, 0x6b, 0x6e,
+        0x84, 0xa5, 0xbe, 0x6e, 0xe2, 0xd0, 0xb4, 0xb5, 0xcf, 0x6d, 0xa1, 0x58,
+        0xb5, 0xc0, 0x05, 0x63, 0xf6, 0x81, 0xda, 0xc2, 0xa0, 0xb0, 0x00, 0x00,
+        0x48, 0xc0, 0x24, 0xc0, 0x28, 0x00, 0x3d, 0xc0, 0x26, 0xc0, 0x2a, 0x00,
+        0x6b, 0x00, 0x6a, 0xc0, 0x0a, 0xc0, 0x14, 0x00, 0x35, 0xc0, 0x05, 0xc0,
+        0x0f, 0x00, 0x39, 0x00, 0x38, 0xc0, 0x23, 0xc0, 0x27, 0x00, 0x3c, 0xc0,
+        0x25, 0xc0, 0x29, 0x00, 0x67, 0x00, 0x40, 0xc0, 0x09, 0xc0, 0x13, 0x00,
+        0x2f, 0xc0, 0x04, 0xc0, 0x0e, 0x00, 0x33, 0x00, 0x32, 0xc0, 0x08, 0xc0,
+        0x12, 0x00, 0x0a, 0xc0, 0x03, 0xc0, 0x0d, 0x00, 0x16, 0x00, 0x13, 0x00,
+        0xff, 0x01, 0x00, 0x00, 0x2e, 0x00, 0x0a, 0x00, 0x08, 0x00, 0x06, 0x00,
+        0x17, 0x00, 0x18, 0x00, 0x19, 0x00, 0x0b, 0x00, 0x02, 0x01, 0x00, 0x00,
+        0x0d, 0x00, 0x18, 0x00, 0x16, 0x06, 0x03, 0x06, 0x01, 0x05, 0x03, 0x05,
+        0x01, 0x04, 0x03, 0x04, 0x01, 0x03, 0x03, 0x03, 0x01, 0x02, 0x03, 0x02,
+        0x01, 0x02, 0x02},
+       true},
+      {"JDK 8",
+       {0x03, 0x03, 0x59, 0xb3, 0x10, 0xfc, 0xc7, 0xcb, 0x36, 0x85, 0x8c, 0x00,
+        0xd6, 0xa7, 0x5b, 0xfb, 0x98, 0xbe, 0xf9, 0xa3, 0xa0, 0x01, 0xff, 0x35,
+        0xb9, 0x1a, 0xc1, 0x72, 0xf1, 0x51, 0x4b, 0x49, 0x96, 0x1a, 0x00, 0x00,
+        0x70, 0xc0, 0x24, 0xc0, 0x28, 0x00, 0x3d, 0xc0, 0x26, 0xc0, 0x2a, 0x00,
+        0x6b, 0x00, 0x6a, 0xc0, 0x0a, 0xc0, 0x14, 0x00, 0x35, 0xc0, 0x05, 0xc0,
+        0x0f, 0x00, 0x39, 0x00, 0x38, 0xc0, 0x23, 0xc0, 0x27, 0x00, 0x3c, 0xc0,
+        0x25, 0xc0, 0x29, 0x00, 0x67, 0x00, 0x40, 0xc0, 0x09, 0xc0, 0x13, 0x00,
+        0x2f, 0xc0, 0x04, 0xc0, 0x0e, 0x00, 0x33, 0x00, 0x32, 0xc0, 0x2c, 0xc0,
+        0x2b, 0xc0, 0x30, 0x00, 0x9d, 0xc0, 0x2e, 0xc0, 0x32, 0x00, 0x9f, 0x00,
+        0xa3, 0xc0, 0x2f, 0x00, 0x9c, 0xc0, 0x2d, 0xc0, 0x31, 0x00, 0x9e, 0x00,
+        0xa2, 0xc0, 0x08, 0xc0, 0x12, 0x00, 0x0a, 0xc0, 0x03, 0xc0, 0x0d, 0x00,
+        0x16, 0x00, 0x13, 0xc0, 0x07, 0xc0, 0x11, 0x00, 0x05, 0xc0, 0x02, 0xc0,
+        0x0c, 0x00, 0x04, 0x00, 0xff, 0x01, 0x00, 0x00, 0x5c, 0x00, 0x0a, 0x00,
+        0x34, 0x00, 0x32, 0x00, 0x17, 0x00, 0x01, 0x00, 0x03, 0x00, 0x13, 0x00,
+        0x15, 0x00, 0x06, 0x00, 0x07, 0x00, 0x09, 0x00, 0x0a, 0x00, 0x18, 0x00,
+        0x0b, 0x00, 0x0c, 0x00, 0x19, 0x00, 0x0d, 0x00, 0x0e, 0x00, 0x0f, 0x00,
+        0x10, 0x00, 0x11, 0x00, 0x02, 0x00, 0x12, 0x00, 0x04, 0x00, 0x05, 0x00,
+        0x14, 0x00, 0x08, 0x00, 0x16, 0x00, 0x0b, 0x00, 0x02, 0x01, 0x00, 0x00,
+        0x0d, 0x00, 0x1a, 0x00, 0x18, 0x06, 0x03, 0x06, 0x01, 0x05, 0x03, 0x05,
+        0x01, 0x04, 0x03, 0x04, 0x01, 0x03, 0x03, 0x03, 0x01, 0x02, 0x03, 0x02,
+        0x01, 0x02, 0x02, 0x01, 0x01},
+       true},
+      {"JDK 9",
+       {0x03, 0x03, 0x0c, 0xe6, 0x06, 0xc6, 0x5d, 0x38, 0xb4, 0x5e, 0x3a, 0xd5,
+        0xb0, 0x5f, 0x5b, 0x84, 0x3b, 0xff, 0x86, 0x4f, 0xb0, 0x3f, 0xc1, 0xfd,
+        0x08, 0xf0, 0x97, 0xf3, 0x56, 0x44, 0x08, 0xe2, 0xdd, 0x2a, 0x00, 0x00,
+        0x64, 0xc0, 0x2c, 0xc0, 0x2b, 0xc0, 0x30, 0x00, 0x9d, 0xc0, 0x2e, 0xc0,
+        0x32, 0x00, 0x9f, 0x00, 0xa3, 0xc0, 0x2f, 0x00, 0x9c, 0xc0, 0x2d, 0xc0,
+        0x31, 0x00, 0x9e, 0x00, 0xa2, 0xc0, 0x24, 0xc0, 0x28, 0x00, 0x3d, 0xc0,
+        0x26, 0xc0, 0x2a, 0x00, 0x6b, 0x00, 0x6a, 0xc0, 0x0a, 0xc0, 0x14, 0x00,
+        0x35, 0xc0, 0x05, 0xc0, 0x0f, 0x00, 0x39, 0x00, 0x38, 0xc0, 0x23, 0xc0,
+        0x27, 0x00, 0x3c, 0xc0, 0x25, 0xc0, 0x29, 0x00, 0x67, 0x00, 0x40, 0xc0,
+        0x09, 0xc0, 0x13, 0x00, 0x2f, 0xc0, 0x04, 0xc0, 0x0e, 0x00, 0x33, 0x00,
+        0x32, 0xc0, 0x08, 0xc0, 0x12, 0x00, 0x0a, 0xc0, 0x03, 0xc0, 0x0d, 0x00,
+        0x16, 0x00, 0x13, 0x00, 0xff, 0x01, 0x00, 0x00, 0x5d, 0x00, 0x0a, 0x00,
+        0x16, 0x00, 0x14, 0x00, 0x17, 0x00, 0x18, 0x00, 0x19, 0x00, 0x09, 0x00,
+        0x0a, 0x00, 0x0b, 0x00, 0x0c, 0x00, 0x0d, 0x00, 0x0e, 0x00, 0x16, 0x00,
+        0x0b, 0x00, 0x02, 0x01, 0x00, 0x00, 0x0d, 0x00, 0x1c, 0x00, 0x1a, 0x06,
+        0x03, 0x06, 0x01, 0x05, 0x03, 0x05, 0x01, 0x04, 0x03, 0x04, 0x01, 0x04,
+        0x02, 0x03, 0x03, 0x03, 0x01, 0x03, 0x02, 0x02, 0x03, 0x02, 0x01, 0x02,
+        0x02, 0x00, 0x11, 0x00, 0x10, 0x00, 0x0e, 0x02, 0x00, 0x04, 0x00, 0x00,
+        0x00, 0x00, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00,
+        0x05, 0x01, 0x00, 0x00, 0x00, 0x00},
+       true},
+      {"JDK 9 with SNI and ALPN enabled and no SCSV cipher",
+       {0x03, 0x03, 0x37, 0xa6, 0x4b, 0x58, 0x02, 0xd0, 0x77, 0xe4, 0x48, 0xaf,
+        0x90, 0x50, 0x45, 0xd5, 0x2f, 0xe7, 0x98, 0x5d, 0x54, 0x93, 0x85, 0x3a,
+        0xde, 0xb6, 0xaa, 0x47, 0xef, 0x7f, 0xb5, 0x52, 0xe6, 0xf8, 0x00, 0x00,
+        0x02, 0xc0, 0x24, 0x01, 0x00, 0x00, 0x87, 0x00, 0x0a, 0x00, 0x16, 0x00,
+        0x14, 0x00, 0x17, 0x00, 0x18, 0x00, 0x19, 0x00, 0x09, 0x00, 0x0a, 0x00,
+        0x0b, 0x00, 0x0c, 0x00, 0x0d, 0x00, 0x0e, 0x00, 0x16, 0x00, 0x0b, 0x00,
+        0x02, 0x01, 0x00, 0x00, 0x0d, 0x00, 0x1c, 0x00, 0x1a, 0x06, 0x03, 0x06,
+        0x01, 0x05, 0x03, 0x05, 0x01, 0x04, 0x03, 0x04, 0x01, 0x04, 0x02, 0x03,
+        0x03, 0x03, 0x01, 0x03, 0x02, 0x02, 0x03, 0x02, 0x01, 0x02, 0x02, 0x00,
+        0x00, 0x00, 0x10, 0x00, 0x0e, 0x00, 0x00, 0x0b, 0x65, 0x78, 0x61, 0x6d,
+        0x70, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d, 0x00, 0x11, 0x00, 0x10, 0x00,
+        0x0e, 0x02, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x04, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x05, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x10, 0x00, 0x0d, 0x00, 0x0b, 0x07, 0x68, 0x74, 0x74, 0x70, 0x31,
+        0x2e, 0x31, 0x02, 0x68, 0x32, 0xff, 0x01, 0x00, 0x01, 0x00},
+       true},
+      {"JDK 9 with EMS extension appended",
+       {0x03, 0x03, 0x0c, 0xe6, 0x06, 0xc6, 0x5d, 0x38, 0xb4, 0x5e, 0x3a, 0xd5,
+        0xb0, 0x5f, 0x5b, 0x84, 0x3b, 0xff, 0x86, 0x4f, 0xb0, 0x3f, 0xc1, 0xfd,
+        0x08, 0xf0, 0x97, 0xf3, 0x56, 0x44, 0x08, 0xe2, 0xdd, 0x2a, 0x00, 0x00,
+        0x64, 0xc0, 0x2c, 0xc0, 0x2b, 0xc0, 0x30, 0x00, 0x9d, 0xc0, 0x2e, 0xc0,
+        0x32, 0x00, 0x9f, 0x00, 0xa3, 0xc0, 0x2f, 0x00, 0x9c, 0xc0, 0x2d, 0xc0,
+        0x31, 0x00, 0x9e, 0x00, 0xa2, 0xc0, 0x24, 0xc0, 0x28, 0x00, 0x3d, 0xc0,
+        0x26, 0xc0, 0x2a, 0x00, 0x6b, 0x00, 0x6a, 0xc0, 0x0a, 0xc0, 0x14, 0x00,
+        0x35, 0xc0, 0x05, 0xc0, 0x0f, 0x00, 0x39, 0x00, 0x38, 0xc0, 0x23, 0xc0,
+        0x27, 0x00, 0x3c, 0xc0, 0x25, 0xc0, 0x29, 0x00, 0x67, 0x00, 0x40, 0xc0,
+        0x09, 0xc0, 0x13, 0x00, 0x2f, 0xc0, 0x04, 0xc0, 0x0e, 0x00, 0x33, 0x00,
+        0x32, 0xc0, 0x08, 0xc0, 0x12, 0x00, 0x0a, 0xc0, 0x03, 0xc0, 0x0d, 0x00,
+        0x16, 0x00, 0x13, 0x00, 0xff, 0x01, 0x00, 0x00, 0x61, 0x00, 0x0a, 0x00,
+        0x16, 0x00, 0x14, 0x00, 0x17, 0x00, 0x18, 0x00, 0x19, 0x00, 0x09, 0x00,
+        0x0a, 0x00, 0x0b, 0x00, 0x0c, 0x00, 0x0d, 0x00, 0x0e, 0x00, 0x16, 0x00,
+        0x0b, 0x00, 0x02, 0x01, 0x00, 0x00, 0x0d, 0x00, 0x1c, 0x00, 0x1a, 0x06,
+        0x03, 0x06, 0x01, 0x05, 0x03, 0x05, 0x01, 0x04, 0x03, 0x04, 0x01, 0x04,
+        0x02, 0x03, 0x03, 0x03, 0x01, 0x03, 0x02, 0x02, 0x03, 0x02, 0x01, 0x02,
+        0x02, 0x00, 0x11, 0x00, 0x10, 0x00, 0x0e, 0x02, 0x00, 0x04, 0x00, 0x00,
+        0x00, 0x00, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00,
+        0x05, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00},
+       false},
+      {"Chrome 61",
+       {0x03, 0x03, 0x33, 0x43, 0x8a, 0x6f, 0x76, 0xdd, 0x84, 0x3f, 0x8d, 0xaa,
+        0x43, 0xf1, 0x86, 0xee, 0xdd, 0x97, 0x96, 0x54, 0xf6, 0x17, 0x2c, 0xde,
+        0x69, 0xfe, 0x5e, 0x53, 0xaa, 0x47, 0xee, 0xad, 0xd7, 0x47, 0x00, 0x00,
+        0x1c, 0x3a, 0x3a, 0xc0, 0x2b, 0xc0, 0x2f, 0xc0, 0x2c, 0xc0, 0x30, 0xcc,
+        0xa9, 0xcc, 0xa8, 0xc0, 0x13, 0xc0, 0x14, 0x00, 0x9c, 0x00, 0x9d, 0x00,
+        0x2f, 0x00, 0x35, 0x00, 0x0a, 0x01, 0x00, 0x00, 0x77, 0x8a, 0x8a, 0x00,
+        0x00, 0xff, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00, 0x0c,
+        0x00, 0x00, 0x09, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x68, 0x6f, 0x73, 0x74,
+        0x00, 0x17, 0x00, 0x00, 0x00, 0x23, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x14,
+        0x00, 0x12, 0x04, 0x03, 0x08, 0x04, 0x04, 0x01, 0x05, 0x03, 0x08, 0x05,
+        0x05, 0x01, 0x08, 0x06, 0x06, 0x01, 0x02, 0x01, 0x00, 0x05, 0x00, 0x05,
+        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x12, 0x00, 0x00, 0x00, 0x10, 0x00,
+        0x0e, 0x00, 0x0c, 0x02, 0x68, 0x32, 0x08, 0x68, 0x74, 0x74, 0x70, 0x2f,
+        0x31, 0x2e, 0x31, 0x75, 0x50, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x02, 0x01,
+        0x00, 0x00, 0x0a, 0x00, 0x0a, 0x00, 0x08, 0x4a, 0x4a, 0x00, 0x1d, 0x00,
+        0x17, 0x00, 0x18, 0x6a, 0x6a, 0x00, 0x01, 0x00},
+       false},
+      {"Firefox 55",
+       {0x03, 0x03, 0x06, 0x8e, 0xf8, 0xf7, 0x7a, 0xfd, 0xce, 0x45, 0xb0, 0x39,
+        0xbe, 0xa4, 0x55, 0x27, 0xe2, 0x80, 0xc4, 0x0a, 0xbd, 0xce, 0x56, 0x7a,
+        0xbc, 0x1f, 0x26, 0x2f, 0xfa, 0xb9, 0xa1, 0x7e, 0xe6, 0xde, 0x00, 0x00,
+        0x1e, 0xc0, 0x2b, 0xc0, 0x2f, 0xcc, 0xa9, 0xcc, 0xa8, 0xc0, 0x2c, 0xc0,
+        0x30, 0xc0, 0x0a, 0xc0, 0x09, 0xc0, 0x13, 0xc0, 0x14, 0x00, 0x33, 0x00,
+        0x39, 0x00, 0x2f, 0x00, 0x35, 0x00, 0x0a, 0x01, 0x00, 0x00, 0x6a, 0x00,
+        0x00, 0x00, 0x0e, 0x00, 0x0c, 0x00, 0x00, 0x09, 0x6c, 0x6f, 0x63, 0x61,
+        0x6c, 0x68, 0x6f, 0x73, 0x74, 0x00, 0x17, 0x00, 0x00, 0xff, 0x01, 0x00,
+        0x01, 0x00, 0x00, 0x0a, 0x00, 0x0a, 0x00, 0x08, 0x00, 0x1d, 0x00, 0x17,
+        0x00, 0x18, 0x00, 0x19, 0x00, 0x0b, 0x00, 0x02, 0x01, 0x00, 0x00, 0x23,
+        0x00, 0x00, 0x00, 0x10, 0x00, 0x0e, 0x00, 0x0c, 0x02, 0x68, 0x32, 0x08,
+        0x68, 0x74, 0x74, 0x70, 0x2f, 0x31, 0x2e, 0x31, 0x00, 0x05, 0x00, 0x05,
+        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x18, 0x00, 0x16, 0x04,
+        0x03, 0x05, 0x03, 0x06, 0x03, 0x08, 0x04, 0x08, 0x05, 0x08, 0x06, 0x04,
+        0x01, 0x05, 0x01, 0x06, 0x01, 0x02, 0x03, 0x02, 0x01},
+       false},
+  };
+  for (const auto &t : kTests) {
+    SCOPED_TRACE(t.name);
+
+    bssl::SSLMessage msg;
+    msg.is_v2_hello = false;
+    msg.type = SSL3_MT_CLIENT_HELLO;
+    CBS_init(&msg.body, t.in.data(), t.in.size());
+    CBS_init(&msg.raw, nullptr, 0);  // unused
+
+    SSL_CLIENT_HELLO client_hello;
+    ASSERT_TRUE(bssl::ssl_client_hello_init(ssl.get(), &client_hello, msg));
+    EXPECT_EQ(t.is_probably_java, bssl::ssl_is_probably_java(&client_hello));
+  }
+}
+
 // TODO(davidben): Convert this file to GTest properly.
 TEST(SSLTest, AllTests) {
   if (!TestSSL_SESSIONEncoding(kOpenSSLSession) ||
@@ -4046,21 +4005,10 @@ TEST(SSLTest, AllTests) {
       // Test the padding extension at TLS 1.3 with a TLS 1.3 session, so there
       // will be a PSK binder after the padding extension.
       !TestPaddingExtension(TLS1_3_VERSION, TLS1_3_DRAFT_VERSION) ||
-      !ForEachVersion(TestSequenceNumber) ||
-      !ForEachVersion(TestOneSidedShutdown) ||
-      !ForEachVersion(TestGetPeerCertificate) ||
-      !ForEachVersion(TestNoPeerCertificate) ||
-      !ForEachVersion(TestRetainOnlySHA256OfCerts) ||
-      !TestClientHello() ||
-      !ForEachVersion(TestSessionIDContext) ||
-      !ForEachVersion(TestSessionTimeout) ||
-      !ForEachVersion(TestSNICallback) ||
-      !ForEachVersion(TestVersion) ||
-      !ForEachVersion(TestALPNCipherAvailable) ||
-      !ForEachVersion(TestSSLClearSessionResumption) ||
-      !ForEachVersion(TestAutoChain) ||
-      !ForEachVersion(TestSSLWriteRetry) ||
-      !ForEachVersion(TestRecordCallback)) {
+      !TestClientHello()) {
     ADD_FAILURE() << "Tests failed";
   }
 }
+
+}  // namespace
+}  // namespace bssl

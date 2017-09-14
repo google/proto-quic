@@ -1521,6 +1521,9 @@ now we are only interested in H264, VP8 and VP9.
 </rappor-metric>
 
 <rappor-metric name="Net.ErrAborted.Fast" type="ETLD_PLUS_ONE">
+  <obsolete>
+    Deprecated Aug 2017, metric just showed popular sites.
+  </obsolete>
   <owner>csharrison@chromium.org</owner>
   <summary>
     The domain and registry of the URL that leads to a main frame ERR_ABORTED
@@ -1529,6 +1532,9 @@ now we are only interested in H264, VP8 and VP9.
 </rappor-metric>
 
 <rappor-metric name="Net.ErrAborted.Slow" type="ETLD_PLUS_ONE">
+  <obsolete>
+    Deprecated Aug 2017, metric just showed popular sites.
+  </obsolete>
   <owner>csharrison@chromium.org</owner>
   <summary>
     The domain and registry of the URL that leads to a main frame ERR_ABORTED

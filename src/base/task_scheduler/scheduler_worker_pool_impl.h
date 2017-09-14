@@ -18,6 +18,7 @@
 #include "base/memory/ref_counted.h"
 #include "base/synchronization/atomic_flag.h"
 #include "base/synchronization/condition_variable.h"
+#include "base/task_runner.h"
 #include "base/task_scheduler/priority_queue.h"
 #include "base/task_scheduler/scheduler_lock.h"
 #include "base/task_scheduler/scheduler_worker.h"
@@ -31,7 +32,6 @@ namespace base {
 
 class HistogramBase;
 class SchedulerWorkerPoolParams;
-class TaskTraits;
 
 namespace internal {
 
@@ -61,8 +61,10 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
       DelayedTaskManager* delayed_task_manager);
 
   // Creates workers following the |params| specification, allowing existing and
-  // future tasks to run. Can only be called once. CHECKs on failure.
-  void Start(const SchedulerWorkerPoolParams& params);
+  // future tasks to run. Uses |service_thread_task_runner| to monitor for
+  // blocked threads in the pool. Can only be called once. CHECKs on failure.
+  void Start(const SchedulerWorkerPoolParams& params,
+             scoped_refptr<TaskRunner> service_thread_task_runner);
 
   // Destroying a SchedulerWorkerPoolImpl returned by Create() is not allowed in
   // production; it is always leaked. In tests, it can only be destroyed after
@@ -70,14 +72,7 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   ~SchedulerWorkerPoolImpl() override;
 
   // SchedulerWorkerPool:
-  scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
-      const TaskTraits& traits) override;
-  scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunnerWithTraits(
-      const TaskTraits& traits) override;
-  bool PostTaskWithSequence(std::unique_ptr<Task> task,
-                            scoped_refptr<Sequence> sequence) override;
-  void PostTaskWithSequenceNow(std::unique_ptr<Task> task,
-                               scoped_refptr<Sequence> sequence) override;
+  void JoinForTesting() override;
 
   const HistogramBase* num_tasks_before_detach_histogram() const {
     return num_tasks_before_detach_histogram_;
@@ -89,20 +84,17 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
 
   void GetHistograms(std::vector<const HistogramBase*>* histograms) const;
 
-  // Returns the maximum number of tasks that can run concurrently in this pool.
+  // Returns the maximum number of non-blocked tasks that can run concurrently
+  // in this pool.
   //
   // TODO(fdoray): Remove this method. https://crbug.com/687264
-  int GetMaxConcurrentTasksDeprecated() const;
+  int GetMaxConcurrentNonBlockedTasksDeprecated() const;
+
+  // Waits until at least |n| workers are idle.
+  void WaitForWorkersIdleForTesting(size_t n);
 
   // Waits until all workers are idle.
   void WaitForAllWorkersIdleForTesting();
-
-  // Joins all workers of this worker pool. Tasks that are already running are
-  // allowed to complete their execution. It is invalid to post a task after
-  // this is called. TaskTracker::Flush() can be called before this to complete
-  // existing tasks, which might otherwise post a task during JoinForTesting().
-  // This can only be called once.
-  void JoinForTesting();
 
   // Disallows worker cleanup. If the suggested reclaim time is not
   // TimeDelta::Max(), the test must call this before JoinForTesting() to reduce
@@ -116,24 +108,56 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // Returns |worker_capacity_|.
   size_t GetWorkerCapacityForTesting();
 
+  // Returns the number of workers that are idle (i.e. not running tasks).
+  size_t NumberOfIdleWorkersForTesting();
+
+  // Sets the MayBlock waiting threshold to TimeDelta::Max().
+  void MaximizeMayBlockThresholdForTesting();
+
  private:
   class SchedulerWorkerDelegateImpl;
+
+  // Friend tests so that they can access |kBlockedWorkersPollPeriod| and
+  // BlockedThreshold().
+  friend class TaskSchedulerWorkerPoolBlockingTest;
+  friend class TaskSchedulerWorkerPoolMayBlockTest;
+
+  // The period between calls to AdjustWorkerCapacity() when the pool is at
+  // capacity. This value was set unscientifically based on intuition and may be
+  // adjusted in the future.
+  static constexpr TimeDelta kBlockedWorkersPollPeriod =
+      TimeDelta::FromMilliseconds(50);
 
   SchedulerWorkerPoolImpl(const SchedulerWorkerPoolParams& params,
                           TaskTracker* task_tracker,
                           DelayedTaskManager* delayed_task_manager);
 
+  // SchedulerWorkerPool:
+  void ScheduleSequence(scoped_refptr<Sequence> sequence) override;
+
+  // Waits until at least |n| workers are idle. |lock_| must be held to call
+  // this function.
+  void WaitForWorkersIdleLockRequiredForTesting(size_t n);
+
   // Wakes up the last worker from this worker pool to go idle, if any.
   void WakeUpOneWorker();
 
+  // Performs the same action as WakeUpOneWorker() except asserts |lock_| is
+  // acquired rather than acquires it.
+  void WakeUpOneWorkerLockRequired();
+
+  // Adds a worker, if needed, to maintain one idle worker, |worker_capacity_|
+  // permitting.
+  void MaintainAtLeastOneIdleWorkerLockRequired();
+
   // Adds |worker| to |idle_workers_stack_|.
-  void AddToIdleWorkersStack(SchedulerWorker* worker);
+  void AddToIdleWorkersStackLockRequired(SchedulerWorker* worker);
 
   // Peeks from |idle_workers_stack_|.
-  const SchedulerWorker* PeekAtIdleWorkersStack() const;
+  const SchedulerWorker* PeekAtIdleWorkersStackLockRequired() const;
 
   // Removes |worker| from |idle_workers_stack_|.
-  void RemoveFromIdleWorkersStack(SchedulerWorker* worker);
+  void RemoveFromIdleWorkersStackLockRequired(SchedulerWorker* worker);
 
   // Returns true if worker cleanup is permitted.
   bool CanWorkerCleanupForTesting();
@@ -141,7 +165,31 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // Tries to add a new SchedulerWorker to the pool. Returns the new
   // SchedulerWorker on success, nullptr otherwise. Cannot be called before
   // Start(). Must be called under the protection of |lock_|.
-  SchedulerWorker* CreateRegisterAndStartSchedulerWorker();
+  SchedulerWorker* CreateRegisterAndStartSchedulerWorkerLockRequired();
+
+  // Returns the number of workers in the pool that should not run tasks due to
+  // the pool being over worker capacity.
+  size_t NumberOfExcessWorkersLockRequired() const;
+
+  // Examines the list of SchedulerWorkers and increments |worker_capacity_| for
+  // each worker that has been within the scope of a MAY_BLOCK
+  // ScopedBlockingCall for more than BlockedThreshold().
+  void AdjustWorkerCapacity();
+
+  // Returns the threshold after which the worker capacity is increased to
+  // compensate for a worker that is within a MAY_BLOCK ScopedBlockingCall.
+  TimeDelta MayBlockThreshold() const;
+
+  // Starts calling AdjustWorkerCapacity() periodically on
+  // |service_thread_task_runner_|.
+  void PostAdjustWorkerCapacityTaskLockRequired();
+
+  // Returns true if AdjustWorkerCapacity() should periodically be called on
+  // |service_thread_task_runner_|.
+  bool ShouldPeriodicallyAdjustWorkerCapacityLockRequired();
+
+  void DecrementWorkerCapacityLockRequired();
+  void IncrementWorkerCapacityLockRequired();
 
   const std::string name_;
   const ThreadPriority priority_hint_;
@@ -156,8 +204,12 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   SchedulerBackwardCompatibility backward_compatibility_;
 
   // Synchronizes accesses to |workers_|, |worker_capacity_|,
-  // |idle_workers_stack_|, |idle_workers_stack_cv_for_testing_|,
-  // |num_wake_ups_before_start_|, and |cleanup_timestamps_| . Has
+  // |num_pending_may_block_workers_|, |idle_workers_stack_|,
+  // |idle_workers_stack_cv_for_testing_|, |num_wake_ups_before_start_|,
+  // |cleanup_timestamps_|, |polling_worker_capacity_|,
+  // |SchedulerWorkerDelegateImpl::is_on_idle_workers_stack_|,
+  // |SchedulerWorkerDelegateImpl::incremented_worker_capacity_since_blocked_|
+  // and |SchedulerWorkerDelegateImpl::may_block_start_time_|. Has
   // |shared_priority_queue_|'s lock as its predecessor so that a worker can be
   // pushed to |idle_workers_stack_| within the scope of a Transaction (more
   // details in GetWork()).
@@ -170,6 +222,13 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // workers.
   size_t worker_capacity_ = 0;
 
+  // Initial value of |worker_capacity_| as set in Start().
+  size_t initial_worker_capacity_ = 0;
+
+  // Number workers that are within the scope of a MAY_BLOCK ScopedBlockingCall
+  // but haven't caused a worker capacity increase yet.
+  int num_pending_may_block_workers_ = 0;
+
   // Stack of idle workers. Initially, all workers are on this stack. A worker
   // is removed from the stack before its WakeUp() function is called and when
   // it receives work from GetWork() (a worker calls GetWork() when its sleep
@@ -177,7 +236,7 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // is pushed on this stack when it receives nullptr from GetWork().
   SchedulerWorkerStack idle_workers_stack_;
 
-  // Signaled when all workers become idle.
+  // Signaled when a worker is added to the idle workers stack.
   std::unique_ptr<ConditionVariable> idle_workers_stack_cv_for_testing_;
 
   // Number of wake ups that occurred before Start(). Never modified after
@@ -187,6 +246,14 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // Stack that contains the timestamps of when workers get cleaned up.
   // Timestamps get popped off the stack as new workers are added.
   std::stack<TimeTicks, std::vector<TimeTicks>> cleanup_timestamps_;
+
+  // Whether we are currently polling for necessary adjustments to
+  // |worker_capacity_|.
+  bool polling_worker_capacity_ = false;
+
+  // Used for testing and makes MayBlockThreshold() return the maximum
+  // TimeDelta.
+  AtomicFlag maximum_blocked_threshold_for_testing_;
 
   // Signaled once JoinForTesting() has returned.
   WaitableEvent join_for_testing_returned_;
@@ -211,8 +278,7 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // Intentionally leaked.
   HistogramBase* const num_tasks_between_waits_histogram_;
 
-  TaskTracker* const task_tracker_;
-  DelayedTaskManager* const delayed_task_manager_;
+  scoped_refptr<TaskRunner> service_thread_task_runner_;
 
   DISALLOW_COPY_AND_ASSIGN(SchedulerWorkerPoolImpl);
 };

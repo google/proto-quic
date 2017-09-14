@@ -17,30 +17,48 @@ import java.util.concurrent.TimeUnit;
  */
 public class CachedMetrics {
     /**
-     * Creating an instance of a subclass of this class automatically adds it to a list of objects
-     * that are committed when the native library is available.
+     * Base class for cached metric objects. Subclasses are expected to call
+     * addToCache() when some metric state gets recorded that requires a later
+     * commit operation when the native library is loaded.
      */
-    private abstract static class CachedHistogram {
-        private static final List<CachedHistogram> sEvents = new ArrayList<CachedHistogram>();
+    private abstract static class CachedMetric {
+        private static final List<CachedMetric> sMetrics = new ArrayList<CachedMetric>();
 
-        protected final String mHistogramName;
+        protected final String mName;
+        protected boolean mCached;
 
         /**
-         * @param histogramName Name of the histogram to record.
+         * @param name Name of the metric to record.
          */
-        protected CachedHistogram(String histogramName) {
-            mHistogramName = histogramName;
-            sEvents.add(this);
+        protected CachedMetric(String name) {
+            mName = name;
         }
 
-        /** Commits the histogram. Expects the native library to be loaded. */
+        /**
+         * Adds this object to the sMetrics cache, if it hasn't been added already.
+         * Must be called while holding the synchronized(sMetrics) lock.
+         * Note: The synchronization is not done inside this function because subclasses
+         * need to increment their held values under lock to ensure thread-safety.
+         */
+        protected final void addToCache() {
+            assert Thread.holdsLock(sMetrics);
+
+            if (mCached) return;
+            sMetrics.add(this);
+            mCached = true;
+        }
+
+        /**
+         * Commits the metric. Expects the native library to be loaded.
+         * Must be called while holding the synchronized(sMetrics) lock.
+         */
         protected abstract void commitAndClear();
     }
 
     /**
      * Caches an action that will be recorded after native side is loaded.
      */
-    public static class ActionEvent extends CachedHistogram {
+    public static class ActionEvent extends CachedMetric {
         private int mCount;
 
         public ActionEvent(String actionName) {
@@ -48,15 +66,18 @@ public class CachedMetrics {
         }
 
         public void record() {
-            if (LibraryLoader.isInitialized()) {
-                recordWithNative();
-            } else {
-                mCount++;
+            synchronized (CachedMetric.sMetrics) {
+                if (LibraryLoader.isInitialized()) {
+                    recordWithNative();
+                } else {
+                    mCount++;
+                    addToCache();
+                }
             }
         }
 
         private void recordWithNative() {
-            RecordUserAction.record(mHistogramName);
+            RecordUserAction.record(mName);
         }
 
         @Override
@@ -69,7 +90,7 @@ public class CachedMetrics {
     }
 
     /** Caches a set of integer histogram samples. */
-    public static class SparseHistogramSample extends CachedHistogram {
+    public static class SparseHistogramSample extends CachedMetric {
         private final List<Integer> mSamples = new ArrayList<Integer>();
 
         public SparseHistogramSample(String histogramName) {
@@ -77,15 +98,18 @@ public class CachedMetrics {
         }
 
         public void record(int sample) {
-            if (LibraryLoader.isInitialized()) {
-                recordWithNative(sample);
-            } else {
-                mSamples.add(sample);
+            synchronized (CachedMetric.sMetrics) {
+                if (LibraryLoader.isInitialized()) {
+                    recordWithNative(sample);
+                } else {
+                    mSamples.add(sample);
+                    addToCache();
+                }
             }
         }
 
         private void recordWithNative(int sample) {
-            RecordHistogram.recordSparseSlowlyHistogram(mHistogramName, sample);
+            RecordHistogram.recordSparseSlowlyHistogram(mName, sample);
         }
 
         @Override
@@ -98,7 +122,7 @@ public class CachedMetrics {
     }
 
     /** Caches a set of enumerated histogram samples. */
-    public static class EnumeratedHistogramSample extends CachedHistogram {
+    public static class EnumeratedHistogramSample extends CachedMetric {
         private final List<Integer> mSamples = new ArrayList<Integer>();
         private final int mMaxValue;
 
@@ -108,15 +132,18 @@ public class CachedMetrics {
         }
 
         public void record(int sample) {
-            if (LibraryLoader.isInitialized()) {
-                recordWithNative(sample);
-            } else {
-                mSamples.add(sample);
+            synchronized (CachedMetric.sMetrics) {
+                if (LibraryLoader.isInitialized()) {
+                    recordWithNative(sample);
+                } else {
+                    mSamples.add(sample);
+                    addToCache();
+                }
             }
         }
 
         private void recordWithNative(int sample) {
-            RecordHistogram.recordEnumeratedHistogram(mHistogramName, sample, mMaxValue);
+            RecordHistogram.recordEnumeratedHistogram(mName, sample, mMaxValue);
         }
 
         @Override
@@ -129,7 +156,7 @@ public class CachedMetrics {
     }
 
     /** Caches a set of times histogram samples. */
-    public static class TimesHistogramSample extends CachedHistogram {
+    public static class TimesHistogramSample extends CachedMetric {
         private final List<Long> mSamples = new ArrayList<Long>();
         private final TimeUnit mTimeUnit;
 
@@ -139,15 +166,18 @@ public class CachedMetrics {
         }
 
         public void record(long sample) {
-            if (LibraryLoader.isInitialized()) {
-                recordWithNative(sample);
-            } else {
-                mSamples.add(sample);
+            synchronized (CachedMetric.sMetrics) {
+                if (LibraryLoader.isInitialized()) {
+                    recordWithNative(sample);
+                } else {
+                    mSamples.add(sample);
+                    addToCache();
+                }
             }
         }
 
         private void recordWithNative(long sample) {
-            RecordHistogram.recordTimesHistogram(mHistogramName, sample, mTimeUnit);
+            RecordHistogram.recordTimesHistogram(mName, sample, mTimeUnit);
         }
 
         @Override
@@ -160,7 +190,7 @@ public class CachedMetrics {
     }
 
     /** Caches a set of boolean histogram samples. */
-    public static class BooleanHistogramSample extends CachedHistogram {
+    public static class BooleanHistogramSample extends CachedMetric {
         private final List<Boolean> mSamples = new ArrayList<Boolean>();
 
         public BooleanHistogramSample(String histogramName) {
@@ -168,15 +198,18 @@ public class CachedMetrics {
         }
 
         public void record(boolean sample) {
-            if (LibraryLoader.isInitialized()) {
-                recordWithNative(sample);
-            } else {
-                mSamples.add(sample);
+            synchronized (CachedMetric.sMetrics) {
+                if (LibraryLoader.isInitialized()) {
+                    recordWithNative(sample);
+                } else {
+                    mSamples.add(sample);
+                    addToCache();
+                }
             }
         }
 
         private void recordWithNative(boolean sample) {
-            RecordHistogram.recordBooleanHistogram(mHistogramName, sample);
+            RecordHistogram.recordBooleanHistogram(mName, sample);
         }
 
         @Override
@@ -193,6 +226,10 @@ public class CachedMetrics {
      * Should be called once the native library has been loaded.
      */
     public static void commitCachedMetrics() {
-        for (CachedHistogram event : CachedHistogram.sEvents) event.commitAndClear();
+        synchronized (CachedMetric.sMetrics) {
+            for (CachedMetric metric : CachedMetric.sMetrics) {
+                metric.commitAndClear();
+            }
+        }
     }
 }

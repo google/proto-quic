@@ -282,7 +282,7 @@ class PassedWrapper {
 };
 
 template <typename T>
-using Unwrapper = BindUnwrapTraits<typename std::decay<T>::type>;
+using Unwrapper = BindUnwrapTraits<std::decay_t<T>>;
 
 template <typename T>
 auto Unwrap(T&& o) -> decltype(Unwrapper<T>::Unwrap(std::forward<T>(o))) {
@@ -438,8 +438,7 @@ static inline internal::OwnedWrapper<T> Owned(T* o) {
 // Both versions of Passed() prevent T from being an lvalue reference. The first
 // via use of enable_if, and the second takes a T* which will not bind to T&.
 template <typename T,
-          typename std::enable_if<!std::is_lvalue_reference<T>::value>::type* =
-              nullptr>
+          std::enable_if_t<!std::is_lvalue_reference<T>::value>* = nullptr>
 static inline internal::PassedWrapper<T> Passed(T&& scoper) {
   return internal::PassedWrapper<T>(std::move(scoper));
 }
@@ -538,9 +537,9 @@ template <typename Functor, typename... BoundArgs>
 struct CallbackCancellationTraits<
     Functor,
     std::tuple<BoundArgs...>,
-    typename std::enable_if<
+    std::enable_if_t<
         internal::IsWeakMethod<internal::FunctorTraits<Functor>::is_method,
-                               BoundArgs...>::value>::type> {
+                               BoundArgs...>::value>> {
   static constexpr bool is_cancellable = true;
 
   template <typename Receiver, typename... Args>
@@ -552,11 +551,19 @@ struct CallbackCancellationTraits<
 };
 
 // Specialization for a nested bind.
-template <typename Signature,
-          typename... BoundArgs,
-          internal::CopyMode copy_mode,
-          internal::RepeatMode repeat_mode>
-struct CallbackCancellationTraits<Callback<Signature, copy_mode, repeat_mode>,
+template <typename Signature, typename... BoundArgs>
+struct CallbackCancellationTraits<OnceCallback<Signature>,
+                                  std::tuple<BoundArgs...>> {
+  static constexpr bool is_cancellable = true;
+
+  template <typename Functor>
+  static bool IsCancelled(const Functor& functor, const BoundArgs&...) {
+    return functor.IsCancelled();
+  }
+};
+
+template <typename Signature, typename... BoundArgs>
+struct CallbackCancellationTraits<RepeatingCallback<Signature>,
                                   std::tuple<BoundArgs...>> {
   static constexpr bool is_cancellable = true;
 

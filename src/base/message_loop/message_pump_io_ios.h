@@ -37,7 +37,7 @@ class BASE_EXPORT MessagePumpIOSForIO : public MessagePumpNSRunLoop {
   // Object returned by WatchFileDescriptor to manage further watching.
   class FileDescriptorWatcher {
    public:
-    explicit FileDescriptorWatcher(const tracked_objects::Location& from_here);
+    explicit FileDescriptorWatcher(const Location& from_here);
     ~FileDescriptorWatcher();  // Implicitly calls StopWatchingFileDescriptor.
 
     // NOTE: These methods aren't called StartWatching()/StopWatching() to
@@ -47,9 +47,7 @@ class BASE_EXPORT MessagePumpIOSForIO : public MessagePumpNSRunLoop {
     // to do.
     bool StopWatchingFileDescriptor();
 
-    const tracked_objects::Location& created_from_location() {
-      return created_from_location_;
-    }
+    const Location& created_from_location() { return created_from_location_; }
 
    private:
     friend class MessagePumpIOSForIO;
@@ -77,7 +75,7 @@ class BASE_EXPORT MessagePumpIOSForIO : public MessagePumpNSRunLoop {
     base::WeakPtr<MessagePumpIOSForIO> pump_;
     Watcher* watcher_;
 
-    tracked_objects::Location created_from_location_;
+    Location created_from_location_;
 
     DISALLOW_COPY_AND_ASSIGN(FileDescriptorWatcher);
   };

@@ -77,8 +77,7 @@ public class ChildConnectionAllocatorTest {
                     }
                 })
                         .when(mConnection)
-                        .start(anyBoolean(), any(ChildProcessConnection.ServiceCallback.class),
-                                anyBoolean());
+                        .start(anyBoolean(), any(ChildProcessConnection.ServiceCallback.class));
             }
             return mConnection;
         }
@@ -113,8 +112,7 @@ public class ChildConnectionAllocatorTest {
                 }
             })
                     .when(mConnection)
-                    .start(anyBoolean(), any(ChildProcessConnection.ServiceCallback.class),
-                            anyBoolean());
+                    .start(anyBoolean(), any(ChildProcessConnection.ServiceCallback.class));
         }
 
         public void simulateServiceStartFailed() {
@@ -155,7 +153,7 @@ public class ChildConnectionAllocatorTest {
 
         verify(connection, times(1))
                 .start(eq(false) /* useStrongBinding */,
-                        any(ChildProcessConnection.ServiceCallback.class), anyBoolean());
+                        any(ChildProcessConnection.ServiceCallback.class));
         verify(listener, times(1)).onConnectionAllocated(mAllocator, connection);
         assertTrue(mAllocator.anyConnectionAllocated());
     }
@@ -193,8 +191,7 @@ public class ChildConnectionAllocatorTest {
             allocator.setConnectionFactoryForTesting(mTestConnectionFactory);
             ChildProcessConnection connection = allocator.allocate(
                     null /* context */, null /* serviceBundle */, mServiceCallback);
-            verify(connection, never())
-                    .start(useStrongBinding, mServiceCallback, false /* retryOnTimeout */);
+            verify(connection, times(0)).start(useStrongBinding, mServiceCallback);
         }
     }
 
@@ -258,7 +255,7 @@ public class ChildConnectionAllocatorTest {
         ComponentName serviceName = mTestConnectionFactory.getAndResetLastServiceName();
         verify(connection, times(1))
                 .start(eq(false) /* useStrongBinding */,
-                        any(ChildProcessConnection.ServiceCallback.class), anyBoolean());
+                        any(ChildProcessConnection.ServiceCallback.class));
         assertTrue(mAllocator.anyConnectionAllocated());
         int onChildStartFailedExpectedCount = 0;
         int onChildProcessDiedExpectedCount = 0;

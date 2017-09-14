@@ -24,7 +24,7 @@
 #include "net/cert/cert_verifier.h"
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/crl_set.h"
-#include "net/cert/internal/parse_ocsp.h"
+#include "net/cert/internal/ocsp.h"
 #include "net/cert/internal/signature_algorithm.h"
 #include "net/cert/ocsp_revocation_status.h"
 #include "net/cert/x509_certificate.h"

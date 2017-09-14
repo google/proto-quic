@@ -4,12 +4,12 @@
 
 #include "net/proxy/multi_threaded_proxy_resolver.h"
 
-#include <deque>
 #include <utility>
 #include <vector>
 
 #include "base/bind.h"
 #include "base/bind_helpers.h"
+#include "base/containers/circular_deque.h"
 #include "base/location.h"
 #include "base/single_thread_task_runner.h"
 #include "base/stl_util.h"
@@ -126,8 +126,8 @@ class MultiThreadedProxyResolver : public ProxyResolver,
   class RequestImpl;
   // FIFO queue of pending jobs waiting to be started.
   // TODO(eroman): Make this priority queue.
-  typedef std::deque<scoped_refptr<Job>> PendingJobsQueue;
-  typedef std::vector<scoped_refptr<Executor>> ExecutorList;
+  using PendingJobsQueue = base::circular_deque<scoped_refptr<Job>>;
+  using ExecutorList = std::vector<scoped_refptr<Executor>>;
 
   // Returns an idle worker thread which is ready to receive GetProxyForURL()
   // requests. If all threads are occupied, returns NULL.

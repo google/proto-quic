@@ -31,8 +31,10 @@ from py_utils import discover
 from core.sharding_map_generator import load_benchmark_sharding_map
 
 
-# TODO(rnephew): Remove when no tests disable using
-# expectations.PermanentlyDisableBenchmark()
+_UNSCHEDULED_TELEMETRY_BENCHMARKS = set([
+  ])
+
+
 ANDROID_BOT_TO_DEVICE_TYPE_MAP = {
   'Android Swarming N5X Tester': 'Nexus 5X',
   'Android Nexus5X Perf': 'Nexus 5X',
@@ -577,7 +579,8 @@ def get_waterfall_config():
 def generate_isolate_script_entry(swarming_dimensions, test_args,
     isolate_name, step_name, ignore_task_failure,
     override_compile_targets=None,
-    swarming_timeout=None):
+    swarming_timeout=None,
+    io_timeout=None):
   result = {
     'args': test_args,
     'isolate_name': isolate_name,
@@ -590,10 +593,10 @@ def generate_isolate_script_entry(swarming_dimensions, test_args,
       # Always say this is true regardless of whether the tester
       # supports swarming. It doesn't hurt.
       'can_use_on_swarming_builders': True,
-      'expiration': 20 * 60 * 60, # 20 hour timeout for now (crbug.com/753367)
+      'expiration': 10 * 60 * 60, # 10 hour timeout
       'hard_timeout': swarming_timeout if swarming_timeout else 10800, # 3 hours
       'ignore_task_failure': ignore_task_failure,
-      'io_timeout': 3600,
+      'io_timeout': io_timeout if io_timeout else 600, # 10 minutes
       'dimension_sets': swarming_dimensions,
       'upload_test_results': False,
     }
@@ -602,10 +605,25 @@ def generate_isolate_script_entry(swarming_dimensions, test_args,
   return result
 
 
-BENCHMARKS_TO_UPLOAD_TO_FLAKINESS_DASHBOARD = ['system_health.common_desktop',
-                                               'system_health.common_mobile',
-                                               'system_health.memory_desktop',
-                                               'system_health.memory_mobile']
+# Manually curated for now. System health is in here because it's an important
+# benchmark. Others are semi randomly chosen; they've failed on the waterfall
+# recently, so should be useful to upload.
+BENCHMARKS_TO_UPLOAD_TO_FLAKINESS_DASHBOARD = [
+    'service_worker.service_worker',
+    'smoothness.tough_texture_upload_cases',
+    'smoothness.tough_webgl_ad_cases',
+    'system_health.common_desktop',
+    'system_health.common_mobile',
+    'system_health.memory_desktop',
+    'system_health.memory_mobile',
+    'v8.browsing_mobile',
+    'v8.browsing_desktop',
+    'v8.runtimestats.browsing_mobile',
+    'v8.runtimestats.browsing_desktop',
+]
+
+
+BENCHMARKS_TO_OUTPUT_HISTOGRAMS = []
 
 
 def generate_telemetry_test(swarming_dimensions, benchmark_name, browser):
@@ -618,11 +636,15 @@ def generate_telemetry_test(swarming_dimensions, benchmark_name, browser):
     benchmark_name,
     '-v',
     '--upload-results',
-    '--output-format=chartjson',
     '--browser=%s' % browser
   ]
   # When this is enabled on more than just windows machines we will need
   # --device=android
+
+  if benchmark_name in BENCHMARKS_TO_OUTPUT_HISTOGRAMS:
+    test_args.append('--output-format=histograms')
+  else:
+    test_args.append('--output-format=chartjson')
 
   ignore_task_failure = False
   step_name = benchmark_name
@@ -647,7 +669,8 @@ def generate_telemetry_test(swarming_dimensions, benchmark_name, browser):
       swarming_dimensions, test_args, isolate_name,
       step_name, ignore_task_failure=ignore_task_failure,
       override_compile_targets=[isolate_name],
-      swarming_timeout=BENCHMARK_SWARMING_TIMEOUTS.get(benchmark_name))
+      swarming_timeout=BENCHMARK_SWARMING_TIMEOUTS.get(benchmark_name),
+      io_timeout=BENCHMARK_SWARMING_IO_TIMEOUTS.get(benchmark_name))
 
 
 def script_test_enabled_on_tester(master, test, tester_name, shard):
@@ -682,28 +705,7 @@ def generate_cplusplus_isolate_script_test(dimension):
   ]
 
 
-def ShouldBenchmarkBeScheduled(benchmark, platform):
-  disabled_tags = decorators.GetDisabledAttributes(benchmark)
-  enabled_tags = decorators.GetEnabledAttributes(benchmark)
-
-  # Don't run benchmarks which are disabled on all platforms.
-  if 'all' in disabled_tags:
-    return False
-
-  # If we're not on android, don't run mobile benchmarks.
-  if platform != 'android' and 'android' in enabled_tags:
-    return False
-
-  # If we're on android, don't run benchmarks disabled on mobile
-  if platform == 'android' and 'android' in disabled_tags:
-    return False
-
-  return True
-
-
-# TODO(rnephew): Remove when no tests disable using
-# expectations.PermanentlyDisableBenchmark()
-def ShouldBenchmarksBeScheduledViaStoryExpectations(
+def ShouldBenchmarksBeScheduled(
     benchmark, name, os_name, browser_name):
   # StoryExpectations uses finder_options.browser_type, platform.GetOSName,
   # platform.GetDeviceTypeName, and platform.IsSvelte to determine if the
@@ -753,7 +755,13 @@ def ShouldBenchmarksBeScheduledViaStoryExpectations(
   device_type_name = ANDROID_BOT_TO_DEVICE_TYPE_MAP.get(name)
   os_name = sanitize_os_name(os_name)
   e = ExpectationData(browser_name, os_name, device_type_name)
-  return not benchmark().GetExpectations().IsBenchmarkDisabled(e, e)
+
+  b = benchmark()
+  # TODO(rnephew): As part of the refactoring of TestConditions this will
+  # be refactored to make more sense. SUPPORTED_PLATFORMS was not the original
+  # intended use of TestConditions, so we actually want to test the opposite.
+  # If ShouldDisable() returns true, we should schedule the benchmark here.
+  return any(t.ShouldDisable(e, e) for t in b.SUPPORTED_PLATFORMS)
 
 
 def generate_telemetry_tests(name, tester_config, benchmarks,
@@ -774,9 +782,6 @@ def generate_telemetry_tests(name, tester_config, benchmarks,
     browser_name ='release'
 
   for benchmark in benchmarks:
-    if not ShouldBenchmarkBeScheduled(benchmark, tester_config['platform']):
-      continue
-
     # First figure out swarming dimensions this test needs to be triggered on.
     # For each set of dimensions it is only triggered on one of the devices
     swarming_dimensions = []
@@ -784,19 +789,18 @@ def generate_telemetry_tests(name, tester_config, benchmarks,
       device = None
       sharding_map = benchmark_sharding_map.get(name, None)
       device = sharding_map.get(benchmark.Name(), None)
-      if device is None:
-        raise ValueError('No sharding map for benchmark %r found. Please'
-                         ' disable the benchmark with @Disabled(\'all\'), and'
-                         ' file a bug with Speed>Benchmarks>Waterfall'
-                         ' component and cc martiniss@ and nednguyen@ to'
-                         ' execute the benchmark on the waterfall.' % (
+      if not device:
+        raise ValueError('No sharding map for benchmark %r found. Please '
+                         'add the benchmark to '
+                         '_UNSCHEDULED_TELEMETRY_BENCHMARKS list, '
+                         'then file a bug with Speed>Benchmarks>Waterfall '
+                         'component and assign to eyaich@ or martiniss@ to '
+                         'schedule the benchmark on the perf waterfall.' % (
                              benchmark.Name()))
       swarming_dimensions.append(get_swarming_dimension(
           dimension, device))
 
-    # TODO(rnephew): Remove when no tests disable using
-    # expectations.PermanentlyDisableBenchmark()
-    if not ShouldBenchmarksBeScheduledViaStoryExpectations(
+    if not ShouldBenchmarksBeScheduled(
         benchmark, name, swarming_dimensions[0]['os'], browser_name):
       continue
 
@@ -824,6 +828,12 @@ BENCHMARK_SWARMING_TIMEOUTS = {
 }
 
 
+# Overrides the default 10m swarming I/O timeout.
+BENCHMARK_SWARMING_IO_TIMEOUTS = {
+    'jetstream': 1200, # 20 minutes
+}
+
+
 # Devices which are broken right now. Tests will not be scheduled on them.
 # Please add a comment with a bug for replacing the device.
 BLACKLISTED_DEVICES = []
@@ -831,7 +841,10 @@ BLACKLISTED_DEVICES = []
 
 # List of benchmarks that are to never be run with reference builds.
 BENCHMARK_REF_BUILD_BLACKLIST = [
-  'power.idle_platform',
+  'power.idle_platform',  # No browser used in benchmark.
+  'loading.desktop',  # Long running benchmark.
+  'loading.mobile',  # Long running benchmark.
+  'v8.runtime_stats.top_25',  # Long running benchmark.
 ]
 
 
@@ -841,9 +854,13 @@ def current_benchmarks():
       path_util.GetChromiumSrcDir(), 'tools', 'perf', 'benchmarks')
   top_level_dir = os.path.dirname(benchmarks_dir)
 
-  all_benchmarks = discover.DiscoverClasses(
+  all_benchmarks = []
+
+  for b in discover.DiscoverClasses(
       benchmarks_dir, top_level_dir, benchmark_module.Benchmark,
-      index_by_class_name=True).values()
+      index_by_class_name=True).values():
+    if not b.Name() in _UNSCHEDULED_TELEMETRY_BENCHMARKS:
+      all_benchmarks.append(b)
 
   return sorted(all_benchmarks, key=lambda b: b.Name())
 

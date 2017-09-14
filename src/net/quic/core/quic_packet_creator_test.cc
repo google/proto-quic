@@ -199,8 +199,7 @@ class QuicPacketCreatorTest : public QuicTestWithParam<TestParams> {
     EXPECT_EQ(stream_id, frame.stream_frame->stream_id);
     if (client_framer_.HasDataProducer()) {
       char buf[kMaxPacketSize];
-      QuicDataWriter writer(kMaxPacketSize, buf, Perspective::IS_CLIENT,
-                            HOST_BYTE_ORDER);
+      QuicDataWriter writer(kMaxPacketSize, buf, HOST_BYTE_ORDER);
       if (frame.stream_frame->data_length > 0) {
         producer_.WriteStreamData(stream_id, frame.stream_frame->offset,
                                   frame.stream_frame->data_length, &writer);
@@ -871,9 +870,7 @@ TEST_P(QuicPacketCreatorTest, AddFrameAndFlush) {
   EXPECT_EQ(STREAM_FRAME, retransmittable[0].type);
   ASSERT_TRUE(retransmittable[0].stream_frame);
   EXPECT_TRUE(serialized_packet_.has_ack);
-  if (FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames) {
-    EXPECT_EQ(10u, serialized_packet_.largest_acked);
-  }
+  EXPECT_EQ(10u, serialized_packet_.largest_acked);
   DeleteSerializedPacket();
 
   EXPECT_FALSE(creator_.HasPendingFrames());

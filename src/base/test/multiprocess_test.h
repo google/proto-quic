@@ -17,17 +17,6 @@ namespace base {
 
 class CommandLine;
 
-struct SpawnChildResult {
-  SpawnChildResult() {}
-  SpawnChildResult(SpawnChildResult&& other) = default;
-
-  SpawnChildResult& operator=(SpawnChildResult&& other) = default;
-
-  Process process;
-
-  DISALLOW_COPY_AND_ASSIGN(SpawnChildResult);
-};
-
 // Helpers to spawn a child for a multiprocess test and execute a designated
 // function. Use these when you already have another base class for your test
 // fixture, but you want (some) of your tests to be multiprocess (otherwise you
@@ -44,10 +33,9 @@ struct SpawnChildResult {
 //     // Maybe set some options (e.g., |start_hidden| on Windows)....
 //
 //     // Start a child process and run |a_test_func|.
-//     SpawnChildResult result =
+//     base::Process test_child_process =
 //         base::SpawnMultiProcessTestChild("a_test_func", command_line,
 //                                          options);
-//     base::Process test_child_process = std::move(result.process);
 //
 //     // Do stuff involving |test_child_process| and the child process....
 //
@@ -73,9 +61,9 @@ struct SpawnChildResult {
 // |command_line| should be as provided by
 // |GetMultiProcessTestChildBaseCommandLine()| (below), possibly with arguments
 // added. Note: On Windows, you probably want to set |options.start_hidden|.
-SpawnChildResult SpawnMultiProcessTestChild(const std::string& procname,
-                                            const CommandLine& command_line,
-                                            const LaunchOptions& options);
+Process SpawnMultiProcessTestChild(const std::string& procname,
+                                   const CommandLine& command_line,
+                                   const LaunchOptions& options);
 
 // Gets the base command line for |SpawnMultiProcessTestChild()|. To this, you
 // may add any flags needed for your child process.
@@ -132,13 +120,13 @@ class MultiProcessTest : public PlatformTest {
   //    }
   //
   // Returns the child process.
-  SpawnChildResult SpawnChild(const std::string& procname);
+  Process SpawnChild(const std::string& procname);
 
   // Run a child process using the given launch options.
   //
   // Note: On Windows, you probably want to set |options.start_hidden|.
-  SpawnChildResult SpawnChildWithOptions(const std::string& procname,
-                                         const LaunchOptions& options);
+  Process SpawnChildWithOptions(const std::string& procname,
+                                const LaunchOptions& options);
 
   // Set up the command line used to spawn the child process.
   // Override this to add things to the command line (calling this first in the

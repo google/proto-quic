@@ -860,8 +860,10 @@ chrome.networkingPrivate.ManagedWiFiProperties;
  * @typedef {{
  *   BSSID: (string|undefined),
  *   Frequency: (number|undefined),
+ *   HexSSID: (string|undefined),
  *   Security: string,
- *   SignalStrength: (number|undefined)
+ *   SignalStrength: (number|undefined),
+ *   SSID: (string|undefined)
  * }}
  * @see https://developer.chrome.com/extensions/networkingPrivate#type-WiFiStateProperties
  */
@@ -997,8 +999,8 @@ chrome.networkingPrivate.NetworkStateProperties;
 /**
  * @typedef {{
  *   Scanning: (boolean|undefined),
- *   SimLockType: (string|undefined),
- *   SimPresent: (boolean|undefined),
+ *   SIMLockStatus: (!chrome.networkingPrivate.SIMLockStatus|undefined),
+ *   SIMPresent: (boolean|undefined),
  *   State: !chrome.networkingPrivate.DeviceStateType,
  *   Type: !chrome.networkingPrivate.NetworkType
  * }}
@@ -1200,9 +1202,12 @@ chrome.networkingPrivate.disableNetworkType = function(networkType) {};
  * list returned by $(ref:getVisibleNetworks). This is only a request: the
  * network subsystem can choose to ignore it.  If the list is updated, then the
  * $(ref:onNetworkListChanged) event will be fired.
+ * @param {!chrome.networkingPrivate.NetworkType=} networkType If provided,
+ *     requests a scan specific to the type.     For Cellular a mobile network
+ *     scan will be requested if supported.
  * @see https://developer.chrome.com/extensions/networkingPrivate#method-requestNetworkScan
  */
-chrome.networkingPrivate.requestNetworkScan = function() {};
+chrome.networkingPrivate.requestNetworkScan = function(networkType) {};
 
 /**
  * Starts a connection to the network with networkGuid.
@@ -1345,6 +1350,19 @@ chrome.networkingPrivate.unlockCellularSim = function(networkGuid, pin, puk, cal
  * @see https://developer.chrome.com/extensions/networkingPrivate#method-setCellularSimState
  */
 chrome.networkingPrivate.setCellularSimState = function(networkGuid, simState, callback) {};
+
+/**
+ * Selects whic Cellular Mobile Network to use. |networkId| must be the
+ * NetworkId property of a member of Cellular.FoundNetworks for the network
+ * properties for the specified Cellular network.
+ * @param {string} networkGuid The GUID of the cellular network to select the
+ *     network     for. If empty, the default cellular device will be used.
+ * @param {string} networkId The networkId to select.
+ * @param {function():void=} callback Called when the operation has completed.
+ * @see https://developer.chrome.com/extensions/networkingPrivate#method-selectCellularMobileNetwork
+ */
+chrome.networkingPrivate.selectCellularMobileNetwork = function(
+    networkGuid, networkId, callback) {};
 
 /**
  * Gets the global policy properties. These properties are not expected to

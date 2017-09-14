@@ -337,12 +337,12 @@ TEST_F(BrokenAlternativeServicesTest, SetBrokenAlternativeServices) {
   base::TimeDelta delay1 = base::TimeDelta::FromMinutes(1);
 
   std::unique_ptr<BrokenAlternativeServiceList> broken_list =
-      base::MakeUnique<BrokenAlternativeServiceList>();
+      std::make_unique<BrokenAlternativeServiceList>();
   broken_list->push_back(
       {alternative_service1, broken_services_clock_->NowTicks() + delay1});
 
   std::unique_ptr<RecentlyBrokenAlternativeServices> recently_broken_map =
-      base::MakeUnique<RecentlyBrokenAlternativeServices>(
+      std::make_unique<RecentlyBrokenAlternativeServices>(
           RecentlyBrokenAlternativeServices::NO_AUTO_EVICT);
   recently_broken_map->Put(alternative_service1, 1);
   recently_broken_map->Put(alternative_service2, 2);
@@ -410,7 +410,7 @@ TEST_F(BrokenAlternativeServicesTest,
   AlternativeService alternative_service3(kProtoQUIC, "foo3", 443);
 
   std::unique_ptr<BrokenAlternativeServiceList> broken_list =
-      base::MakeUnique<BrokenAlternativeServiceList>();
+      std::make_unique<BrokenAlternativeServiceList>();
   broken_list->push_back(
       {alternative_service1,
        broken_services_clock_->NowTicks() + base::TimeDelta::FromMinutes(3)});
@@ -419,7 +419,7 @@ TEST_F(BrokenAlternativeServicesTest,
        broken_services_clock_->NowTicks() + base::TimeDelta::FromMinutes(1)});
 
   std::unique_ptr<RecentlyBrokenAlternativeServices> recently_broken_map =
-      base::MakeUnique<RecentlyBrokenAlternativeServices>(
+      std::make_unique<RecentlyBrokenAlternativeServices>(
           RecentlyBrokenAlternativeServices::NO_AUTO_EVICT);
   recently_broken_map->Put(alternative_service1, 1);
   recently_broken_map->Put(alternative_service3, 1);
@@ -565,13 +565,13 @@ TEST_F(BrokenAlternativeServicesTest, Clear) {
       alternative_service2));
 
   std::unique_ptr<BrokenAlternativeServiceList> broken_list =
-      base::MakeUnique<BrokenAlternativeServiceList>();
+      std::make_unique<BrokenAlternativeServiceList>();
   broken_list->push_back(
       {alternative_service1,
        broken_services_clock_->NowTicks() + base::TimeDelta::FromMinutes(1)});
 
   std::unique_ptr<RecentlyBrokenAlternativeServices> recently_broken_map =
-      base::MakeUnique<RecentlyBrokenAlternativeServices>(
+      std::make_unique<RecentlyBrokenAlternativeServices>(
           RecentlyBrokenAlternativeServices::NO_AUTO_EVICT);
   recently_broken_map->Put(alternative_service2, 2);
 

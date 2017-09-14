@@ -74,7 +74,7 @@ struct BASE_EXPORT Backtrace {
   // pseudo traces (see above), but not for native traces, where we need more.
   enum { kMaxFrameCount = 48 };
   StackFrame frames[kMaxFrameCount];
-  size_t frame_count;
+  size_t frame_count = 0;
 };
 
 bool BASE_EXPORT operator==(const Backtrace& lhs, const Backtrace& rhs);

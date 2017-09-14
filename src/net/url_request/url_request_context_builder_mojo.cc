@@ -35,7 +35,7 @@ std::unique_ptr<ProxyService> URLRequestContextBuilderMojo::CreateProxyService(
   std::unique_ptr<net::DhcpProxyScriptFetcher> dhcp_proxy_script_fetcher =
       dhcp_fetcher_factory_->Create(url_request_context);
   std::unique_ptr<net::ProxyScriptFetcher> proxy_script_fetcher =
-      base::MakeUnique<ProxyScriptFetcherImpl>(url_request_context);
+      std::make_unique<ProxyScriptFetcherImpl>(url_request_context);
   return CreateProxyServiceUsingMojoFactory(
       mojo_proxy_resolver_factory_, std::move(proxy_config_service),
       proxy_script_fetcher.release(), std::move(dhcp_proxy_script_fetcher),

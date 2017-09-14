@@ -8,15 +8,6 @@
 
 namespace IPC {
 
-void ParamTraits<GURL>::GetSize(base::PickleSizer* s, const GURL& p) {
-  if (p.possibly_invalid_spec().length() > url::kMaxURLChars || !p.is_valid()) {
-    GetParamSize(s, std::string());
-    return;
-  }
-
-  GetParamSize(s, p.possibly_invalid_spec());
-}
-
 void ParamTraits<GURL>::Write(base::Pickle* m, const GURL& p) {
   if (p.possibly_invalid_spec().length() > url::kMaxURLChars) {
     m->WriteString(std::string());

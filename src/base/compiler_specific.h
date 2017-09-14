@@ -55,9 +55,6 @@
 
 #endif  // COMPILER_MSVC
 
-// TODO(crbug.com/752837): Remove this, it's a no-op.
-#define NON_EXPORTED_BASE(code) code
-
 // Annotate a variable indicating it's ok if the variable is not used.
 // (Typically used to silence a compiler warning when the assignment
 // is important for some other reason.)
@@ -201,7 +198,7 @@
 
 // Macro for hinting that an expression is likely to be false.
 #if !defined(UNLIKELY)
-#if defined(COMPILER_GCC)
+#if defined(COMPILER_GCC) || defined(__clang__)
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)
 #else
 #define UNLIKELY(x) (x)
@@ -209,7 +206,7 @@
 #endif  // !defined(UNLIKELY)
 
 #if !defined(LIKELY)
-#if defined(COMPILER_GCC)
+#if defined(COMPILER_GCC) || defined(__clang__)
 #define LIKELY(x) __builtin_expect(!!(x), 1)
 #else
 #define LIKELY(x) (x)

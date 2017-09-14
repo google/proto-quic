@@ -56,13 +56,15 @@ IncomingTaskQueue::IncomingTaskQueue(MessageLoop* message_loop)
       message_loop_scheduled_(false),
       always_schedule_work_(AlwaysNotifyPump(message_loop_->type())),
       is_ready_for_scheduling_(false) {
+  // The constructing sequence is not necessarily the running sequence in the
+  // case of base::Thread.
+  DETACH_FROM_SEQUENCE(sequence_checker_);
 }
 
-bool IncomingTaskQueue::AddToIncomingQueue(
-    const tracked_objects::Location& from_here,
-    OnceClosure task,
-    TimeDelta delay,
-    bool nestable) {
+bool IncomingTaskQueue::AddToIncomingQueue(const Location& from_here,
+                                           OnceClosure task,
+                                           TimeDelta delay,
+                                           bool nestable) {
   // Use CHECK instead of DCHECK to crash earlier. See http://crbug.com/711167
   // for details.
   CHECK(task);
@@ -84,11 +86,6 @@ bool IncomingTaskQueue::AddToIncomingQueue(
   }
 #endif
   return PostPendingTask(&pending_task);
-}
-
-bool IncomingTaskQueue::HasHighResolutionTasks() {
-  AutoLock lock(incoming_queue_lock_);
-  return high_res_task_count_ > 0;
 }
 
 bool IncomingTaskQueue::IsIdleForTesting() {
@@ -117,8 +114,14 @@ int IncomingTaskQueue::ReloadWorkQueue(TaskQueue* work_queue) {
 }
 
 void IncomingTaskQueue::WillDestroyCurrentMessageLoop() {
-  base::subtle::AutoWriteLock lock(message_loop_lock_);
-  message_loop_ = NULL;
+  {
+    AutoLock auto_lock(incoming_queue_lock_);
+    accept_new_tasks_ = false;
+  }
+  {
+    AutoLock auto_lock(message_loop_lock_);
+    message_loop_ = nullptr;
+  }
 }
 
 void IncomingTaskQueue::StartScheduling() {
@@ -143,60 +146,78 @@ IncomingTaskQueue::~IncomingTaskQueue() {
   DCHECK(!message_loop_);
 }
 
+void IncomingTaskQueue::RunTask(PendingTask* pending_task) {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+  task_annotator_.RunTask("MessageLoop::PostTask", pending_task);
+}
+
 bool IncomingTaskQueue::PostPendingTask(PendingTask* pending_task) {
   // Warning: Don't try to short-circuit, and handle this thread's tasks more
   // directly, as it could starve handling of foreign threads.  Put every task
   // into this queue.
+  bool accept_new_tasks;
+  bool schedule_work = false;
+  {
+    AutoLock auto_lock(incoming_queue_lock_);
+    accept_new_tasks = accept_new_tasks_;
+    if (accept_new_tasks)
+      schedule_work = PostPendingTaskLockRequired(pending_task);
+  }
 
-  // Ensures |message_loop_| isn't destroyed while running.
-  base::subtle::AutoReadLock hold_message_loop(message_loop_lock_);
-
-  if (!message_loop_) {
+  if (!accept_new_tasks) {
+    // Clear the pending task outside of |incoming_queue_lock_| to prevent any
+    // chance of self-deadlock if destroying a task also posts a task to this
+    // queue.
+    DCHECK(!schedule_work);
     pending_task->task.Reset();
     return false;
   }
 
-  bool schedule_work = false;
-  {
-    AutoLock hold(incoming_queue_lock_);
-
-#if defined(OS_WIN)
-    if (pending_task->is_high_res)
-      ++high_res_task_count_;
-#endif
-
-    // Initialize the sequence number. The sequence number is used for delayed
-    // tasks (to facilitate FIFO sorting when two tasks have the same
-    // delayed_run_time value) and for identifying the task in about:tracing.
-    pending_task->sequence_num = next_sequence_num_++;
-
-    message_loop_->task_annotator()->DidQueueTask("MessageLoop::PostTask",
-                                                  *pending_task);
-
-    bool was_empty = incoming_queue_.empty();
-    incoming_queue_.push(std::move(*pending_task));
-
-    if (is_ready_for_scheduling_ &&
-        (always_schedule_work_ || (!message_loop_scheduled_ && was_empty))) {
-      schedule_work = true;
-      // After we've scheduled the message loop, we do not need to do so again
-      // until we know it has processed all of the work in our queue and is
-      // waiting for more work again. The message loop will always attempt to
-      // reload from the incoming queue before waiting again so we clear this
-      // flag in ReloadWorkQueue().
-      message_loop_scheduled_ = true;
-    }
+  // Wake up the message loop and schedule work. This is done outside
+  // |incoming_queue_lock_| to allow for multiple post tasks to occur while
+  // ScheduleWork() is running. For platforms (e.g. Android) that require one
+  // call to ScheduleWork() for each task, all pending tasks may serialize
+  // within the ScheduleWork() call. As a result, holding a lock to maintain the
+  // lifetime of |message_loop_| is less of a concern.
+  if (schedule_work) {
+    // Ensures |message_loop_| isn't destroyed while running.
+    AutoLock auto_lock(message_loop_lock_);
+    if (message_loop_)
+      message_loop_->ScheduleWork();
   }
 
-  // Wake up the message loop and schedule work. This is done outside
-  // |incoming_queue_lock_| because signaling the message loop may cause this
-  // thread to be switched. If |incoming_queue_lock_| is held, any other thread
-  // that wants to post a task will be blocked until this thread switches back
-  // in and releases |incoming_queue_lock_|.
-  if (schedule_work)
-    message_loop_->ScheduleWork();
-
   return true;
+}
+
+bool IncomingTaskQueue::PostPendingTaskLockRequired(PendingTask* pending_task) {
+  incoming_queue_lock_.AssertAcquired();
+
+#if defined(OS_WIN)
+  if (pending_task->is_high_res)
+    ++high_res_task_count_;
+#endif
+
+  // Initialize the sequence number. The sequence number is used for delayed
+  // tasks (to facilitate FIFO sorting when two tasks have the same
+  // delayed_run_time value) and for identifying the task in about:tracing.
+  pending_task->sequence_num = next_sequence_num_++;
+
+  task_annotator_.DidQueueTask("MessageLoop::PostTask", *pending_task);
+
+  bool was_empty = incoming_queue_.empty();
+  incoming_queue_.push(std::move(*pending_task));
+
+  if (is_ready_for_scheduling_ &&
+      (always_schedule_work_ || (!message_loop_scheduled_ && was_empty))) {
+    // After we've scheduled the message loop, we do not need to do so again
+    // until we know it has processed all of the work in our queue and is
+    // waiting for more work again. The message loop will always attempt to
+    // reload from the incoming queue before waiting again so we clear this
+    // flag in ReloadWorkQueue().
+    message_loop_scheduled_ = true;
+    return true;
+  }
+  return false;
 }
 
 }  // namespace internal

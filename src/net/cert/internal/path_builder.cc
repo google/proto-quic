@@ -249,6 +249,9 @@ void CertIssuersIter::SortRemainingIssuers() {
 // CertIssuerIterPath tracks which certs are present in the path and prevents
 // paths from being built which repeat any certs (including different versions
 // of the same cert, based on Subject+SubjectAltName+SPKI).
+// (RFC 5280 forbids duplicate certificates per section 6.1, and RFC 4158
+// further recommends disallowing the same Subject+SubjectAltName+SPKI in
+// section 2.4.2.)
 class CertIssuerIterPath {
  public:
   // Returns true if |cert| is already present in the path.
@@ -362,23 +365,11 @@ class CertPathIter {
   // CertPathIter.
   void AddCertIssuerSource(CertIssuerSource* cert_issuer_source);
 
-  // Gets the next candidate path, or clears |*path| when all paths have been
-  // exhausted.
-  void GetNextPath(CertPath* path);
+  // Gets the next candidate path, or clears |*out_path| when all paths have
+  // been exhausted.
+  void GetNextPath(CertPath* out_path);
 
  private:
-  enum State {
-    STATE_NONE,
-    STATE_GET_NEXT_ISSUER,
-    STATE_GET_NEXT_ISSUER_COMPLETE,
-    STATE_RETURN_A_PATH,
-    STATE_BACKTRACK,
-  };
-
-  void DoGetNextIssuer();
-  void DoGetNextIssuerComplete();
-  void DoBackTrack();
-
   // Stores the next candidate issuer, until it is used during the
   // STATE_GET_NEXT_ISSUER_COMPLETE step.
   IssuerEntry next_issuer_;
@@ -390,18 +381,13 @@ class CertPathIter {
   CertIssuerSources cert_issuer_sources_;
   // The TrustStore for checking if a path ends in a trust anchor.
   const TrustStore* trust_store_;
-  // The output variable for storing the next candidate path, which the client
-  // passes in to GetNextPath. Only used for a single path output.
-  CertPath* out_path_;
-  // Current state of the state machine.
-  State next_state_;
 
   DISALLOW_COPY_AND_ASSIGN(CertPathIter);
 };
 
 CertPathIter::CertPathIter(scoped_refptr<ParsedCertificate> cert,
                            const TrustStore* trust_store)
-    : trust_store_(trust_store), next_state_(STATE_GET_NEXT_ISSUER_COMPLETE) {
+    : trust_store_(trust_store) {
   // Initialize |next_issuer_| to the target certificate.
   next_issuer_.cert = std::move(cert);
   trust_store_->GetTrust(next_issuer_.cert, &next_issuer_.trust);
@@ -411,102 +397,61 @@ void CertPathIter::AddCertIssuerSource(CertIssuerSource* cert_issuer_source) {
   cert_issuer_sources_.push_back(cert_issuer_source);
 }
 
-// TODO(eroman): Simplify (doesn't need to use the "DoLoop" pattern).
-void CertPathIter::GetNextPath(CertPath* path) {
-  out_path_ = path;
-  out_path_->Clear();
-  do {
-    State state = next_state_;
-    next_state_ = STATE_NONE;
-    switch (state) {
-      case STATE_NONE:
-        NOTREACHED();
-        break;
-      case STATE_GET_NEXT_ISSUER:
-        DoGetNextIssuer();
-        break;
-      case STATE_GET_NEXT_ISSUER_COMPLETE:
-        DoGetNextIssuerComplete();
-        break;
-      case STATE_RETURN_A_PATH:
-        // If the returned path did not verify, keep looking for other paths
-        // (the trust root is not part of cur_path_, so don't need to
-        // backtrack).
-        next_state_ = STATE_GET_NEXT_ISSUER;
-        break;
-      case STATE_BACKTRACK:
-        DoBackTrack();
-        break;
-    }
-  } while (next_state_ != STATE_NONE && next_state_ != STATE_RETURN_A_PATH);
-
-  out_path_ = nullptr;
-}
-
-void CertPathIter::DoGetNextIssuer() {
-  if (cur_path_.Empty()) {
-    // Exhausted all paths.
-    next_state_ = STATE_NONE;
-  } else {
-    next_state_ = STATE_GET_NEXT_ISSUER_COMPLETE;
-    cur_path_.back()->GetNextIssuer(&next_issuer_);
-  }
-}
-
-void CertPathIter::DoGetNextIssuerComplete() {
-  if (!next_issuer_.cert) {
-    // TODO(mattm): should also include such paths in CertPathBuilder::Result,
-    // maybe with a flag to enable it. Or use a visitor pattern so the caller
-    // can decide what to do with any failed paths.
-    // No more issuers for current chain, go back up and see if there are any
-    // more for the previous cert.
-    next_state_ = STATE_BACKTRACK;
-    return;
-  }
-
-  switch (next_issuer_.trust.type) {
-    // If the trust for this issuer is "known" (either becuase it is distrusted,
-    // or because it is trusted) then stop building and return the path.
-    case CertificateTrustType::DISTRUSTED:
-    case CertificateTrustType::TRUSTED_ANCHOR:
-    case CertificateTrustType::TRUSTED_ANCHOR_WITH_CONSTRAINTS: {
-      // If the issuer has a known trust level, can stop building the path.
-      DVLOG(1) << "CertPathIter got anchor: "
-               << CertDebugString(next_issuer_.cert.get());
-      next_state_ = STATE_RETURN_A_PATH;
-      cur_path_.CopyPath(&out_path_->certs);
-      out_path_->certs.push_back(std::move(next_issuer_.cert));
-      out_path_->last_cert_trust = next_issuer_.trust;
-      next_issuer_ = IssuerEntry();
-      break;
-    }
-    case CertificateTrustType::UNSPECIFIED: {
-      // Skip this cert if it is already in the chain.
-      if (cur_path_.IsPresent(next_issuer_.cert.get())) {
-        next_state_ = STATE_GET_NEXT_ISSUER;
-        break;
+void CertPathIter::GetNextPath(CertPath* out_path) {
+  out_path->Clear();
+  while (true) {
+    if (!next_issuer_.cert) {
+      if (cur_path_.Empty()) {
+        DVLOG(1) << "CertPathIter exhausted all paths...";
+        return;
       }
-
-      cur_path_.Append(base::MakeUnique<CertIssuersIter>(
-          std::move(next_issuer_.cert), &cert_issuer_sources_, trust_store_));
-      next_issuer_ = IssuerEntry();
-      DVLOG(1) << "CertPathIter cur_path_ = " << cur_path_.PathDebugString();
-      // Continue descending the tree.
-      next_state_ = STATE_GET_NEXT_ISSUER;
-      break;
+      cur_path_.back()->GetNextIssuer(&next_issuer_);
+      if (!next_issuer_.cert) {
+        // TODO(mattm): should also include such paths in
+        // CertPathBuilder::Result, maybe with a flag to enable it. Or use a
+        // visitor pattern so the caller can decide what to do with any failed
+        // paths. No more issuers for current chain, go back up and see if there
+        // are any more for the previous cert.
+        DVLOG(1) << "CertPathIter backtracking...";
+        cur_path_.Pop();
+        // Continue exploring issuers of the previous path...
+        continue;
+      }
     }
-  }
-}
 
-void CertPathIter::DoBackTrack() {
-  DVLOG(1) << "CertPathIter backtracking...";
-  cur_path_.Pop();
-  if (cur_path_.Empty()) {
-    // Exhausted all paths.
-    next_state_ = STATE_NONE;
-  } else {
-    // Continue exploring issuers of the previous path.
-    next_state_ = STATE_GET_NEXT_ISSUER;
+    switch (next_issuer_.trust.type) {
+      // If the trust for this issuer is "known" (either becuase it is
+      // distrusted, or because it is trusted) then stop building and return the
+      // path.
+      case CertificateTrustType::DISTRUSTED:
+      case CertificateTrustType::TRUSTED_ANCHOR:
+      case CertificateTrustType::TRUSTED_ANCHOR_WITH_CONSTRAINTS: {
+        // If the issuer has a known trust level, can stop building the path.
+        DVLOG(1) << "CertPathIter got anchor: "
+                 << CertDebugString(next_issuer_.cert.get());
+        cur_path_.CopyPath(&out_path->certs);
+        out_path->certs.push_back(std::move(next_issuer_.cert));
+        out_path->last_cert_trust = next_issuer_.trust;
+        next_issuer_ = IssuerEntry();
+        return;
+      }
+      case CertificateTrustType::UNSPECIFIED: {
+        // Skip this cert if it is already in the chain.
+        if (cur_path_.IsPresent(next_issuer_.cert.get())) {
+          DVLOG(1) << "CertPathIter skipping dupe cert: "
+                   << CertDebugString(next_issuer_.cert.get());
+          next_issuer_ = IssuerEntry();
+          continue;
+        }
+
+        cur_path_.Append(std::make_unique<CertIssuersIter>(
+            std::move(next_issuer_.cert), &cert_issuer_sources_, trust_store_));
+        next_issuer_ = IssuerEntry();
+        DVLOG(1) << "CertPathIter cur_path_ = " << cur_path_.PathDebugString();
+        // Continue descending the tree.
+        continue;
+      }
+    }
   }
 }
 
@@ -563,7 +508,6 @@ CertPathBuilder::CertPathBuilder(
       user_initial_policy_set_(user_initial_policy_set),
       initial_policy_mapping_inhibit_(initial_policy_mapping_inhibit),
       initial_any_policy_inhibit_(initial_any_policy_inhibit),
-      next_state_(STATE_NONE),
       out_result_(result) {
   DCHECK(delegate);
   result->Clear();
@@ -578,71 +522,42 @@ void CertPathBuilder::AddCertIssuerSource(
   cert_path_iter_->AddCertIssuerSource(cert_issuer_source);
 }
 
-// TODO(eroman): Simplify (doesn't need to use the "DoLoop" pattern).
 void CertPathBuilder::Run() {
-  DCHECK_EQ(STATE_NONE, next_state_);
-  next_state_ = STATE_GET_NEXT_PATH;
-
-  do {
-    State state = next_state_;
-    next_state_ = STATE_NONE;
-    switch (state) {
-      case STATE_NONE:
-        NOTREACHED();
-        break;
-      case STATE_GET_NEXT_PATH:
-        DoGetNextPath();
-        break;
-      case STATE_GET_NEXT_PATH_COMPLETE:
-        DoGetNextPathComplete();
-        break;
+  CertPath next_path;
+  while (true) {
+    cert_path_iter_->GetNextPath(&next_path);
+    if (next_path.IsEmpty()) {
+      // No more paths to check.
+      return;
     }
-  } while (next_state_ != STATE_NONE);
-}
 
-void CertPathBuilder::DoGetNextPath() {
-  next_state_ = STATE_GET_NEXT_PATH_COMPLETE;
-  cert_path_iter_->GetNextPath(&next_path_);
-}
+    // Verify the entire certificate chain.
+    auto result_path = std::make_unique<ResultPath>();
+    result_path->path = next_path;
+    VerifyCertificateChain(
+        result_path->path.certs, result_path->path.last_cert_trust, delegate_,
+        time_, key_purpose_, initial_explicit_policy_, user_initial_policy_set_,
+        initial_policy_mapping_inhibit_, initial_any_policy_inhibit_,
+        &result_path->user_constrained_policy_set, &result_path->errors);
 
-void CertPathBuilder::DoGetNextPathComplete() {
-  if (next_path_.IsEmpty()) {
-    // No more paths to check, signal completion.
-    next_state_ = STATE_NONE;
-    return;
+    DVLOG(1) << "CertPathBuilder VerifyCertificateChain errors:\n"
+             << result_path->errors.ToDebugString(result_path->path.certs);
+
+    // Give the delegate a chance to add errors to the path.
+    delegate_->CheckPathAfterVerification(result_path->path,
+                                          &result_path->errors);
+
+    bool path_is_good = result_path->IsValid();
+
+    AddResultPath(std::move(result_path));
+
+    if (path_is_good) {
+      // Found a valid path, return immediately.
+      // TODO(mattm): add debug/test mode that tries all possible paths.
+      return;
+    }
+    // Path did not verify. Try more paths.
   }
-
-  // Verify the entire certificate chain.
-  auto result_path = base::MakeUnique<ResultPath>();
-  result_path->path = next_path_;
-  VerifyCertificateChain(
-      result_path->path.certs, result_path->path.last_cert_trust, delegate_,
-      time_, key_purpose_, initial_explicit_policy_, user_initial_policy_set_,
-      initial_policy_mapping_inhibit_, initial_any_policy_inhibit_,
-      &result_path->user_constrained_policy_set, &result_path->errors);
-
-  DVLOG(1) << "CertPathBuilder VerifyCertificateChain errors:\n"
-           << result_path->errors.ToDebugString(result_path->path.certs);
-
-  // Give the delegate a chance to add errors to the path.
-  delegate_->CheckPathAfterVerification(result_path->path,
-                                        &result_path->errors);
-
-  bool path_is_good = result_path->IsValid();
-
-  AddResultPath(std::move(result_path));
-
-  if (path_is_good) {
-    // Found a valid path, return immediately.
-    // TODO(mattm): add debug/test mode that tries all possible paths.
-    next_state_ = STATE_NONE;
-    return;
-  }
-
-  // Path did not verify. Try more paths. If there are no more paths, the result
-  // will be returned next time DoGetNextPathComplete is called with next_path_
-  // empty.
-  next_state_ = STATE_GET_NEXT_PATH;
 }
 
 void CertPathBuilder::AddResultPath(std::unique_ptr<ResultPath> result_path) {

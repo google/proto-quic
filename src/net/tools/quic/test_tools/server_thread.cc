@@ -4,6 +4,7 @@
 
 #include "net/tools/quic/test_tools/server_thread.h"
 
+#include "net/quic/platform/api/quic_containers.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/tools/quic/quic_dispatcher.h"
 #include "net/tools/quic/test_tools/quic_server_peer.h"
@@ -113,7 +114,7 @@ void ServerThread::MaybeNotifyOfHandshakeConfirmation() {
 }
 
 void ServerThread::ExecuteScheduledActions() {
-  std::deque<std::function<void()>> actions;
+  QuicDeque<std::function<void()>> actions;
   {
     QuicWriterMutexLock lock(&scheduled_actions_lock_);
     actions.swap(scheduled_actions_);

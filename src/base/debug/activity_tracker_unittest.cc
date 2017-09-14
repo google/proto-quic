@@ -61,7 +61,7 @@ class ActivityTrackerTest : public testing::Test {
 
   std::unique_ptr<ThreadActivityTracker> CreateActivityTracker() {
     std::unique_ptr<char[]> memory(new char[kStackSize]);
-    return MakeUnique<TestActivityTracker>(std::move(memory), kStackSize);
+    return std::make_unique<TestActivityTracker>(std::move(memory), kStackSize);
   }
 
   size_t GetGlobalActiveTrackerCount() {

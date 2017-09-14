@@ -23,10 +23,9 @@ TaskAnnotator::~TaskAnnotator() {
 
 void TaskAnnotator::DidQueueTask(const char* queue_function,
                                  const PendingTask& pending_task) {
-  TRACE_EVENT_WITH_FLOW0(TRACE_DISABLED_BY_DEFAULT("toplevel.flow"),
-                          queue_function,
-                          TRACE_ID_MANGLE(GetTaskTraceID(pending_task)),
-                          TRACE_EVENT_FLAG_FLOW_OUT);
+  TRACE_EVENT_WITH_FLOW0(
+      TRACE_DISABLED_BY_DEFAULT("toplevel.flow"), queue_function,
+      TRACE_ID_MANGLE(GetTaskTraceID(pending_task)), TRACE_EVENT_FLAG_FLOW_OUT);
 }
 
 void TaskAnnotator::RunTask(const char* queue_function,
@@ -35,13 +34,10 @@ void TaskAnnotator::RunTask(const char* queue_function,
 
   tracked_objects::TaskStopwatch stopwatch;
   stopwatch.Start();
-  base::TimeDelta queue_duration =
-      stopwatch.StartTime() - pending_task->EffectiveTimePosted();
 
-  TRACE_EVENT_WITH_FLOW1(
+  TRACE_EVENT_WITH_FLOW0(
       TRACE_DISABLED_BY_DEFAULT("toplevel.flow"), queue_function,
-      TRACE_ID_MANGLE(GetTaskTraceID(*pending_task)), TRACE_EVENT_FLAG_FLOW_IN,
-      "queue_duration", queue_duration.InMilliseconds());
+      TRACE_ID_MANGLE(GetTaskTraceID(*pending_task)), TRACE_EVENT_FLAG_FLOW_IN);
 
   // Before running the task, store the task backtrace with the chain of
   // PostTasks that resulted in this call and deliberately alias it to ensure
@@ -49,18 +45,22 @@ void TaskAnnotator::RunTask(const char* queue_function,
   // variable itself will have the expected value when displayed by the
   // optimizer in an optimized build. Look at a memory dump of the stack.
   static constexpr int kStackTaskTraceSnapshotSize =
-      std::tuple_size<decltype(pending_task->task_backtrace)>::value + 1;
+      std::tuple_size<decltype(pending_task->task_backtrace)>::value + 3;
   std::array<const void*, kStackTaskTraceSnapshotSize> task_backtrace;
-  task_backtrace[0] = pending_task->posted_from.program_counter();
+
+  // Store a marker to locate |task_backtrace| content easily on a memory
+  // dump.
+  task_backtrace.front() = reinterpret_cast<void*>(0xefefefefefefefef);
+  task_backtrace.back() = reinterpret_cast<void*>(0xfefefefefefefefe);
+
+  task_backtrace[1] = pending_task->posted_from.program_counter();
   std::copy(pending_task->task_backtrace.begin(),
-            pending_task->task_backtrace.end(), task_backtrace.begin() + 1);
+            pending_task->task_backtrace.end(), task_backtrace.begin() + 2);
   debug::Alias(&task_backtrace);
 
   std::move(pending_task->task).Run();
 
   stopwatch.Stop();
-  tracked_objects::ThreadData::TallyRunOnNamedThreadIfTracking(*pending_task,
-                                                               stopwatch);
 }
 
 uint64_t TaskAnnotator::GetTaskTraceID(const PendingTask& task) const {

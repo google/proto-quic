@@ -38,14 +38,6 @@ using base::Time;
 
 namespace {
 
-size_t MaybeGetMaxFds() {
-#if defined(OS_POSIX)
-  return base::GetMaxFds();
-#else
-  return std::numeric_limits<size_t>::max();
-#endif
-}
-
 void MaybeSetFdLimit(unsigned int max_descriptors) {
 #if defined(OS_POSIX)
   base::SetFdLimit(max_descriptors);
@@ -59,7 +51,7 @@ struct TestEntry {
 
 class DiskCachePerfTest : public DiskCacheTestWithCache {
  public:
-  DiskCachePerfTest() : saved_fd_limit_(MaybeGetMaxFds()) {
+  DiskCachePerfTest() : saved_fd_limit_(base::GetMaxFds()) {
     if (saved_fd_limit_ < kFdLimitForCacheTests)
       MaybeSetFdLimit(kFdLimitForCacheTests);
   }

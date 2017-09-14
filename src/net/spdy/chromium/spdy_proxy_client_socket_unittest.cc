@@ -182,7 +182,7 @@ void SpdyProxyClientSocketTest::Initialize(MockRead* reads,
                                            size_t reads_count,
                                            MockWrite* writes,
                                            size_t writes_count) {
-  data_ = base::MakeUnique<SequencedSocketData>(reads, reads_count, writes,
+  data_ = std::make_unique<SequencedSocketData>(reads, reads_count, writes,
                                                 writes_count);
   data_->set_connect_data(connect_data_);
   session_deps_.socket_factory->AddSocketDataProvider(data_.get());
@@ -206,9 +206,8 @@ void SpdyProxyClientSocketTest::Initialize(MockRead* reads,
   ASSERT_TRUE(spdy_stream.get() != NULL);
 
   // Create the SpdyProxyClientSocket.
-  sock_ = base::MakeUnique<SpdyProxyClientSocket>(
-      spdy_stream, user_agent_, endpoint_host_port_pair_, proxy_host_port_,
-      net_log_.bound(),
+  sock_ = std::make_unique<SpdyProxyClientSocket>(
+      spdy_stream, user_agent_, endpoint_host_port_pair_, net_log_.bound(),
       new HttpAuthController(
           HttpAuth::AUTH_PROXY, GURL("https://" + proxy_host_port_.ToString()),
           session_->http_auth_cache(), session_->http_auth_handler_factory()));

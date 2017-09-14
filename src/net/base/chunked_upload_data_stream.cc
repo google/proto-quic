@@ -49,7 +49,7 @@ void ChunkedUploadDataStream::AppendData(
   if (data_len > 0) {
     DCHECK(data);
     upload_data_.push_back(
-        base::MakeUnique<std::vector<char>>(data, data + data_len));
+        std::make_unique<std::vector<char>>(data, data + data_len));
   }
   all_data_appended_ = is_done;
 

@@ -146,7 +146,7 @@ class SpdyHttpStreamTest : public testing::Test {
                    size_t reads_count,
                    MockWrite* writes,
                    size_t writes_count) {
-    sequenced_data_ = base::MakeUnique<SequencedSocketData>(
+    sequenced_data_ = std::make_unique<SequencedSocketData>(
         reads, reads_count, writes, writes_count);
     session_deps_.socket_factory->AddSocketDataProvider(sequenced_data_.get());
 
@@ -198,7 +198,7 @@ TEST_F(SpdyHttpStreamTest, SendRequest) {
   HttpRequestHeaders headers;
   NetLogWithSource net_log;
   auto http_stream =
-      base::MakeUnique<SpdyHttpStream>(session_, true, net_log.source());
+      std::make_unique<SpdyHttpStream>(session_, true, net_log.source());
   // Make sure getting load timing information the stream early does not crash.
   LoadTimingInfo load_timing_info;
   EXPECT_FALSE(http_stream->GetLoadTimingInfo(&load_timing_info));
@@ -261,7 +261,7 @@ TEST_F(SpdyHttpStreamTest, LoadTimingTwoRequests) {
   HttpRequestHeaders headers1;
   NetLogWithSource net_log;
   auto http_stream1 =
-      base::MakeUnique<SpdyHttpStream>(session_, true, net_log.source());
+      std::make_unique<SpdyHttpStream>(session_, true, net_log.source());
 
   HttpRequestInfo request2;
   request2.method = "GET";
@@ -270,7 +270,7 @@ TEST_F(SpdyHttpStreamTest, LoadTimingTwoRequests) {
   HttpResponseInfo response2;
   HttpRequestHeaders headers2;
   auto http_stream2 =
-      base::MakeUnique<SpdyHttpStream>(session_, true, net_log.source());
+      std::make_unique<SpdyHttpStream>(session_, true, net_log.source());
 
   // First write.
   ASSERT_THAT(http_stream1->InitializeStream(&request1, DEFAULT_PRIORITY,
@@ -545,7 +545,7 @@ TEST_F(SpdyHttpStreamTest, DelayedSendChunkedPost) {
 
   NetLogWithSource net_log;
   auto http_stream =
-      base::MakeUnique<SpdyHttpStream>(session_, true, net_log.source());
+      std::make_unique<SpdyHttpStream>(session_, true, net_log.source());
   ASSERT_THAT(http_stream->InitializeStream(&request, DEFAULT_PRIORITY, net_log,
                                             CompletionCallback()),
               IsOk());
@@ -640,7 +640,7 @@ TEST_F(SpdyHttpStreamTest, DelayedSendChunkedPostWithEmptyFinalDataFrame) {
 
   NetLogWithSource net_log;
   auto http_stream =
-      base::MakeUnique<SpdyHttpStream>(session_, true, net_log.source());
+      std::make_unique<SpdyHttpStream>(session_, true, net_log.source());
   ASSERT_THAT(http_stream->InitializeStream(&request, DEFAULT_PRIORITY, net_log,
                                             CompletionCallback()),
               IsOk());
@@ -724,7 +724,7 @@ TEST_F(SpdyHttpStreamTest, ChunkedPostWithEmptyPayload) {
 
   NetLogWithSource net_log;
   auto http_stream =
-      base::MakeUnique<SpdyHttpStream>(session_, true, net_log.source());
+      std::make_unique<SpdyHttpStream>(session_, true, net_log.source());
   ASSERT_THAT(http_stream->InitializeStream(&request, DEFAULT_PRIORITY, net_log,
                                             CompletionCallback()),
               IsOk());
@@ -784,7 +784,7 @@ TEST_F(SpdyHttpStreamTest, SpdyURLTest) {
   HttpRequestHeaders headers;
   NetLogWithSource net_log;
   auto http_stream =
-      base::MakeUnique<SpdyHttpStream>(session_, true, net_log.source());
+      std::make_unique<SpdyHttpStream>(session_, true, net_log.source());
   ASSERT_THAT(http_stream->InitializeStream(&request, DEFAULT_PRIORITY, net_log,
                                             CompletionCallback()),
               IsOk());
@@ -837,7 +837,7 @@ TEST_F(SpdyHttpStreamTest, DelayedSendChunkedPostWithWindowUpdate) {
 
   NetLogWithSource net_log;
   auto http_stream =
-      base::MakeUnique<SpdyHttpStream>(session_, true, net_log.source());
+      std::make_unique<SpdyHttpStream>(session_, true, net_log.source());
   ASSERT_THAT(http_stream->InitializeStream(&request, DEFAULT_PRIORITY, net_log,
                                             CompletionCallback()),
               IsOk());

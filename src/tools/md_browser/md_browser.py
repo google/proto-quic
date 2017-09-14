@@ -145,7 +145,10 @@ class Handler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     elif path.lower().endswith('.md'):
       self._DoMD(path)
     elif os.path.exists(full_path + '/README.md'):
-      self._DoMD(path + '/README.md')
+      separator = '/'
+      if path.endswith('/'):
+        separator = ''
+      self._DoMD(path + separator + 'README.md')
     elif path.lower().endswith('.png'):
       self._DoImage(full_path, 'image/png')
     elif path.lower().endswith('.jpg'):

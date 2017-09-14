@@ -16,7 +16,6 @@ executable("battor_agent") {
     "//base",
     "//build/config:exe_and_shlib_deps",
     "//build/win:default_exe_manifest",
-    "//device/serial",
   ]
 }
 
@@ -58,7 +57,6 @@ test("battor_agent_unittests") {
     "//base",
     "//base/test:run_all_unittests",
     "//base/test:test_support",
-    "//device/serial",
     "//device/serial:test_support",
     "//testing/gmock",
     "//testing/gtest",

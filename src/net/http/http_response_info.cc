@@ -46,7 +46,7 @@ bool KeyExchangeGroupIsValid(int ssl_connection_status) {
   // Prior to TLS 1.3, only ECDHE ciphers have groups.
   const SSL_CIPHER* cipher = SSL_get_cipher_by_value(
       SSLConnectionStatusToCipherSuite(ssl_connection_status));
-  return cipher && SSL_CIPHER_is_ECDHE(cipher);
+  return cipher && SSL_CIPHER_get_kx_nid(cipher) == NID_kx_ecdhe;
 }
 
 }  // namespace

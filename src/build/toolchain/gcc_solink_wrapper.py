@@ -122,7 +122,7 @@ def main():
   # Finally, strip the linked shared object file (if desired).
   if args.strip:
     result = subprocess.call(wrapper_utils.CommandToRun(
-        [args.strip, '--strip-unneeded', '-o', args.output, args.sofile]))
+        [args.strip, '-o', args.output, args.sofile]))
 
   return result
 

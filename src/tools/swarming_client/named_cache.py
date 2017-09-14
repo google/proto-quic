@@ -11,6 +11,7 @@ import os
 import random
 import re
 import string
+import sys
 
 from utils import lru
 from utils import file_path
@@ -197,8 +198,14 @@ class CacheManager(object):
           file_path.remove(named_path)
         else:
           file_path.ensure_tree(os.path.dirname(named_path))
-        fs.symlink(abs_cache, named_path)
-        logging.info('Created symlink %r to %r', named_path, abs_cache)
+        try:
+          fs.symlink(abs_cache, named_path)
+          logging.info('Created symlink %r to %r', named_path, abs_cache)
+        except OSError:
+          # Ignore on Windows. It happens when running as a normal user or when
+          # UAC is enabled and the user is a filtered administrator account.
+          if sys.platform != 'win32':
+            raise
     except (OSError, Error) as ex:
       raise Error(
           'cannot uninstall cache named %r at %r: %s' % (

@@ -13,6 +13,7 @@
 #include "base/synchronization/condition_variable.h"
 #include "base/synchronization/lock.h"
 #include "base/synchronization/waitable_event.h"
+#include "base/threading/scoped_blocking_call.h"
 #include "base/threading/thread_restrictions.h"
 
 // -----------------------------------------------------------------------------
@@ -166,6 +167,7 @@ bool WaitableEvent::TimedWait(const TimeDelta& wait_delta) {
 
 bool WaitableEvent::TimedWaitUntil(const TimeTicks& end_time) {
   base::ThreadRestrictions::AssertWaitAllowed();
+  ScopedBlockingCall scoped_blocking_call(BlockingType::MAY_BLOCK);
   // Record the event that this thread is blocking upon (for hang diagnosis).
   base::debug::ScopedEventWaitActivity event_activity(this);
 
@@ -241,7 +243,7 @@ size_t WaitableEvent::WaitMany(WaitableEvent** raw_waitables,
                                size_t count) {
   base::ThreadRestrictions::AssertWaitAllowed();
   DCHECK(count) << "Cannot wait on no events";
-
+  ScopedBlockingCall scoped_blocking_call(BlockingType::MAY_BLOCK);
   // Record an event (the first) that this thread is blocking upon.
   base::debug::ScopedEventWaitActivity event_activity(raw_waitables[0]);
 

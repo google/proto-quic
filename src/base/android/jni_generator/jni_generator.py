@@ -900,8 +900,6 @@ $CONSTANT_FIELDS
 // Step 2: method stubs.
 $METHOD_STUBS
 
-// Step 3: RegisterNatives.
-$REGISTER_NATIVES_EMPTY
 $CLOSE_NAMESPACE
 
 #endif  // ${HEADER_GUARD}
@@ -913,7 +911,6 @@ $CLOSE_NAMESPACE
         'CONSTANT_FIELDS': self.GetConstantFieldsString(),
         'METHOD_STUBS': self.GetMethodStubsString(),
         'OPEN_NAMESPACE': self.GetOpenNamespaceString(),
-        'REGISTER_NATIVES_EMPTY': self.GetOriginalRegisterNativesString(),
         'CLOSE_NAMESPACE': self.GetCloseNamespaceString(),
         'HEADER_GUARD': self.header_guard,
         'INCLUDES': self.GetIncludesString(),
@@ -951,21 +948,6 @@ $CLOSE_NAMESPACE
       return ''
     includes = self.options.includes.split(',')
     return '\n'.join('#include "%s"' % x for x in includes)
-
-  # TODO(agrieve): Remove this function when deleting original registers.
-  # https://crbug.com/683256.
-  def GetOriginalRegisterNativesString(self):
-    """Return the code for original RegisterNatives"""
-    if len(self.natives) == 0:
-      return ''
-
-    return """
-// TODO(agrieve): Remove these empty registration functions and functions
-// calling them. https://crbug.com/683256.
-inline bool RegisterNativesImpl(JNIEnv* env) {
-  return true;
-}
-"""
 
   def GetOpenNamespaceString(self):
     if self.namespace:

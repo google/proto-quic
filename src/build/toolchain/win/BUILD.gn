@@ -23,7 +23,11 @@ assert(is_win)
 tool_wrapper_path = rebase_path("tool_wrapper.py", root_build_dir)
 
 if (use_goma) {
-  goma_prefix = "$goma_dir/gomacc.exe "
+  if (host_os == "win") {
+    goma_prefix = "$goma_dir/gomacc.exe "
+  } else {
+    goma_prefix = "$goma_dir/gomacc "
+  }
 } else {
   goma_prefix = ""
 }
@@ -116,6 +120,10 @@ template("msvc_toolchain") {
       # archives and understands bitcode (for lto builds).
       lib = "$prefix/$lld_link /lib /llvmlibthin"
       link = "$prefix/$lld_link"
+      if (host_os != "win") {
+        # See comment adding --rsp-quoting to $cl above for more information.
+        link = "$link --rsp-quoting=posix"
+      }
     } else {
       lib = "lib.exe"
       link = "link.exe"

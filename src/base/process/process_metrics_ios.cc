@@ -38,7 +38,7 @@ std::unique_ptr<ProcessMetrics> ProcessMetrics::CreateProcessMetrics(
   return WrapUnique(new ProcessMetrics(process));
 }
 
-double ProcessMetrics::GetCPUUsage() {
+double ProcessMetrics::GetPlatformIndependentCPUUsage() {
   NOTIMPLEMENTED();
   return 0;
 }

@@ -125,7 +125,7 @@ class FileStream::Context {
     DISALLOW_COPY_AND_ASSIGN(OpenResult);
   };
 
-  // TODO(xunjieli): Remove after crbug.com/487732 is fixed.
+  // TODO(xunjieli): Remove after crbug.com/732321 is fixed.
   enum LastOperation {
     // FileStream has a pending Open().
     OPEN,
@@ -143,7 +143,7 @@ class FileStream::Context {
     NONE
   };
 
-  // TODO(xunjieli): Remove after crbug.com/487732 is fixed.
+  // TODO(xunjieli): Remove after crbug.com/732321 is fixed.
   void CheckNoAsyncInProgress() const;
 
   ////////////////////////////////////////////////////////////////////////////
@@ -239,7 +239,7 @@ class FileStream::Context {
   base::File file_;
   bool async_in_progress_;
 
-  // TODO(xunjieli): Remove after crbug.com/487732 is fixed.
+  // TODO(xunjieli): Remove after crbug.com/732321 is fixed.
   LastOperation last_operation_;
 
   bool orphaned_;

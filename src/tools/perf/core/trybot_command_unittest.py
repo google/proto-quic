@@ -135,7 +135,8 @@ class TrybotCommandTest(unittest.TestCase):
   def _ExpectedGitTryTestArgs(self, test_name, browser, target_arch='ia32'):
     return ('perf_try_config={'
             '"repeat_count": "1", "command": "src/tools/perf/run_benchmark '
-            '--browser=%s %s --verbose", "max_time_minutes": "120", '
+            '--browser=%s %s --verbose --output-format=html", '
+            '"max_time_minutes": "120", '
             '"target_arch": "%s", "truncate_percent": "0"}' % (
                 browser, test_name, target_arch))
 
@@ -398,7 +399,8 @@ class TrybotCommandTest(unittest.TestCase):
     config, _ = self._GetConfigForTrybot('android-nexus4', 'android')
     self.assertEquals(
         {'command': ('src/tools/perf/run_benchmark '
-                     '--browser=android-chromium sunspider --verbose'),
+                     '--browser=android-chromium sunspider --verbose '
+                     '--output-format=html'),
          'max_time_minutes': '120',
          'repeat_count': '1',
          'target_arch': 'ia32',
@@ -410,7 +412,8 @@ class TrybotCommandTest(unittest.TestCase):
         'android-webview-nexus6-aosp', 'android-webview')
     self.assertEquals(
         {'command': ('src/tools/perf/run_benchmark '
-                     '--browser=android-webview sunspider --verbose'),
+                     '--browser=android-webview sunspider --verbose '
+                     '--output-format=html'),
          'max_time_minutes': '120',
          'repeat_count': '1',
          'target_arch': 'ia32',
@@ -421,7 +424,8 @@ class TrybotCommandTest(unittest.TestCase):
     config, _ = self._GetConfigForTrybot('mac-10-9', 'mac')
     self.assertEquals(
         {'command': ('src/tools/perf/run_benchmark '
-                     '--browser=release sunspider --verbose'),
+                     '--browser=release sunspider --verbose '
+                     '--output-format=html'),
          'max_time_minutes': '120',
          'repeat_count': '1',
          'target_arch': 'ia32',
@@ -433,7 +437,8 @@ class TrybotCommandTest(unittest.TestCase):
 
     self.assertEquals(
         {'command': ('src/tools/perf/run_benchmark '
-                     '--browser=release_x64 sunspider --verbose'),
+                     '--browser=release_x64 sunspider --verbose '
+                     '--output-format=html'),
          'max_time_minutes': '120',
          'repeat_count': '1',
          'target_arch': 'x64',
@@ -445,7 +450,8 @@ class TrybotCommandTest(unittest.TestCase):
         'win-x64', 'win-x64', extra_benchmark_args=['-v'])
     self.assertEquals(
         {'command': ('src/tools/perf/run_benchmark '
-                     '--browser=release_x64 sunspider -v'),
+                     '--browser=release_x64 sunspider -v '
+                     '--output-format=html'),
          'max_time_minutes': '120',
          'repeat_count': '1',
          'target_arch': 'x64',
@@ -456,7 +462,8 @@ class TrybotCommandTest(unittest.TestCase):
     config, _ = self._GetConfigForTrybot('winx64nvidia', 'win-x64')
     self.assertEquals(
         {'command': ('src/tools/perf/run_benchmark '
-                     '--browser=release_x64 sunspider --verbose'),
+                     '--browser=release_x64 sunspider --verbose '
+                     '--output-format=html'),
          'max_time_minutes': '120',
          'repeat_count': '1',
          'target_arch': 'x64',
@@ -470,6 +477,57 @@ class TrybotCommandTest(unittest.TestCase):
         'arms-nvidia',
         {'win_perf_bisect': 'stuff'}
     )
+
+  def testConfig_EmptyOutputFormat_AddsHtml(self):
+    config, _ = self._GetConfigForTrybot('android-nexus4', 'android')
+    self.assertEquals(
+        {'command': ('src/tools/perf/run_benchmark '
+                     '--browser=android-chromium sunspider --verbose '
+                     '--output-format=html'),
+         'max_time_minutes': '120',
+         'repeat_count': '1',
+         'target_arch': 'ia32',
+         'truncate_percent': '0'
+        }, config)
+
+  def testConfig_OtherOutputFormat_AddsHtml(self):
+    config, _ = self._GetConfigForTrybot('android-nexus4', 'android',
+        extra_benchmark_args=['--output-format=foo'])
+    self.assertEquals(
+        {'command': ('src/tools/perf/run_benchmark '
+                     '--browser=android-chromium sunspider --output-format=foo '
+                     '--verbose --output-format=html'),
+         'max_time_minutes': '120',
+         'repeat_count': '1',
+         'target_arch': 'ia32',
+         'truncate_percent': '0'
+        }, config)
+
+  def testConfig_HtmlOutputFormat_Skipped(self):
+    config, _ = self._GetConfigForTrybot('android-nexus4', 'android',
+        extra_benchmark_args=['--output-format', 'html'])
+    self.assertEquals(
+        {'command': ('src/tools/perf/run_benchmark '
+                     '--browser=android-chromium sunspider '
+                     '--output-format html --verbose'),
+         'max_time_minutes': '120',
+         'repeat_count': '1',
+         'target_arch': 'ia32',
+         'truncate_percent': '0'
+        }, config)
+
+  def testConfig_HtmlOutputFormat_UsesEquals_Skipped(self):
+    config, _ = self._GetConfigForTrybot('android-nexus4', 'android',
+        extra_benchmark_args=['--output-format=html'])
+    self.assertEquals(
+        {'command': ('src/tools/perf/run_benchmark '
+                     '--browser=android-chromium sunspider '
+                     '--output-format=html --verbose'),
+         'max_time_minutes': '120',
+         'repeat_count': '1',
+         'target_arch': 'ia32',
+         'truncate_percent': '0'
+        }, config)
 
   def testGetChangeListCommandError(self):
     temp_file = self._MockTempFile(None, None)

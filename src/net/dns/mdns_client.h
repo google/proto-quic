@@ -21,6 +21,7 @@
 namespace net {
 
 class DatagramServerSocket;
+class NetLog;
 class RecordParsed;
 
 // Represents a one-time record lookup. A transaction takes one
@@ -186,7 +187,8 @@ NET_EXPORT InterfaceIndexFamilyList GetMDnsInterfacesToBind();
 // Returns NULL if failed.
 NET_EXPORT std::unique_ptr<DatagramServerSocket> CreateAndBindMDnsSocket(
     AddressFamily address_family,
-    uint32_t interface_index);
+    uint32_t interface_index,
+    NetLog* net_log);
 
 }  // namespace net
 

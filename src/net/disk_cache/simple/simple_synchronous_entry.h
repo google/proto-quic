@@ -14,10 +14,12 @@
 #include <utility>
 #include <vector>
 
+#include "base/feature_list.h"
 #include "base/files/file.h"
 #include "base/files/file_path.h"
 #include "base/gtest_prod_util.h"
 #include "base/memory/ref_counted.h"
+#include "base/strings/string_piece_forward.h"
 #include "base/time/time.h"
 #include "net/base/cache_type.h"
 #include "net/base/net_export.h"
@@ -31,6 +33,13 @@ class IOBuffer;
 FORWARD_DECLARE_TEST(DiskCacheBackendTest, SimpleCacheEnumerationLongKeys);
 
 namespace disk_cache {
+
+NET_EXPORT_PRIVATE extern const base::Feature kSimpleCachePrefetchExperiment;
+NET_EXPORT_PRIVATE extern const char kSimplePrefetchBytesParam[];
+
+// Returns how large a file would get prefetched on reading the entry.
+// If the experiment is disabled, returns 0.
+NET_EXPORT_PRIVATE int GetSimpleCachePrefetchSize();
 
 class SimpleSynchronousEntry;
 
@@ -73,14 +82,24 @@ class NET_EXPORT_PRIVATE SimpleEntryStat {
   int32_t sparse_data_size_;
 };
 
+struct SimpleStreamPrefetchData {
+  SimpleStreamPrefetchData();
+  ~SimpleStreamPrefetchData();
+
+  scoped_refptr<net::GrowableIOBuffer> data;
+  uint32_t stream_crc32;
+};
+
 struct SimpleEntryCreationResults {
   explicit SimpleEntryCreationResults(SimpleEntryStat entry_stat);
   ~SimpleEntryCreationResults();
 
   SimpleSynchronousEntry* sync_entry;
-  scoped_refptr<net::GrowableIOBuffer> stream_0_data;
+
+  // Expectation is that [0] will always be filled in, but [1] might not be.
+  SimpleStreamPrefetchData stream_prefetch_data[2];
+
   SimpleEntryStat entry_stat;
-  uint32_t stream_0_crc32;
   int result;
 };
 
@@ -188,9 +207,9 @@ class SimpleSynchronousEntry {
                  net::IOBuffer* in_buf,
                  SimpleEntryStat* out_entry_stat,
                  int* out_result);
-  int CheckEOFRecord(int index,
+  int CheckEOFRecord(int stream_index,
                      const SimpleEntryStat& entry_stat,
-                     uint32_t expected_crc32) const;
+                     uint32_t expected_crc32);
 
   void ReadSparseData(const EntryOperationData& in_entry_op,
                       net::IOBuffer* out_buf,
@@ -281,8 +300,7 @@ class SimpleSynchronousEntry {
 
   // Returns a net error, i.e. net::OK on success.
   int InitializeForOpen(SimpleEntryStat* out_entry_stat,
-                        scoped_refptr<net::GrowableIOBuffer>* stream_0_data,
-                        uint32_t* out_stream_0_crc32);
+                        SimpleStreamPrefetchData stream_prefetch_data[2]);
 
   // Writes the header and key to a newly-created stream file. |index| is the
   // index of the stream. Returns true on success; returns false and sets
@@ -294,19 +312,45 @@ class SimpleSynchronousEntry {
   int InitializeForCreate(SimpleEntryStat* out_entry_stat);
 
   // Allocates and fills a buffer with stream 0 data in |stream_0_data|, then
-  // checks its crc32.
-  int ReadAndValidateStream0(
+  // checks its crc32. May also optionally read in |stream_1_data| and its
+  // crc, but might decide not to.
+  int ReadAndValidateStream0AndMaybe1(
       int file_size,
       SimpleEntryStat* out_entry_stat,
-      scoped_refptr<net::GrowableIOBuffer>* stream_0_data,
-      uint32_t* out_stream_0_crc32);
+      SimpleStreamPrefetchData stream_prefetch_data[2]);
 
-  int GetEOFRecordData(int index,
-                       const SimpleEntryStat& entry_stat,
-                       bool* out_has_crc32,
-                       bool* out_has_key_sha256,
-                       uint32_t* out_crc32,
-                       int32_t* out_data_size) const;
+  // Reads the EOF record located at |file_offset| in file |file_index|,
+  // with |file_0_prefetch| ptentially having prefetched file 0 content.
+  // Puts the result into |*eof_record| and sanity-checks it.
+  // Returns net status, and records any failures to UMA.
+  int GetEOFRecordData(base::StringPiece file_0_prefetch,
+                       int file_index,
+                       int file_offset,
+                       SimpleFileEOF* eof_record);
+
+  // Reads either from |file_0_prefetch| or files_[file_index].
+  // Range-checks all the in-memory reads.
+  bool ReadFromFileOrPrefetched(base::StringPiece file_0_prefetch,
+                                int file_index,
+                                int offset,
+                                int size,
+                                char* dest);
+
+  // Extracts out the payload of stream |stream_index|, reading either from
+  // |file_0_prefetch|, if available, or the file. |entry_stat| will be used to
+  // determine file layout, though |extra_size| additional bytes will be read
+  // past the stream payload end.
+  //
+  // |*stream_data| will be pointed to a fresh buffer with the results,
+  // and |*out_crc32| will get the checksum, which will be verified against
+  // |eof_record|.
+  int PreReadStreamPayload(base::StringPiece file_0_prefetch,
+                           int stream_index,
+                           int extra_size,
+                           const SimpleEntryStat& entry_stat,
+                           const SimpleFileEOF& eof_record,
+                           SimpleStreamPrefetchData* out);
+
   void Doom() const;
 
   // Opens the sparse data file and scans it if it exists.

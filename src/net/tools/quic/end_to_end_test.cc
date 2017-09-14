@@ -341,28 +341,28 @@ class EndToEndTest : public QuicTestWithParam<TestParams> {
   }
 
   void set_client_initial_stream_flow_control_receive_window(uint32_t window) {
-    CHECK(client_.get() == nullptr);
+    CHECK(client_ == nullptr);
     QUIC_DLOG(INFO) << "Setting client initial stream flow control window: "
                     << window;
     client_config_.SetInitialStreamFlowControlWindowToSend(window);
   }
 
   void set_client_initial_session_flow_control_receive_window(uint32_t window) {
-    CHECK(client_.get() == nullptr);
+    CHECK(client_ == nullptr);
     QUIC_DLOG(INFO) << "Setting client initial session flow control window: "
                     << window;
     client_config_.SetInitialSessionFlowControlWindowToSend(window);
   }
 
   void set_server_initial_stream_flow_control_receive_window(uint32_t window) {
-    CHECK(server_thread_.get() == nullptr);
+    CHECK(server_thread_ == nullptr);
     QUIC_DLOG(INFO) << "Setting server initial stream flow control window: "
                     << window;
     server_config_.SetInitialStreamFlowControlWindowToSend(window);
   }
 
   void set_server_initial_session_flow_control_receive_window(uint32_t window) {
-    CHECK(server_thread_.get() == nullptr);
+    CHECK(server_thread_ == nullptr);
     QUIC_DLOG(INFO) << "Setting server initial session flow control window: "
                     << window;
     server_config_.SetInitialSessionFlowControlWindowToSend(window);
@@ -479,7 +479,7 @@ class EndToEndTest : public QuicTestWithParam<TestParams> {
   void StopServer() {
     if (!server_started_)
       return;
-    if (server_thread_.get()) {
+    if (server_thread_) {
       server_thread_->Quit();
       server_thread_->Join();
     }
@@ -2428,9 +2428,6 @@ class ClientSessionThatDropsBody : public QuicSpdyClientSession {
   std::unique_ptr<QuicSpdyClientStream> CreateClientStream() override {
     return QuicMakeUnique<ClientStreamThatDropsBody>(GetNextOutgoingStreamId(),
                                                      this);
-  }
-  std::unique_ptr<QuicStream> CreateStream(QuicStreamId id) override {
-    return QuicMakeUnique<ClientStreamThatDropsBody>(id, this);
   }
 };
 

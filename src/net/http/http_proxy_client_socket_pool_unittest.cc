@@ -83,7 +83,7 @@ class HttpProxyClientSocketPoolTest
                          NetLogWithSource().net_log()),
         field_trial_list_(nullptr),
         pool_(
-            base::MakeUnique<HttpProxyClientSocketPool>(kMaxSockets,
+            std::make_unique<HttpProxyClientSocketPool>(kMaxSockets,
                                                         kMaxSocketsPerGroup,
                                                         &transport_socket_pool_,
                                                         &ssl_socket_pool_,
@@ -120,7 +120,7 @@ class HttpProxyClientSocketPoolTest
 
     // Reset |pool_| so that the field trial parameters are read by the
     // |pool_|.
-    pool_ = base::MakeUnique<HttpProxyClientSocketPool>(
+    pool_ = std::make_unique<HttpProxyClientSocketPool>(
         kMaxSockets, kMaxSocketsPerGroup, &transport_socket_pool_,
         &ssl_socket_pool_, &estimator_, NetLogWithSource().net_log());
   }

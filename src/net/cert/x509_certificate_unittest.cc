@@ -305,9 +305,7 @@ TEST(X509CertificateTest, TeletexStringIsLatin1OrCp1252) {
   ASSERT_TRUE(cert);
 
   const CertPrincipal& subject = cert->subject();
-#if (defined(OS_MACOSX) && !defined(OS_IOS)) || \
-    (BUILDFLAG(USE_BYTE_CERTS) && !BUILDFLAG(USE_PLATFORM_ICU_ALTERNATIVES))
-  // Mac: TeletexString is decoded as CP1252.
+#if BUILDFLAG(USE_BYTE_CERTS) && !BUILDFLAG(USE_PLATFORM_ICU_ALTERNATIVES)
   // use_byte_certs: ICU ISO-8859-1 seems to be CP1252 actually.
   //   (but with use_platform_icu_alternatives it's not.)
   EXPECT_EQ(
@@ -1294,14 +1292,7 @@ const struct PublicKeyInfoTestData {
      X509Certificate::kPublicKeyTypeRSA},
     {"prime256v1-ecdsa-ee-by-1024-rsa-intermediate.pem", 256,
      X509Certificate::kPublicKeyTypeECDSA},
-#if defined(OS_MACOSX) && !defined(OS_IOS) && !BUILDFLAG(USE_BYTE_CERTS)
-    // OS X has an key length limit of 4096 bits. This should manifest as an
-    // unknown key. If a future version of OS X changes this, large_key.pem may
-    // need to be renegerated with a larger key. See https://crbug.com/472291.
-    {"large_key.pem", 0, X509Certificate::kPublicKeyTypeUnknown},
-#else
     {"large_key.pem", 8200, X509Certificate::kPublicKeyTypeRSA},
-#endif
 };
 
 class X509CertificatePublicKeyInfoTest

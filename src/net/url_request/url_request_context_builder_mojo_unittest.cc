@@ -35,7 +35,7 @@ std::unique_ptr<test_server::HttpResponse> HandlePacRequest(
   if (request.relative_url != kPacPath)
     return nullptr;
   std::unique_ptr<test_server::BasicHttpResponse> response =
-      base::MakeUnique<test_server::BasicHttpResponse>();
+      std::make_unique<test_server::BasicHttpResponse>();
   response->set_content(base::StringPrintf(
       "function FindProxyForURL(url, host) { return 'PROXY %s;'; }",
       HostPortPair::FromURL(request.base_url).ToString().c_str()));
@@ -59,7 +59,7 @@ TEST_F(URLRequestContextBuilderMojoTest, MojoProxyResolver) {
   EXPECT_TRUE(test_server_.Start());
   TestMojoProxyResolverFactory::GetInstance()->set_resolver_created(false);
 
-  builder_.set_proxy_config_service(base::MakeUnique<ProxyConfigServiceFixed>(
+  builder_.set_proxy_config_service(std::make_unique<ProxyConfigServiceFixed>(
       ProxyConfig::CreateFromCustomPacURL(test_server_.GetURL(kPacPath))));
   builder_.set_mojo_proxy_resolver_factory(
       TestMojoProxyResolverFactory::GetInstance());
@@ -85,7 +85,7 @@ TEST_F(URLRequestContextBuilderMojoTest, ShutdownWithHungRequest) {
   test_server_.SetConnectionListener(&connection_listener);
   EXPECT_TRUE(test_server_.Start());
 
-  builder_.set_proxy_config_service(base::MakeUnique<ProxyConfigServiceFixed>(
+  builder_.set_proxy_config_service(std::make_unique<ProxyConfigServiceFixed>(
       ProxyConfig::CreateFromCustomPacURL(test_server_.GetURL("/hung"))));
   builder_.set_mojo_proxy_resolver_factory(
       TestMojoProxyResolverFactory::GetInstance());

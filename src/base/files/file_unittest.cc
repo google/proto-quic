@@ -177,6 +177,10 @@ TEST(FileTest, ReadWrite) {
   int bytes_written = file.Write(0, data_to_write, 0);
   EXPECT_EQ(0, bytes_written);
 
+  // Write 0 bytes, with buf=nullptr.
+  bytes_written = file.Write(0, nullptr, 0);
+  EXPECT_EQ(0, bytes_written);
+
   // Write "test" to the file.
   bytes_written = file.Write(0, data_to_write, kTestDataSize);
   EXPECT_EQ(kTestDataSize, bytes_written);
@@ -245,6 +249,10 @@ TEST(FileTest, Append) {
 
   // Write 0 bytes to the file.
   int bytes_written = file.Write(0, data_to_write, 0);
+  EXPECT_EQ(0, bytes_written);
+
+  // Write 0 bytes, with buf=nullptr.
+  bytes_written = file.Write(0, nullptr, 0);
   EXPECT_EQ(0, bytes_written);
 
   // Write "test" to the file.

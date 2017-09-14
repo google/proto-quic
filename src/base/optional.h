@@ -171,7 +171,7 @@ class Optional {
   }
 
   template <class U>
-  typename std::enable_if<std::is_same<std::decay<U>, T>::value,
+  typename std::enable_if<std::is_same<std::decay_t<U>, T>::value,
                           Optional&>::type
   operator=(U&& value) {
     InitOrAssign(std::forward<U>(value));

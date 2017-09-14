@@ -83,7 +83,7 @@ bool AiaRequest::AddCompletedFetchToResults(Error error,
   if (!ParsedCertificate::CreateAndAddToVector(
           x509_util::CreateCryptoBuffer(fetched_bytes.data(),
                                         fetched_bytes.size()),
-          {}, results, &errors)) {
+          x509_util::DefaultParseCertificateOptions(), results, &errors)) {
     // TODO(crbug.com/634443): propagate error info.
     LOG(ERROR) << "Error parsing cert retrieved from AIA:\n"
                << errors.ToDebugString();

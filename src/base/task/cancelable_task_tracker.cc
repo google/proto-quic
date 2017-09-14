@@ -64,7 +64,7 @@ CancelableTaskTracker::~CancelableTaskTracker() {
 
 CancelableTaskTracker::TaskId CancelableTaskTracker::PostTask(
     TaskRunner* task_runner,
-    const tracked_objects::Location& from_here,
+    const Location& from_here,
     OnceClosure task) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
 
@@ -74,7 +74,7 @@ CancelableTaskTracker::TaskId CancelableTaskTracker::PostTask(
 
 CancelableTaskTracker::TaskId CancelableTaskTracker::PostTaskAndReply(
     TaskRunner* task_runner,
-    const tracked_objects::Location& from_here,
+    const Location& from_here,
     OnceClosure task,
     OnceClosure reply) {
   DCHECK(sequence_checker_.CalledOnValidSequence());

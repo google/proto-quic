@@ -12,7 +12,6 @@
 #include <cstdint>
 
 #include "net/spdy/core/http2_frame_decoder_adapter.h"
-#include "net/spdy/core/spdy_framer.h"
 #include "net/spdy/core/spdy_protocol.h"
 #include "net/spdy/platform/api/spdy_string_piece.h"
 
@@ -27,7 +26,7 @@ class SpdyNoOpVisitor : public SpdyFramerVisitorInterface,
   ~SpdyNoOpVisitor() override;
 
   // SpdyFramerVisitorInterface methods:
-  void OnError(SpdyFramer::SpdyFramerError error) override {}
+  void OnError(Http2DecoderAdapter::SpdyFramerError error) override {}
   SpdyHeadersHandlerInterface* OnHeaderFrameStart(
       SpdyStreamId stream_id) override;
   void OnHeaderFrameEnd(SpdyStreamId stream_id) override {}

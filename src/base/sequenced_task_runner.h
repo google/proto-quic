@@ -111,27 +111,23 @@ class BASE_EXPORT SequencedTaskRunner : public TaskRunner {
   // TODO(akalin): Get rid of the boolean return value for the methods
   // below.
 
-  bool PostNonNestableTask(const tracked_objects::Location& from_here,
-                           OnceClosure task);
+  bool PostNonNestableTask(const Location& from_here, OnceClosure task);
 
-  virtual bool PostNonNestableDelayedTask(
-      const tracked_objects::Location& from_here,
-      OnceClosure task,
-      base::TimeDelta delay) = 0;
+  virtual bool PostNonNestableDelayedTask(const Location& from_here,
+                                          OnceClosure task,
+                                          base::TimeDelta delay) = 0;
 
   // Submits a non-nestable task to delete the given object.  Returns
   // true if the object may be deleted at some point in the future,
   // and false if the object definitely will not be deleted.
   template <class T>
-  bool DeleteSoon(const tracked_objects::Location& from_here,
-                  const T* object) {
+  bool DeleteSoon(const Location& from_here, const T* object) {
     return DeleteOrReleaseSoonInternal(from_here, &DeleteHelper<T>::DoDelete,
                                        object);
   }
 
   template <class T>
-  bool DeleteSoon(const tracked_objects::Location& from_here,
-                  std::unique_ptr<T> object) {
+  bool DeleteSoon(const Location& from_here, std::unique_ptr<T> object) {
     return DeleteSoon(from_here, object.release());
   }
 
@@ -139,8 +135,7 @@ class BASE_EXPORT SequencedTaskRunner : public TaskRunner {
   // true if the object may be released at some point in the future,
   // and false if the object definitely will not be released.
   template <class T>
-  bool ReleaseSoon(const tracked_objects::Location& from_here,
-                   const T* object) {
+  bool ReleaseSoon(const Location& from_here, const T* object) {
     return DeleteOrReleaseSoonInternal(from_here, &ReleaseHelper<T>::DoRelease,
                                        object);
   }
@@ -149,7 +144,7 @@ class BASE_EXPORT SequencedTaskRunner : public TaskRunner {
   ~SequencedTaskRunner() override {}
 
  private:
-  bool DeleteOrReleaseSoonInternal(const tracked_objects::Location& from_here,
+  bool DeleteOrReleaseSoonInternal(const Location& from_here,
                                    void (*deleter)(const void*),
                                    const void* object);
 };

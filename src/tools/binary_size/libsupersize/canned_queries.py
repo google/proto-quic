@@ -148,3 +148,9 @@ class CannedQueries(object):
     # Call Sorted() twice so that subgroups will be sorted.
     # TODO(agrieve): Might be nice to recursively GroupedByName() on these.
     return symbols.WhereIsTemplate().Sorted().GroupedByName(depth).Sorted()
+
+  def StaticInitializers(self, symbols=None):
+    """Lists Static Initializers."""
+    symbols = self._SymbolsArg(symbols)
+    # GCC generates "_GLOBAL__" symbols. Clang generates "startup".
+    return symbols.WhereNameMatches('^startup$|^_GLOBAL__')

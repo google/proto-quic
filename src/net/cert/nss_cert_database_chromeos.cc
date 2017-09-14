@@ -16,7 +16,7 @@
 #include "base/location.h"
 #include "base/stl_util.h"
 #include "base/task_runner.h"
-#include "net/cert/x509_certificate.h"
+#include "base/task_runner_util.h"
 
 namespace net {
 
@@ -39,20 +39,16 @@ void NSSCertDatabaseChromeOS::SetSystemSlot(
   profile_filter_.Init(GetPublicSlot(), GetPrivateSlot(), GetSystemSlot());
 }
 
-void NSSCertDatabaseChromeOS::ListCertsSync(CertificateList* certs) {
-  ListCertsImpl(profile_filter_, certs);
+ScopedCERTCertificateList NSSCertDatabaseChromeOS::ListCertsSync() {
+  return ListCertsImpl(profile_filter_);
 }
 
 void NSSCertDatabaseChromeOS::ListCerts(
     const NSSCertDatabase::ListCertsCallback& callback) {
-  std::unique_ptr<CertificateList> certs(new CertificateList());
-
-  // base::Pased will NULL out |certs|, so cache the underlying pointer here.
-  CertificateList* raw_certs = certs.get();
-  GetSlowTaskRunner()->PostTaskAndReply(
-      FROM_HERE, base::Bind(&NSSCertDatabaseChromeOS::ListCertsImpl,
-                            profile_filter_, base::Unretained(raw_certs)),
-      base::Bind(callback, base::Passed(&certs)));
+  base::PostTaskAndReplyWithResult(
+      GetSlowTaskRunner().get(), FROM_HERE,
+      base::Bind(&NSSCertDatabaseChromeOS::ListCertsImpl, profile_filter_),
+      callback);
 }
 
 crypto::ScopedPK11Slot NSSCertDatabaseChromeOS::GetSystemSlot() const {
@@ -74,17 +70,18 @@ void NSSCertDatabaseChromeOS::ListModules(
            << " modules";
 }
 
-void NSSCertDatabaseChromeOS::ListCertsImpl(
-    const NSSProfileFilterChromeOS& profile_filter,
-    CertificateList* certs) {
-  NSSCertDatabase::ListCertsImpl(crypto::ScopedPK11Slot(), certs);
+ScopedCERTCertificateList NSSCertDatabaseChromeOS::ListCertsImpl(
+    const NSSProfileFilterChromeOS& profile_filter) {
+  ScopedCERTCertificateList certs(
+      NSSCertDatabase::ListCertsImpl(crypto::ScopedPK11Slot()));
 
-  size_t pre_size = certs->size();
-  base::EraseIf(*certs,
+  size_t pre_size = certs.size();
+  base::EraseIf(certs,
                 NSSProfileFilterChromeOS::CertNotAllowedForProfilePredicate(
                     profile_filter));
-  DVLOG(1) << "filtered " << pre_size - certs->size() << " of " << pre_size
+  DVLOG(1) << "filtered " << pre_size - certs.size() << " of " << pre_size
            << " certs";
+  return certs;
 }
 
 }  // namespace net

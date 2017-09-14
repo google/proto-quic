@@ -62,8 +62,9 @@ int NumberOfProcessors() {
 base::LazyInstance<
     base::internal::LazySysInfoValue<int, NumberOfProcessors> >::Leaky
     g_lazy_number_of_processors = LAZY_INSTANCE_INITIALIZER;
-#endif
+#endif  // !defined(OS_OPENBSD) && !defined(OS_FUCHSIA)
 
+#if !defined(OS_FUCHSIA)
 int64_t AmountOfVirtualMemory() {
   struct rlimit limit;
   int result = getrlimit(RLIMIT_DATA, &limit);
@@ -77,6 +78,7 @@ int64_t AmountOfVirtualMemory() {
 base::LazyInstance<
     base::internal::LazySysInfoValue<int64_t, AmountOfVirtualMemory>>::Leaky
     g_lazy_virtual_memory = LAZY_INSTANCE_INITIALIZER;
+#endif  // !defined(OS_FUCHSIA)
 
 #if defined(OS_LINUX)
 bool IsStatsZeroIfUnlimited(const base::FilePath& path) {
@@ -134,10 +136,12 @@ int SysInfo::NumberOfProcessors() {
 }
 #endif
 
+#if !defined(OS_FUCHSIA)
 // static
 int64_t SysInfo::AmountOfVirtualMemory() {
   return g_lazy_virtual_memory.Get().value();
 }
+#endif
 
 // static
 int64_t SysInfo::AmountOfFreeDiskSpace(const FilePath& path) {

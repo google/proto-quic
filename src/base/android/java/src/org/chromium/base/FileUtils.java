@@ -25,7 +25,7 @@ public class FileUtils {
      * Delete the given File and (if it's a directory) everything within it.
      */
     public static void recursivelyDeleteFile(File currentFile) {
-        assert !ThreadUtils.runningOnUiThread();
+        ThreadUtils.assertOnBackgroundThread();
         if (currentFile.isDirectory()) {
             File[] files = currentFile.listFiles();
             if (files != null) {
@@ -43,7 +43,7 @@ public class FileUtils {
      * @param files The files to delete.
      */
     public static void batchDeleteFiles(List<File> files) {
-        assert !ThreadUtils.runningOnUiThread();
+        ThreadUtils.assertOnBackgroundThread();
 
         for (File file : files) {
             if (file.exists()) recursivelyDeleteFile(file);

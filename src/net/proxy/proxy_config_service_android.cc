@@ -370,11 +370,6 @@ ProxyConfigServiceAndroid::~ProxyConfigServiceAndroid() {
   delegate_->Shutdown();
 }
 
-// static
-bool ProxyConfigServiceAndroid::Register(JNIEnv* env) {
-  return RegisterNativesImpl(env);
-}
-
 void ProxyConfigServiceAndroid::set_exclude_pac_url(bool enabled) {
   delegate_->set_exclude_pac_url(enabled);
 }

@@ -177,7 +177,7 @@ std::unique_ptr<ParsedNetLog> ReadNetLogFromDisk(
     return nullptr;
   }
 
-  std::unique_ptr<ParsedNetLog> result = base::MakeUnique<ParsedNetLog>();
+  std::unique_ptr<ParsedNetLog> result = std::make_unique<ParsedNetLog>();
 
   ::testing::AssertionResult init_result = result->InitFromFileContents(input);
   EXPECT_TRUE(init_result);
@@ -436,7 +436,7 @@ TEST_P(FileNetLogObserverTest, GeneratesValidJSONWithPolledData) {
   const char kDummyPolledDataPath[] = "dummy_path";
   const char kDummyPolledDataString[] = "dummy_info";
   std::unique_ptr<base::DictionaryValue> dummy_polled_data =
-      base::MakeUnique<base::DictionaryValue>();
+      std::make_unique<base::DictionaryValue>();
   dummy_polled_data->SetString(kDummyPolledDataPath, kDummyPolledDataString);
 
   logger_->StopObserving(std::move(dummy_polled_data), closure.closure());
@@ -462,7 +462,7 @@ TEST_P(FileNetLogObserverTest, AddEventsFromMultipleThreads) {
   // Start all the threads. Waiting for them to start is to hopefuly improve
   // the odds of hitting interesting races once events start being added.
   for (size_t i = 0; i < threads.size(); ++i) {
-    threads[i] = base::MakeUnique<base::Thread>(
+    threads[i] = std::make_unique<base::Thread>(
         base::StringPrintf("WorkerThread%i", static_cast<int>(i)));
     threads[i]->Start();
     threads[i]->WaitUntilThreadStarted();
@@ -816,7 +816,7 @@ TEST_P(FileNetLogObserverTest, AddEventsFromMultipleThreadsWithStopObserving) {
   // Start all the threads. Waiting for them to start is to hopefully improve
   // the odds of hitting interesting races once events start being added.
   for (size_t i = 0; i < threads.size(); ++i) {
-    threads[i] = base::MakeUnique<base::Thread>(
+    threads[i] = std::make_unique<base::Thread>(
         base::StringPrintf("WorkerThread%i", static_cast<int>(i)));
     threads[i]->Start();
     threads[i]->WaitUntilThreadStarted();
@@ -851,7 +851,7 @@ TEST_P(FileNetLogObserverTest,
   // Start all the threads. Waiting for them to start is to hopefully improve
   // the odds of hitting interesting races once events start being added.
   for (size_t i = 0; i < threads.size(); ++i) {
-    threads[i] = base::MakeUnique<base::Thread>(
+    threads[i] = std::make_unique<base::Thread>(
         base::StringPrintf("WorkerThread%i", static_cast<int>(i)));
     threads[i]->Start();
     threads[i]->WaitUntilThreadStarted();

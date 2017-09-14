@@ -39,6 +39,9 @@ tools/binary_size/diagnose_bloat.py HEAD -v
 # Diff BEFORE_REV and AFTER_REV using build artifacts downloaded from perf bots.
 tools/binary_size/diagnose_bloat.py AFTER_REV --reference-rev BEFORE_REV --cloud -v
 
+# Fetch a single .size and .apk from the bots:
+tools/binary_size/diagnose_bloat.py AFTER_REV --cloud --single
+
 # Build and diff all contiguous revs in range BEFORE_REV..AFTER_REV for src/v8.
 tools/binary_size/diagnose_bloat.py AFTER_REV --reference-rev BEFORE_REV --subrepo v8 --all -v
 
@@ -136,7 +139,7 @@ Collect size information and dump it into a `.size` file.
 *** note
 **Note:** Refer to
 [diagnose_bloat.py](https://cs.chromium.org/search/?q=file:diagnose_bloat.py+gn_args)
-for list of GN args to build a Release binary.
+for list of GN args to build a Release binary (or just use the tool with --single).
 ***
 
 Example Usage:

@@ -189,10 +189,6 @@ class QUIC_EXPORT_PRIVATE QuicPacketGenerator {
     packet_creator_.set_debug_delegate(debug_delegate);
   }
 
-  bool latched_flag_no_stop_waiting_frames() const {
-    return packet_creator_.latched_flag_no_stop_waiting_frames();
-  }
-
  private:
   friend class test::QuicPacketGeneratorPeer;
 

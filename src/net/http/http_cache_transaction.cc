@@ -555,6 +555,12 @@ void HttpCache::Transaction::SetRequestHeadersCallback(
   request_headers_callback_ = std::move(callback);
 }
 
+void HttpCache::Transaction::SetResponseHeadersCallback(
+    ResponseHeadersCallback callback) {
+  DCHECK(!network_trans_);
+  response_headers_callback_ = std::move(callback);
+}
+
 int HttpCache::Transaction::ResumeNetworkStart() {
   if (network_trans_)
     return network_trans_->ResumeNetworkStart();
@@ -1501,6 +1507,7 @@ int HttpCache::Transaction::DoSendRequest() {
   network_trans_->SetBeforeNetworkStartCallback(before_network_start_callback_);
   network_trans_->SetBeforeHeadersSentCallback(before_headers_sent_callback_);
   network_trans_->SetRequestHeadersCallback(request_headers_callback_);
+  network_trans_->SetResponseHeadersCallback(response_headers_callback_);
 
   // Old load timing information, if any, is now obsolete.
   old_network_trans_load_timing_.reset();
@@ -1929,12 +1936,12 @@ int HttpCache::Transaction::DoFinishHeaders(int result) {
 
   TransitionToState(STATE_FINISH_HEADERS_COMPLETE);
 
-  // If it was an auth failure or 416, this transaction should continue to be
+  // If it was an auth failure, this transaction should continue to be
   // headers_transaction till consumer takes an action, so no need to do
   // anything now.
-  if (auth_response_.headers.get() ||
-      (new_response_ && new_response_->headers &&
-       new_response_->headers->response_code() == 416))
+  // TODO(crbug.com/740947). See the issue for a suggestion for cleaning the
+  // state machine to be able to remove this condition.
+  if (auth_response_.headers.get())
     return OK;
 
   // If the transaction needs to wait because another transaction is still

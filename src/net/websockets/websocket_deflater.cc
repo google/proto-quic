@@ -6,9 +6,9 @@
 
 #include <string.h>
 #include <algorithm>
-#include <deque>
 #include <vector>
 
+#include "base/containers/circular_deque.h"
 #include "base/logging.h"
 #include "net/base/io_buffer.h"
 #include "third_party/zlib/zlib.h"
@@ -120,8 +120,8 @@ void WebSocketDeflater::PushSyncMark() {
 
 scoped_refptr<IOBufferWithSize> WebSocketDeflater::GetOutput(size_t size) {
   size_t length_to_copy = std::min(size, buffer_.size());
-  std::deque<char>::iterator begin = buffer_.begin();
-  std::deque<char>::iterator end = begin + length_to_copy;
+  base::circular_deque<char>::iterator begin = buffer_.begin();
+  base::circular_deque<char>::iterator end = begin + length_to_copy;
 
   scoped_refptr<IOBufferWithSize> result = new IOBufferWithSize(length_to_copy);
   std::copy(begin, end, result->data());

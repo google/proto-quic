@@ -16,10 +16,9 @@ TestSimpleTaskRunner::TestSimpleTaskRunner() = default;
 
 TestSimpleTaskRunner::~TestSimpleTaskRunner() = default;
 
-bool TestSimpleTaskRunner::PostDelayedTask(
-    const tracked_objects::Location& from_here,
-    OnceClosure task,
-    TimeDelta delay) {
+bool TestSimpleTaskRunner::PostDelayedTask(const Location& from_here,
+                                           OnceClosure task,
+                                           TimeDelta delay) {
   AutoLock auto_lock(lock_);
   pending_tasks_.push_back(TestPendingTask(from_here, std::move(task),
                                            TimeTicks(), delay,
@@ -27,10 +26,9 @@ bool TestSimpleTaskRunner::PostDelayedTask(
   return true;
 }
 
-bool TestSimpleTaskRunner::PostNonNestableDelayedTask(
-    const tracked_objects::Location& from_here,
-    OnceClosure task,
-    TimeDelta delay) {
+bool TestSimpleTaskRunner::PostNonNestableDelayedTask(const Location& from_here,
+                                                      OnceClosure task,
+                                                      TimeDelta delay) {
   AutoLock auto_lock(lock_);
   pending_tasks_.push_back(TestPendingTask(from_here, std::move(task),
                                            TimeTicks(), delay,

@@ -103,7 +103,7 @@ std::unique_ptr<CertErrorParams> CreateCertErrorParams1Der(
     const char* name,
     const der::Input& der) {
   DCHECK(name);
-  return base::MakeUnique<CertErrorParams2Der>(name, der, nullptr,
+  return std::make_unique<CertErrorParams2Der>(name, der, nullptr,
                                                der::Input());
 }
 
@@ -114,13 +114,13 @@ std::unique_ptr<CertErrorParams> CreateCertErrorParams2Der(
     const der::Input& der2) {
   DCHECK(name1);
   DCHECK(name2);
-  return base::MakeUnique<CertErrorParams2Der>(name1, der1, name2, der2);
+  return std::make_unique<CertErrorParams2Der>(name1, der1, name2, der2);
 }
 
 std::unique_ptr<CertErrorParams> CreateCertErrorParams1SizeT(const char* name,
                                                              size_t value) {
   DCHECK(name);
-  return base::MakeUnique<CertErrorParams1SizeT>(name, value);
+  return std::make_unique<CertErrorParams1SizeT>(name, value);
 }
 
 NET_EXPORT std::unique_ptr<CertErrorParams> CreateCertErrorParams2SizeT(
@@ -130,7 +130,7 @@ NET_EXPORT std::unique_ptr<CertErrorParams> CreateCertErrorParams2SizeT(
     size_t value2) {
   DCHECK(name1);
   DCHECK(name2);
-  return base::MakeUnique<CertErrorParams2SizeT>(name1, value1, name2, value2);
+  return std::make_unique<CertErrorParams2SizeT>(name1, value1, name2, value2);
 }
 
 }  // namespace net

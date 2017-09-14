@@ -65,12 +65,4 @@ static void Java_Foo_calledByNative(JNIEnv* env, const
   jni_generator::CheckException(env);
 }
 
-// Step 3: RegisterNatives.
-
-// TODO(agrieve): Remove these empty registration functions and functions
-// calling them. https://crbug.com/683256.
-inline bool RegisterNativesImpl(JNIEnv* env) {
-  return true;
-}
-
 #endif  // org_chromium_foo_Foo_JNI

@@ -28,8 +28,7 @@ class PostTaskAndReplyTaskRunner : public internal::PostTaskAndReplyImpl {
       : destination_(destination) {}
 
  private:
-  bool PostTask(const tracked_objects::Location& from_here,
-                OnceClosure task) override {
+  bool PostTask(const Location& from_here, OnceClosure task) override {
     return destination_->PostTask(from_here, std::move(task));
   }
 

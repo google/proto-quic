@@ -28,7 +28,6 @@ class QUIC_EXPORT_PRIVATE QuicDataWriter {
   // Creates a QuicDataWriter where |buffer| is not owned.
   QuicDataWriter(size_t size,
                  char* buffer,
-                 Perspective perspective,
                  Endianness endianness);
 
   ~QuicDataWriter();
@@ -91,12 +90,6 @@ class QUIC_EXPORT_PRIVATE QuicDataWriter {
   char* buffer_;
   size_t capacity_;  // Allocation size of payload (or -1 if buffer is const).
   size_t length_;    // Current length of the buffer.
-
-  // TODO(zhongyi): remove this field as it is no longer used.
-  // Perspective of this data writer. Please note, although client and server
-  // may have different in-memory representation of the same field, the on wire
-  // representation must be consistent.
-  Perspective perspective_;
 
   // The endianness to write integers and floating numbers.
   Endianness endianness_;

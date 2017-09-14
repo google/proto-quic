@@ -273,7 +273,7 @@ TEST_P(HttpServerPropertiesManagerTest,
   // Set up the prefs for https://www.google.com and https://mail.google.com and
   // then set it twice. Only expect a single cache update.
 
-  auto server_pref_dict = base::MakeUnique<base::DictionaryValue>();
+  auto server_pref_dict = std::make_unique<base::DictionaryValue>();
   url::SchemeHostPort google_server("https", "www.google.com", 443);
   url::SchemeHostPort mail_server("https", "mail.google.com", 443);
 
@@ -281,53 +281,53 @@ TEST_P(HttpServerPropertiesManagerTest,
   server_pref_dict->SetBoolean("supports_spdy", true);
 
   // Set up alternative_services for https://www.google.com.
-  auto alternative_service_dict0 = base::MakeUnique<base::DictionaryValue>();
+  auto alternative_service_dict0 = std::make_unique<base::DictionaryValue>();
   alternative_service_dict0->SetInteger("port", 443);
   alternative_service_dict0->SetString("protocol_str", "h2");
-  auto alternative_service_dict1 = base::MakeUnique<base::DictionaryValue>();
+  auto alternative_service_dict1 = std::make_unique<base::DictionaryValue>();
   alternative_service_dict1->SetInteger("port", 1234);
   alternative_service_dict1->SetString("protocol_str", "quic");
-  auto alternative_service_list0 = base::MakeUnique<base::ListValue>();
+  auto alternative_service_list0 = std::make_unique<base::ListValue>();
   alternative_service_list0->Append(std::move(alternative_service_dict0));
   alternative_service_list0->Append(std::move(alternative_service_dict1));
   server_pref_dict->SetWithoutPathExpansion(
       "alternative_service", std::move(alternative_service_list0));
 
   // Set up ServerNetworkStats for https://www.google.com.
-  auto stats = base::MakeUnique<base::DictionaryValue>();
+  auto stats = std::make_unique<base::DictionaryValue>();
   stats->SetInteger("srtt", 10);
   server_pref_dict->SetWithoutPathExpansion("network_stats", std::move(stats));
 
   // Set the server preference for https://www.google.com.
-  auto servers_dict = base::MakeUnique<base::DictionaryValue>();
+  auto servers_dict = std::make_unique<base::DictionaryValue>();
   servers_dict->SetWithoutPathExpansion(
       GetParam() >= 5 ? "https://www.google.com" : "www.google.com:443",
       std::move(server_pref_dict));
   std::unique_ptr<base::ListValue> servers_list;
   if (GetParam() >= 4) {
-    servers_list = base::MakeUnique<base::ListValue>();
+    servers_list = std::make_unique<base::ListValue>();
     servers_list->Append(std::move(servers_dict));
-    servers_dict = base::MakeUnique<base::DictionaryValue>();
+    servers_dict = std::make_unique<base::DictionaryValue>();
   }
 
   // Set the preference for mail.google.com server.
-  auto server_pref_dict1 = base::MakeUnique<base::DictionaryValue>();
+  auto server_pref_dict1 = std::make_unique<base::DictionaryValue>();
 
   // Set supports_spdy for https://mail.google.com.
   server_pref_dict1->SetBoolean("supports_spdy", true);
 
   // Set up alternative_services for https://mail.google.com.
-  auto alternative_service_dict2 = base::MakeUnique<base::DictionaryValue>();
+  auto alternative_service_dict2 = std::make_unique<base::DictionaryValue>();
   alternative_service_dict2->SetString("protocol_str", "h2");
   alternative_service_dict2->SetInteger("port", 444);
-  auto alternative_service_list1 = base::MakeUnique<base::ListValue>();
+  auto alternative_service_list1 = std::make_unique<base::ListValue>();
   alternative_service_list1->Append(std::move(alternative_service_dict2));
   server_pref_dict1->SetWithoutPathExpansion(
       "alternative_service", std::move(alternative_service_list1));
 
   // Set up ServerNetworkStats for https://mail.google.com and it is the MRU
   // server.
-  auto stats1 = base::MakeUnique<base::DictionaryValue>();
+  auto stats1 = std::make_unique<base::DictionaryValue>();
   stats1->SetInteger("srtt", 20);
   server_pref_dict1->SetWithoutPathExpansion("network_stats",
                                              std::move(stats1));
@@ -352,7 +352,7 @@ TEST_P(HttpServerPropertiesManagerTest,
     http_server_properties_dict.SetWithoutPathExpansion(
         "servers", std::move(servers_dict));
   }
-  auto supports_quic = base::MakeUnique<base::DictionaryValue>();
+  auto supports_quic = std::make_unique<base::DictionaryValue>();
   supports_quic->SetBoolean("used_quic", true);
   supports_quic->SetString("address", "127.0.0.1");
   http_server_properties_dict.SetWithoutPathExpansion("supports_quic",
@@ -361,19 +361,16 @@ TEST_P(HttpServerPropertiesManagerTest,
   // Set quic_server_info for https://www.google.com, https://mail.google.com
   // and https://play.google.com and verify the MRU.
   http_server_props_manager_->SetMaxServerConfigsStoredInProperties(3);
-  auto quic_servers_dict = base::MakeUnique<base::DictionaryValue>();
-  auto quic_server_pref_dict1 = base::MakeUnique<base::DictionaryValue>();
+  auto quic_servers_dict = std::make_unique<base::DictionaryValue>();
+  auto quic_server_pref_dict1 = std::make_unique<base::DictionaryValue>();
   std::string quic_server_info1("quic_server_info1");
-  quic_server_pref_dict1->SetStringWithoutPathExpansion("server_info",
-                                                        quic_server_info1);
-  auto quic_server_pref_dict2 = base::MakeUnique<base::DictionaryValue>();
+  quic_server_pref_dict1->SetKey("server_info", base::Value(quic_server_info1));
+  auto quic_server_pref_dict2 = std::make_unique<base::DictionaryValue>();
   std::string quic_server_info2("quic_server_info2");
-  quic_server_pref_dict2->SetStringWithoutPathExpansion("server_info",
-                                                        quic_server_info2);
-  auto quic_server_pref_dict3 = base::MakeUnique<base::DictionaryValue>();
+  quic_server_pref_dict2->SetKey("server_info", base::Value(quic_server_info2));
+  auto quic_server_pref_dict3 = std::make_unique<base::DictionaryValue>();
   std::string quic_server_info3("quic_server_info3");
-  quic_server_pref_dict3->SetStringWithoutPathExpansion("server_info",
-                                                        quic_server_info3);
+  quic_server_pref_dict3->SetKey("server_info", base::Value(quic_server_info3));
   // Set the quic_server_info1 for https://www.google.com.
   QuicServerId google_quic_server_id("www.google.com", 443);
   quic_servers_dict->SetWithoutPathExpansion(google_quic_server_id.ToString(),
@@ -472,32 +469,32 @@ TEST_P(HttpServerPropertiesManagerTest, BadCachedHostPortPair) {
   ExpectPrefsUpdate(1);
   ExpectScheduleUpdatePrefsOnNetworkSequence();
 
-  auto server_pref_dict = base::MakeUnique<base::DictionaryValue>();
+  auto server_pref_dict = std::make_unique<base::DictionaryValue>();
 
   // Set supports_spdy for www.google.com:65536.
   server_pref_dict->SetBoolean("supports_spdy", true);
 
   // Set up alternative_service for www.google.com:65536.
-  auto alternative_service_dict = base::MakeUnique<base::DictionaryValue>();
+  auto alternative_service_dict = std::make_unique<base::DictionaryValue>();
   alternative_service_dict->SetString("protocol_str", "h2");
   alternative_service_dict->SetInteger("port", 80);
-  auto alternative_service_list = base::MakeUnique<base::ListValue>();
+  auto alternative_service_list = std::make_unique<base::ListValue>();
   alternative_service_list->Append(std::move(alternative_service_dict));
   server_pref_dict->SetWithoutPathExpansion(
       "alternative_service", std::move(alternative_service_list));
 
   // Set up ServerNetworkStats for www.google.com:65536.
-  auto stats = base::MakeUnique<base::DictionaryValue>();
+  auto stats = std::make_unique<base::DictionaryValue>();
   stats->SetInteger("srtt", 10);
   server_pref_dict->SetWithoutPathExpansion("network_stats", std::move(stats));
 
   // Set the server preference for www.google.com:65536.
-  auto servers_dict = base::MakeUnique<base::DictionaryValue>();
+  auto servers_dict = std::make_unique<base::DictionaryValue>();
   servers_dict->SetWithoutPathExpansion("www.google.com:65536",
                                         std::move(server_pref_dict));
   base::DictionaryValue http_server_properties_dict;
   if (GetParam() >= 4) {
-    auto servers_list = base::MakeUnique<base::ListValue>();
+    auto servers_list = std::make_unique<base::ListValue>();
     servers_list->Append(std::move(servers_dict));
     if (GetParam() == 5) {
       HttpServerPropertiesManager::SetVersion(&http_server_properties_dict, -1);
@@ -515,10 +512,10 @@ TEST_P(HttpServerPropertiesManagerTest, BadCachedHostPortPair) {
   }
 
   // Set quic_server_info for www.google.com:65536.
-  auto quic_servers_dict = base::MakeUnique<base::DictionaryValue>();
-  auto quic_server_pref_dict1 = base::MakeUnique<base::DictionaryValue>();
-  quic_server_pref_dict1->SetStringWithoutPathExpansion("server_info",
-                                                        "quic_server_info1");
+  auto quic_servers_dict = std::make_unique<base::DictionaryValue>();
+  auto quic_server_pref_dict1 = std::make_unique<base::DictionaryValue>();
+  quic_server_pref_dict1->SetKey("server_info",
+                                 base::Value("quic_server_info1"));
   quic_servers_dict->SetWithoutPathExpansion("http://mail.google.com:65536",
                                              std::move(quic_server_pref_dict1));
 
@@ -561,27 +558,27 @@ TEST_P(HttpServerPropertiesManagerTest, BadCachedAltProtocolPort) {
   ExpectPrefsUpdate(1);
   ExpectScheduleUpdatePrefsOnNetworkSequence();
 
-  auto server_pref_dict = base::MakeUnique<base::DictionaryValue>();
+  auto server_pref_dict = std::make_unique<base::DictionaryValue>();
 
   // Set supports_spdy for www.google.com:80.
   server_pref_dict->SetBoolean("supports_spdy", true);
 
   // Set up alternative_service for www.google.com:80.
-  auto alternative_service_dict = base::MakeUnique<base::DictionaryValue>();
+  auto alternative_service_dict = std::make_unique<base::DictionaryValue>();
   alternative_service_dict->SetString("protocol_str", "h2");
   alternative_service_dict->SetInteger("port", 65536);
-  auto alternative_service_list = base::MakeUnique<base::ListValue>();
+  auto alternative_service_list = std::make_unique<base::ListValue>();
   alternative_service_list->Append(std::move(alternative_service_dict));
   server_pref_dict->SetWithoutPathExpansion(
       "alternative_service", std::move(alternative_service_list));
 
   // Set the server preference for www.google.com:80.
-  auto servers_dict = base::MakeUnique<base::DictionaryValue>();
+  auto servers_dict = std::make_unique<base::DictionaryValue>();
   servers_dict->SetWithoutPathExpansion("www.google.com:80",
                                         std::move(server_pref_dict));
   base::DictionaryValue http_server_properties_dict;
   if (GetParam() >= 4) {
-    auto servers_list = base::MakeUnique<base::ListValue>();
+    auto servers_list = std::make_unique<base::ListValue>();
     servers_list->Append(std::move(servers_dict));
     if (GetParam() == 5) {
       HttpServerPropertiesManager::SetVersion(&http_server_properties_dict, -1);
@@ -1063,19 +1060,19 @@ TEST_P(HttpServerPropertiesManagerTest, Clear) {
 TEST_P(HttpServerPropertiesManagerTest, BadSupportsQuic) {
   ExpectCacheUpdate();
 
-  auto servers_dict = base::MakeUnique<base::DictionaryValue>();
+  auto servers_dict = std::make_unique<base::DictionaryValue>();
   std::unique_ptr<base::ListValue> servers_list;
   if (GetParam() >= 4)
-    servers_list = base::MakeUnique<base::ListValue>();
+    servers_list = std::make_unique<base::ListValue>();
 
   for (int i = 1; i <= 200; ++i) {
     // Set up alternative_service for www.google.com:i.
-    auto alternative_service_dict = base::MakeUnique<base::DictionaryValue>();
+    auto alternative_service_dict = std::make_unique<base::DictionaryValue>();
     alternative_service_dict->SetString("protocol_str", "quic");
     alternative_service_dict->SetInteger("port", i);
-    auto alternative_service_list = base::MakeUnique<base::ListValue>();
+    auto alternative_service_list = std::make_unique<base::ListValue>();
     alternative_service_list->Append(std::move(alternative_service_dict));
-    auto server_pref_dict = base::MakeUnique<base::DictionaryValue>();
+    auto server_pref_dict = std::make_unique<base::DictionaryValue>();
     server_pref_dict->SetWithoutPathExpansion(
         "alternative_service", std::move(alternative_service_list));
     if (GetParam() >= 5) {
@@ -1088,12 +1085,12 @@ TEST_P(HttpServerPropertiesManagerTest, BadSupportsQuic) {
     }
     if (GetParam() >= 4) {
       servers_list->AppendIfNotPresent(std::move(servers_dict));
-      servers_dict = base::MakeUnique<base::DictionaryValue>();
+      servers_dict = std::make_unique<base::DictionaryValue>();
     }
   }
 
   // Set the server preference for http://mail.google.com server.
-  auto server_pref_dict1 = base::MakeUnique<base::DictionaryValue>();
+  auto server_pref_dict1 = std::make_unique<base::DictionaryValue>();
   if (GetParam() >= 5) {
     servers_dict->SetWithoutPathExpansion("https://mail.google.com",
                                           std::move(server_pref_dict1));
@@ -1120,7 +1117,7 @@ TEST_P(HttpServerPropertiesManagerTest, BadSupportsQuic) {
   }
 
   // Set up SupportsQuic for 127.0.0.1
-  auto supports_quic = base::MakeUnique<base::DictionaryValue>();
+  auto supports_quic = std::make_unique<base::DictionaryValue>();
   supports_quic->SetBoolean("used_quic", true);
   supports_quic->SetString("address", "127.0.0.1");
   http_server_properties_dict.SetWithoutPathExpansion("supports_quic",
@@ -1251,7 +1248,7 @@ TEST_P(HttpServerPropertiesManagerTest, UpdatePrefsWithCache) {
   // A copy of |pref_delegate_|'s server dict will be created, and the broken
   // alternative service's "broken_until" field is removed and verified
   // separately. The rest of the server dict copy is verified afterwards.
-  base::Value server_value_copy(pref_delegate_->GetServerProperties());
+  base::Value server_value_copy = pref_delegate_->GetServerProperties().Clone();
 
   // Extract and remove the "broken_until" string for "www.google.com:1234".
   base::DictionaryValue* server_dict;
@@ -1513,8 +1510,8 @@ TEST_P(HttpServerPropertiesManagerTest, DoNotPersistExpiredAlternativeService) {
 
 // Test that expired alternative service entries on disk are ignored.
 TEST_P(HttpServerPropertiesManagerTest, DoNotLoadExpiredAlternativeService) {
-  auto alternative_service_list = base::MakeUnique<base::ListValue>();
-  auto expired_dict = base::MakeUnique<base::DictionaryValue>();
+  auto alternative_service_list = std::make_unique<base::ListValue>();
+  auto expired_dict = std::make_unique<base::DictionaryValue>();
   expired_dict->SetString("protocol_str", "h2");
   expired_dict->SetString("host", "expired.example.com");
   expired_dict->SetInteger("port", 443);
@@ -1524,7 +1521,7 @@ TEST_P(HttpServerPropertiesManagerTest, DoNotLoadExpiredAlternativeService) {
       "expiration", base::Int64ToString(time_one_day_ago.ToInternalValue()));
   alternative_service_list->Append(std::move(expired_dict));
 
-  auto valid_dict = base::MakeUnique<base::DictionaryValue>();
+  auto valid_dict = std::make_unique<base::DictionaryValue>();
   valid_dict->SetString("protocol_str", "h2");
   valid_dict->SetString("host", "valid.example.com");
   valid_dict->SetInteger("port", 443);

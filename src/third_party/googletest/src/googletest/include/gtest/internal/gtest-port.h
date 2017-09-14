@@ -122,12 +122,14 @@
 //   GTEST_OS_AIX      - IBM AIX
 //   GTEST_OS_CYGWIN   - Cygwin
 //   GTEST_OS_FREEBSD  - FreeBSD
+//   GTEST_OS_FUCHSIA  - Fuchsia
 //   GTEST_OS_HPUX     - HP-UX
 //   GTEST_OS_LINUX    - Linux
 //     GTEST_OS_LINUX_ANDROID - Google Android
 //   GTEST_OS_MAC      - Mac OS X
 //     GTEST_OS_IOS    - iOS
 //   GTEST_OS_NACL     - Google Native Client (NaCl)
+//   GTEST_OS_NETBSD   - NetBSD
 //   GTEST_OS_OPENBSD  - OpenBSD
 //   GTEST_OS_QNX      - QNX
 //   GTEST_OS_SOLARIS  - Sun Solaris
@@ -606,8 +608,9 @@ typedef struct _RTL_CRITICAL_SECTION GTEST_CRITICAL_SECTION;
 //
 // To disable threading support in Google Test, add -DGTEST_HAS_PTHREAD=0
 // to your compiler flags.
-# define GTEST_HAS_PTHREAD (GTEST_OS_LINUX || GTEST_OS_MAC || GTEST_OS_HPUX \
-    || GTEST_OS_QNX || GTEST_OS_FREEBSD || GTEST_OS_NACL)
+#define GTEST_HAS_PTHREAD                                                      \
+  (GTEST_OS_LINUX || GTEST_OS_MAC || GTEST_OS_HPUX || GTEST_OS_QNX ||          \
+   GTEST_OS_FREEBSD || GTEST_OS_NACL || GTEST_OS_NETBSD || GTEST_OS_FUCHSIA)
 #endif  // GTEST_HAS_PTHREAD
 
 #if GTEST_HAS_PTHREAD
@@ -800,7 +803,7 @@ using ::std::tuple_size;
      (GTEST_OS_MAC && !GTEST_OS_IOS) || \
      (GTEST_OS_WINDOWS_DESKTOP && _MSC_VER >= 1400) || \
      GTEST_OS_WINDOWS_MINGW || GTEST_OS_AIX || GTEST_OS_HPUX || \
-     GTEST_OS_OPENBSD || GTEST_OS_QNX || GTEST_OS_FREEBSD)
+     GTEST_OS_OPENBSD || GTEST_OS_QNX || GTEST_OS_FREEBSD || GTEST_OS_NETBSD)
 # define GTEST_HAS_DEATH_TEST 1
 #endif
 
@@ -2209,12 +2212,13 @@ class ThreadLocal {
 GTEST_API_ size_t GetThreadCount();
 
 // Passing non-POD classes through ellipsis (...) crashes the ARM
-// compiler and generates a warning in Sun Studio.  The Nokia Symbian
+// compiler and generates a warning in Sun Studio before 12u4. The Nokia Symbian
 // and the IBM XL C/C++ compiler try to instantiate a copy constructor
 // for objects passed through ellipsis (...), failing for uncopyable
 // objects.  We define this to ensure that only POD is passed through
 // ellipsis on these systems.
-#if defined(__SYMBIAN32__) || defined(__IBMCPP__) || defined(__SUNPRO_CC)
+#if defined(__SYMBIAN32__) || defined(__IBMCPP__) || \
+     (defined(__SUNPRO_CC) && __SUNPRO_CC < 0x5130)
 // We lose support for NULL detection where the compiler doesn't like
 // passing non-POD classes through ellipsis (...).
 # define GTEST_ELLIPSIS_NEEDS_POD_ 1
@@ -2239,6 +2243,12 @@ template <bool bool_value> const bool bool_constant<bool_value>::value;
 
 typedef bool_constant<false> false_type;
 typedef bool_constant<true> true_type;
+
+template <typename T, typename U>
+struct is_same : public false_type {};
+
+template <typename T>
+struct is_same<T, T> : public true_type {};
 
 template <typename T>
 struct is_pointer : public false_type {};
@@ -2416,7 +2426,7 @@ inline int Close(int fd) { return close(fd); }
 inline const char* StrError(int errnum) { return strerror(errnum); }
 #endif
 inline const char* GetEnv(const char* name) {
-#if GTEST_OS_WINDOWS_MOBILE || GTEST_OS_WINDOWS_PHONE | GTEST_OS_WINDOWS_RT
+#if GTEST_OS_WINDOWS_MOBILE || GTEST_OS_WINDOWS_PHONE || GTEST_OS_WINDOWS_RT
   // We are on Windows CE, which has no environment variables.
   static_cast<void>(name);  // To prevent 'unused argument' warning.
   return NULL;

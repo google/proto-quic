@@ -26,7 +26,7 @@ TEST(HttpBasicStateTest, ConstructsProperly) {
 }
 
 TEST(HttpBasicStateTest, ConstructsProperlyWithDifferentOptions) {
-  const HttpBasicState state(base::MakeUnique<ClientSocketHandle>(),
+  const HttpBasicState state(std::make_unique<ClientSocketHandle>(),
                              false /* using_proxy */,
                              true /* http_09_on_non_default_ports_enabled */);
   EXPECT_FALSE(state.using_proxy());
@@ -44,7 +44,7 @@ TEST(HttpBasicStateTest, ReleaseConnectionWorks) {
 }
 
 TEST(HttpBasicStateTest, InitializeWorks) {
-  HttpBasicState state(base::MakeUnique<ClientSocketHandle>(), false, false);
+  HttpBasicState state(std::make_unique<ClientSocketHandle>(), false, false);
   const HttpRequestInfo request_info;
   EXPECT_EQ(OK, state.Initialize(&request_info, LOW, NetLogWithSource(),
                                  CompletionCallback()));
@@ -52,7 +52,7 @@ TEST(HttpBasicStateTest, InitializeWorks) {
 }
 
 TEST(HttpBasicStateTest, DeleteParser) {
-  HttpBasicState state(base::MakeUnique<ClientSocketHandle>(), false, false);
+  HttpBasicState state(std::make_unique<ClientSocketHandle>(), false, false);
   const HttpRequestInfo request_info;
   state.Initialize(&request_info, LOW, NetLogWithSource(),
                    CompletionCallback());
@@ -63,7 +63,7 @@ TEST(HttpBasicStateTest, DeleteParser) {
 
 TEST(HttpBasicStateTest, GenerateRequestLineNoProxy) {
   const bool use_proxy = false;
-  HttpBasicState state(base::MakeUnique<ClientSocketHandle>(), use_proxy,
+  HttpBasicState state(std::make_unique<ClientSocketHandle>(), use_proxy,
                        false);
   HttpRequestInfo request_info;
   request_info.url = GURL("http://www.example.com/path?foo=bar#hoge");
@@ -75,7 +75,7 @@ TEST(HttpBasicStateTest, GenerateRequestLineNoProxy) {
 
 TEST(HttpBasicStateTest, GenerateRequestLineWithProxy) {
   const bool use_proxy = true;
-  HttpBasicState state(base::MakeUnique<ClientSocketHandle>(), use_proxy,
+  HttpBasicState state(std::make_unique<ClientSocketHandle>(), use_proxy,
                        false);
   HttpRequestInfo request_info;
   request_info.url = GURL("http://www.example.com/path?foo=bar#hoge");

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <memory>
-#include <queue>
 #include <vector>
 
 #include "base/location.h"
@@ -378,7 +377,7 @@ class MockTimer : public base::MockTimer {
   MockTimer() : base::MockTimer(false, false) {}
   ~MockTimer() {}
 
-  void Start(const tracked_objects::Location& posted_from,
+  void Start(const base::Location& posted_from,
              base::TimeDelta delay,
              const base::Closure& user_task) {
     StartObserver(posted_from, delay, user_task);
@@ -388,7 +387,7 @@ class MockTimer : public base::MockTimer {
   // StartObserver is invoked when MockTimer::Start() is called.
   // Does not replace the behavior of MockTimer::Start().
   MOCK_METHOD3(StartObserver,
-               void(const tracked_objects::Location& posted_from,
+               void(const base::Location& posted_from,
                     base::TimeDelta delay,
                     const base::Closure& user_task));
 

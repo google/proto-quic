@@ -351,6 +351,13 @@ void CloseLogFileUnlocked() {
 
 }  // namespace
 
+#if DCHECK_IS_ON() && defined(SYZYASAN)
+// In DCHECK-enabled SyzyASAN builds, allow the meaning of LOG_DCHECK to be
+// determined at run-time. We default it to INFO, to avoid it triggering
+// crashes before the run-time has explicitly chosen the behaviour.
+BASE_EXPORT logging::LogSeverity LOG_DCHECK = LOG_INFO;
+#endif
+
 // This is never instantiated, it's just used for EAT_STREAM_PARAMETERS to have
 // an object of the correct type on the LHS of the unused part of the ternary
 // operator.

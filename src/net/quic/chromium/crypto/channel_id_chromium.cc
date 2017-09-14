@@ -206,7 +206,7 @@ QuicAsyncStatus ChannelIDSourceChromium::GetChannelIDKey(
     const std::string& hostname,
     std::unique_ptr<ChannelIDKey>* channel_id_key,
     ChannelIDSourceCallback* callback) {
-  std::unique_ptr<Job> job = base::MakeUnique<Job>(this, channel_id_service_);
+  std::unique_ptr<Job> job = std::make_unique<Job>(this, channel_id_service_);
   QuicAsyncStatus status =
       job->GetChannelIDKey(hostname, channel_id_key, callback);
   if (status == QUIC_PENDING) {

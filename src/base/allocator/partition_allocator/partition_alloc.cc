@@ -342,7 +342,7 @@ static ALWAYS_INLINE void PartitionDecommitSystemPages(PartitionRootBase* root,
 static ALWAYS_INLINE void PartitionRecommitSystemPages(PartitionRootBase* root,
                                                        void* address,
                                                        size_t length) {
-  RecommitSystemPages(address, length);
+  CHECK(RecommitSystemPages(address, length, PageReadWrite));
   PartitionIncreaseCommittedPages(root, length);
 }
 
@@ -374,7 +374,7 @@ static ALWAYS_INLINE void* PartitionAllocPartitionPages(
   // architectures.
   char* requestedAddress = root->next_super_page;
   char* super_page = reinterpret_cast<char*>(AllocPages(
-      requestedAddress, kSuperPageSize, kSuperPageSize, PageAccessible));
+      requestedAddress, kSuperPageSize, kSuperPageSize, PageReadWrite));
   if (UNLIKELY(!super_page))
     return 0;
 
@@ -389,12 +389,13 @@ static ALWAYS_INLINE void* PartitionAllocPartitionPages(
   // hole in the middle.
   // This is where we put page metadata and also a tiny amount of extent
   // metadata.
-  SetSystemPagesInaccessible(super_page, kSystemPageSize);
-  SetSystemPagesInaccessible(super_page + (kSystemPageSize * 2),
-                             kPartitionPageSize - (kSystemPageSize * 2));
+  CHECK(SetSystemPagesAccess(super_page, kSystemPageSize, PageInaccessible));
+  CHECK(SetSystemPagesAccess(super_page + (kSystemPageSize * 2),
+                             kPartitionPageSize - (kSystemPageSize * 2),
+                             PageInaccessible));
   // Also make the last partition page a guard page.
-  SetSystemPagesInaccessible(super_page + (kSuperPageSize - kPartitionPageSize),
-                             kPartitionPageSize);
+  CHECK(SetSystemPagesAccess(super_page + (kSuperPageSize - kPartitionPageSize),
+                             kPartitionPageSize, PageInaccessible));
 
   // If we were after a specific address, but didn't get it, assume that
   // the system chose a lousy address. Here most OS'es have a default
@@ -644,7 +645,7 @@ static ALWAYS_INLINE PartitionPage* PartitionDirectMap(PartitionRootBase* root,
   // TODO: these pages will be zero-filled. Consider internalizing an
   // allocZeroed() API so we can avoid a memset() entirely in this case.
   char* ptr = reinterpret_cast<char*>(
-      AllocPages(0, map_size, kSuperPageSize, PageAccessible));
+      AllocPages(0, map_size, kSuperPageSize, PageReadWrite));
   if (UNLIKELY(!ptr))
     return nullptr;
 
@@ -653,11 +654,12 @@ static ALWAYS_INLINE PartitionPage* PartitionDirectMap(PartitionRootBase* root,
   PartitionIncreaseCommittedPages(root, committed_page_size);
 
   char* slot = ptr + kPartitionPageSize;
-  SetSystemPagesInaccessible(ptr + (kSystemPageSize * 2),
-                             kPartitionPageSize - (kSystemPageSize * 2));
+  CHECK(SetSystemPagesAccess(ptr + (kSystemPageSize * 2),
+                             kPartitionPageSize - (kSystemPageSize * 2),
+                             PageInaccessible));
 #if !defined(ARCH_CPU_64_BITS)
-  SetSystemPagesInaccessible(ptr, kSystemPageSize);
-  SetSystemPagesInaccessible(slot + size, kSystemPageSize);
+  CHECK(SetSystemPagesAccess(ptr, kSystemPageSize, PageInaccessible));
+  CHECK(SetSystemPagesAccess(slot + size, kSystemPageSize, PageInaccessible));
 #endif
 
   PartitionSuperPageExtentEntry* extent =
@@ -981,13 +983,14 @@ bool PartitionReallocDirectMappedInPlace(PartitionRootGeneric* root,
     // Shrink by decommitting unneeded pages and making them inaccessible.
     size_t decommitSize = current_size - new_size;
     PartitionDecommitSystemPages(root, char_ptr + new_size, decommitSize);
-    SetSystemPagesInaccessible(char_ptr + new_size, decommitSize);
+    CHECK(SetSystemPagesAccess(char_ptr + new_size, decommitSize,
+                               PageInaccessible));
   } else if (new_size <= partitionPageToDirectMapExtent(page)->map_size) {
     // Grow within the actually allocated memory. Just need to make the
     // pages accessible again.
     size_t recommit_size = new_size - current_size;
-    bool ret = SetSystemPagesAccessible(char_ptr + current_size, recommit_size);
-    CHECK(ret);
+    CHECK(SetSystemPagesAccess(char_ptr + current_size, recommit_size,
+                               PageReadWrite));
     PartitionRecommitSystemPages(root, char_ptr + current_size, recommit_size);
 
 #if DCHECK_IS_ON()

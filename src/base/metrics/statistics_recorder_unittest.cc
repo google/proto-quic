@@ -7,6 +7,7 @@
 #include <stddef.h>
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "base/bind.h"
@@ -15,6 +16,7 @@
 #include "base/memory/weak_ptr.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/persistent_histogram_allocator.h"
+#include "base/metrics/record_histogram_checker.h"
 #include "base/metrics/sparse_histogram.h"
 #include "base/values.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -35,6 +37,17 @@ class LogStateSaver {
   int old_min_log_level_;
 
   DISALLOW_COPY_AND_ASSIGN(LogStateSaver);
+};
+
+// Test implementation of RecordHistogramChecker interface.
+class OddRecordHistogramChecker : public base::RecordHistogramChecker {
+ public:
+  ~OddRecordHistogramChecker() override {}
+
+  // base::RecordHistogramChecker:
+  bool ShouldRecord(uint64_t histogram_hash) const override {
+    return histogram_hash % 2;
+  }
 };
 
 }  // namespace
@@ -90,14 +103,6 @@ class StatisticsRecorderTest : public testing::TestWithParam<bool> {
 
   void DeleteHistogram(HistogramBase* histogram) {
     delete histogram;
-  }
-
-  int CountIterableHistograms(StatisticsRecorder::HistogramIterator* iter) {
-    int count = 0;
-    for (; *iter != StatisticsRecorder::end(); ++*iter) {
-      ++count;
-    }
-    return count;
   }
 
   void InitLogOnShutdown() {
@@ -423,12 +428,9 @@ TEST_P(StatisticsRecorderTest, IterationTest) {
   Histogram::FactoryGet("IterationTest1", 1, 64, 16, HistogramBase::kNoFlags);
   Histogram::FactoryGet("IterationTest2", 1, 64, 16, HistogramBase::kNoFlags);
 
-  StatisticsRecorder::HistogramIterator i1 = StatisticsRecorder::begin(true);
-  EXPECT_EQ(2, CountIterableHistograms(&i1));
-
-  StatisticsRecorder::HistogramIterator i2 = StatisticsRecorder::begin(false);
-  EXPECT_EQ(use_persistent_histogram_allocator_ ? 0 : 2,
-            CountIterableHistograms(&i2));
+  EXPECT_EQ(2U, StatisticsRecorder::GetKnownHistograms(true).size());
+  EXPECT_EQ(use_persistent_histogram_allocator_ ? 0U : 2U,
+            StatisticsRecorder::GetKnownHistograms(false).size());
 
   // Create a new global allocator using the same memory as the old one. Any
   // old one is kept around so the memory doesn't get released.
@@ -445,13 +447,11 @@ TEST_P(StatisticsRecorderTest, IterationTest) {
   InitializeStatisticsRecorder();
 
   StatisticsRecorder::ImportGlobalPersistentHistograms();
-  StatisticsRecorder::HistogramIterator i3 = StatisticsRecorder::begin(true);
-  EXPECT_EQ(use_persistent_histogram_allocator_ ? 2 : 0,
-            CountIterableHistograms(&i3));
+  EXPECT_EQ(use_persistent_histogram_allocator_ ? 2U : 0U,
+            StatisticsRecorder::GetKnownHistograms(true).size());
 
   StatisticsRecorder::ImportGlobalPersistentHistograms();
-  StatisticsRecorder::HistogramIterator i4 = StatisticsRecorder::begin(false);
-  EXPECT_EQ(0, CountIterableHistograms(&i4));
+  EXPECT_EQ(0U, StatisticsRecorder::GetKnownHistograms(false).size());
 }
 
 namespace {
@@ -726,6 +726,15 @@ TEST_P(StatisticsRecorderTest, ImportHistogramsTest) {
   EXPECT_EQ(3, snapshot->TotalCount());
   EXPECT_EQ(2, snapshot->GetCount(3));
   EXPECT_EQ(1, snapshot->GetCount(5));
+}
+
+TEST_P(StatisticsRecorderTest, RecordHistogramChecker) {
+  // Record checker isn't set
+  EXPECT_TRUE(base::StatisticsRecorder::ShouldRecordHistogram(0));
+  auto record_checker = std::make_unique<OddRecordHistogramChecker>();
+  base::StatisticsRecorder::SetRecordChecker(std::move(record_checker));
+  EXPECT_TRUE(base::StatisticsRecorder::ShouldRecordHistogram(1));
+  EXPECT_FALSE(base::StatisticsRecorder::ShouldRecordHistogram(2));
 }
 
 }  // namespace base

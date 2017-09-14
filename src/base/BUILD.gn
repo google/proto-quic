@@ -39,6 +39,11 @@ declare_args() {
 
   # Partition alloc is included by default except iOS.
   use_partition_alloc = !is_ios
+
+  # Indicates if the Location object contains the source code information
+  # (file, function, line). False means only the program counter (and currently
+  # file name) is saved.
+  enable_location_source = true
 }
 
 if (is_android) {
@@ -235,9 +240,11 @@ component("base") {
     "containers/flat_set.h",
     "containers/flat_tree.h",
     "containers/hash_tables.h",
+    "containers/id_map.h",
     "containers/linked_list.h",
     "containers/mru_cache.h",
     "containers/small_map.h",
+    "containers/span.h",
     "containers/stack_container.h",
     "containers/vector_buffer.h",
     "cpu.cc",
@@ -352,7 +359,6 @@ component("base") {
     "guid.h",
     "hash.cc",
     "hash.h",
-    "id_map.h",
     "ios/block_types.h",
     "ios/crb_protocol_observers.h",
     "ios/crb_protocol_observers.mm",
@@ -559,6 +565,7 @@ component("base") {
     "metrics/persistent_memory_allocator.h",
     "metrics/persistent_sample_map.cc",
     "metrics/persistent_sample_map.h",
+    "metrics/record_histogram_checker.h",
     "metrics/sample_map.cc",
     "metrics/sample_map.h",
     "metrics/sample_vector.cc",
@@ -675,10 +682,6 @@ component("base") {
     "profiler/native_stack_sampler_mac.cc",
     "profiler/native_stack_sampler_posix.cc",
     "profiler/native_stack_sampler_win.cc",
-    "profiler/scoped_profile.cc",
-    "profiler/scoped_profile.h",
-    "profiler/scoped_tracker.cc",
-    "profiler/scoped_tracker.h",
     "profiler/stack_sampling_profiler.cc",
     "profiler/stack_sampling_profiler.h",
     "rand_util.cc",
@@ -802,6 +805,8 @@ component("base") {
     "task_scheduler/initialization_util.h",
     "task_scheduler/lazy_task_runner.cc",
     "task_scheduler/lazy_task_runner.h",
+    "task_scheduler/platform_native_worker_pool_win.cc",
+    "task_scheduler/platform_native_worker_pool_win.h",
     "task_scheduler/post_task.cc",
     "task_scheduler/post_task.h",
     "task_scheduler/priority_queue.cc",
@@ -814,6 +819,7 @@ component("base") {
     "task_scheduler/scheduler_worker.cc",
     "task_scheduler/scheduler_worker.h",
     "task_scheduler/scheduler_worker_params.h",
+    "task_scheduler/scheduler_worker_pool.cc",
     "task_scheduler/scheduler_worker_pool.h",
     "task_scheduler/scheduler_worker_pool_impl.cc",
     "task_scheduler/scheduler_worker_pool_impl.h",
@@ -862,8 +868,8 @@ component("base") {
     "threading/platform_thread_win.cc",
     "threading/post_task_and_reply_impl.cc",
     "threading/post_task_and_reply_impl.h",
-    "threading/scoped_may_block.cc",
-    "threading/scoped_may_block.h",
+    "threading/scoped_blocking_call.cc",
+    "threading/scoped_blocking_call.h",
     "threading/sequence_local_storage_map.cc",
     "threading/sequence_local_storage_map.h",
     "threading/sequence_local_storage_slot.cc",
@@ -1002,8 +1008,6 @@ component("base") {
     "trace_event/tracing_agent.h",
     "tracked_objects.cc",
     "tracked_objects.h",
-    "tracking_info.cc",
-    "tracking_info.h",
     "tuple.h",
     "unguessable_token.cc",
     "unguessable_token.h",
@@ -1234,6 +1238,8 @@ component("base") {
       "base_paths_fuchsia.cc",
       "debug/stack_trace_fuchsia.cc",
       "files/file_path_watcher_fuchsia.cc",
+      "fuchsia/default_job.cc",
+      "fuchsia/default_job.h",
       "fuchsia/scoped_mx_handle.h",
       "memory/shared_memory_fuchsia.cc",
       "memory/shared_memory_handle_fuchsia.cc",
@@ -1675,6 +1681,7 @@ buildflag_header("debugging_flags") {
   header = "debugging_flags.h"
   header_dir = "base/debug"
   flags = [
+    "ENABLE_LOCATION_SOURCE=$enable_location_source",
     "ENABLE_PROFILING=$enable_profiling",
     "CAN_UNWIND_WITH_FRAME_POINTERS=$can_unwind_with_frame_pointers",
   ]
@@ -1781,6 +1788,7 @@ component("i18n") {
 
 test("base_perftests") {
   sources = [
+    "message_loop/message_loop_perftest.cc",
     "message_loop/message_pump_perftest.cc",
 
     # "test/run_all_unittests.cc",
@@ -1970,6 +1978,7 @@ test("base_unittests") {
     "containers/flat_set_unittest.cc",
     "containers/flat_tree_unittest.cc",
     "containers/hash_tables_unittest.cc",
+    "containers/id_map_unittest.cc",
     "containers/linked_list_unittest.cc",
     "containers/mru_cache_unittest.cc",
     "containers/small_map_unittest.cc",
@@ -2019,7 +2028,6 @@ test("base_unittests") {
     "i18n/string_search_unittest.cc",
     "i18n/time_formatting_unittest.cc",
     "i18n/timezone_unittest.cc",
-    "id_map_unittest.cc",
     "ios/crb_protocol_observers_unittest.mm",
     "ios/device_util_unittest.mm",
     "ios/weak_nsobject_unittest.mm",
@@ -2073,6 +2081,7 @@ test("base_unittests") {
     "metrics/histogram_delta_serialization_unittest.cc",
     "metrics/histogram_functions_unittest.cc",
     "metrics/histogram_macros_unittest.cc",
+    "metrics/histogram_samples_unittest.cc",
     "metrics/histogram_snapshot_manager_unittest.cc",
     "metrics/histogram_unittest.cc",
     "metrics/metrics_hashes_unittest.cc",
@@ -2150,6 +2159,7 @@ test("base_unittests") {
     "task_scheduler/scheduler_lock_unittest.cc",
     "task_scheduler/scheduler_single_thread_task_runner_manager_unittest.cc",
     "task_scheduler/scheduler_worker_pool_impl_unittest.cc",
+    "task_scheduler/scheduler_worker_pool_unittest.cc",
     "task_scheduler/scheduler_worker_stack_unittest.cc",
     "task_scheduler/scheduler_worker_unittest.cc",
     "task_scheduler/scoped_set_task_priority_for_current_thread_unittest.cc",
@@ -2170,12 +2180,14 @@ test("base_unittests") {
     "test/scoped_feature_list_unittest.cc",
     "test/scoped_mock_time_message_loop_task_runner_unittest.cc",
     "test/scoped_task_environment_unittest.cc",
+    "test/test_mock_time_task_runner_unittest.cc",
     "test/test_pending_task_unittest.cc",
     "test/test_reg_util_win_unittest.cc",
     "test/trace_event_analyzer_unittest.cc",
     "test/user_action_tester_unittest.cc",
     "threading/platform_thread_unittest.cc",
     "threading/post_task_and_reply_impl_unittest.cc",
+    "threading/scoped_blocking_call_unittest.cc",
     "threading/sequence_local_storage_map_unittest.cc",
     "threading/sequence_local_storage_slot_unittest.cc",
     "threading/sequenced_task_runner_handle_unittest.cc",
@@ -2450,6 +2462,7 @@ if (enable_nocompile_tests) {
       "bind_unittest.nc",
       "callback_list_unittest.nc",
       "callback_unittest.nc",
+      "containers/span_unittest.nc",
       "memory/ref_counted_unittest.nc",
       "memory/weak_ptr_unittest.nc",
       "metrics/histogram_unittest.nc",
@@ -2639,6 +2652,7 @@ if (is_android) {
       "android/javatests/src/org/chromium/base/ApiCompatibilityUtilsTest.java",
       "android/javatests/src/org/chromium/base/CommandLineInitUtilTest.java",
       "android/javatests/src/org/chromium/base/CommandLineTest.java",
+      "android/javatests/src/org/chromium/base/EarlyTraceEventTest.java",
 
       # TODO(nona): move to Junit once that is built for Android N.
       "android/javatests/src/org/chromium/base/LocaleUtilsTest.java",
@@ -2655,6 +2669,7 @@ if (is_android) {
       "//third_party/android_support_test_runner:exposed_instrumentation_api_publish_java",
       "//third_party/android_support_test_runner:rules_java",
       "//third_party/android_support_test_runner:runner_java",
+      "//third_party/android_tools:android_support_annotations_java",
       "//third_party/android_tools:android_support_chromium_java",
       "//third_party/android_tools:android_support_compat_java",
       "//third_party/hamcrest:hamcrest_core_java",

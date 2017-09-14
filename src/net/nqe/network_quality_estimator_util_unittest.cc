@@ -28,7 +28,7 @@ namespace {
 // reading of the network quality prefs is not enabled..
 TEST(NetworkQualityEstimatorUtilTest, ReservedHost) {
   std::unique_ptr<BoundTestNetLog> net_log =
-      base::MakeUnique<BoundTestNetLog>();
+      std::make_unique<BoundTestNetLog>();
   MockCachingHostResolver mock_host_resolver;
 
   scoped_refptr<net::RuleBasedHostResolverProc> rules(
@@ -101,7 +101,7 @@ TEST(NetworkQualityEstimatorUtilTest, ReservedHost) {
 // the cached entry is used.
 TEST(NetworkQualityEstimatorUtilTest, ReservedHostUncached) {
   std::unique_ptr<BoundTestNetLog> net_log =
-      base::MakeUnique<BoundTestNetLog>();
+      std::make_unique<BoundTestNetLog>();
   MockCachingHostResolver mock_host_resolver;
 
   scoped_refptr<net::RuleBasedHostResolverProc> rules(
@@ -141,7 +141,7 @@ TEST(NetworkQualityEstimatorUtilTest, ReservedHostUncached) {
 // Verify that IsPrivateHost() returns correct results for local hosts.
 TEST(NetworkQualityEstimatorUtilTest, Localhost) {
   std::unique_ptr<BoundTestNetLog> net_log =
-      base::MakeUnique<BoundTestNetLog>();
+      std::make_unique<BoundTestNetLog>();
   BoundTestNetLog* net_log_ptr = net_log.get();
 
   net::HostResolver::Options options;

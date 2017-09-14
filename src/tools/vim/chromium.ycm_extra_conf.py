@@ -31,7 +31,7 @@
 #
 #   * You must use ninja & clang to build Chromium.
 #
-#   * You must have run gyp_chromium and built Chromium recently.
+#   * You must have built Chromium recently.
 #
 #
 # Hacking notes:
@@ -57,7 +57,7 @@ import sys
 # Flags from YCM's default config.
 _default_flags = [
     '-DUSE_CLANG_COMPLETER',
-    '-std=c++11',
+    '-std=c++14',
     '-x',
     'c++',
 ]
@@ -111,7 +111,7 @@ def GetDefaultSourceFile(chrome_root, filename):
   """
   blink_root = os.path.join(chrome_root, 'third_party', 'WebKit')
   if filename.startswith(blink_root):
-    return os.path.join(blink_root, 'Source', 'core', 'Init.cpp')
+    return os.path.join(blink_root, 'Source', 'core', 'CoreInitializer.cpp')
   else:
     if 'test.' in filename:
       return os.path.join(chrome_root, 'base', 'logging_unittest.cc')
@@ -238,15 +238,15 @@ def GetClangOptionsFromCommandLine(clang_commandline, out_dir,
 
   # Parse flags that are important for YCM's purposes.
   clang_tokens = shlex.split(clang_commandline)
+  include_pattern = re.compile(r'^(-I|-isystem)(.+)$')
   for flag_index, flag in enumerate(clang_tokens):
-    if flag.startswith('-I'):
+    include_match = include_pattern.match(flag)
+    if include_match:
       # Relative paths need to be resolved, because they're relative to the
       # output dir, not the source.
-      if flag[2] == '/':
-        clang_flags.append(flag)
-      else:
-        clang_flags.append('-I' + abspath(flag[2:]))
-    elif flag.startswith('-std'):
+      path = abspath(include_match.group(2))
+      clang_flags.append(include_match.group(1) + path)
+    elif flag.startswith('-std') or flag == '-nostdinc++':
       clang_flags.append(flag)
     elif flag.startswith('-') and flag[1] in 'DWFfmO':
       if flag == '-Wno-deprecated-register' or flag == '-Wno-header-guard':
@@ -254,9 +254,7 @@ def GetClangOptionsFromCommandLine(clang_commandline, out_dir,
         # are fixed.
         continue
       clang_flags.append(flag)
-    elif flag == '-isysroot':
-      # On Mac -isysroot <path> is used to find the system headers.
-      # Copy over both flags.
+    elif flag == '-isysroot' or flag == '-isystem' or flag == '-I':
       if flag_index + 1 < len(clang_tokens):
         clang_flags.append(flag)
         clang_flags.append(abspath(clang_tokens[flag_index + 1]))

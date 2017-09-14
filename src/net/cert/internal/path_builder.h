@@ -171,15 +171,6 @@ class NET_EXPORT CertPathBuilder {
   void Run();
 
  private:
-  enum State {
-    STATE_NONE,
-    STATE_GET_NEXT_PATH,
-    STATE_GET_NEXT_PATH_COMPLETE,
-  };
-
-  void DoGetNextPath();
-  void DoGetNextPathComplete();
-
   void AddResultPath(std::unique_ptr<ResultPath> result_path);
 
   std::unique_ptr<CertPathIter> cert_path_iter_;
@@ -190,15 +181,6 @@ class NET_EXPORT CertPathBuilder {
   const std::set<der::Input> user_initial_policy_set_;
   const InitialPolicyMappingInhibit initial_policy_mapping_inhibit_;
   const InitialAnyPolicyInhibit initial_any_policy_inhibit_;
-
-  // Stores the next complete path to attempt verification on. This is filled in
-  // by |cert_path_iter_| during the STATE_GET_NEXT_PATH step, and thus should
-  // only be accessed during the STATE_GET_NEXT_PATH_COMPLETE step.
-  // (Will be empty if all paths have been tried, otherwise will be a candidate
-  // path starting with the target cert and ending with a
-  // certificate issued by trust anchor.)
-  CertPath next_path_;
-  State next_state_;
 
   Result* out_result_;
 

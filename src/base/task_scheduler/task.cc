@@ -11,7 +11,7 @@
 namespace base {
 namespace internal {
 
-Task::Task(const tracked_objects::Location& posted_from,
+Task::Task(const Location& posted_from,
            OnceClosure task,
            const TaskTraits& traits,
            TimeDelta delay)
@@ -31,6 +31,17 @@ Task::Task(const tracked_objects::Location& posted_from,
                                      {TaskShutdownBehavior::SKIP_ON_SHUTDOWN})
               : traits),
       delay(delay) {}
+
+// This should be "= default but MSVC has trouble with "noexcept = default" in
+// this case.
+Task::Task(Task&& other) noexcept
+    : PendingTask(std::move(other)),
+      traits(other.traits),
+      delay(other.delay),
+      sequenced_time(other.sequenced_time),
+      sequenced_task_runner_ref(std::move(other.sequenced_task_runner_ref)),
+      single_thread_task_runner_ref(
+          std::move(other.single_thread_task_runner_ref)) {}
 
 Task::~Task() = default;
 

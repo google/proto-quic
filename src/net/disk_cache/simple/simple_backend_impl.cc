@@ -92,9 +92,9 @@ base::LazyInstance<LeakySequencedWorkerPool>::Leaky g_sequenced_worker_pool =
     LAZY_INSTANCE_INITIALIZER;
 
 scoped_refptr<base::SequencedTaskRunner> FallbackToInternalIfNull(
-    const scoped_refptr<base::SingleThreadTaskRunner>& cache_thread) {
-  if (cache_thread)
-    return cache_thread;
+    const scoped_refptr<base::SequencedTaskRunner>& cache_runner) {
+  if (cache_runner)
+    return cache_runner;
   return base::CreateSequencedTaskRunnerWithTraits(
       {base::MayBlock(), base::TaskPriority::USER_BLOCKING,
        base::TaskShutdownBehavior::BLOCK_SHUTDOWN});
@@ -255,12 +255,12 @@ SimpleBackendImpl::SimpleBackendImpl(
     scoped_refptr<BackendCleanupTracker> cleanup_tracker,
     int max_bytes,
     net::CacheType cache_type,
-    const scoped_refptr<base::SingleThreadTaskRunner>& cache_thread,
+    const scoped_refptr<base::SequencedTaskRunner>& cache_runner,
     net::NetLog* net_log)
     : cleanup_tracker_(std::move(cleanup_tracker)),
       path_(path),
       cache_type_(cache_type),
-      cache_runner_(FallbackToInternalIfNull(cache_thread)),
+      cache_runner_(FallbackToInternalIfNull(cache_runner)),
       orig_max_size_(max_bytes),
       entry_operations_mode_(cache_type == net::DISK_CACHE
                                  ? SimpleEntryImpl::OPTIMISTIC_OPERATIONS
@@ -280,10 +280,10 @@ SimpleBackendImpl::~SimpleBackendImpl() {
 int SimpleBackendImpl::Init(const CompletionCallback& completion_callback) {
   worker_pool_ = g_sequenced_worker_pool.Get().GetTaskRunner();
 
-  index_ = base::MakeUnique<SimpleIndex>(
+  index_ = std::make_unique<SimpleIndex>(
       base::ThreadTaskRunnerHandle::Get(), cleanup_tracker_.get(), this,
       cache_type_,
-      base::MakeUnique<SimpleIndexFile>(cache_runner_, worker_pool_.get(),
+      std::make_unique<SimpleIndexFile>(cache_runner_, worker_pool_.get(),
                                         cache_type_, path_));
   index_->ExecuteWhenReady(
       base::Bind(&RecordIndexLoad, cache_type_, base::TimeTicks::Now()));
@@ -592,6 +592,17 @@ size_t SimpleBackendImpl::DumpMemoryStats(
   dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameSize,
                   base::trace_event::MemoryAllocatorDump::kUnitsBytes, size);
   return size;
+}
+
+uint8_t SimpleBackendImpl::GetEntryInMemoryData(const std::string& key) {
+  const uint64_t entry_hash = simple_util::GetEntryHashKey(key);
+  return index_->GetEntryInMemoryData(entry_hash);
+}
+
+void SimpleBackendImpl::SetEntryInMemoryData(const std::string& key,
+                                             uint8_t data) {
+  const uint64_t entry_hash = simple_util::GetEntryHashKey(key);
+  index_->SetEntryInMemoryData(entry_hash, data);
 }
 
 void SimpleBackendImpl::InitializeIndex(const CompletionCallback& callback,

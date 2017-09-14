@@ -355,7 +355,7 @@ HttpProxyClientSocketPool::GetInfoAsValue(const std::string& name,
                                           bool include_nested_pools) const {
   std::unique_ptr<base::DictionaryValue> dict(base_.GetInfoAsValue(name, type));
   if (include_nested_pools) {
-    auto list = base::MakeUnique<base::ListValue>();
+    auto list = std::make_unique<base::ListValue>();
     if (transport_pool_) {
       list->Append(transport_pool_->GetInfoAsValue("transport_socket_pool",
                                                    "transport_socket_pool",

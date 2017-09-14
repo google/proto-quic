@@ -27,12 +27,13 @@ import time
 import urllib
 import urlparse
 
-# Load BeautifulSoup. It's checked into two places in the Chromium tree.
-sys.path.append('third_party/WebKit/Tools/Scripts/webkitpy/thirdparty/')
-from BeautifulSoup import BeautifulSoup
-
 # The location of the DumpAccessibilityTree html test files and expectations.
 TEST_DATA_PATH = os.path.join(os.getcwd(), 'content/test/data/accessibility')
+
+# Colors for easier debugging.
+# TODO check environment  to determine whether terminal is rich or interactive.
+BRIGHT_COLOR = '\033[93m'
+NORMAL_COLOR = '\033[0m'
 
 # A global that keeps track of files we've already updated, so we don't
 # bother to update the same file twice.
@@ -42,6 +43,13 @@ def Fix(line):
   if line[:3] == '@@@':
     try:
       line = re.search('[^@]@([^@]*)@@@', line).group(1)
+    except:
+      pass
+  # For Android tests:
+  if line[:2] == 'I ':
+    try:
+      line = re.search('I  \d+\.\d+s run_tests_on_device\([0-9a-f]+\)  (.*)',
+                       line).group(1)
     except:
       pass
   return line
@@ -111,24 +119,28 @@ def Run():
       platform = tokens[6]
       build = tokens[8]
       logdog_prefix = 'chromium/bb/%s/%s/%s' % (bucket, platform, build)
-      logdog_steps = '%s/+/recipes/steps' % logdog_prefix
-      print logdog_prefix
-      steps = os.popen('cit logdog ls "%s"' % logdog_steps).readlines()
+      logdog_steps = '%s/+/recipes/steps/**' % logdog_prefix
+      logdog_query = 'cit logdog query -results 999 -path "%s"' % logdog_steps
+      print (BRIGHT_COLOR + '=> %s' + NORMAL_COLOR) % logdog_query
+      steps = os.popen(logdog_query).readlines()
       a11y_step = None
       for step in steps:
-        if (step.find('content_browsertests') >= 0 and
+        if (step.find('/content_browsertests') >= 0 and
             step.find('with_patch') >= 0 and
             step.find('trigger') == -1 and
+            step.find('swarming.summary') == -1 and
+            step.find('step_metadata') == -1 and
             step.find('Upload') == -1):
+
           a11y_step = step.rstrip()
+          logdog_cat = 'cit logdog cat -raw "chromium%s"' % a11y_step
+          # A bit noisy but useful for debugging.
+          # print (BRIGHT_COLOR + '=> %s' + NORMAL_COLOR) % logdog_cat
+          output = os.popen(logdog_cat).read()
+          ParseLog(output)
       if not a11y_step:
         print 'No content_browsertests (with patch) step found'
         continue
-      print a11y_step
-      logdog_cat = ('cit logdog cat -raw "%s/%s/0/stdout"' %
-        (logdog_steps, a11y_step))
-      output = os.popen(logdog_cat).read()
-      ParseLog(output)
 
 if __name__ == '__main__':
   sys.exit(Run())

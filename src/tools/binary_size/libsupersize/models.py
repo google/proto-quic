@@ -248,6 +248,9 @@ class BaseSymbol(object):
     return '.' in self.name or (
         self.name.endswith(']') and not self.name.endswith('[]'))
 
+  def IterLeafSymbols(self):
+    yield self
+
 
 class Symbol(BaseSymbol):
   """Represents a single symbol within a binary.
@@ -588,11 +591,8 @@ class SymbolGroup(BaseSymbol):
   def IterLeafSymbols(self):
     """Yields all symbols, recursing into subgroups."""
     for s in self:
-      if s.IsGroup():
-        for x in s.IterLeafSymbols():
-          yield x
-      else:
-        yield s
+      for x in s.IterLeafSymbols():
+        yield x
 
   def CountUniqueSymbols(self):
     return sum(1 for s in self.IterUniqueSymbols())

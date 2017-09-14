@@ -37,11 +37,6 @@ class FramePartsCollector : public FailingHttp2FrameDecoderListener {
   // callback info if IsInProgress, else nullptr.
   const FrameParts* current_frame() const { return current_frame_.get(); }
 
-  // Returns the completely collected FrameParts instances.
-  const std::vector<std::unique_ptr<FrameParts>>& collected_frames() const {
-    return collected_frames_;
-  }
-
   // Returns the number of completely collected FrameParts instances.
   size_t size() const { return collected_frames_.size(); }
 

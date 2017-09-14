@@ -85,12 +85,4 @@ JNI_GENERATOR_EXPORT jint
   return Init(env, base::android::JavaParamRef<jobject>(env, jcaller));
 }
 
-// Step 3: RegisterNatives.
-
-// TODO(agrieve): Remove these empty registration functions and functions
-// calling them. https://crbug.com/683256.
-inline bool RegisterNativesImpl(JNIEnv* env) {
-  return true;
-}
-
 #endif  // org_chromium_TestJni_JNI

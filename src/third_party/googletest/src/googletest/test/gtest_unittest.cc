@@ -1388,7 +1388,7 @@ class TestResultTest : public Test {
     delete r2;
   }
 
-  // Helper that compares two two TestPartResults.
+  // Helper that compares two TestPartResults.
   static void CompareTestPartResult(const TestPartResult& expected,
                                     const TestPartResult& actual) {
     EXPECT_EQ(expected.type(), actual.type());
@@ -3115,13 +3115,13 @@ TEST(DISABLED_TestCase, DISABLED_TestShouldNotRun) {
   FAIL() << "Unexpected failure: Test in disabled test case should not be run.";
 }
 
-// Check that when all tests in a test case are disabled, SetupTestCase() and
+// Check that when all tests in a test case are disabled, SetUpTestCase() and
 // TearDownTestCase() are not called.
 class DisabledTestsTest : public Test {
  protected:
   static void SetUpTestCase() {
     FAIL() << "Unexpected failure: All tests disabled in test case. "
-              "SetupTestCase() should not be called.";
+              "SetUpTestCase() should not be called.";
   }
 
   static void TearDownTestCase() {
@@ -3689,7 +3689,7 @@ TEST(AssertionTest, ASSERT_EQ) {
 TEST(AssertionTest, ASSERT_EQ_NULL) {
   // A success.
   const char* p = NULL;
-  // Some older GCC versions may issue a spurious waring in this or the next
+  // Some older GCC versions may issue a spurious warning in this or the next
   // assertion statement. This warning should not be suppressed with
   // static_cast since the test verifies the ability to use bare NULL as the
   // expected parameter to the macro.

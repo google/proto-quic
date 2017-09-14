@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <map>
 #include <memory>
-#include <queue>
 #include <string>
 #include <vector>
 
@@ -192,8 +191,8 @@ class QUIC_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
     // TODO(jokulik): Consider using a hash-set as extra book-keeping to ensure
     // that no connection-id is added twice.  Also, consider keeping the server
     // nonces and connection_ids together in one queue.
-    std::queue<QuicConnectionId> server_designated_connection_ids_;
-    std::queue<std::string> server_nonces_;
+    QuicQueue<QuicConnectionId> server_designated_connection_ids_;
+    QuicQueue<std::string> server_nonces_;
 
     DISALLOW_COPY_AND_ASSIGN(CachedState);
   };

@@ -1,1 +1,1 @@
-{"vibrate": ["self", "https://example.org/"]}
+vibrate 'self' https://example.org/

@@ -27,6 +27,7 @@
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_map_util.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 
 using std::string;
 
@@ -74,26 +75,24 @@ const uint8_t kQuicFrameTypeAckMask = 0xA0;
 // StreamID may be 1, 2, 3, or 4 bytes.
 const uint8_t kQuicStreamIdShift_Pre40 = 2;
 const uint8_t kQuicStreamIDLengthMask_Pre40 = 0x03;
-const uint8_t kQuicStreamIDLengthOffsetShift = 3;
+const uint8_t kQuicStreamIDLengthShift = 3;
 const uint8_t kQuicStreamIDLengthNumBits = 2;
 
 // Offset may be 0, 2, 4, or 8 bytes.
-const uint8_t kQuicStreamOffsetShift_Pre40 = 3;
+const uint8_t kQuicStreamShift_Pre40 = 3;
 const uint8_t kQuicStreamOffsetMask_Pre40 = 0x07;
 const uint8_t kQuicStreamOffsetNumBits = 2;
-const uint8_t kQuicStreamOffsetOffsetShift = 1;
+const uint8_t kQuicStreamOffsetShift = 1;
 
 // Data length may be 0 or 2 bytes.
 const uint8_t kQuicStreamDataLengthShift_Pre40 = 1;
 const uint8_t kQuicStreamDataLengthMask_Pre40 = 0x01;
-const uint8_t kQuicStreamDataLengthNumBits = 1;
-const uint8_t kQuicStreamDataLengthOffsetShift = 0;
+const uint8_t kQuicStreamDataLengthShift = 0;
 
 // Fin bit may be set or not.
 const uint8_t kQuicStreamFinShift_Pre40 = 1;
 const uint8_t kQuicStreamFinMask_Pre40 = 0x01;
-const uint8_t kQuicStreamFinNumBits = 0x01;
-const uint8_t kQuicStreamFinOffsetShift = 5;
+const uint8_t kQuicStreamFinShift = 5;
 
 // packet number size shift used in AckFrames.
 const uint8_t kQuicSequenceNumberLengthNumBits = 2;
@@ -103,7 +102,6 @@ const uint8_t kLargestAckedOffset = 2;
 // Acks may have only one ack block.
 const uint8_t kQuicHasMultipleAckBlocksOffset_Pre40 = 5;
 const uint8_t kQuicHasMultipleAckBlocksOffset = 4;
-const uint8_t kBooleanNumBits = 1;
 
 // Returns the absolute value of the difference between |a| and |b|.
 QuicPacketNumber Delta(QuicPacketNumber a, QuicPacketNumber b) {
@@ -360,7 +358,7 @@ size_t QuicFramer::BuildDataPacket(const QuicPacketHeader& header,
                                    const QuicFrames& frames,
                                    char* buffer,
                                    size_t packet_length) {
-  QuicDataWriter writer(packet_length, buffer, perspective_, endianness());
+  QuicDataWriter writer(packet_length, buffer, endianness());
   if (!AppendPacketHeader(header, &writer)) {
     QUIC_BUG << "AppendPacketHeader failed";
     return 0;
@@ -476,8 +474,7 @@ std::unique_ptr<QuicEncryptedPacket> QuicFramer::BuildPublicResetPacket(
   std::unique_ptr<char[]> buffer(new char[len]);
   // Endianness is not a concern here, as writer is not going to write integers
   // or floating numbers.
-  QuicDataWriter writer(len, buffer.get(), Perspective::IS_SERVER,
-                        NETWORK_BYTE_ORDER);
+  QuicDataWriter writer(len, buffer.get(), NETWORK_BYTE_ORDER);
 
   uint8_t flags = static_cast<uint8_t>(PACKET_PUBLIC_FLAGS_RST |
                                        PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID);
@@ -509,8 +506,7 @@ std::unique_ptr<QuicEncryptedPacket> QuicFramer::BuildVersionNegotiationPacket(
   std::unique_ptr<char[]> buffer(new char[len]);
   // Endianness is not a concern here, version negotiation packet does not have
   // integers or floating numbers.
-  QuicDataWriter writer(len, buffer.get(), Perspective::IS_SERVER,
-                        NETWORK_BYTE_ORDER);
+  QuicDataWriter writer(len, buffer.get(), NETWORK_BYTE_ORDER);
 
   uint8_t flags = static_cast<uint8_t>(
       PACKET_PUBLIC_FLAGS_VERSION | PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID |
@@ -534,8 +530,7 @@ std::unique_ptr<QuicEncryptedPacket> QuicFramer::BuildVersionNegotiationPacket(
 }
 
 bool QuicFramer::ProcessPacket(const QuicEncryptedPacket& packet) {
-  QuicDataReader reader(packet.data(), packet.length(), perspective_,
-                        endianness());
+  QuicDataReader reader(packet.data(), packet.length(), endianness());
 
   visitor_->OnPacket();
 
@@ -626,8 +621,7 @@ bool QuicFramer::ProcessDataPacket(QuicDataReader* encrypted_reader,
     return RaiseError(QUIC_DECRYPTION_FAILURE);
   }
 
-  QuicDataReader reader(decrypted_buffer, decrypted_length, perspective_,
-                        endianness());
+  QuicDataReader reader(decrypted_buffer, decrypted_length, endianness());
 
   // Set the last packet number after we have decrypted the packet
   // so we are confident is not attacker controlled.
@@ -1188,10 +1182,20 @@ uint8_t ExtractBits(uint8_t flags, uint8_t num_bits, uint8_t offset) {
   return (flags >> offset) & GetMaskFromNumBits(num_bits);
 }
 
+// Extract the bit at position |offset| from |flags| as a bool.
+bool ExtractBit(uint8_t flags, uint8_t offset) {
+  return ((flags >> offset) & GetMaskFromNumBits(1)) != 0;
+}
+
 // Set |num_bits|, offset by |offset| to |val| in |flags|.
 void SetBits(uint8_t* flags, uint8_t val, uint8_t num_bits, uint8_t offset) {
   DCHECK_LE(val, GetMaskFromNumBits(num_bits));
   *flags |= val << offset;
+}
+
+// Set the bit at position |offset| to |val| in |flags|.
+void SetBit(uint8_t* flags, bool val, uint8_t offset) {
+  SetBits(flags, val ? 1 : 0, 1, offset);
 }
 }  // namespace
 
@@ -1215,7 +1219,7 @@ bool QuicFramer::ProcessStreamFrame(QuicDataReader* reader,
     if (offset_length > 0) {
       offset_length += 1;
     }
-    stream_flags >>= kQuicStreamOffsetShift_Pre40;
+    stream_flags >>= kQuicStreamShift_Pre40;
 
     has_data_length = (stream_flags & kQuicStreamDataLengthMask_Pre40) ==
                       kQuicStreamDataLengthMask_Pre40;
@@ -1228,20 +1232,18 @@ bool QuicFramer::ProcessStreamFrame(QuicDataReader* reader,
     stream_flags &= ~kQuicFrameTypeStreamMask;
 
     stream_id_length = 1 + ExtractBits(stream_flags, kQuicStreamIDLengthNumBits,
-                                       kQuicStreamIDLengthOffsetShift);
+                                       kQuicStreamIDLengthShift);
 
     offset_length = 1 << ExtractBits(stream_flags, kQuicStreamOffsetNumBits,
-                                     kQuicStreamOffsetOffsetShift);
+                                     kQuicStreamOffsetShift);
 
     if (offset_length == 1) {
       offset_length = 0;
     }
 
-    has_data_length = !!ExtractBits(stream_flags, kQuicStreamDataLengthNumBits,
-                                    kQuicStreamDataLengthOffsetShift);
+    has_data_length = ExtractBit(stream_flags, kQuicStreamDataLengthShift);
 
-    frame->fin = !!ExtractBits(stream_flags, kQuicStreamFinNumBits,
-                               kQuicStreamFinOffsetShift);
+    frame->fin = ExtractBit(stream_flags, kQuicStreamFinShift);
   }
 
   uint16_t data_len = 0;
@@ -1293,10 +1295,10 @@ bool QuicFramer::ProcessStreamFrame(QuicDataReader* reader,
 bool QuicFramer::ProcessAckFrame(QuicDataReader* reader,
                                  uint8_t frame_type,
                                  QuicAckFrame* ack_frame) {
-  bool has_ack_blocks = !!ExtractBits(
-      frame_type, kBooleanNumBits,
-      quic_version_ < QUIC_VERSION_40 ? kQuicHasMultipleAckBlocksOffset_Pre40
-                                      : kQuicHasMultipleAckBlocksOffset);
+  bool has_ack_blocks =
+      ExtractBit(frame_type, quic_version_ < QUIC_VERSION_40
+                                 ? kQuicHasMultipleAckBlocksOffset_Pre40
+                                 : kQuicHasMultipleAckBlocksOffset);
   uint8_t num_ack_blocks = 0;
   uint8_t num_received_packets = 0;
   if (quic_version_ > QUIC_VERSION_39) {
@@ -1351,6 +1353,17 @@ bool QuicFramer::ProcessAckFrame(QuicDataReader* reader,
     set_detailed_error("Unable to read first ack block length.");
     return false;
   }
+
+  if (FLAGS_quic_reloadable_flag_sanitize_framer_addrange_input &&
+      first_block_length > ack_frame->largest_observed + 1) {
+    QUIC_FLAG_COUNT_N(quic_reloadable_flag_sanitize_framer_addrange_input, 1,
+                      2);
+    set_detailed_error(QuicStrCat("Underflow with first ack block length ",
+                                  first_block_length, " largest acked is ",
+                                  ack_frame->largest_observed + 1, ".")
+                           .c_str());
+    return false;
+  }
   QuicPacketNumber first_received =
       ack_frame->largest_observed + 1 - first_block_length;
   ack_frame->packets.AddRange(first_received, ack_frame->largest_observed + 1);
@@ -1367,6 +1380,17 @@ bool QuicFramer::ProcessAckFrame(QuicDataReader* reader,
         set_detailed_error("Unable to ack block length.");
         return false;
       }
+      if (FLAGS_quic_reloadable_flag_sanitize_framer_addrange_input &&
+          first_received < gap + current_block_length) {
+        QUIC_FLAG_COUNT_N(quic_reloadable_flag_sanitize_framer_addrange_input,
+                          2, 2);
+        set_detailed_error(
+            QuicStrCat("Underflow with ack block length ", current_block_length,
+                       ", end of block is ", first_received - gap, ".")
+                .c_str());
+        return false;
+      }
+
       first_received -= (gap + current_block_length);
       if (current_block_length > 0) {
         ack_frame->packets.AddRange(first_received,
@@ -1608,7 +1632,7 @@ QuicStringPiece QuicFramer::GetAssociatedDataFromEncryptedPacket(
 }
 
 void QuicFramer::SetDecrypter(EncryptionLevel level, QuicDecrypter* decrypter) {
-  DCHECK(alternative_decrypter_.get() == nullptr);
+  DCHECK(alternative_decrypter_ == nullptr);
   DCHECK_GE(level, decrypter_level_);
   decrypter_.reset(decrypter);
   decrypter_level_ = level;
@@ -1661,7 +1685,7 @@ size_t QuicFramer::EncryptPayload(EncryptionLevel level,
                                   const QuicPacket& packet,
                                   char* buffer,
                                   size_t buffer_len) {
-  DCHECK(encrypter_[level].get() != nullptr);
+  DCHECK(encrypter_[level] != nullptr);
 
   QuicStringPiece associated_data = packet.AssociatedData(quic_version_);
   // Copy in the header, because the encrypter only populates the encrypted
@@ -1687,7 +1711,7 @@ size_t QuicFramer::GetMaxPlaintextSize(size_t ciphertext_size) {
   size_t min_plaintext_size = ciphertext_size;
 
   for (int i = ENCRYPTION_NONE; i < NUM_ENCRYPTION_LEVELS; i++) {
-    if (encrypter_[i].get() != nullptr) {
+    if (encrypter_[i] != nullptr) {
       size_t size = encrypter_[i]->GetMaxPlaintextSize(ciphertext_size);
       if (size < min_plaintext_size) {
         min_plaintext_size = size;
@@ -1705,7 +1729,7 @@ bool QuicFramer::DecryptPayload(QuicDataReader* encrypted_reader,
                                 size_t buffer_length,
                                 size_t* decrypted_length) {
   QuicStringPiece encrypted = encrypted_reader->ReadRemainingPayload();
-  DCHECK(decrypter_.get() != nullptr);
+  DCHECK(decrypter_ != nullptr);
   QuicStringPiece associated_data = GetAssociatedDataFromEncryptedPacket(
       quic_version_, packet, header.public_header.connection_id_length,
       header.public_header.version_flag, header.public_header.nonce != nullptr,
@@ -1716,7 +1740,7 @@ bool QuicFramer::DecryptPayload(QuicDataReader* encrypted_reader,
       decrypted_buffer, decrypted_length, buffer_length);
   if (success) {
     visitor_->OnDecryptedPacket(decrypter_level_);
-  } else if (alternative_decrypter_.get() != nullptr) {
+  } else if (alternative_decrypter_ != nullptr) {
     if (header.public_header.nonce != nullptr) {
       DCHECK_EQ(perspective_, Perspective::IS_CLIENT);
       alternative_decrypter_->SetDiversificationNonce(
@@ -1863,7 +1887,7 @@ bool QuicFramer::AppendTypeByte(const QuicFrame& frame,
             no_stream_frame_length ? 0 : kQuicStreamDataLengthMask_Pre40;
 
         // Offset 3 bits.
-        type_byte <<= kQuicStreamOffsetShift_Pre40;
+        type_byte <<= kQuicStreamShift_Pre40;
         const size_t offset_len =
             GetStreamOffsetSize(quic_version_, frame.stream_frame->offset);
         if (offset_len > 0) {
@@ -1877,12 +1901,10 @@ bool QuicFramer::AppendTypeByte(const QuicFrame& frame,
             kQuicFrameTypeStreamMask_Pre40;  // Set Stream Frame Type to 1.
       } else {
         // Fin bit.
-        SetBits(&type_byte, frame.stream_frame->fin ? 1 : 0,
-                kQuicStreamFinNumBits, kQuicStreamFinOffsetShift);
+        SetBit(&type_byte, frame.stream_frame->fin, kQuicStreamFinShift);
 
         // Data Length bit.
-        SetBits(&type_byte, no_stream_frame_length ? 0 : 1,
-                kQuicStreamDataLengthNumBits, kQuicStreamDataLengthOffsetShift);
+        SetBit(&type_byte, !no_stream_frame_length, kQuicStreamDataLengthShift);
 
         // Offset 2 bits.
         uint8_t offset_len_encode = 3;
@@ -1904,11 +1926,11 @@ bool QuicFramer::AppendTypeByte(const QuicFrame& frame,
             QUIC_BUG << "Invalid offset_length.";
         }
         SetBits(&type_byte, offset_len_encode, kQuicStreamOffsetNumBits,
-                kQuicStreamOffsetOffsetShift);
+                kQuicStreamOffsetShift);
 
         // stream id 2 bits.
         SetBits(&type_byte, GetStreamIdSize(frame.stream_frame->stream_id) - 1,
-                kQuicStreamIDLengthNumBits, kQuicStreamIDLengthOffsetShift);
+                kQuicStreamIDLengthNumBits, kQuicStreamIDLengthShift);
         type_byte |= kQuicFrameTypeStreamMask;  // Set Stream Frame Type to 1.
       }
       break;
@@ -2042,10 +2064,9 @@ bool QuicFramer::AppendAckFrameAndTypeByte(const QuicAckFrame& frame,
   // to make room for the next bit flags to be set.
   // Whether there are multiple ack blocks.
   uint8_t type_byte = 0;
-  SetBits(&type_byte, new_ack_info.num_ack_blocks == 0 ? 0 : 1, kBooleanNumBits,
-          quic_version_ < QUIC_VERSION_40
-              ? kQuicHasMultipleAckBlocksOffset_Pre40
-              : kQuicHasMultipleAckBlocksOffset);
+  SetBit(&type_byte, new_ack_info.num_ack_blocks != 0,
+         quic_version_ < QUIC_VERSION_40 ? kQuicHasMultipleAckBlocksOffset_Pre40
+                                         : kQuicHasMultipleAckBlocksOffset);
 
   SetBits(&type_byte, GetPacketNumberFlags(largest_acked_length),
           kQuicSequenceNumberLengthNumBits, kLargestAckedOffset);
@@ -2404,7 +2425,7 @@ bool QuicFramer::StartsWithChlo(QuicStreamId id,
     return false;
   }
   char buf[sizeof(kCHLO)];
-  QuicDataWriter writer(sizeof(kCHLO), buf, perspective_, endianness());
+  QuicDataWriter writer(sizeof(kCHLO), buf, endianness());
   if (!data_producer_->WriteStreamData(id, offset, sizeof(kCHLO), &writer)) {
     QUIC_BUG << "Failed to write data for stream " << id << " with offset "
              << offset << " data_length = " << sizeof(kCHLO);

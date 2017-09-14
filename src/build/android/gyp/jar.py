@@ -39,11 +39,10 @@ def Jar(class_files, classes_dir, jar_path, manifest_file=None,
 
     for filepath, jar_filepath in additional_files or []:
       full_jar_filepath = os.path.join(jar_cwd, jar_filepath)
-      if not os.path.exists(full_jar_filepath):
-        jar_dir = os.path.dirname(full_jar_filepath)
-        if not os.path.exists(jar_dir):
-          os.makedirs(jar_dir)
-        shutil.copy(filepath, full_jar_filepath)
+      jar_dir = os.path.dirname(full_jar_filepath)
+      if not os.path.exists(jar_dir):
+        os.makedirs(jar_dir)
+      shutil.copy(filepath, full_jar_filepath)
       jar_cmd.append(jar_filepath)
 
     if provider_configurations:

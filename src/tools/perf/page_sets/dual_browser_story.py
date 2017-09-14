@@ -98,8 +98,9 @@ class MultiBrowserSharedState(story_module.SharedState):
     else:
       wpr_mode = wpr_modes.WPR_REPLAY
 
-    self.platform.network_controller.Open(wpr_mode,
-                                          browser_options.extra_wpr_args)
+    self.platform.network_controller.Open(
+        wpr_mode, browser_options.extra_wpr_args,
+        use_wpr_go=story_set.wpr_archive_info.is_using_wpr_go_archives)
 
   @property
   def current_tab(self):
@@ -202,8 +203,11 @@ class MultiBrowserSharedState(story_module.SharedState):
   def DumpStateUponFailure(self, unused_story, unused_results):
     if self._browsers:
       for browser_type, browser in self._browsers.iteritems():
-        logging.info('vvvvv BROWSER STATE BELOW FOR \'%s\' vvvvv', browser_type)
-        browser.DumpStateUponFailure()
+        if browser is not None:
+          logging.info("vvvvv BROWSER STATE BELOW FOR '%s' vvvvv", browser_type)
+          browser.DumpStateUponFailure()
+        else:
+          logging.info("browser '%s' not yet created", browser_type)
     else:
       logging.warning('Cannot dump browser states: No browsers.')
 

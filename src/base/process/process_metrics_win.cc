@@ -37,6 +37,11 @@ typedef NTSTATUS(WINAPI* NTQUERYSYSTEMINFORMATION)(
 
 ProcessMetrics::~ProcessMetrics() { }
 
+size_t GetMaxFds() {
+  // Windows is only limited by the amount of physical memory.
+  return std::numeric_limits<size_t>::max();
+}
+
 // static
 std::unique_ptr<ProcessMetrics> ProcessMetrics::CreateProcessMetrics(
     ProcessHandle process) {
@@ -279,7 +284,7 @@ static uint64_t FileTimeToUTC(const FILETIME& ftime) {
   return li.QuadPart;
 }
 
-double ProcessMetrics::GetCPUUsage() {
+double ProcessMetrics::GetPlatformIndependentCPUUsage() {
   FILETIME creation_time;
   FILETIME exit_time;
   FILETIME kernel_time;
@@ -292,9 +297,7 @@ double ProcessMetrics::GetCPUUsage() {
     // not yet received the notification.
     return 0;
   }
-  int64_t system_time =
-      (FileTimeToUTC(kernel_time) + FileTimeToUTC(user_time)) /
-      processor_count_;
+  int64_t system_time = FileTimeToUTC(kernel_time) + FileTimeToUTC(user_time);
   TimeTicks time = TimeTicks::Now();
 
   if (last_system_time_ == 0) {
@@ -315,15 +318,14 @@ double ProcessMetrics::GetCPUUsage() {
   last_system_time_ = system_time;
   last_cpu_time_ = time;
 
-  return static_cast<double>(system_time_delta * 100.0) / time_delta;
+  return static_cast<double>(system_time_delta) / time_delta;
 }
 
 bool ProcessMetrics::GetIOCounters(IoCounters* io_counters) const {
   return GetProcessIoCounters(process_.Get(), io_counters) != FALSE;
 }
 
-ProcessMetrics::ProcessMetrics(ProcessHandle process)
-    : processor_count_(SysInfo::NumberOfProcessors()), last_system_time_(0) {
+ProcessMetrics::ProcessMetrics(ProcessHandle process) : last_system_time_(0) {
   if (process) {
     HANDLE duplicate_handle;
     BOOL result = ::DuplicateHandle(::GetCurrentProcess(), process,

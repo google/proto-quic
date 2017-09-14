@@ -135,7 +135,7 @@ QuicConsumedData QuicPacketGenerator::ConsumeData(
   if (run_fast_path) {
     QUIC_FLAG_COUNT(quic_reloadable_flag_quic_consuming_data_faster);
     return ConsumeDataFastPath(id, iov, offset, state != NO_FIN,
-                               total_bytes_consumed, std::move(ack_listener));
+                               total_bytes_consumed, ack_listener);
   }
 
   // Don't allow the handshake to be bundled with other retransmittable frames.

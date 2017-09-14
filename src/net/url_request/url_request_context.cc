@@ -17,7 +17,6 @@
 #include "base/trace_event/memory_dump_manager.h"
 #include "base/trace_event/memory_dump_request_args.h"
 #include "base/trace_event/process_memory_dump.h"
-#include "net/base/sdch_manager.h"
 #include "net/cookies/cookie_store.h"
 #include "net/dns/host_resolver.h"
 #include "net/http/http_cache.h"
@@ -46,7 +45,6 @@ URLRequestContext::URLRequestContext()
       job_factory_(nullptr),
       throttler_manager_(nullptr),
       backoff_manager_(nullptr),
-      sdch_manager_(nullptr),
       network_quality_estimator_(nullptr),
       reporting_service_(nullptr),
       network_error_logging_delegate_(nullptr),
@@ -84,7 +82,6 @@ void URLRequestContext::CopyFrom(const URLRequestContext* other) {
   set_job_factory(other->job_factory_);
   set_throttler_manager(other->throttler_manager_);
   set_backoff_manager(other->backoff_manager_);
-  set_sdch_manager(other->sdch_manager_);
   set_http_user_agent_settings(other->http_user_agent_settings_);
   set_network_quality_estimator(other->network_quality_estimator_);
   set_reporting_service(other->reporting_service_);
@@ -169,6 +166,11 @@ void URLRequestContext::AssertNoURLRequests() const {
   }
 }
 
+void URLRequestContext::AssertURLRequestPresent(
+    const URLRequest* request) const {
+  CHECK_GE(url_requests_.count(request), 0u);
+}
+
 bool URLRequestContext::OnMemoryDump(
     const base::trace_event::MemoryDumpArgs& args,
     base::trace_event::ProcessMemoryDump* pmd) {
@@ -194,8 +196,6 @@ bool URLRequestContext::OnMemoryDump(
     if (http_cache)
       http_cache->DumpMemoryStats(pmd, dump->absolute_name());
   }
-  if (sdch_manager_)
-    sdch_manager_->DumpMemoryStats(pmd, dump_name);
   return true;
 }
 

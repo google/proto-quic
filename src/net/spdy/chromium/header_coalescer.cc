@@ -22,7 +22,7 @@ std::unique_ptr<base::Value> ElideNetLogHeaderCallback(
     SpdyStringPiece header_value,
     SpdyStringPiece error_message,
     NetLogCaptureMode capture_mode) {
-  auto dict = base::MakeUnique<base::DictionaryValue>();
+  auto dict = std::make_unique<base::DictionaryValue>();
   dict->SetString("header_name", EscapeExternalHandlerValue(header_name));
   dict->SetString(
       "header_value",

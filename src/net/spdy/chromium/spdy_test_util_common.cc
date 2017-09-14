@@ -70,7 +70,7 @@ void ParseUrl(SpdyStringPiece url,
 // |num_chunks| is the number of chunks to create.
 std::unique_ptr<MockWrite[]> ChopWriteFrame(const SpdySerializedFrame& frame,
                                             int num_chunks) {
-  auto chunks = base::MakeUnique<MockWrite[]>(num_chunks);
+  auto chunks = std::make_unique<MockWrite[]>(num_chunks);
   int chunk_size = frame.size() / num_chunks;
   for (int index = 0; index < num_chunks; index++) {
     const char* ptr = frame.data() + (index * chunk_size);
@@ -168,7 +168,7 @@ SpdySerializedFrame CombineFrames(
   for (const auto* frame : frames) {
     total_size += frame->size();
   }
-  auto data = base::MakeUnique<char[]>(total_size);
+  auto data = std::make_unique<char[]>(total_size);
   char* ptr = data.get();
   for (const auto* frame : frames) {
     memcpy(ptr, frame->data(), frame->size());
@@ -189,7 +189,8 @@ class PriorityGetter : public BufferedSpdyFramerVisitorInterface {
     return priority_;
   }
 
-  void OnError(SpdyFramer::SpdyFramerError spdy_framer_error) override {}
+  void OnError(
+      Http2DecoderAdapter::SpdyFramerError spdy_framer_error) override {}
   void OnStreamError(SpdyStreamId stream_id,
                      const SpdyString& description) override {}
   void OnHeaders(SpdyStreamId stream_id,
@@ -321,7 +322,7 @@ MockECSignatureCreatorFactory::~MockECSignatureCreatorFactory() {
 
 std::unique_ptr<crypto::ECSignatureCreator>
 MockECSignatureCreatorFactory::Create(crypto::ECPrivateKey* key) {
-  return base::MakeUnique<MockECSignatureCreator>(key);
+  return std::make_unique<MockECSignatureCreator>(key);
 }
 
 SpdySessionDependencies::SpdySessionDependencies()
@@ -380,7 +381,7 @@ SpdySessionDependencies::SpdyCreateSessionWithSocketFactory(
       CreateSessionContext(session_deps);
   session_context.client_socket_factory = factory;
   auto http_session =
-      base::MakeUnique<HttpNetworkSession>(session_params, session_context);
+      std::make_unique<HttpNetworkSession>(session_params, session_context);
   SpdySessionPoolPeer pool_peer(http_session->spdy_session_pool());
   pool_peer.SetEnableSendingInitialData(false);
   return http_session;
@@ -458,7 +459,7 @@ SpdyURLRequestContext::SpdyURLRequestContext() : storage_(this) {
       HttpAuthHandlerFactory::CreateDefault(host_resolver()));
   storage_.set_http_server_properties(
       std::unique_ptr<HttpServerProperties>(new HttpServerPropertiesImpl()));
-  storage_.set_job_factory(base::MakeUnique<URLRequestJobFactoryImpl>());
+  storage_.set_job_factory(std::make_unique<URLRequestJobFactoryImpl>());
   HttpNetworkSession::Params session_params;
   session_params.enable_spdy_ping_based_connection_checking = false;
 
@@ -474,11 +475,11 @@ SpdyURLRequestContext::SpdyURLRequestContext() : storage_(this) {
   session_context.http_auth_handler_factory = http_auth_handler_factory();
   session_context.http_server_properties = http_server_properties();
   storage_.set_http_network_session(
-      base::MakeUnique<HttpNetworkSession>(session_params, session_context));
+      std::make_unique<HttpNetworkSession>(session_params, session_context));
   SpdySessionPoolPeer pool_peer(
       storage_.http_network_session()->spdy_session_pool());
   pool_peer.SetEnableSendingInitialData(false);
-  storage_.set_http_transaction_factory(base::MakeUnique<HttpCache>(
+  storage_.set_http_transaction_factory(std::make_unique<HttpCache>(
       storage_.http_network_session(), HttpCache::DefaultBackend::InMemory(0),
       false));
 }
@@ -509,7 +510,7 @@ base::WeakPtr<SpdySession> CreateSpdySessionHelper(
           key.host_port_pair(), false, OnHostResolutionCallback(),
           TransportSocketParams::COMBINE_CONNECT_AND_WRITE_DEFAULT));
 
-  auto connection = base::MakeUnique<ClientSocketHandle>();
+  auto connection = std::make_unique<ClientSocketHandle>();
   TestCompletionCallback callback;
 
   int rv = ERR_UNEXPECTED;
@@ -626,8 +627,8 @@ base::WeakPtr<SpdySession> CreateFakeSpdySessionHelper(
     Error expected_status) {
   EXPECT_NE(expected_status, ERR_IO_PENDING);
   EXPECT_FALSE(HasSpdySession(pool, key));
-  auto handle = base::MakeUnique<ClientSocketHandle>();
-  handle->SetSocket(base::MakeUnique<FakeSpdySessionClientSocket>(
+  auto handle = std::make_unique<ClientSocketHandle>();
+  handle->SetSocket(std::make_unique<FakeSpdySessionClientSocket>(
       expected_status == OK ? ERR_IO_PENDING : expected_status));
   base::WeakPtr<SpdySession> spdy_session =
       pool->CreateAvailableSessionFromSocket(key, std::move(handle),

@@ -21,7 +21,7 @@ namespace {
 
 std::unique_ptr<base::SimpleTestClock> MakeTestClock() {
   std::unique_ptr<base::SimpleTestClock> clock =
-      base::MakeUnique<base::SimpleTestClock>();
+      std::make_unique<base::SimpleTestClock>();
   // SimpleTestClock starts at the null base::Time which converts to and from
   // time_t confusingly.
   clock->SetNow(base::Time::FromTimeT(1000000000));

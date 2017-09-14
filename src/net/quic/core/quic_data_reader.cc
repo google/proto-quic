@@ -18,15 +18,8 @@ namespace net {
 
 QuicDataReader::QuicDataReader(const char* data,
                                const size_t len,
-                               Perspective perspective,
                                Endianness endianness)
-    : data_(data),
-      len_(len),
-      pos_(0),
-      perspective_(perspective),
-      endianness_(endianness) {
-  QUIC_DVLOG(1) << ENDPOINT << "QuicDataReader";
-}
+    : data_(data), len_(len), pos_(0), endianness_(endianness) {}
 
 bool QuicDataReader::ReadUInt8(uint8_t* result) {
   return ReadBytes(result, sizeof(*result));

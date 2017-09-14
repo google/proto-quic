@@ -172,8 +172,6 @@ class HTTP2_EXPORT_PRIVATE HpackVarintDecoder {
   uint32_t offset_ = 0;
 };
 
-std::ostream& operator<<(std::ostream& out, const HpackVarintDecoder& v);
-
 }  // namespace net
 
 #endif  // NET_HTTP2_HPACK_DECODER_HPACK_VARINT_DECODER_H_

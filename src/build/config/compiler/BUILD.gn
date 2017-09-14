@@ -107,6 +107,14 @@ declare_args() {
 
   # Allow projects that wish to stay on C++11 to override Chromium's default.
   use_cxx11 = false
+
+  # Strip the debug info of symbols file in lib.unstripped to reduce size.
+  strip_debug_info = false
+}
+
+declare_args() {
+  # C++11 may not be an option if Android test infrastructure is used.
+  use_cxx11_on_android = use_cxx11
 }
 
 if (is_clang && !is_nacl) {
@@ -268,6 +276,8 @@ config("compiler") {
     # and build system rebuild things when their commandline changes). Nothing
     # should ever read this define.
     defines += [ "CR_CLANG_REVISION=\"$clang_revision\"" ]
+
+    configs += [ "//build/config/coverage" ]
   }
 
   # Non-Mac Posix compiler flags setup.
@@ -366,13 +376,7 @@ config("compiler") {
     ldflags += [ "-fuse-ld=lld" ]
   } else if (use_gold) {
     ldflags += [ "-fuse-ld=gold" ]
-    if (is_android) {
-      # Use -mstackrealign due to a bug on ia32 Jelly Bean.
-      # See crbug.com/521527
-      if (current_cpu == "x86") {
-        cflags += [ "-mstackrealign" ]
-      }
-    } else {
+    if (!is_android) {
       # On Android, this isn't needed.  gcc in the NDK knows to look next to
       # it with -fuse-ld=gold, and clang gets a --gcc-toolchain flag passed
       # above.
@@ -455,24 +459,36 @@ config("compiler") {
   # C11/C++11 compiler flags setup.
   # ---------------------------
   if (is_linux || is_android || (is_nacl && is_clang) || current_os == "aix") {
+    if (target_os == "android") {
+      cxx11_override = use_cxx11_on_android
+    } else {
+      cxx11_override = use_cxx11
+    }
+
     # gnu11/gnu++11 instead of c11/c++11 is needed because some code uses typeof()
     # (a GNU extension).
     # TODO(thakis): Eventually switch this to c++11 instead,
     # http://crbug.com/427584
     cflags_c += [ "-std=gnu11" ]
-    if (use_cxx11) {
+    if (cxx11_override) {
       # Override Chromium's default for projects that wish to stay on C++11.
       cflags_cc += [ "-std=gnu++11" ]
     } else {
       cflags_cc += [ "-std=gnu++14" ]
     }
   } else if (!is_win && !is_nacl) {
+    if (target_os == "android") {
+      cxx11_override = use_cxx11_on_android
+    } else {
+      cxx11_override = use_cxx11
+    }
+
     # TODO(mcgrathr) - the NaCl GCC toolchain doesn't support either gnu11/gnu++11
     # or c11/c++11; we technically don't need this toolchain any more, but there
     # are still a few buildbots using it, so until those are turned off
     # we need the !is_nacl clause and the (is_nacl && is_clang) clause, above.
     cflags_c += [ "-std=c11" ]
-    if (use_cxx11) {
+    if (cxx11_override) {
       cflags_cc += [ "-std=c++11" ]
     } else {
       cflags_cc += [ "-std=c++14" ]
@@ -1208,6 +1224,12 @@ config("default_warnings") {
         # TODO(thakis): https://crbug.com/753973
         "-Wno-enum-compare-switch",
       ]
+      if (llvm_force_head_revision) {
+        cflags += [
+          # TODO(hans): https://crbug.com/763392
+          "-Wno-tautological-unsigned-zero-compare",
+        ]
+      }
     } else if (use_xcode_clang && xcode_version_int >= 830) {
       # This is necessary to allow a progressive transition from using xcode 8.0
       # to 8.3 or more recent. Remove when all bots are migrated to 8.3.
@@ -1816,6 +1838,7 @@ config("minimal_symbols") {
       cflags += [ "-gdwarf-3" ]
     }
     cflags += [ "-g1" ]
+    ldflags = []
     if (is_android) {
       # Android defaults to symbol_level=1 builds in production builds
       # (https://crbug.com/648948), but clang, unlike gcc, doesn't emit
@@ -1825,11 +1848,13 @@ config("minimal_symbols") {
       # TODO(thakis): Consider making clang emit DW_AT_linkage_name in -g1 mode;
       #               failing that consider doing this on non-Android too.
       cflags += [ "-fdebug-info-for-profiling" ]
+      if (strip_debug_info) {
+        ldflags += [ "-Wl,--strip-debug" ]
+      }
     }
 
     # Note: -gsplit-dwarf implicitly turns on -g2 with clang, so don't pass it.
     asmflags = cflags
-    ldflags = []
   }
 }
 

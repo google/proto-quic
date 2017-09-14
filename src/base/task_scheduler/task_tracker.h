@@ -33,7 +33,7 @@ namespace internal {
 class BASE_EXPORT TaskTracker {
  public:
   TaskTracker();
-  ~TaskTracker();
+  virtual ~TaskTracker();
 
   // Synchronously shuts down the scheduler. Once this is called, only tasks
   // posted with the BLOCK_SHUTDOWN behavior will be run. Returns when:

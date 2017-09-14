@@ -59,10 +59,11 @@ def get_results(keys, output_collector=None):
   """
   return list(
       swarming.yield_results(
-          'https://host:9001', keys, 10., None, True, output_collector, False))
+          'https://host:9001', keys, 10., None, True,
+          output_collector, False, True))
 
 
-def collect(url, task_ids):
+def collect(url, task_ids, task_stdout=('console', 'json')):
   """Simplifies the call to swarming.collect()."""
   return swarming.collect(
     swarming=url,
@@ -72,6 +73,7 @@ def collect(url, task_ids):
     print_status_updates=True,
     task_summary_json=None,
     task_output_dir=None,
+    task_output_stdout=task_stdout,
     include_perf=False)
 
 
@@ -222,11 +224,10 @@ class Common(object):
       self._tempdir = tempfile.mkdtemp(prefix=u'swarming_test')
     return self._tempdir
 
+  maxDiff = None
   def _check_output(self, out, err):
-    self.assertEqual(
-        out.splitlines(True), sys.stdout.getvalue().splitlines(True))
-    self.assertEqual(
-        err.splitlines(True), sys.stderr.getvalue().splitlines(True))
+    self.assertMultiLineEqual(out, sys.stdout.getvalue())
+    self.assertMultiLineEqual(err, sys.stderr.getvalue())
 
     # Flush their content by mocking them again.
     self.mock(sys, 'stdout', StringIO.StringIO())
@@ -351,11 +352,11 @@ class TestSwarmingTrigger(NetTestCase):
             io_timeout_secs=60,
             outputs=[],
             secret_bytes=None),
-        service_account_token=None,
+        service_account=None,
         tags=['tag:a', 'tag:b'],
         user='joe@localhost')
 
-    request_1 = swarming.task_request_to_raw_request(task_request, False)
+    request_1 = swarming.task_request_to_raw_request(task_request)
     request_1['name'] = u'unit_tests:0:2'
     request_1['properties']['env'] = [
       {'key': 'GTEST_SHARD_INDEX', 'value': '0'},
@@ -363,7 +364,7 @@ class TestSwarmingTrigger(NetTestCase):
     ]
     result_1 = gen_request_response(request_1)
 
-    request_2 = swarming.task_request_to_raw_request(task_request, False)
+    request_2 = swarming.task_request_to_raw_request(task_request)
     request_2['name'] = u'unit_tests:1:2'
     request_2['properties']['env'] = [
       {'key': 'GTEST_SHARD_INDEX', 'value': '1'},
@@ -426,11 +427,11 @@ class TestSwarmingTrigger(NetTestCase):
             io_timeout_secs=60,
             outputs=[],
             secret_bytes=None),
-        service_account_token=None,
+        service_account=None,
         tags=['tag:a', 'tag:b'],
         user='joe@localhost')
 
-    request = swarming.task_request_to_raw_request(task_request, False)
+    request = swarming.task_request_to_raw_request(task_request)
     self.assertEqual('123', request['parent_task_id'])
 
     result = gen_request_response(request)
@@ -493,11 +494,11 @@ class TestSwarmingTrigger(NetTestCase):
             io_timeout_secs=60,
             outputs=[],
             secret_bytes=None),
-        service_account_token=None,
+        service_account=None,
         tags=['tag:a', 'tag:b'],
         user='joe@localhost')
 
-    request = swarming.task_request_to_raw_request(task_request, False)
+    request = swarming.task_request_to_raw_request(task_request)
     expected = {
       'client_package': None,
       'packages': [{
@@ -710,13 +711,27 @@ class TestSwarmingCollection(NetTestCase):
     self.mock(swarming, 'yield_results', lambda *_: [(0, data)])
     self.assertEqual(0, collect('https://localhost:1', ['10100']))
     expected = u'\n'.join((
-      '+---------------------------------------------------------------------+',
-      '| Shard 0  https://localhost:1/user/task/10100                        |',
-      '+---------------------------------------------------------------------+',
+      '+------------------------------------------------------+',
+      '| Shard 0  https://localhost:1/user/task/10100         |',
+      '+------------------------------------------------------+',
       'Foo',
-      '+---------------------------------------------------------------------+',
-      '| End of shard 0  Pending: 6.0s  Duration: 1.0s  Bot: swarm6  Exit: 0 |',
-      '+---------------------------------------------------------------------+',
+      '+------------------------------------------------------+',
+      '| End of shard 0                                       |',
+      '|  Pending: 6.0s  Duration: 1.0s  Bot: swarm6  Exit: 0 |',
+      '+------------------------------------------------------+',
+      'Total duration: 1.0s',
+      ''))
+    self._check_output(expected, '')
+
+  def test_collect_success_nostdout(self):
+    data = gen_result_response(output='Foo')
+    self.mock(swarming, 'yield_results', lambda *_: [(0, data)])
+    self.assertEqual(0, collect('https://localhost:1', ['10100'], []))
+    expected = u'\n'.join((
+      '+------------------------------------------------------+',
+      '| Shard 0  https://localhost:1/user/task/10100         |',
+      '|  Pending: 6.0s  Duration: 1.0s  Bot: swarm6  Exit: 0 |',
+      '+------------------------------------------------------+',
       'Total duration: 1.0s',
       ''))
     self._check_output(expected, '')
@@ -727,19 +742,14 @@ class TestSwarmingCollection(NetTestCase):
     self.mock(swarming, 'yield_results', lambda *_: [(0, data)])
     self.assertEqual(-9, collect('https://localhost:1', ['10100']))
     expected = u'\n'.join((
-      '+----------------------------------------------------------------------'
-        '+',
-      '| Shard 0  https://localhost:1/user/task/10100                         '
-        '|',
-      '+----------------------------------------------------------------------'
-        '+',
+      '+-------------------------------------------------------+',
+      '| Shard 0  https://localhost:1/user/task/10100          |',
+      '+-------------------------------------------------------+',
       'Foo',
-      '+----------------------------------------------------------------------'
-        '+',
-      '| End of shard 0  Pending: 6.0s  Duration: 1.0s  Bot: swarm6  Exit: -9 '
-        '|',
-      '+----------------------------------------------------------------------'
-        '+',
+      '+-------------------------------------------------------+',
+      '| End of shard 0                                        |',
+      '|  Pending: 6.0s  Duration: 1.0s  Bot: swarm6  Exit: -9 |',
+      '+-------------------------------------------------------+',
       'Total duration: 1.0s',
       ''))
     self._check_output(expected, '')
@@ -750,13 +760,14 @@ class TestSwarmingCollection(NetTestCase):
     self.mock(swarming, 'yield_results', lambda *_: [(0, data)])
     self.assertEqual(1, collect('https://localhost:1', ['10100', '10200']))
     expected = u'\n'.join((
-      '+---------------------------------------------------------------------+',
-      '| Shard 0  https://localhost:1/user/task/10100                        |',
-      '+---------------------------------------------------------------------+',
+      '+------------------------------------------------------+',
+      '| Shard 0  https://localhost:1/user/task/10100         |',
+      '+------------------------------------------------------+',
       'Foo',
-      '+---------------------------------------------------------------------+',
-      '| End of shard 0  Pending: 6.0s  Duration: 1.0s  Bot: swarm6  Exit: 0 |',
-      '+---------------------------------------------------------------------+',
+      '+------------------------------------------------------+',
+      '| End of shard 0                                       |',
+      '|  Pending: 6.0s  Duration: 1.0s  Bot: swarm6  Exit: 0 |',
+      '+------------------------------------------------------+',
       '',
       'Total duration: 1.0s',
       ''))
@@ -774,7 +785,8 @@ class TestSwarmingCollection(NetTestCase):
       actual_calls.append((isolated_hash, outdir))
     self.mock(isolateserver, 'fetch_isolated', fetch_isolated)
 
-    collector = swarming.TaskOutputCollector(self.tempdir, 2)
+    collector = swarming.TaskOutputCollector(
+        self.tempdir, ['json', 'console'], 2)
     for index in xrange(2):
       collector.process_shard_result(
           index,
@@ -842,7 +854,8 @@ class TestSwarmingCollection(NetTestCase):
     ]
 
     # Feed them to collector.
-    collector = swarming.TaskOutputCollector(self.tempdir, 2)
+    collector = swarming.TaskOutputCollector(
+        self.tempdir, ['json', 'console'], 2)
     for index, result in enumerate(data):
       collector.process_shard_result(index, result)
     collector.finalize()
@@ -1014,7 +1027,7 @@ class TestMain(NetTestCase):
         'outputs': [],
         'secret_bytes': None,
       },
-      'service_account_token': 'bot',
+      'service_account': 'bot',
       'tags': [],
       'user': None,
     }
@@ -1382,7 +1395,7 @@ class TestMain(NetTestCase):
       json.dump(data, f)
     def stub_collect(
         swarming_server, task_ids, timeout, decorate, print_status_updates,
-        task_summary_json, task_output_dir, include_perf):
+        task_summary_json, task_output_dir, task_output_stdout, include_perf):
       self.assertEqual('https://host', swarming_server)
       self.assertEqual([u'12300'], task_ids)
       # It is automatically calculated from hard timeout + expiration + 10.
@@ -1391,13 +1404,14 @@ class TestMain(NetTestCase):
       self.assertEqual(True, print_status_updates)
       self.assertEqual('/a', task_summary_json)
       self.assertEqual('/b', task_output_dir)
+      self.assertSetEqual(set(['console', 'json']), set(task_output_stdout))
       self.assertEqual(False, include_perf)
       print('Fake output')
     self.mock(swarming, 'collect', stub_collect)
     self.main_safe(
         ['collect', '--swarming', 'https://host', '--json', j, '--decorate',
           '--print-status-updates', '--task-summary-json', '/a',
-          '--task-output-dir', '/b'])
+          '--task-output-dir', '/b', '--task-output-stdout', 'all'])
     self._check_output('Fake output\n', '')
 
   def test_query_base(self):

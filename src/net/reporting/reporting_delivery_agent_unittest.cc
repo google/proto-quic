@@ -98,7 +98,7 @@ TEST_F(ReportingDeliveryAgentTest, FailedUpload) {
   cache()->SetClient(kOrigin_, kEndpoint_, ReportingClient::Subdomains::EXCLUDE,
                      kGroup_, tomorrow());
   cache()->AddReport(kUrl_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
 
   EXPECT_TRUE(delivery_timer()->IsRunning());
@@ -132,7 +132,7 @@ TEST_F(ReportingDeliveryAgentTest, RemoveEndpointUpload) {
   ASSERT_TRUE(FindClientInCache(cache(), kDifferentOrigin, kEndpoint_));
 
   cache()->AddReport(kUrl_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
 
   EXPECT_TRUE(delivery_timer()->IsRunning());
@@ -162,7 +162,7 @@ TEST_F(ReportingDeliveryAgentTest, ConcurrentRemove) {
   cache()->SetClient(kOrigin_, kEndpoint_, ReportingClient::Subdomains::EXCLUDE,
                      kGroup_, tomorrow());
   cache()->AddReport(kUrl_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
 
   EXPECT_TRUE(delivery_timer()->IsRunning());
@@ -205,10 +205,10 @@ TEST_F(ReportingDeliveryAgentTest,
                      ReportingClient::Subdomains::EXCLUDE, kGroup_, tomorrow());
 
   cache()->AddReport(kUrl_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->AddReport(kDifferentUrl, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
 
   EXPECT_TRUE(delivery_timer()->IsRunning());
@@ -232,7 +232,7 @@ TEST_F(ReportingDeliveryAgentTest, SerializeUploadsToEndpoint) {
                      ReportingClient::Subdomains::EXCLUDE, kGroup_, tomorrow());
 
   cache()->AddReport(kUrl_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
 
   EXPECT_TRUE(delivery_timer()->IsRunning());
@@ -240,7 +240,7 @@ TEST_F(ReportingDeliveryAgentTest, SerializeUploadsToEndpoint) {
   EXPECT_EQ(1u, pending_uploads().size());
 
   cache()->AddReport(kDifferentUrl, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
 
   EXPECT_TRUE(delivery_timer()->IsRunning());
@@ -270,7 +270,7 @@ TEST_F(ReportingDeliveryAgentTest, SerializeUploadsToGroup) {
                      ReportingClient::Subdomains::EXCLUDE, kGroup_, tomorrow());
 
   cache()->AddReport(kUrl_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
 
   EXPECT_TRUE(delivery_timer()->IsRunning());
@@ -278,7 +278,7 @@ TEST_F(ReportingDeliveryAgentTest, SerializeUploadsToGroup) {
   EXPECT_EQ(1u, pending_uploads().size());
 
   cache()->AddReport(kUrl_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
 
   EXPECT_TRUE(delivery_timer()->IsRunning());
@@ -309,10 +309,10 @@ TEST_F(ReportingDeliveryAgentTest, ParallelizeUploadsAcrossGroups) {
                      tomorrow());
 
   cache()->AddReport(kUrl_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->AddReport(kUrl_, kDifferentGroup, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
 
   EXPECT_TRUE(delivery_timer()->IsRunning());

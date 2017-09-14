@@ -35,3 +35,21 @@ executable("cygprofile_unittests") {
     "//testing/gtest",
   ]
 }
+
+executable("cygprofile_perftests") {
+  testonly = true
+
+  sources = [
+    "cygprofile_perftest.cc",
+  ]
+
+  configs -= [ "//build/config/android:default_cygprofile_instrumentation" ]
+  configs += [ "//build/config/android:no_cygprofile_instrumentation" ]
+
+  deps = [
+    ":cygprofile",
+    "//base",
+    "//testing/gtest",
+    "//testing/perf",
+  ]
+}

@@ -5,6 +5,8 @@
 #ifndef BASE_CONTAINERS_FLAT_SET_H_
 #define BASE_CONTAINERS_FLAT_SET_H_
 
+#include <functional>
+
 #include "base/containers/flat_tree.h"
 #include "base/template_util.h"
 
@@ -122,7 +124,7 @@ namespace base {
 //   bool operator>=(const flat_set&, const flat_set);
 //   bool operator<=(const flat_set&, const flat_set);
 //
-template <class Key, class Compare = ::base::less>
+template <class Key, class Compare = std::less<>>
 using flat_set = typename ::base::internal::flat_tree<
     Key,
     Key,

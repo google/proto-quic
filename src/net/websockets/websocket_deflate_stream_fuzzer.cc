@@ -72,7 +72,7 @@ class WebSocketFuzzedStream final : public WebSocketStream {
         fuzzed_data_provider_->ConsumeUint32InRange(
             WebSocketFrameHeader::kOpCodeContinuation,
             WebSocketFrameHeader::kOpCodeControlUnused);
-    auto frame = base::MakeUnique<WebSocketFrame>(opcode);
+    auto frame = std::make_unique<WebSocketFrame>(opcode);
     // Bad news: ConsumeBool actually consumes a whole byte per call, so do
     // something hacky to conserve precious bits.
     uint8_t flags = fuzzed_data_provider_->ConsumeUint8();
@@ -115,8 +115,8 @@ void WebSocketDeflateStreamFuzz(const uint8_t* data, size_t size) {
   WebSocketDeflateParameters parameters;
   DCHECK(parameters.Initialize(params, &failure_message)) << failure_message;
   WebSocketDeflateStream deflate_stream(
-      base::MakeUnique<WebSocketFuzzedStream>(&fuzzed_data_provider),
-      parameters, base::MakeUnique<WebSocketDeflatePredictorImpl>());
+      std::make_unique<WebSocketFuzzedStream>(&fuzzed_data_provider),
+      parameters, std::make_unique<WebSocketDeflatePredictorImpl>());
   std::vector<std::unique_ptr<net::WebSocketFrame>> frames;
   deflate_stream.ReadFrames(&frames, CompletionCallback());
 }

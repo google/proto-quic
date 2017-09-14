@@ -18,7 +18,8 @@ namespace disk_cache {
 //     |kSimpleVersion - 1| then the whole cache directory will be cleared.
 //   * Dropping cache data on disk or some of its parts can be a valid way to
 //     Upgrade.
-const uint32_t kSimpleVersion = 7;
+const uint32_t kLastCompatSparseVersion = 7;
+const uint32_t kSimpleVersion = 8;
 
 // The version of the entry file(s) as written to disk. Must be updated iff the
 // entry format changes with the overall backend version update.

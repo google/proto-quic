@@ -220,7 +220,7 @@ class BASE_EXPORT File {
   // Writes the given buffer into the file at the given offset, overwritting any
   // data that was previously there. Returns the number of bytes written, or -1
   // on error. Note that this function makes a best effort to write all data on
-  // all platforms.
+  // all platforms. |data| can be nullptr when |size| is 0.
   // Ignores the offset and writes to the end of the file if the file was opened
   // with FLAG_APPEND.
   int Write(int64_t offset, const char* data, int size);

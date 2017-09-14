@@ -16,17 +16,8 @@ namespace net {
 #define ENDPOINT \
   (perspective_ == Perspective::IS_SERVER ? "Server: " : "Client: ")
 
-QuicDataWriter::QuicDataWriter(size_t size,
-                               char* buffer,
-                               Perspective perspective,
-                               Endianness endianness)
-    : buffer_(buffer),
-      capacity_(size),
-      length_(0),
-      perspective_(perspective),
-      endianness_(endianness) {
-  QUIC_DVLOG(1) << ENDPOINT << "QuicDataWriter";
-}
+QuicDataWriter::QuicDataWriter(size_t size, char* buffer, Endianness endianness)
+    : buffer_(buffer), capacity_(size), length_(0), endianness_(endianness) {}
 
 QuicDataWriter::~QuicDataWriter() {}
 

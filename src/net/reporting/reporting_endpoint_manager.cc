@@ -78,7 +78,7 @@ class ReportingEndpointManagerImpl : public ReportingEndpointManager {
 
   void InformOfEndpointRequest(const GURL& endpoint, bool succeeded) override {
     if (!base::ContainsKey(endpoint_backoff_, endpoint)) {
-      endpoint_backoff_[endpoint] = base::MakeUnique<BackoffEntry>(
+      endpoint_backoff_[endpoint] = std::make_unique<BackoffEntry>(
           &policy().endpoint_backoff_policy, tick_clock());
     }
     endpoint_backoff_[endpoint]->InformOfRequest(succeeded);
@@ -107,7 +107,7 @@ class ReportingEndpointManagerImpl : public ReportingEndpointManager {
 // static
 std::unique_ptr<ReportingEndpointManager> ReportingEndpointManager::Create(
     ReportingContext* context) {
-  return base::MakeUnique<ReportingEndpointManagerImpl>(context);
+  return std::make_unique<ReportingEndpointManagerImpl>(context);
 }
 
 ReportingEndpointManager::~ReportingEndpointManager() {}

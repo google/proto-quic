@@ -53,7 +53,7 @@ class TaskSchedulerTaskTrackerPosixTest : public testing::Test {
 // Verify that TaskTrackerPosix runs a Task it receives.
 TEST_F(TaskSchedulerTaskTrackerPosixTest, RunTask) {
   bool did_run = false;
-  auto task = MakeUnique<Task>(
+  auto task = std::make_unique<Task>(
       FROM_HERE,
       Bind([](bool* did_run) { *did_run = true; }, Unretained(&did_run)),
       TaskTraits(), TimeDelta());
@@ -70,9 +70,10 @@ TEST_F(TaskSchedulerTaskTrackerPosixTest, RunTask) {
 TEST_F(TaskSchedulerTaskTrackerPosixTest, FileDescriptorWatcher) {
   int fds[2];
   ASSERT_EQ(0, pipe(fds));
-  auto task = MakeUnique<Task>(
-      FROM_HERE, Bind(IgnoreResult(&FileDescriptorWatcher::WatchReadable),
-                      fds[0], Bind(&DoNothing)),
+  auto task = std::make_unique<Task>(
+      FROM_HERE,
+      Bind(IgnoreResult(&FileDescriptorWatcher::WatchReadable), fds[0],
+           Bind(&DoNothing)),
       TaskTraits(), TimeDelta());
   // FileDescriptorWatcher::WatchReadable needs a SequencedTaskRunnerHandle.
   task->sequenced_task_runner_ref = MakeRefCounted<NullTaskRunner>();

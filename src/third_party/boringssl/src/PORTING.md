@@ -130,6 +130,17 @@ Things which do not work:
 * If a HelloRequest is received while `SSL_write` has unsent application data,
   the renegotiation is rejected.
 
+* Renegotiation does not participate in session resumption. The client will
+  not offer a session on renegotiation or resume any session established by a
+  renegotiation handshake.
+
+* The server may not change its certificate in the renegotiation. This mitigates
+  the [triple handshake attack](https://mitls.org/pages/attacks/3SHAKE). Any new
+  stapled OCSP response and SCT list will be ignored. As no authentication state
+  may change, BoringSSL will not re-verify the certificate on a renegotiation.
+  Callbacks such as `SSL_CTX_set_custom_verify` will only run on the initial
+  handshake.
+
 ### Lowercase hexadecimal
 
 BoringSSL's `BN_bn2hex` function uses lowercase hexadecimal digits instead of
@@ -153,6 +164,17 @@ Ensure that callers do not rely on this object reuse behavior. It is
 recommended to avoid the `out` parameter completely and always pass in `NULL`.
 Note that less error-prone APIs are available for BoringSSL-specific code (see
 below).
+
+### Memory allocation
+
+OpenSSL provides wrappers `OPENSSL_malloc` and `OPENSSL_free` over the standard
+`malloc` and `free`. Memory allocated by OpenSSL should be released with
+`OPENSSL_free`, not the standard `free`. However, by default, they are
+implemented directly using `malloc` and `free`, so code which mixes them up
+usually works.
+
+In BoringSSL, these functions maintain additional book-keeping to zero memory
+on `OPENSSL_free`, so any mixups must be fixed.
 
 ## Optional BoringSSL-specific simplifications
 

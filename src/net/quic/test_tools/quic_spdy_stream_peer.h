@@ -9,15 +9,10 @@
 
 namespace net {
 
-class QuicSpdyStream;
-
 namespace test {
 
 class QuicSpdyStreamPeer {
  public:
-  static void SetHeadersDecompressed(QuicSpdyStream* stream,
-                                     bool headers_decompressed);
-
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicSpdyStreamPeer);
 };

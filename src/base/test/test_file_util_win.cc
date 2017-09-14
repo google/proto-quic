@@ -78,7 +78,7 @@ bool RestorePermissionInfo(const FilePath& path, void* info, size_t length) {
 
 std::unique_ptr<wchar_t[]> ToCStr(const std::basic_string<wchar_t>& str) {
   size_t size = str.size() + 1;
-  std::unique_ptr<wchar_t[]> ptr = base::MakeUnique<wchar_t[]>(size);
+  std::unique_ptr<wchar_t[]> ptr = std::make_unique<wchar_t[]>(size);
   wcsncpy(ptr.get(), str.c_str(), size);
   return ptr;
 }

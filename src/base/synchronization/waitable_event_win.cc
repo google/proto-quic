@@ -13,6 +13,7 @@
 #include "base/debug/activity_tracker.h"
 #include "base/logging.h"
 #include "base/numerics/safe_conversions.h"
+#include "base/threading/scoped_blocking_call.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/time/time.h"
 
@@ -53,6 +54,7 @@ bool WaitableEvent::IsSignaled() {
 
 void WaitableEvent::Wait() {
   base::ThreadRestrictions::AssertWaitAllowed();
+  ScopedBlockingCall scoped_blocking_call(BlockingType::MAY_BLOCK);
   // Record the event that this thread is blocking upon (for hang diagnosis).
   base::debug::ScopedEventWaitActivity event_activity(this);
 
@@ -66,6 +68,8 @@ namespace {
 
 // Helper function called from TimedWait and TimedWaitUntil.
 bool WaitUntil(HANDLE handle, const TimeTicks& now, const TimeTicks& end_time) {
+  ScopedBlockingCall scoped_blocking_call(BlockingType::MAY_BLOCK);
+
   TimeDelta delta = end_time - now;
   DCHECK_GT(delta, TimeDelta());
 
@@ -132,6 +136,7 @@ size_t WaitableEvent::WaitMany(WaitableEvent** events, size_t count) {
   DCHECK(count) << "Cannot wait on no events";
 
   base::ThreadRestrictions::AssertWaitAllowed();
+  ScopedBlockingCall scoped_blocking_call(BlockingType::MAY_BLOCK);
   // Record an event (the first) that this thread is blocking upon.
   base::debug::ScopedEventWaitActivity event_activity(events[0]);
 

@@ -32,6 +32,8 @@ OneWayLink::QueuedPacket::QueuedPacket(std::unique_ptr<Packet> packet,
                                        QuicTime dequeue_time)
     : packet(std::move(packet)), dequeue_time(dequeue_time) {}
 
+OneWayLink::QueuedPacket::QueuedPacket(QueuedPacket&& other) = default;
+
 OneWayLink::QueuedPacket::~QueuedPacket() {}
 
 void OneWayLink::AcceptPacket(std::unique_ptr<Packet> packet) {

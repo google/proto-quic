@@ -43,6 +43,7 @@ QuicChromiumClientStream::Handle::Handle(QuicChromiumClientStream* stream)
       read_headers_buffer_(nullptr),
       read_body_buffer_len_(0),
       net_error_(ERR_UNEXPECTED),
+      net_log_(stream->net_log()),
       weak_factory_(this) {
   SaveState();
 }
@@ -310,6 +311,12 @@ size_t QuicChromiumClientStream::Handle::NumBytesConsumed() const {
   return stream_->sequencer()->NumBytesConsumed();
 }
 
+bool QuicChromiumClientStream::Handle::HasBytesToRead() const {
+  if (!stream_)
+    return false;
+  return stream_->sequencer()->HasBytesToRead();
+}
+
 bool QuicChromiumClientStream::Handle::IsDoneReading() const {
   if (!stream_)
     return is_done_reading_;
@@ -339,6 +346,10 @@ bool QuicChromiumClientStream::Handle::can_migrate() {
   if (!stream_)
     return false;
   return stream_->can_migrate();
+}
+
+const NetLogWithSource& QuicChromiumClientStream::Handle::net_log() const {
+  return net_log_;
 }
 
 void QuicChromiumClientStream::Handle::SaveState() {
@@ -537,10 +548,16 @@ bool QuicChromiumClientStream::WritevStreamData(
   // Must not be called when data is buffered.
   DCHECK(!HasBufferedData());
   // Writes the data, or buffers it.
-  for (size_t i = 0; i < buffers.size(); ++i) {
-    bool is_fin = fin && (i == buffers.size() - 1);
-    QuicStringPiece string_data(buffers[i]->data(), lengths[i]);
-    WriteOrBufferData(string_data, is_fin, nullptr);
+  if (session_->can_use_slices()) {
+    WriteMemSlices(QuicMemSliceSpan(QuicMemSliceSpanImpl(
+                       buffers.data(), lengths.data(), buffers.size())),
+                   fin);
+  } else {
+    for (size_t i = 0; i < buffers.size(); ++i) {
+      bool is_fin = fin && (i == buffers.size() - 1);
+      QuicStringPiece string_data(buffers[i]->data(), lengths[i]);
+      WriteOrBufferData(string_data, is_fin, nullptr);
+    }
   }
   return !HasBufferedData();  // Was all data written?
 }

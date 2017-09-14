@@ -47,37 +47,19 @@ NET_EXPORT scoped_refptr<X509Certificate> CreateX509CertificateFromCertContexts(
 // multiple threads if no further modifications happen, it is generally
 // preferable for each thread that needs such a context to obtain its own,
 // rather than risk thread-safety issues by sharing.
-//
-// ------------------------------------------------------------------------
-// The following remarks only apply when USE_BYTE_CERTS=false (e.g., when
-// using x509_certificate_win).
-// TODO(mattm): remove references to USE_BYTE_CERTS and clean up the rest of
-// the comment when x509_certificate_win is deleted.
-//
-// The returned PCCERT_CONTEXT *MUST NOT* be stored in an X509Certificate, as
-// this will cause os_cert_handle() to return incorrect results.
-//
-// Depending on the CryptoAPI function, Windows may need to access the
-// HCERTSTORE that the passed-in PCCERT_CONTEXT belongs to, such as to
-// locate additional intermediates. However, all X509Certificate handles are
-// added to a NULL HCERTSTORE, allowing the system to manage the resources.  As
-// a result, intermediates for |cert->os_cert_handle()| cannot be located
-// simply via |cert->os_cert_handle()->hCertStore|, as it refers to a magic
-// value indicating "only this certificate".
-//
-// To avoid this problems, a new in-memory HCERTSTORE is created containing
-// just this certificate and its intermediates. The handle to the version of
-// the current certificate in the new HCERTSTORE is then returned, with the
-// PCCERT_CONTEXT's HCERTSTORE set to be automatically freed when the returned
-// certificate handle is freed.
-//
-// Because of how X509Certificate caching is implemented, attempting to
-// create an X509Certificate from the returned PCCERT_CONTEXT may result in
-// the original handle (and thus the originall HCERTSTORE) being returned by
-// os_cert_handle(). For this reason, the returned PCCERT_CONTEXT *MUST NOT*
-// be stored in an X509Certificate.
 NET_EXPORT ScopedPCCERT_CONTEXT
 CreateCertContextWithChain(const X509Certificate* cert);
+
+// Specify behavior if an intermediate certificate fails CERT_CONTEXT parsing.
+// kFail means the function should return a failure result immediately. kIgnore
+// means the invalid intermediate is not added to the output context.
+enum class InvalidIntermediateBehavior { kFail, kIgnore };
+
+// As CreateCertContextWithChain above, but |invalid_intermediate_behavior|
+// specifies behavior if intermediates of |cert| could not be converted.
+NET_EXPORT ScopedPCCERT_CONTEXT CreateCertContextWithChain(
+    const X509Certificate* cert,
+    InvalidIntermediateBehavior invalid_intermediate_behavior);
 
 // Calculates the SHA-256 fingerprint of the certificate.  Returns an empty
 // (all zero) fingerprint on failure.

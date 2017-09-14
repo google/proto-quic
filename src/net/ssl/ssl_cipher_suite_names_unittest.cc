@@ -20,11 +20,11 @@ uint16_t kModernCipherSuite =
     0xc02f; /* TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 */
 
 uint16_t kObsoleteCipherObsoleteKeyExchange =
-    0x67; /* TLS_DHE_RSA_WITH_AES_128_CBC_SHA256 */
+    0x2f; /* TLS_RSA_WITH_AES_128_CBC_SHA */
 uint16_t kObsoleteCipherModernKeyExchange =
-    0x9e; /* TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 */
-uint16_t kModernCipherObsoleteKeyExchange =
     0xc014; /* TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA */
+uint16_t kModernCipherObsoleteKeyExchange =
+    0x9c; /* TLS_RSA_WITH_AES_128_GCM_SHA256 */
 uint16_t kModernCipherModernKeyExchange =
     0xc02f; /* TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 */
 
@@ -42,16 +42,24 @@ TEST(CipherSuiteNamesTest, Basic) {
   bool is_aead, is_tls13;
 
   SSLCipherSuiteToStrings(&key_exchange, &cipher, &mac, &is_aead, &is_tls13,
-                          0xc001);
-  EXPECT_STREQ("ECDH_ECDSA", key_exchange);
-  EXPECT_STREQ("NULL", cipher);
+                          0x000a);
+  EXPECT_STREQ("RSA", key_exchange);
+  EXPECT_STREQ("3DES_EDE_CBC", cipher);
   EXPECT_STREQ("HMAC-SHA1", mac);
   EXPECT_FALSE(is_aead);
   EXPECT_FALSE(is_tls13);
 
   SSLCipherSuiteToStrings(&key_exchange, &cipher, &mac, &is_aead, &is_tls13,
-                          0x009f);
-  EXPECT_STREQ("DHE_RSA", key_exchange);
+                          0x002f);
+  EXPECT_STREQ("RSA", key_exchange);
+  EXPECT_STREQ("AES_128_CBC", cipher);
+  EXPECT_STREQ("HMAC-SHA1", mac);
+  EXPECT_FALSE(is_aead);
+  EXPECT_FALSE(is_tls13);
+
+  SSLCipherSuiteToStrings(&key_exchange, &cipher, &mac, &is_aead, &is_tls13,
+                          0xc030);
+  EXPECT_STREQ("ECDHE_RSA", key_exchange);
   EXPECT_STREQ("AES_256_GCM", cipher);
   EXPECT_TRUE(is_aead);
   EXPECT_FALSE(is_tls13);
@@ -59,15 +67,6 @@ TEST(CipherSuiteNamesTest, Basic) {
 
   SSLCipherSuiteToStrings(&key_exchange, &cipher, &mac, &is_aead, &is_tls13,
                           0xcca9);
-  EXPECT_STREQ("ECDHE_ECDSA", key_exchange);
-  EXPECT_STREQ("CHACHA20_POLY1305", cipher);
-  EXPECT_TRUE(is_aead);
-  EXPECT_FALSE(is_tls13);
-  EXPECT_EQ(nullptr, mac);
-
-  // Non-standard variant.
-  SSLCipherSuiteToStrings(&key_exchange, &cipher, &mac, &is_aead, &is_tls13,
-                          0xcc14);
   EXPECT_STREQ("ECDHE_ECDSA", key_exchange);
   EXPECT_STREQ("CHACHA20_POLY1305", cipher);
   EXPECT_TRUE(is_aead);
@@ -162,10 +161,10 @@ TEST(CipherSuiteNamesTest, ObsoleteSSLStatusProtocolAndCipherSuite) {
                 kObsoleteVersion, kObsoleteCipherObsoleteKeyExchange)));
   EXPECT_EQ(OBSOLETE_SSL_MASK_PROTOCOL | OBSOLETE_SSL_MASK_KEY_EXCHANGE,
             ObsoleteSSLStatus(MakeConnectionStatus(
-                kObsoleteVersion, kObsoleteCipherModernKeyExchange)));
+                kObsoleteVersion, kModernCipherObsoleteKeyExchange)));
   EXPECT_EQ(OBSOLETE_SSL_MASK_PROTOCOL | OBSOLETE_SSL_MASK_CIPHER,
             ObsoleteSSLStatus(MakeConnectionStatus(
-                kObsoleteVersion, kModernCipherObsoleteKeyExchange)));
+                kObsoleteVersion, kObsoleteCipherModernKeyExchange)));
   EXPECT_EQ(OBSOLETE_SSL_MASK_PROTOCOL,
             ObsoleteSSLStatus(MakeConnectionStatus(
                 kObsoleteVersion, kModernCipherModernKeyExchange)));
@@ -174,10 +173,10 @@ TEST(CipherSuiteNamesTest, ObsoleteSSLStatusProtocolAndCipherSuite) {
                 kModernVersion, kObsoleteCipherObsoleteKeyExchange)));
   EXPECT_EQ(OBSOLETE_SSL_MASK_KEY_EXCHANGE,
             ObsoleteSSLStatus(MakeConnectionStatus(
-                kModernVersion, kObsoleteCipherModernKeyExchange)));
+                kModernVersion, kModernCipherObsoleteKeyExchange)));
   EXPECT_EQ(OBSOLETE_SSL_MASK_CIPHER,
             ObsoleteSSLStatus(MakeConnectionStatus(
-                kModernVersion, kModernCipherObsoleteKeyExchange)));
+                kModernVersion, kObsoleteCipherModernKeyExchange)));
   EXPECT_EQ(OBSOLETE_SSL_NONE,
             ObsoleteSSLStatus(MakeConnectionStatus(
                 kModernVersion, kModernCipherModernKeyExchange)));
@@ -191,14 +190,6 @@ TEST(CipherSuiteNamesTest, HTTP2CipherSuites) {
   EXPECT_FALSE(
       IsTLSCipherSuiteAllowedByHTTP2(0x0 /* TLS_NULL_WITH_NULL_NULL */));
   EXPECT_FALSE(IsTLSCipherSuiteAllowedByHTTP2(
-      0x39 /* TLS_DHE_RSA_WITH_AES_256_CBC_SHA */));
-  EXPECT_FALSE(IsTLSCipherSuiteAllowedByHTTP2(
-      0xc5 /* TLS_DH_anon_WITH_CAMELLIA_256_CBC_SHA256 */));
-  EXPECT_FALSE(IsTLSCipherSuiteAllowedByHTTP2(
-      0xc00f /* TLS_ECDH_RSA_WITH_AES_256_CBC_SHA */));
-  EXPECT_FALSE(IsTLSCipherSuiteAllowedByHTTP2(
-      0xc083 /* TLS_DH_DSS_WITH_CAMELLIA_256_GCM_SHA384 */));
-  EXPECT_FALSE(IsTLSCipherSuiteAllowedByHTTP2(
       0xc014 /* TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA */));
   EXPECT_FALSE(IsTLSCipherSuiteAllowedByHTTP2(
       0x9c /* TLS_RSA_WITH_AES_128_GCM_SHA256 */));
@@ -208,13 +199,7 @@ TEST(CipherSuiteNamesTest, HTTP2CipherSuites) {
 
   // HTTP/2-compatible ones.
   EXPECT_TRUE(IsTLSCipherSuiteAllowedByHTTP2(
-      0x9e /* TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 */));
-  EXPECT_TRUE(IsTLSCipherSuiteAllowedByHTTP2(
       0xc02f /* TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 */));
-  EXPECT_TRUE(IsTLSCipherSuiteAllowedByHTTP2(
-      0xcc13 /* ECDHE_RSA_WITH_CHACHA20_POLY1305 (non-standard) */));
-  EXPECT_TRUE(IsTLSCipherSuiteAllowedByHTTP2(
-      0xcc14 /* ECDHE_ECDSA_WITH_CHACHA20_POLY1305 (non-standard) */));
   EXPECT_TRUE(IsTLSCipherSuiteAllowedByHTTP2(
       0xcca8 /* ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 */));
   EXPECT_TRUE(IsTLSCipherSuiteAllowedByHTTP2(
@@ -222,52 +207,6 @@ TEST(CipherSuiteNamesTest, HTTP2CipherSuites) {
   EXPECT_TRUE(IsTLSCipherSuiteAllowedByHTTP2(0x1301 /* AES_128_GCM_SHA256 */));
   EXPECT_TRUE(IsTLSCipherSuiteAllowedByHTTP2(0x1302 /* AES_256_GCM_SHA384 */));
   EXPECT_TRUE(IsTLSCipherSuiteAllowedByHTTP2(0x1303 /* CHACHA20_POLY1305 */));
-}
-
-TEST(CipherSuiteNamesTest, CECPQ1) {
-  const std::vector<uint16_t> kCECPQ1CipherSuites = {
-      0x16b7,  // TLS_CECPQ1_RSA_WITH_CHACHA20_POLY1305_SHA256 (non-standard)
-      0x16b8,  // TLS_CECPQ1_ECDSA_WITH_CHACHA20_POLY1305_SHA256 (non-standard)
-      0x16b9,  // TLS_CECPQ1_RSA_WITH_AES_256_GCM_SHA384 (non-standard)
-      0x16ba,  // TLS_CECPQ1_ECDSA_WITH_AES_256_GCM_SHA384 (non-standard)
-  };
-  const char *key_exchange, *cipher, *mac;
-  bool is_aead, is_tls13;
-
-  for (const uint16_t cipher_suite_id : kCECPQ1CipherSuites) {
-    SCOPED_TRACE(base::StringPrintf("cipher suite %x", cipher_suite_id));
-    EXPECT_TRUE(IsTLSCipherSuiteAllowedByHTTP2(cipher_suite_id));
-
-    int connection_status =
-        MakeConnectionStatus(kModernVersion, cipher_suite_id);
-    EXPECT_EQ(OBSOLETE_SSL_NONE, ObsoleteSSLStatus(connection_status));
-    EXPECT_TRUE(IsTLSCipherSuiteAllowedByHTTP2(cipher_suite_id));
-    SSLCipherSuiteToStrings(&key_exchange, &cipher, &mac, &is_aead, &is_tls13,
-                            cipher_suite_id);
-    EXPECT_TRUE(is_aead);
-    EXPECT_FALSE(is_tls13);
-    EXPECT_EQ(nullptr, mac);
-  }
-
-  SSLCipherSuiteToStrings(&key_exchange, &cipher, &mac, &is_aead, &is_tls13,
-                          0x16b7);
-  EXPECT_STREQ("CECPQ1_RSA", key_exchange);
-  EXPECT_STREQ("CHACHA20_POLY1305", cipher);
-
-  SSLCipherSuiteToStrings(&key_exchange, &cipher, &mac, &is_aead, &is_tls13,
-                          0x16b8);
-  EXPECT_STREQ("CECPQ1_ECDSA", key_exchange);
-  EXPECT_STREQ("CHACHA20_POLY1305", cipher);
-
-  SSLCipherSuiteToStrings(&key_exchange, &cipher, &mac, &is_aead, &is_tls13,
-                          0x16b9);
-  EXPECT_STREQ("CECPQ1_RSA", key_exchange);
-  EXPECT_STREQ("AES_256_GCM", cipher);
-
-  SSLCipherSuiteToStrings(&key_exchange, &cipher, &mac, &is_aead, &is_tls13,
-                          0x16ba);
-  EXPECT_STREQ("CECPQ1_ECDSA", key_exchange);
-  EXPECT_STREQ("AES_256_GCM", cipher);
 }
 
 }  // anonymous namespace

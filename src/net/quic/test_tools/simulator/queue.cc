@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "net/quic/test_tools/simulator/queue.h"
+
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/test_tools/simulator/simulator.h"
 
@@ -96,6 +97,9 @@ void Queue::AggregationAlarmDelegate::OnAlarm() {
 Queue::EnqueuedPacket::EnqueuedPacket(std::unique_ptr<Packet> packet,
                                       AggregationBundleNumber bundle)
     : packet(std::move(packet)), bundle(bundle) {}
+
+Queue::EnqueuedPacket::EnqueuedPacket(EnqueuedPacket&& other) = default;
+
 Queue::EnqueuedPacket::~EnqueuedPacket() = default;
 
 void Queue::NextBundle() {

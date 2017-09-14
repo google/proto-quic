@@ -53,7 +53,7 @@ class SpdySessionPoolTest : public ::testing::Test {
   }
 
   void AddSSLSocketData() {
-    auto ssl = base::MakeUnique<SSLSocketDataProvider>(SYNCHRONOUS, OK);
+    auto ssl = std::make_unique<SSLSocketDataProvider>(SYNCHRONOUS, OK);
     ssl->cert = ImportCertFromFile(GetTestCertsDirectory(), "spdy_pooling.pem");
     ASSERT_TRUE(ssl->cert);
     session_deps_.socket_factory->AddSSLSocketDataProvider(ssl.get());
@@ -873,7 +873,7 @@ TEST_P(SpdySessionMemoryDumpTest, DumpMemoryStats) {
   EXPECT_TRUE(HasSpdySession(spdy_session_pool_, key));
   base::trace_event::MemoryDumpArgs dump_args = {GetParam()};
   auto process_memory_dump =
-      base::MakeUnique<base::trace_event::ProcessMemoryDump>(nullptr,
+      std::make_unique<base::trace_event::ProcessMemoryDump>(nullptr,
                                                              dump_args);
   base::trace_event::MemoryAllocatorDump* parent_dump =
       process_memory_dump->CreateAllocatorDump(

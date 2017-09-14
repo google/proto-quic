@@ -102,20 +102,6 @@ void MockPersistentCookieStore::SetForceKeepSessionState() {
 MockPersistentCookieStore::~MockPersistentCookieStore() {
 }
 
-MockCookieMonsterDelegate::MockCookieMonsterDelegate() {
-}
-
-void MockCookieMonsterDelegate::OnCookieChanged(
-    const CanonicalCookie& cookie,
-    bool removed,
-    CookieStore::ChangeCause cause) {
-  CookieNotification notification(cookie, removed);
-  changes_.push_back(notification);
-}
-
-MockCookieMonsterDelegate::~MockCookieMonsterDelegate() {
-}
-
 std::unique_ptr<CanonicalCookie> BuildCanonicalCookie(
     const GURL& url,
     const std::string& cookie_line,
@@ -134,7 +120,7 @@ std::unique_ptr<CanonicalCookie> BuildCanonicalCookie(
                       : base::Time();
   std::string cookie_path = pc.Path();
 
-  return base::MakeUnique<CanonicalCookie>(
+  return std::make_unique<CanonicalCookie>(
       pc.Name(), pc.Value(), "." + url.host(), cookie_path, creation_time,
       cookie_expires, base::Time(), pc.IsSecure(), pc.IsHttpOnly(),
       pc.SameSite(), pc.Priority());
@@ -159,7 +145,7 @@ void MockSimplePersistentCookieStore::Load(
   std::vector<std::unique_ptr<CanonicalCookie>> out_cookies;
 
   for (auto it = cookies_.begin(); it != cookies_.end(); it++)
-    out_cookies.push_back(base::MakeUnique<CanonicalCookie>(it->second));
+    out_cookies.push_back(std::make_unique<CanonicalCookie>(it->second));
 
   base::ThreadTaskRunnerHandle::Get()->PostTask(
       FROM_HERE, base::Bind(loaded_callback, base::Passed(&out_cookies)));
@@ -246,7 +232,7 @@ std::unique_ptr<CookieMonster> CreateMonsterFromStoreForGC(
     // The URL must be HTTPS since |secure| can be true or false, and because
     // strict secure cookies are enforced, the cookie will fail to be created if
     // |secure| is true but the URL is an insecure scheme.
-    std::unique_ptr<CanonicalCookie> cc(base::MakeUnique<CanonicalCookie>(
+    std::unique_ptr<CanonicalCookie> cc(std::make_unique<CanonicalCookie>(
         "a", "1", base::StringPrintf("h%05d.izzle", i), "/path", creation_time,
         expiration_time, base::Time(), secure, false,
         CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
@@ -254,7 +240,7 @@ std::unique_ptr<CookieMonster> CreateMonsterFromStoreForGC(
     store->AddCookie(*cc);
   }
 
-  return base::MakeUnique<CookieMonster>(store.get(), nullptr);
+  return std::make_unique<CookieMonster>(store.get());
 }
 
 MockSimplePersistentCookieStore::~MockSimplePersistentCookieStore() {

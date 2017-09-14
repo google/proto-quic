@@ -474,14 +474,6 @@ org_chromium_example_jni_1generator_SampleForTests_00024InnerStructB_clazz(env),
   return base::android::ScopedJavaLocalRef<jstring>(env, ret);
 }
 
-// Step 3: RegisterNatives.
-
-// TODO(agrieve): Remove these empty registration functions and functions
-// calling them. https://crbug.com/683256.
-inline bool RegisterNativesImpl(JNIEnv* env) {
-  return true;
-}
-
 }  // namespace android
 }  // namespace base
 

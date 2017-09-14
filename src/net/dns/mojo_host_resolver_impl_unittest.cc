@@ -142,7 +142,7 @@ class MojoHostResolverImplTest : public testing::Test {
   std::unique_ptr<HostResolver::RequestInfo>
   CreateRequest(const std::string& host, uint16_t port, bool is_my_ip_address) {
     std::unique_ptr<HostResolver::RequestInfo> request =
-        base::MakeUnique<HostResolver::RequestInfo>(HostPortPair(host, port));
+        std::make_unique<HostResolver::RequestInfo>(HostPortPair(host, port));
     request->set_is_my_ip_address(is_my_ip_address);
     request->set_address_family(ADDRESS_FAMILY_IPV4);
     return request;

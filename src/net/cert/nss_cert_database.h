@@ -20,6 +20,7 @@
 #include "net/base/net_errors.h"
 #include "net/base/net_export.h"
 #include "net/cert/cert_type.h"
+#include "net/cert/scoped_nss_types.h"
 #include "net/cert/x509_certificate.h"
 
 namespace base {
@@ -53,11 +54,11 @@ class NET_EXPORT NSSCertDatabase {
   // Stores per-certificate error codes for import failures.
   struct NET_EXPORT ImportCertFailure {
    public:
-    ImportCertFailure(const scoped_refptr<X509Certificate>& cert, int err);
-    ImportCertFailure(const ImportCertFailure& other);
+    ImportCertFailure(ScopedCERTCertificate cert, int err);
+    ImportCertFailure(ImportCertFailure&& other);
     ~ImportCertFailure();
 
-    scoped_refptr<X509Certificate> certificate;
+    ScopedCERTCertificate certificate;
     int net_error;
   };
   typedef std::vector<ImportCertFailure> ImportCertFailureList;
@@ -88,7 +89,7 @@ class NET_EXPORT NSSCertDatabase {
     DISTRUSTED_OBJ_SIGN   = 1 << 5,
   };
 
-  typedef base::Callback<void(std::unique_ptr<CertificateList> certs)>
+  typedef base::Callback<void(ScopedCERTCertificateList certs)>
       ListCertsCallback;
 
   typedef base::Callback<void(bool)> DeleteCertCallback;
@@ -109,7 +110,7 @@ class NET_EXPORT NSSCertDatabase {
   // Get a list of unique certificates in the certificate database (one
   // instance of all certificates).
   // DEPRECATED by |ListCerts|. See http://crbug.com/340460.
-  virtual void ListCertsSync(CertificateList* certs);
+  virtual ScopedCERTCertificateList ListCertsSync();
 
   // Asynchronously get a list of unique certificates in the certificate
   // database (one instance of all certificates). Note that the callback may be
@@ -156,12 +157,12 @@ class NET_EXPORT NSSCertDatabase {
                        const std::string& data,
                        const base::string16& password,
                        bool is_extractable,
-                       CertificateList* imported_certs);
+                       ScopedCERTCertificateList* imported_certs);
 
   // Export the given certificates and private keys into a PKCS #12 blob,
   // storing into |output|.
   // Returns the number of certificates successfully exported.
-  int ExportToPKCS12(const CertificateList& certs,
+  int ExportToPKCS12(const ScopedCERTCertificateList& certs,
                      const base::string16& password,
                      std::string* output) const;
 
@@ -169,13 +170,14 @@ class NET_EXPORT NSSCertDatabase {
   // root.  Assumes the list is an ordered hierarchy with the root being either
   // the first or last element.
   // TODO(mattm): improve this to handle any order.
-  X509Certificate* FindRootInList(const CertificateList& certificates) const;
+  CERTCertificate* FindRootInList(
+      const ScopedCERTCertificateList& certificates) const;
 
   // Import a user certificate. The private key for the user certificate must
   // already be installed, otherwise we return ERR_NO_PRIVATE_KEY_FOR_CERT.
   // Returns OK or a network error code.
   int ImportUserCert(const std::string& data);
-  int ImportUserCert(X509Certificate* cert);
+  int ImportUserCert(CERTCertificate* cert);
 
   // Import CA certificates.
   // Tries to import all the certificates given.  The root will be trusted
@@ -184,7 +186,7 @@ class NET_EXPORT NSSCertDatabase {
   // Returns false if there is an internal error, otherwise true is returned and
   // |not_imported| should be checked for any certificates that were not
   // imported.
-  bool ImportCACerts(const CertificateList& certificates,
+  bool ImportCACerts(const ScopedCERTCertificateList& certificates,
                      TrustBits trust_bits,
                      ImportCertFailureList* not_imported);
 
@@ -198,40 +200,38 @@ class NET_EXPORT NSSCertDatabase {
   // Returns false if there is an internal error, otherwise true is returned and
   // |not_imported| should be checked for any certificates that were not
   // imported.
-  bool ImportServerCert(const CertificateList& certificates,
+  bool ImportServerCert(const ScopedCERTCertificateList& certificates,
                         TrustBits trust_bits,
                         ImportCertFailureList* not_imported);
 
   // Get trust bits for certificate.
-  TrustBits GetCertTrust(const X509Certificate* cert, CertType type) const;
+  TrustBits GetCertTrust(const CERTCertificate* cert, CertType type) const;
 
   // IsUntrusted returns true if |cert| is specifically untrusted. These
   // certificates are stored in the database for the specific purpose of
   // rejecting them.
-  bool IsUntrusted(const X509Certificate* cert) const;
+  bool IsUntrusted(const CERTCertificate* cert) const;
 
   // Set trust values for certificate.
   // Returns true on success or false on failure.
-  bool SetCertTrust(const X509Certificate* cert,
-                    CertType type,
-                    TrustBits trust_bits);
+  bool SetCertTrust(CERTCertificate* cert, CertType type, TrustBits trust_bits);
 
   // Delete certificate and associated private key (if one exists).
   // |cert| is still valid when this function returns. Returns true on
   // success.
-  bool DeleteCertAndKey(X509Certificate* cert);
+  bool DeleteCertAndKey(CERTCertificate* cert);
 
   // Like DeleteCertAndKey but does not block by running the removal on a worker
   // thread. This must be called on IO thread and it will run |callback| on IO
   // thread. Never calls |callback| synchronously.
-  void DeleteCertAndKeyAsync(const scoped_refptr<X509Certificate>& cert,
+  void DeleteCertAndKeyAsync(ScopedCERTCertificate cert,
                              const DeleteCertCallback& callback);
 
   // Check whether cert is stored in a readonly slot.
-  bool IsReadOnly(const X509Certificate* cert) const;
+  bool IsReadOnly(const CERTCertificate* cert) const;
 
   // Check whether cert is stored in a hardware slot.
-  bool IsHardwareBacked(const X509Certificate* cert) const;
+  bool IsHardwareBacked(const CERTCertificate* cert) const;
 
   // Overrides task runner that's used for running slow tasks.
   void SetSlowTaskRunnerForTest(
@@ -242,8 +242,7 @@ class NET_EXPORT NSSCertDatabase {
   // |ListCertsSync|. Static so it may safely be used on the worker thread.
   // If |slot| is NULL, obtains the certs of all slots, otherwise only of
   // |slot|.
-  static void ListCertsImpl(crypto::ScopedPK11Slot slot,
-                            CertificateList* certs);
+  static ScopedCERTCertificateList ListCertsImpl(crypto::ScopedPK11Slot slot);
 
   // Gets task runner that should be used for slow tasks like certificate
   // listing. Defaults to a base::WorkerPool runner, but may be overriden
@@ -274,7 +273,11 @@ class NET_EXPORT NSSCertDatabase {
 
   // Certificate removal implementation used by |DeleteCertAndKey*|. Static so
   // it may safely be used on the worker thread.
-  static bool DeleteCertAndKeyImpl(scoped_refptr<X509Certificate> cert);
+  static bool DeleteCertAndKeyImpl(CERTCertificate* cert);
+  // Like above, but taking a ScopedCERTCertificate. This is a workaround for
+  // base::Bind not having a way to own a unique_ptr but pass it to the
+  // function as a raw pointer.
+  static bool DeleteCertAndKeyImplScoped(ScopedCERTCertificate cert);
 
   crypto::ScopedPK11Slot public_slot_;
   crypto::ScopedPK11Slot private_slot_;

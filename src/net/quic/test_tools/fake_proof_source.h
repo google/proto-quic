@@ -38,40 +38,80 @@ class FakeProofSource : public ProofSource {
                 QuicStringPiece chlo_hash,
                 const QuicTagVector& connection_options,
                 std::unique_ptr<ProofSource::Callback> callback) override;
+  QuicReferenceCountedPointer<Chain> GetCertChain(
+      const QuicSocketAddress& server_address,
+      const std::string& hostname) override;
+  void ComputeTlsSignature(
+      const QuicSocketAddress& server_address,
+      const std::string& hostname,
+      uint16_t signature_algorithm,
+      QuicStringPiece in,
+      std::unique_ptr<ProofSource::SignatureCallback> callback) override;
 
   // Get the number of callbacks which are pending
   int NumPendingCallbacks() const;
 
-  // Invoke a pending callback.  The index refers to the position in params_ of
-  // the callback to be completed.
+  // Invoke a pending callback.  The index refers to the position in
+  // pending_ops_ of the callback to be completed.
   void InvokePendingCallback(int n);
 
  private:
   std::unique_ptr<ProofSource> delegate_;
   bool active_ = false;
 
-  struct Params {
-    Params(const QuicSocketAddress& server_addr,
-           std::string hostname,
-           std::string server_config,
-           QuicVersion quic_version,
-           std::string chlo_hash,
-           const QuicTagVector& connection_options,
-           std::unique_ptr<ProofSource::Callback> callback);
-    ~Params();
-    Params(Params&& other);
-    Params& operator=(Params&& other);
-
-    QuicSocketAddress server_address;
-    std::string hostname;
-    std::string server_config;
-    QuicVersion quic_version;
-    std::string chlo_hash;
-    QuicTagVector connection_options;
-    std::unique_ptr<ProofSource::Callback> callback;
+  class PendingOp {
+   public:
+    virtual ~PendingOp();
+    virtual void Run() = 0;
   };
 
-  std::vector<Params> params_;
+  class GetProofOp : public PendingOp {
+   public:
+    GetProofOp(const QuicSocketAddress& server_addr,
+               std::string hostname,
+               std::string server_config,
+               QuicVersion quic_version,
+               std::string chlo_hash,
+               const QuicTagVector& connection_options,
+               std::unique_ptr<ProofSource::Callback> callback,
+               ProofSource* delegate);
+    ~GetProofOp() override;
+
+    void Run() override;
+
+   private:
+    QuicSocketAddress server_address_;
+    std::string hostname_;
+    std::string server_config_;
+    QuicVersion quic_version_;
+    std::string chlo_hash_;
+    QuicTagVector connection_options_;
+    std::unique_ptr<ProofSource::Callback> callback_;
+    ProofSource* delegate_;
+  };
+
+  class ComputeSignatureOp : public PendingOp {
+   public:
+    ComputeSignatureOp(const QuicSocketAddress& server_address,
+                       std::string hostname,
+                       uint16_t sig_alg,
+                       QuicStringPiece in,
+                       std::unique_ptr<ProofSource::SignatureCallback> callback,
+                       ProofSource* delegate);
+    ~ComputeSignatureOp() override;
+
+    void Run() override;
+
+   private:
+    QuicSocketAddress server_address_;
+    std::string hostname_;
+    uint16_t sig_alg_;
+    QuicStringPiece in_;
+    std::unique_ptr<ProofSource::SignatureCallback> callback_;
+    ProofSource* delegate_;
+  };
+
+  std::vector<std::unique_ptr<PendingOp>> pending_ops_;
 };
 
 }  // namespace test

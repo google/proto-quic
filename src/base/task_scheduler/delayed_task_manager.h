@@ -36,8 +36,8 @@ class BASE_EXPORT DelayedTaskManager {
   using PostTaskNowCallback = OnceCallback<void(std::unique_ptr<Task> task)>;
 
   // |tick_clock| can be specified for testing.
-  DelayedTaskManager(
-      std::unique_ptr<TickClock> tick_clock = MakeUnique<DefaultTickClock>());
+  DelayedTaskManager(std::unique_ptr<TickClock> tick_clock =
+                         std::make_unique<DefaultTickClock>());
   ~DelayedTaskManager();
 
   // Starts the delayed task manager, allowing past and future tasks to be

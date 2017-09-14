@@ -284,11 +284,7 @@ bool X509Certificate::IsIssuedByEncoded(
 // static
 bool X509Certificate::GetDEREncoded(X509Certificate::OSCertHandle cert_handle,
                                     std::string* encoded) {
-  if (!cert_handle || !cert_handle->derCert.len)
-    return false;
-  encoded->assign(reinterpret_cast<char*>(cert_handle->derCert.data),
-                  cert_handle->derCert.len);
-  return true;
+  return x509_util::GetDEREncoded(cert_handle, encoded);
 }
 
 // static
@@ -358,17 +354,7 @@ void X509Certificate::FreeOSCertHandle(OSCertHandle cert_handle) {
 
 // static
 SHA256HashValue X509Certificate::CalculateFingerprint256(OSCertHandle cert) {
-  SHA256HashValue sha256;
-  memset(sha256.data, 0, sizeof(sha256.data));
-
-  DCHECK(NULL != cert->derCert.data);
-  DCHECK_NE(0U, cert->derCert.len);
-
-  SECStatus rv = HASH_HashBuf(
-      HASH_AlgSHA256, sha256.data, cert->derCert.data, cert->derCert.len);
-  DCHECK_EQ(SECSuccess, rv);
-
-  return sha256;
+  return x509_util::CalculateFingerprint256(cert);
 }
 
 // static

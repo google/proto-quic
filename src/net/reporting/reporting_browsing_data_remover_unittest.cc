@@ -66,10 +66,10 @@ class ReportingBrowsingDataRemoverTest : public ReportingTestBase {
 
 TEST_F(ReportingBrowsingDataRemoverTest, RemoveNothing) {
   cache()->AddReport(kUrl1_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->AddReport(kUrl2_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->SetClient(kOrigin1_, kEndpoint_,
                      ReportingClient::Subdomains::EXCLUDE, kGroup_,
@@ -86,10 +86,10 @@ TEST_F(ReportingBrowsingDataRemoverTest, RemoveNothing) {
 
 TEST_F(ReportingBrowsingDataRemoverTest, RemoveAllReports) {
   cache()->AddReport(kUrl1_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->AddReport(kUrl2_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->SetClient(kOrigin1_, kEndpoint_,
                      ReportingClient::Subdomains::EXCLUDE, kGroup_,
@@ -106,10 +106,10 @@ TEST_F(ReportingBrowsingDataRemoverTest, RemoveAllReports) {
 
 TEST_F(ReportingBrowsingDataRemoverTest, RemoveAllClients) {
   cache()->AddReport(kUrl1_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->AddReport(kUrl2_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->SetClient(kOrigin1_, kEndpoint_,
                      ReportingClient::Subdomains::EXCLUDE, kGroup_,
@@ -126,10 +126,10 @@ TEST_F(ReportingBrowsingDataRemoverTest, RemoveAllClients) {
 
 TEST_F(ReportingBrowsingDataRemoverTest, RemoveAllReportsAndClients) {
   cache()->AddReport(kUrl1_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->AddReport(kUrl2_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->SetClient(kOrigin1_, kEndpoint_,
                      ReportingClient::Subdomains::EXCLUDE, kGroup_,
@@ -146,10 +146,10 @@ TEST_F(ReportingBrowsingDataRemoverTest, RemoveAllReportsAndClients) {
 
 TEST_F(ReportingBrowsingDataRemoverTest, RemoveSomeReports) {
   cache()->AddReport(kUrl1_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->AddReport(kUrl2_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->SetClient(kOrigin1_, kEndpoint_,
                      ReportingClient::Subdomains::EXCLUDE, kGroup_,
@@ -170,10 +170,10 @@ TEST_F(ReportingBrowsingDataRemoverTest, RemoveSomeReports) {
 
 TEST_F(ReportingBrowsingDataRemoverTest, RemoveSomeClients) {
   cache()->AddReport(kUrl1_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->AddReport(kUrl2_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->SetClient(kOrigin1_, kEndpoint_,
                      ReportingClient::Subdomains::EXCLUDE, kGroup_,

@@ -258,7 +258,12 @@ be describing additional metrics about the same event.
   </metric>
   <metric name="IsAutofilled">
     <summary>
-      True whether field was autofilled. See |AutofillField.is_autofilled|.
+      True if the field was autofilled. See |AutofillField.is_autofilled|.
+    </summary>
+  </metric>
+  <metric name="IsEmpty">
+    <summary>
+      True if the field was empty. See |AutofillField.IsEmpty()|.
     </summary>
   </metric>
   <metric name="MillisecondsSinceFormParsed">
@@ -521,6 +526,7 @@ be describing additional metrics about the same event.
     media playbacks, the total number of visits, the calculated engagement score
     and the new number of significant media playbacks that occured this visit.
   </summary>
+  <metric name="Engagement.IsHigh"/>
   <metric name="Engagement.Score"/>
   <metric name="Playbacks.Delta"/>
   <metric name="Playbacks.Total"/>
@@ -528,6 +534,9 @@ be describing additional metrics about the same event.
 </event>
 
 <event name="Media.WatchTime">
+  <obsolete>
+    Deprecated 8/2017 in favor Media.BasicPlayback
+  </obsolete>
   <owner>dalecurtis@chromium.org</owner>
   <summary>
     Watch time is defined as the amount of elapsed media time for audio+video
@@ -575,6 +584,131 @@ be describing additional metrics about the same event.
   <metric name="AudioVideo.SRC"/>
 </event>
 
+<event name="Media.BasicPlayback">
+  <owner>dalecurtis@chromium.org</owner>
+  <owner>media-dev@chromium.org</owner>
+  <summary>
+    Core metrics associated with a media playback. Only recorded if a playback
+    qualifies for WatchTime recording (see Media.WatchTime metrics). Reported at
+    the time of WebMediaPlayer destruction or render process termination;
+    whichever comes first.
+  </summary>
+  <metric name="AudioCodec">
+    <summary>
+      media::AudioCodec enum value. Can be kUnknownAudioCodec even with HasAudio
+      is true because we don't always know the codec.
+    </summary>
+  </metric>
+  <metric name="HasAudio">
+    <summary>
+      Boolean value indicating the presence of audio.
+    </summary>
+  </metric>
+  <metric name="HasVideo">
+    <summary>
+      Boolean value indicating the presence of video.
+    </summary>
+  </metric>
+  <metric name="IsBackground">
+    <summary>
+      Boolean value indicating if this event is for a background playback.
+    </summary>
+  </metric>
+  <metric name="IsEME">
+    <summary>
+      Boolean value indicating if this event is for an EME playback.
+    </summary>
+  </metric>
+  <metric name="IsMSE">
+    <summary>
+      Boolean value indicating if this event is for an MSE playback. If false it
+      means this was a SRC playback.
+    </summary>
+  </metric>
+  <metric name="LastPipelineStatus">
+    <summary>
+      media::PipelineStatus enum value. Always 0 if the playback succeeded; all
+      other values indicate the playback ended in an error.
+    </summary>
+  </metric>
+  <metric name="MeanTimeBetweenRebuffers">
+    <summary>
+      Average number of milliseconds between rebuffering events. Only reported
+      if a rebuffering event occurred. Computed by dividing total watch time by
+      the number of rebuffering events.
+    </summary>
+  </metric>
+  <metric name="RebuffersCount">
+    <summary>
+      Integer count of the number of times playback experienced rebuffering.
+    </summary>
+  </metric>
+  <metric name="VideoCodec">
+    <summary>
+      media::VideoCodec enum value. Can be kUnknownVideoCodec even with HasVideo
+      is true because we don't always know the codec.
+    </summary>
+  </metric>
+  <metric name="VideoNaturalHeight">
+    <summary>
+      Integer value indicating the natural height of the playback.
+    </summary>
+  </metric>
+  <metric name="VideoNaturalWidth">
+    <summary>
+      Integer value indicating the natural width of the playback.
+    </summary>
+  </metric>
+  <metric name="WatchTime">
+    <summary>
+      Watch time in milliseconds for this playback. See Media.WatchTime UMA
+      metrics.
+    </summary>
+  </metric>
+  <metric name="WatchTime.AC">
+    <summary>
+      Watch time on AC power in milliseconds for this playback. See
+      Media.WatchTime UMA metrics.
+    </summary>
+  </metric>
+  <metric name="WatchTime.Battery">
+    <summary>
+      Watch time on battery power in milliseconds for this playback. See
+      Media.WatchTime UMA metrics.
+    </summary>
+  </metric>
+  <metric name="WatchTime.DisplayFullscreen">
+    <summary>
+      Watch time for fullscreen in milliseconds for this playback. See
+      Media.WatchTime UMA metrics.
+    </summary>
+  </metric>
+  <metric name="WatchTime.DisplayInline">
+    <summary>
+      Watch time for inline display in milliseconds for this playback. See
+      Media.WatchTime UMA metrics.
+    </summary>
+  </metric>
+  <metric name="WatchTime.DisplayPictureInPicture">
+    <summary>
+      Watch time for picture in picture display in milliseconds for this
+      playback. See Media.WatchTime UMA metrics.
+    </summary>
+  </metric>
+  <metric name="WatchTime.NativeControlsOff">
+    <summary>
+      Watch time with no controls in milliseconds for this playback. See
+      Media.WatchTime UMA metrics.
+    </summary>
+  </metric>
+  <metric name="WatchTime.NativeControlsOn">
+    <summary>
+      Watch time with native controls in milliseconds for this playback. See
+      Media.WatchTime UMA metrics.
+    </summary>
+  </metric>
+</event>
+
 <event name="Memory.Experimental">
   <owner>erikchen@chromium.org</owner>
   <summary>
@@ -593,6 +727,12 @@ be describing additional metrics about the same event.
   <metric name="Malloc">
     <summary>
       Measure of memory allocated by malloc.
+    </summary>
+  </metric>
+  <metric name="NumberOfExtensions">
+    <summary>
+      The number of extensions that are served from the associated renderer
+      process.
     </summary>
   </metric>
   <metric name="PartitionAlloc">
@@ -622,9 +762,25 @@ be describing additional metrics about the same event.
       Measure of total memory consumed by all processes.
     </summary>
   </metric>
+  <metric name="Uptime">
+    <summary>
+      Process uptime.
+    </summary>
+  </metric>
   <metric name="V8">
     <summary>
       Measure of memory consumed by V8.
+    </summary>
+  </metric>
+</event>
+
+<event name="OfflinePages.SavePageRequested">
+  <owner>petewil@chromium.org</owner>
+  <metric name="RequestedFromForeground">
+    <summary>
+      Metrics that measure which URLs the user is requesting offline page copies
+      of, and whether they were requested from the foreground or background UI.
+      The value is 1 if requested from the foreground, 0 from background.
     </summary>
   </metric>
 </event>
@@ -676,6 +832,13 @@ be describing additional metrics about the same event.
   <metric name="Navigation.PageTransition">
     <summary>
       The |ui::PageTransition| for the main frame navigation of this page load.
+    </summary>
+  </metric>
+  <metric name="Net.DownstreamKbpsEstimate.OnNavigationStart">
+    <owner>tbansal@chromium.org</owner>
+    <summary>
+      The downstream throughput (in kilobits per second) for this page load, at
+      the time the navigation for this page load was initiated.
     </summary>
   </metric>
   <metric name="Net.EffectiveConnectionType.OnNavigationStart">
@@ -948,6 +1111,14 @@ be describing additional metrics about the same event.
     interactions with them. No events are created for pages that don't contain
     password forms.
   </summary>
+  <metric name="PageLevelUserAction">
+    <summary>
+      Records if the user interacts with the password manager in a way that
+      cannot (reliably) be attributed to a specific PasswordFormManager. Values
+      correspond to the enum
+      PasswordManagerMetricsRecorder::PageLevelUserAction.
+    </summary>
+  </metric>
   <metric name="ProvisionalSaveFailure">
     <summary>
       Records a provisional save failure in case the password manager cannot
@@ -1082,6 +1253,92 @@ be describing additional metrics about the same event.
   <metric name="Tick">
     <summary>
       Tick CPU Usage measurement was taken at.
+    </summary>
+  </metric>
+</event>
+
+<event name="TabManager.Background.FirstAlertFired">
+  <owner>chrisha@chromium.org</owner>
+  <owner>lpy@chromium.org</owner>
+  <summary>
+    Collects the duration in MS from when the tab is backgrounded to when a
+    JavaScript alert is fired. Only recorded when the tab is in the background.
+  </summary>
+  <metric name="IsMainFrame">
+    <summary>
+      Indicates whether the alert is fired from main frame.
+    </summary>
+  </metric>
+  <metric name="TimeFromBackgrounded">
+    <summary>
+      Duration in MS from when the tab is backgrounded to when alert is fired.
+    </summary>
+  </metric>
+</event>
+
+<event name="TabManager.Background.FirstAudioStarts">
+  <owner>chrisha@chromium.org</owner>
+  <owner>lpy@chromium.org</owner>
+  <summary>
+    Collects the duration in MS from when the tab is backgrounded to when audio
+    starts to play. Only recorded when the tab is in the background.
+  </summary>
+  <metric name="IsMainFrame">
+    <summary>
+      Indicates whether the audio stream belongs to the main frame.
+    </summary>
+  </metric>
+  <metric name="TimeFromBackgrounded">
+    <summary>
+      Duration in MS from when the tab is backgrounded to when audio starts to
+      play.
+    </summary>
+  </metric>
+</event>
+
+<event name="TabManager.Background.FirstFaviconUpdated">
+  <owner>chrisha@chromium.org</owner>
+  <owner>lpy@chromium.org</owner>
+  <summary>
+    Collects the duration in MS from when the tab is backgrounded to when the
+    favicon is updated. Only recorded when the tab is in the background.
+  </summary>
+  <metric name="TimeFromBackgrounded">
+    <summary>
+      Duration in MS from when the tab is backgrounded to when the favicon is
+      updated.
+    </summary>
+  </metric>
+</event>
+
+<event name="TabManager.Background.FirstNonPersistentNotificationCreated">
+  <owner>chrisha@chromium.org</owner>
+  <owner>lpy@chromium.org</owner>
+  <summary/>
+  <metric name="IsMainFrame">
+    <summary>
+      Indicates whether the notification creation is from the main frame.
+    </summary>
+  </metric>
+  <metric name="TimeFromBackgrounded">
+    <summary>
+      Duration in MS from when the tab is backgrounded to when a non-persistent
+      notification is created.
+    </summary>
+  </metric>
+</event>
+
+<event name="TabManager.Background.FirstTitleUpdated">
+  <owner>chrisha@chromium.org</owner>
+  <owner>lpy@chromium.org</owner>
+  <summary>
+    Collects the duration in MS from when the tab is backgrounded to when the
+    title is updated. Only recorded when the tab is in the background.
+  </summary>
+  <metric name="TimeFromBackgrounded">
+    <summary>
+      Duration in MS from when the tab is backgrounded to when the title is
+      updated.
     </summary>
   </metric>
 </event>

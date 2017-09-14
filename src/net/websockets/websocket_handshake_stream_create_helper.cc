@@ -36,7 +36,7 @@ WebSocketHandshakeStreamCreateHelper::CreateBasicStream(
   // method.
   std::vector<std::string> extensions(
       1, "permessage-deflate; client_max_window_bits");
-  auto stream = base::MakeUnique<WebSocketBasicHandshakeStream>(
+  auto stream = std::make_unique<WebSocketBasicHandshakeStream>(
       std::move(connection), connect_delegate_, using_proxy,
       requested_subprotocols_, extensions, request_);
   OnBasicStreamCreated(stream.get());

@@ -8,6 +8,26 @@ import json
 import logging
 
 
+def UnicodeToStr(data):
+  """Recursively converts any Unicode to Python strings.
+
+  Args:
+    data: The data to be converted.
+
+  Return:
+    A copy of the given data, but with instances of Unicode converted to Python
+    strings.
+  """
+  if isinstance(data, dict):
+    return {UnicodeToStr(key): UnicodeToStr(value)
+            for key, value in data.iteritems()}
+  elif isinstance(data, list):
+    return [UnicodeToStr(element) for element in data]
+  elif isinstance(data, unicode):
+    return data.encode('utf-8')
+  return data
+
+
 def ExtractSettingsFromJson(filepath):
   """Extracts the settings data from the given JSON file.
 
@@ -19,18 +39,8 @@ def ExtractSettingsFromJson(filepath):
   """
   # json.load() loads strings as unicode, which causes issues when trying
   # to edit string values in preference files, so convert to Python strings
-  def unicode_to_str(data):
-    if isinstance(data, dict):
-      return {unicode_to_str(key): unicode_to_str(value)
-              for key, value in data.iteritems()}
-    elif isinstance(data, list):
-      return [unicode_to_str(element) for element in data]
-    elif isinstance(data, unicode):
-      return data.encode('utf-8')
-    return data
-
   with open(filepath) as prefs_file:
-    return unicode_to_str(json.load(prefs_file))
+    return UnicodeToStr(json.load(prefs_file))
 
 
 def ApplySharedPreferenceSetting(shared_pref, setting):

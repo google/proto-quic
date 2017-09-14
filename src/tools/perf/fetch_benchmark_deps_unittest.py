@@ -61,7 +61,7 @@ class FetchBenchmarkDepsUnittest(unittest.TestCase):
 
   def testFetchOctane(self):
     octane_wpr_path = os.path.join(
-        os.path.dirname(__file__), 'page_sets', 'data', 'octane_002.wpr')
+        os.path.dirname(__file__), 'page_sets', 'data', 'octane_002.wprgo')
     expected = os.path.relpath(octane_wpr_path,
                                path_util.GetChromiumSrcDir())
     self._RunFetchBenchmarkDepsTest('octane', NormPaths(expected))

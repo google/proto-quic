@@ -29,6 +29,23 @@ TEST(NetworkQualityStoreTest, TestCaching) {
       EFFECTIVE_CONNECTION_TYPE_2G);
 
   {
+    // When ECT is UNKNOWN, then the network quality is not cached.
+    nqe::internal::CachedNetworkQuality cached_network_quality_unknown(
+        tick_clock.NowTicks(),
+        nqe::internal::NetworkQuality(base::TimeDelta::FromSeconds(1),
+                                      base::TimeDelta::FromSeconds(1), 1),
+        EFFECTIVE_CONNECTION_TYPE_UNKNOWN);
+
+    // Entry should not be added.
+    nqe::internal::NetworkID network_id(NetworkChangeNotifier::CONNECTION_2G,
+                                        "test1");
+    nqe::internal::CachedNetworkQuality read_network_quality;
+    network_quality_store.Add(network_id, cached_network_quality_unknown);
+    EXPECT_FALSE(
+        network_quality_store.GetById(network_id, &read_network_quality));
+  }
+
+  {
     // Entry will be added for (2G, "test1").
     nqe::internal::NetworkID network_id(NetworkChangeNotifier::CONNECTION_2G,
                                         "test1");

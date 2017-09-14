@@ -76,6 +76,8 @@ static_library("snapshot") {
     "minidump/process_snapshot_minidump.cc",
     "minidump/process_snapshot_minidump.h",
     "module_snapshot.h",
+    "posix/timezone.cc",
+    "posix/timezone.h",
     "process_snapshot.h",
     "system_snapshot.h",
     "thread_snapshot.h",
@@ -110,6 +112,13 @@ static_library("snapshot") {
     "win/thread_snapshot_win.cc",
     "win/thread_snapshot_win.h",
   ]
+
+  if (target_cpu == "x86" || target_cpu == "x64") {
+    sources += [
+      "x86/cpuid_reader.cc",
+      "x86/cpuid_reader.h",
+    ]
+  }
 }
 
 if (is_win) {

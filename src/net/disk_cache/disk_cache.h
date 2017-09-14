@@ -24,7 +24,6 @@
 
 namespace base {
 class FilePath;
-class SingleThreadTaskRunner;
 
 namespace trace_event {
 class ProcessMemoryDump;
@@ -45,37 +44,20 @@ class Backend;
 // Returns an instance of a Backend of the given |type|. |path| points to a
 // folder where the cached data will be stored (if appropriate). This cache
 // instance must be the only object that will be reading or writing files to
-// that folder (if another one exists, this operation will not complete until
-// the previous duplicate gets destroyed and finishes all I/O).
+// that folder (if another one exists, and |type| is not net::DISK_CACHE or
+// net::MEDIA_CACHE, this operation will not complete until the previous
+// duplicate gets destroyed and finishes all I/O).
 //
 // The returned object should be deleted when not needed anymore.
 // If |force| is true, and there is a problem with the cache initialization, the
 // files will be deleted and a new set will be created. |max_bytes| is the
 // maximum size the cache can grow to. If zero is passed in as |max_bytes|, the
-// cache will determine the value to use. |thread| can be used to perform IO
-// operations if a dedicated thread is required; if you pass in null, the
-// backend will create its own. The returned pointer can be
+// cache will determine the value to use. The returned pointer can be
 // NULL if a fatal error is found. The actual return value of the function is a
 // net error code. If this function returns ERR_IO_PENDING, the |callback| will
 // be invoked when a backend is available or a fatal error condition is reached.
 // The pointer to receive the |backend| must remain valid until the operation
 // completes (the callback is notified).
-//
-// Note: this is in process of being deprecated for the variant below.
-NET_EXPORT int CreateCacheBackend(
-    net::CacheType type,
-    net::BackendType backend_type,
-    const base::FilePath& path,
-    int max_bytes,
-    bool force,
-    const scoped_refptr<base::SingleThreadTaskRunner>& thread,
-    net::NetLog* net_log,
-    std::unique_ptr<Backend>* backend,
-    const net::CompletionCallback& callback);
-
-// Like above, but the backend is responsible for its own thread setup.
-// This is being migrated towards (along with a not-yet existing variant for
-// those with synchronization requirements towards backend's I/O).
 NET_EXPORT int CreateCacheBackend(net::CacheType type,
                                   net::BackendType backend_type,
                                   const base::FilePath& path,
@@ -89,6 +71,9 @@ NET_EXPORT int CreateCacheBackend(net::CacheType type,
 // that was in flight has completed post-destruction. |post_cleanup_callback|
 // will get invoked even if the creation fails. The invocation will always be
 // via the event loop, and never direct.
+//
+// This is currently unsupported for |type| == net::DISK_CACHE or
+// net::MEDIA_CACHE.
 //
 // Note that this will not wait for |post_cleanup_callback| of a previous
 // instance for |path| to run.
@@ -223,6 +208,21 @@ class NET_EXPORT Backend {
   virtual size_t DumpMemoryStats(
       base::trace_event::ProcessMemoryDump* pmd,
       const std::string& parent_absolute_name) const = 0;
+
+  // Backends can optionally permit one to store, probabilistically, up to a
+  // byte associated with a key of an existing entry in memory.
+
+  // GetEntryInMemoryData has the following behavior:
+  // - If the data is not available at this time for any reason, returns 0.
+  // - Otherwise, returns a value that was with very high probability
+  //   given to SetEntryInMemoryData(|key|) (and with a very low probability
+  //   to a different key that collides in the in-memory index).
+  //
+  // Due to the probability of collisions, including those that can be induced
+  // by hostile 3rd parties, this interface should not be used to make decisions
+  // that affect correctness (especially security).
+  virtual uint8_t GetEntryInMemoryData(const std::string& key);
+  virtual void SetEntryInMemoryData(const std::string& key, uint8_t data);
 };
 
 // This interface represents an entry in the disk cache.

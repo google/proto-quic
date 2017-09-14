@@ -31,12 +31,12 @@ class BASE_EXPORT MessageLoopTaskRunner : public SingleThreadTaskRunner {
   void BindToCurrentThread();
 
   // SingleThreadTaskRunner implementation
-  bool PostDelayedTask(const tracked_objects::Location& from_here,
+  bool PostDelayedTask(const Location& from_here,
                        OnceClosure task,
-                       base::TimeDelta delay) override;
-  bool PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
+                       TimeDelta delay) override;
+  bool PostNonNestableDelayedTask(const Location& from_here,
                                   OnceClosure task,
-                                  base::TimeDelta delay) override;
+                                  TimeDelta delay) override;
   bool RunsTasksInCurrentSequence() const override;
 
  private:

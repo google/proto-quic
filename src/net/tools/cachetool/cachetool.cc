@@ -18,6 +18,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/stringprintf.h"
+#include "base/task_scheduler/task_scheduler.h"
 #include "net/base/io_buffer.h"
 #include "net/base/test_completion_callback.h"
 #include "net/disk_cache/disk_cache.h"
@@ -647,6 +648,8 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
+  base::TaskScheduler::CreateAndStartWithDefaultParams("cachetool");
+
   base::FilePath cache_path(args[0]);
   std::string cache_backend_type(args[1]);
 
@@ -663,9 +666,9 @@ int main(int argc, char* argv[]) {
 
   std::unique_ptr<Backend> cache_backend;
   net::TestCompletionCallback cb;
-  int rv = disk_cache::CreateCacheBackend(
-      net::DISK_CACHE, backend_type, cache_path, INT_MAX, false,
-      message_loop.task_runner(), nullptr, &cache_backend, cb.callback());
+  int rv = disk_cache::CreateCacheBackend(net::DISK_CACHE, backend_type,
+                                          cache_path, INT_MAX, false, nullptr,
+                                          &cache_backend, cb.callback());
   if (cb.GetResult(rv) != net::OK) {
     std::cerr << "Invalid cache." << std::endl;
     return 1;
@@ -678,6 +681,7 @@ int main(int argc, char* argv[]) {
 
   base::RunLoop().RunUntilIdle();
   cache_backend = nullptr;
+  disk_cache::FlushCacheThreadForTesting();
   base::RunLoop().RunUntilIdle();
   return !successful_commands;
 }

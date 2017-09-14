@@ -397,14 +397,6 @@ ssize_t QuicTestClient::SendMessage(const SpdyHeaderBlock& headers,
                                     bool fin) {
   // Always force creation of a stream for SendMessage.
   latest_created_stream_ = nullptr;
-  // If we're not connected, try to find an sni hostname.
-  if (!connected()) {
-    QuicUrl url(SpdyUtils::GetUrlFromHeaderBlock(headers));
-    if (override_sni_set_) {
-      client_->set_server_id(
-          QuicServerId(override_sni_, url.port(), PRIVACY_MODE_DISABLED));
-    }
-  }
 
   ssize_t ret = GetOrCreateStreamAndSendRequest(&headers, body, fin, nullptr);
   WaitForWriteToFlush();
@@ -536,6 +528,13 @@ void QuicTestClient::Connect() {
   if (!connect_attempted_) {
     client_->Initialize();
   }
+
+  // If we've been asked to override SNI, set it now
+  if (override_sni_set_) {
+    client_->set_server_id(
+        QuicServerId(override_sni_, address().port(), PRIVACY_MODE_DISABLED));
+  }
+
   client_->Connect();
   connect_attempted_ = true;
 }

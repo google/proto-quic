@@ -64,9 +64,6 @@ class NET_EXPORT ProxyConfigServiceAndroid : public ProxyConfigService {
 
   ~ProxyConfigServiceAndroid() override;
 
-  // Register JNI bindings.
-  static bool Register(JNIEnv* env);
-
   // Android provides a local HTTP proxy that does PAC resolution. When this
   // setting is enabled, the proxy config service ignores the PAC URL and uses
   // the local proxy for all proxy resolution.

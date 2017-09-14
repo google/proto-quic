@@ -373,13 +373,12 @@ config("no_incremental_linking") {
 # config should be applied to large modules to turn off incremental linking
 # when it won't work.
 config("default_large_module_incremental_linking") {
-  if (symbol_level > 0 && (current_cpu == "x86" || !is_component_build)) {
-    # When symbols are on, things get so large that the tools fail due to the
-    # size of the .ilk files.
-    ldflags = incremental_linking_off_switch
-  } else {
-    # Otherwise just do the default incremental linking for this build type.
+  if (symbol_level == 0 || (current_cpu == "x86" && is_component_build)) {
+    # In these configurations, ilk file sizes stay low enough that we can
+    # link incrementally.
     ldflags = default_incremental_linking_switch
+  } else {
+    ldflags = incremental_linking_off_switch
   }
 }
 

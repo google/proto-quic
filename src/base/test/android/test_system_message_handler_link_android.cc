@@ -23,10 +23,6 @@ TestSystemMessageHandlerLink::CreateTestSystemMessageHandler(
       reinterpret_cast<intptr_t>(test_done_event));
 }
 
-bool TestSystemMessageHandlerLink::RegisterJNI(JNIEnv* env) {
-  return RegisterNativesImpl(env);
-}
-
 static void NotifyTestDone(JNIEnv* env,
                            const base::android::JavaParamRef<jclass>& jcaller,
                            jlong native_waitable_test_event) {

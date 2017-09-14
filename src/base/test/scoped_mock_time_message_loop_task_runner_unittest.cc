@@ -62,7 +62,7 @@ class ScopedMockTimeMessageLoopTaskRunnerTest : public testing::Test {
 // after destruction.
 TEST_F(ScopedMockTimeMessageLoopTaskRunnerTest, CurrentTaskRunners) {
   auto scoped_task_runner_ =
-      base::MakeUnique<ScopedMockTimeMessageLoopTaskRunner>();
+      std::make_unique<ScopedMockTimeMessageLoopTaskRunner>();
   EXPECT_EQ(scoped_task_runner_->task_runner(), GetCurrentTaskRunner());
   scoped_task_runner_.reset();
   EXPECT_EQ(original_task_runner(), GetCurrentTaskRunner());
@@ -71,7 +71,7 @@ TEST_F(ScopedMockTimeMessageLoopTaskRunnerTest, CurrentTaskRunners) {
 TEST_F(ScopedMockTimeMessageLoopTaskRunnerTest,
        IncompleteTasksAreCopiedToPreviousTaskRunnerAfterDestruction) {
   auto scoped_task_runner_ =
-      base::MakeUnique<ScopedMockTimeMessageLoopTaskRunner>();
+      std::make_unique<ScopedMockTimeMessageLoopTaskRunner>();
 
   bool task_10_has_run = false;
   bool task_11_has_run = false;

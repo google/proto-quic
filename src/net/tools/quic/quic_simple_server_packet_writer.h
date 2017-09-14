@@ -16,7 +16,7 @@
 
 namespace net {
 
-class QuicBlockedWriterInterface;
+class QuicDispatcher;
 class UDPServerSocket;
 struct WriteResult;
 
@@ -28,7 +28,7 @@ class QuicSimpleServerPacketWriter : public QuicPacketWriter {
   typedef base::Callback<void(WriteResult)> WriteCallback;
 
   QuicSimpleServerPacketWriter(UDPServerSocket* socket,
-                               QuicBlockedWriterInterface* blocked_writer);
+                               QuicDispatcher* dispatcher);
   ~QuicSimpleServerPacketWriter() override;
 
   // Wraps WritePacket, and ensures that |callback| is run on successful write.
@@ -58,7 +58,7 @@ class QuicSimpleServerPacketWriter : public QuicPacketWriter {
   UDPServerSocket* socket_;
 
   // To be notified after every successful asynchronous write.
-  QuicBlockedWriterInterface* blocked_writer_;
+  QuicDispatcher* dispatcher_;
 
   // To call once the write completes.
   WriteCallback callback_;

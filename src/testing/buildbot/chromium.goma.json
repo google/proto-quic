@@ -19,6 +19,16 @@
       "all"
     ]
   },
+  "CrWinClangGomaGCEStaging": {
+    "additional_compile_targets": [
+      "all"
+    ]
+  },
+  "CrWinGomaGCEStaging": {
+    "additional_compile_targets": [
+      "all"
+    ]
+  },
   "CrWinGomaStaging": {
     "additional_compile_targets": [
       "all"

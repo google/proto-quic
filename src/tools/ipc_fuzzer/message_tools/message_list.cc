@@ -56,9 +56,9 @@ static bool check_msgtable() {
   exemptions.push_back(CastMediaMsgStart);    // Reserved for chromecast.
   exemptions.push_back(IPCTestMsgStart);
 
-#if defined(DISABLE_NACL)
+#if !BUILDFLAG(ENABLE_NACL)
   exemptions.push_back(NaClMsgStart);
-#endif  // defined(DISABLE_NACL)
+#endif  // !BUILDFLAG(ENABLE_NACL)
 
 #if !BUILDFLAG(ENABLE_WEBRTC)
   exemptions.push_back(WebRtcLoggingMsgStart);
@@ -82,10 +82,6 @@ static bool check_msgtable() {
 #if !defined(USE_OZONE)
   exemptions.push_back(OzoneGpuMsgStart);
 #endif  // !defined(USE_OZONE)
-
-#if !defined(OS_WIN) && !defined(OS_MACOSX)
-  exemptions.push_back(ChromeUtilityExtensionsMsgStart);
-#endif
 
 #if !defined(OS_WIN)
   exemptions.push_back(DWriteFontProxyMsgStart);

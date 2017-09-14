@@ -38,7 +38,7 @@ std::unique_ptr<base::Value> NetLogSpdyStreamErrorCallback(
     int net_error,
     const SpdyString* description,
     NetLogCaptureMode /* capture_mode */) {
-  auto dict = base::MakeUnique<base::DictionaryValue>();
+  auto dict = std::make_unique<base::DictionaryValue>();
   dict->SetInteger("stream_id", static_cast<int>(stream_id));
   dict->SetString("net_error", ErrorToShortString(net_error));
   dict->SetString("description", *description);
@@ -50,7 +50,7 @@ std::unique_ptr<base::Value> NetLogSpdyStreamWindowUpdateCallback(
     int32_t delta,
     int32_t window_size,
     NetLogCaptureMode /* capture_mode */) {
-  auto dict = base::MakeUnique<base::DictionaryValue>();
+  auto dict = std::make_unique<base::DictionaryValue>();
   dict->SetInteger("stream_id", stream_id);
   dict->SetInteger("delta", delta);
   dict->SetInteger("window_size", window_size);
@@ -79,7 +79,7 @@ class SpdyStream::HeadersBufferProducer : public SpdyBufferProducer {
       return std::unique_ptr<SpdyBuffer>();
     }
     DCHECK_GT(stream_->stream_id(), 0u);
-    return base::MakeUnique<SpdyBuffer>(stream_->ProduceHeadersFrame());
+    return std::make_unique<SpdyBuffer>(stream_->ProduceHeadersFrame());
   }
   size_t EstimateMemoryUsage() const override { return 0; }
 
@@ -705,7 +705,7 @@ int SpdyStream::SendRequestHeaders(SpdyHeaderBlock request_headers,
   pending_send_status_ = send_status;
   session_->EnqueueStreamWrite(
       GetWeakPtr(), SpdyFrameType::HEADERS,
-      base::MakeUnique<HeadersBufferProducer>(GetWeakPtr()));
+      std::make_unique<HeadersBufferProducer>(GetWeakPtr()));
   return ERR_IO_PENDING;
 }
 
@@ -734,17 +734,17 @@ NextProto SpdyStream::GetNegotiatedProtocol() const {
   return session_->GetNegotiatedProtocol();
 }
 
-void SpdyStream::PossiblyResumeIfSendStalled() {
-  if (IsLocallyClosed()) {
-    return;
+SpdyStream::ShouldRequeueStream SpdyStream::PossiblyResumeIfSendStalled() {
+  if (IsLocallyClosed() || !send_stalled_by_flow_control_)
+    return DoNotRequeue;
+  if (session_->IsSendStalled() || send_window_size_ <= 0) {
+    return Requeue;
   }
-  if (send_stalled_by_flow_control_ && !session_->IsSendStalled() &&
-      send_window_size_ > 0) {
-    net_log_.AddEvent(NetLogEventType::HTTP2_STREAM_FLOW_CONTROL_UNSTALLED,
-                      NetLog::IntCallback("stream_id", stream_id_));
-    send_stalled_by_flow_control_ = false;
-    QueueNextDataFrame();
-  }
+  net_log_.AddEvent(NetLogEventType::HTTP2_STREAM_FLOW_CONTROL_UNSTALLED,
+                    NetLog::IntCallback("stream_id", stream_id_));
+  send_stalled_by_flow_control_ = false;
+  QueueNextDataFrame();
+  return DoNotRequeue;
 }
 
 bool SpdyStream::IsClosed() const {
@@ -872,7 +872,7 @@ void SpdyStream::QueueNextDataFrame() {
 
   session_->EnqueueStreamWrite(
       GetWeakPtr(), SpdyFrameType::DATA,
-      base::MakeUnique<SimpleBufferProducer>(std::move(data_buffer)));
+      std::make_unique<SimpleBufferProducer>(std::move(data_buffer)));
 }
 
 void SpdyStream::SaveResponseHeaders(const SpdyHeaderBlock& response_headers) {

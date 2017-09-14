@@ -462,9 +462,9 @@ class Progress(object):
       <kwargs>: argument name is a name of a column. it's value is the increment
                 to the column, value is usually 0 or 1.
     """
-    assert isinstance(name, str)
-    assert isinstance(raw, bool)
-    assert all(isinstance(v, int) for v in kwargs.itervalues())
+    assert isinstance(name, basestring), repr(name)
+    assert isinstance(raw, bool), repr(raw)
+    assert all(isinstance(v, int) for v in kwargs.itervalues()), repr(kwargs)
     args = [(self._columns_lookup[k], v) for k, v in kwargs.iteritems() if v]
     self._queued_updates.put((name, raw, args))
 

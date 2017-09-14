@@ -26,7 +26,8 @@ QuicSpdyClientSession::QuicSpdyClientSession(
     QuicClientPushPromiseIndex* push_promise_index)
     : QuicSpdyClientSessionBase(connection, push_promise_index, config),
       server_id_(server_id),
-      crypto_config_(crypto_config) {}
+      crypto_config_(crypto_config),
+      respect_goaway_(true) {}
 
 QuicSpdyClientSession::~QuicSpdyClientSession() {}
 
@@ -42,7 +43,6 @@ void QuicSpdyClientSession::OnProofVerifyDetailsAvailable(
     const ProofVerifyDetails& /*verify_details*/) {}
 
 bool QuicSpdyClientSession::ShouldCreateOutgoingDynamicStream() {
-  DCHECK(!FLAGS_quic_reloadable_flag_quic_refactor_stream_creation);
   if (!crypto_stream_->encryption_established()) {
     QUIC_DLOG(INFO) << "Encryption not active so no outgoing stream created.";
     return false;
@@ -52,7 +52,7 @@ bool QuicSpdyClientSession::ShouldCreateOutgoingDynamicStream() {
                     << "Already " << GetNumOpenOutgoingStreams() << " open.";
     return false;
   }
-  if (goaway_received() && respect_goaway()) {
+  if (goaway_received() && respect_goaway_) {
     QUIC_DLOG(INFO) << "Failed to create a new outgoing stream. "
                     << "Already received goaway.";
     return false;
@@ -100,12 +100,11 @@ int QuicSpdyClientSession::GetNumReceivedServerConfigUpdates() const {
 }
 
 bool QuicSpdyClientSession::ShouldCreateIncomingDynamicStream(QuicStreamId id) {
-  DCHECK(!FLAGS_quic_reloadable_flag_quic_refactor_stream_creation);
   if (!connection()->connected()) {
     QUIC_BUG << "ShouldCreateIncomingDynamicStream called when disconnected";
     return false;
   }
-  if (goaway_received() && respect_goaway()) {
+  if (goaway_received() && respect_goaway_) {
     QUIC_DLOG(INFO) << "Failed to create a new outgoing stream. "
                     << "Already received goaway.";
     return false;
@@ -140,28 +139,6 @@ QuicSpdyClientSession::CreateQuicCryptoStream() {
 
 bool QuicSpdyClientSession::IsAuthorized(const string& authority) {
   return true;
-}
-
-QuicSpdyClientStream* QuicSpdyClientSession::MaybeCreateOutgoingDynamicStream(
-    SpdyPriority priority) {
-  return static_cast<QuicSpdyClientStream*>(
-      QuicSpdySession::MaybeCreateOutgoingDynamicStream(priority));
-}
-
-QuicSpdyStream* QuicSpdyClientSession::MaybeCreateIncomingDynamicStream(
-    QuicStreamId id) {
-  QuicSpdyStream* stream =
-      QuicSpdySession::MaybeCreateIncomingDynamicStream(id);
-  if (stream) {
-    // Push streams start half-closed.
-    stream->CloseWriteSide();
-  }
-  return stream;
-}
-
-std::unique_ptr<QuicStream> QuicSpdyClientSession::CreateStream(
-    QuicStreamId id) {
-  return QuicMakeUnique<QuicSpdyClientStream>(id, this);
 }
 
 }  // namespace net

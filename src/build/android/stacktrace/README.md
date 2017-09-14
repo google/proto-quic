@@ -7,7 +7,7 @@ A wrapper around ProGuard's ReTrace tool, which:
 
 The second point here is what allows you to run:
 
-    adb logcat | out/Default/bin/java_deobfuscate
+    adb logcat | out/Default/bin/java_deobfuscate out/Default/apks/ChromePublic.apk.mapping
 
 And have it actually show output without logcat terminating.
 

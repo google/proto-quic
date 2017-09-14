@@ -219,12 +219,4 @@ JNI_GENERATOR_EXPORT jthrowable
       jcaller), base::android::JavaParamRef<jthrowable>(env, e)).Release();
 }
 
-// Step 3: RegisterNatives.
-
-// TODO(agrieve): Remove these empty registration functions and functions
-// calling them. https://crbug.com/683256.
-inline bool RegisterNativesImpl(JNIEnv* env) {
-  return true;
-}
-
 #endif  // org_chromium_TestJni_JNI

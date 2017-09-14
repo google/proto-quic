@@ -59,7 +59,7 @@ TEST_F(ReportingNetworkChangeObserverTest, ClearNothing) {
   UsePolicy(new_policy);
 
   cache()->AddReport(kUrl_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->SetClient(kOrigin_, kEndpoint_, ReportingClient::Subdomains::EXCLUDE,
                      kGroup_,
@@ -80,7 +80,7 @@ TEST_F(ReportingNetworkChangeObserverTest, ClearReports) {
   UsePolicy(new_policy);
 
   cache()->AddReport(kUrl_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->SetClient(kOrigin_, kEndpoint_, ReportingClient::Subdomains::EXCLUDE,
                      kGroup_,
@@ -101,7 +101,7 @@ TEST_F(ReportingNetworkChangeObserverTest, ClearClients) {
   UsePolicy(new_policy);
 
   cache()->AddReport(kUrl_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->SetClient(kOrigin_, kEndpoint_, ReportingClient::Subdomains::EXCLUDE,
                      kGroup_,
@@ -122,7 +122,7 @@ TEST_F(ReportingNetworkChangeObserverTest, ClearReportsAndClients) {
   UsePolicy(new_policy);
 
   cache()->AddReport(kUrl_, kGroup_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(),
+                     std::make_unique<base::DictionaryValue>(),
                      tick_clock()->NowTicks(), 0);
   cache()->SetClient(kOrigin_, kEndpoint_, ReportingClient::Subdomains::EXCLUDE,
                      kGroup_,

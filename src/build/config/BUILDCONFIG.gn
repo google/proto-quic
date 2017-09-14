@@ -138,7 +138,6 @@ declare_args() {
   is_clang =
       current_os == "mac" || current_os == "ios" || current_os == "chromeos" ||
       current_os == "fuchsia" || current_os == "android" ||
-      current_os == "win" ||
       (current_os == "linux" && current_cpu != "s390x" &&
        current_cpu != "s390" && current_cpu != "ppc64" &&
        current_cpu != "ppc" && current_cpu != "mips" && current_cpu != "mips64")
@@ -504,6 +503,14 @@ set_sources_assignment_filter(sources_assignment_filter)
 # The values configured here will be automatically set on the scope of the
 # corresponding target. Target definitions can add or remove to the settings
 # here as needed.
+#
+# WHAT GOES HERE?
+#
+# Other than the main compiler and linker configs, the only reason for a config
+# to be in this list is if some targets need to explicitly override that config
+# by removing it. This is how targets opt-out of flags. If you don't have that
+# requirement and just need to add a config everywhere, reference it as a
+# sub-config of an existing one, most commonly the main "compiler" one.
 
 # Holds all configs used for running the compiler.
 default_compiler_configs = [

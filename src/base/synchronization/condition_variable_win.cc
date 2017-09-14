@@ -5,6 +5,7 @@
 #include "base/synchronization/condition_variable.h"
 
 #include "base/synchronization/lock.h"
+#include "base/threading/scoped_blocking_call.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/time/time.h"
 
@@ -28,6 +29,7 @@ void ConditionVariable::Wait() {
 
 void ConditionVariable::TimedWait(const TimeDelta& max_time) {
   base::ThreadRestrictions::AssertWaitAllowed();
+  ScopedBlockingCall scoped_blocking_call(BlockingType::MAY_BLOCK);
   DWORD timeout = static_cast<DWORD>(max_time.InMilliseconds());
 
 #if DCHECK_IS_ON()

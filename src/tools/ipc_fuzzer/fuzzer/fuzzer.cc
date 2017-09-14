@@ -602,13 +602,13 @@ struct FuzzTraits<base::DictionaryValue> {
         case base::Value::Type::DOUBLE: {
           double tmp;
           fuzzer->FuzzDouble(&tmp);
-          p->SetDoubleWithoutPathExpansion(property, tmp);
+          p->SetKey(property, base::Value(tmp));
           break;
         }
         case base::Value::Type::STRING: {
           std::string tmp;
           fuzzer->FuzzString(&tmp);
-          p->SetStringWithoutPathExpansion(property, tmp);
+          p->SetKey(property, base::Value(tmp));
           break;
         }
         case base::Value::Type::BINARY: {
@@ -733,84 +733,6 @@ struct FuzzTraits<content::PageState> {
     if (!FuzzParam(&data, fuzzer))
       return false;
     *p = content::PageState::CreateFromEncodedData(data);
-    return true;
-  }
-};
-
-template <>
-struct FuzzTraits<content::SyntheticGesturePacket> {
-  static bool Fuzz(content::SyntheticGesturePacket* p,
-                       Fuzzer* fuzzer) {
-    // TODO(mbarbella): Support mutation.
-    if (!fuzzer->ShouldGenerate())
-      return true;
-
-    std::unique_ptr<content::SyntheticGestureParams> gesture_params;
-    switch (RandInRange(
-        content::SyntheticGestureParams::SYNTHETIC_GESTURE_TYPE_MAX + 1)) {
-      case content::SyntheticGestureParams::GestureType::
-          SMOOTH_SCROLL_GESTURE: {
-        content::SyntheticSmoothScrollGestureParams* params =
-            new content::SyntheticSmoothScrollGestureParams();
-        if (!FuzzParam(&params->anchor, fuzzer))
-          return false;
-        if (!FuzzParam(&params->distances, fuzzer))
-          return false;
-        if (!FuzzParam(&params->prevent_fling, fuzzer))
-          return false;
-        if (!FuzzParam(&params->speed_in_pixels_s, fuzzer))
-          return false;
-        gesture_params.reset(params);
-        break;
-      }
-      case content::SyntheticGestureParams::GestureType::SMOOTH_DRAG_GESTURE: {
-        content::SyntheticSmoothDragGestureParams* params =
-            new content::SyntheticSmoothDragGestureParams();
-        if (!FuzzParam(&params->start_point, fuzzer))
-          return false;
-        if (!FuzzParam(&params->distances, fuzzer))
-          return false;
-        if (!FuzzParam(&params->speed_in_pixels_s, fuzzer))
-          return false;
-        gesture_params.reset(params);
-        break;
-      }
-      case content::SyntheticGestureParams::GestureType::PINCH_GESTURE: {
-        content::SyntheticPinchGestureParams* params =
-            new content::SyntheticPinchGestureParams();
-        if (!FuzzParam(&params->scale_factor, fuzzer))
-          return false;
-        if (!FuzzParam(&params->anchor, fuzzer))
-          return false;
-        if (!FuzzParam(&params->relative_pointer_speed_in_pixels_s,
-                           fuzzer))
-          return false;
-        gesture_params.reset(params);
-        break;
-      }
-      case content::SyntheticGestureParams::GestureType::TAP_GESTURE: {
-        content::SyntheticTapGestureParams* params =
-            new content::SyntheticTapGestureParams();
-        if (!FuzzParam(&params->position, fuzzer))
-          return false;
-        if (!FuzzParam(&params->duration_ms, fuzzer))
-          return false;
-        gesture_params.reset(params);
-        break;
-      }
-      case content::SyntheticGestureParams::GestureType::POINTER_ACTION_LIST: {
-        std::vector<content::SyntheticPointerActionListParams::ParamList>
-            param_list;
-        if (!FuzzParam(&param_list, fuzzer))
-          return false;
-        content::SyntheticPointerActionListParams* params =
-            new content::SyntheticPointerActionListParams();
-        params->params = param_list;
-        gesture_params.reset(params);
-        break;
-      }
-    }
-    p->set_gesture_params(std::move(gesture_params));
     return true;
   }
 };
@@ -1758,14 +1680,14 @@ class FuzzerHelper<IPC::MessageT<Meta, std::tuple<Ins...>, void>> {
   using Message = IPC::MessageT<Meta, std::tuple<Ins...>, void>;
 
   static std::unique_ptr<IPC::Message> Fuzz(IPC::Message* msg, Fuzzer* fuzzer) {
-    return FuzzImpl(msg, fuzzer, base::MakeIndexSequence<sizeof...(Ins)>());
+    return FuzzImpl(msg, fuzzer, std::index_sequence_for<Ins...>());
   }
 
  private:
   template <size_t... Ns>
   static std::unique_ptr<IPC::Message> FuzzImpl(IPC::Message* msg,
                                                 Fuzzer* fuzzer,
-                                                base::IndexSequence<Ns...>) {
+                                                std::index_sequence<Ns...>) {
     typename Message::Param p;
     if (msg) {
       Message::Read(static_cast<Message*>(msg), &p);
@@ -1785,14 +1707,14 @@ class FuzzerHelper<
   using Message = IPC::MessageT<Meta, std::tuple<Ins...>, std::tuple<Outs...>>;
 
   static std::unique_ptr<IPC::Message> Fuzz(IPC::Message* msg, Fuzzer* fuzzer) {
-    return FuzzImpl(msg, fuzzer, base::MakeIndexSequence<sizeof...(Ins)>());
+    return FuzzImpl(msg, fuzzer, std::index_sequence_for<Ins...>());
   }
 
  private:
   template <size_t... Ns>
   static std::unique_ptr<IPC::Message> FuzzImpl(IPC::Message* msg,
                                                 Fuzzer* fuzzer,
-                                                base::IndexSequence<Ns...>) {
+                                                std::index_sequence<Ns...>) {
     typename Message::SendParam p;
     Message* real_msg = static_cast<Message*>(msg);
     std::unique_ptr<Message> new_msg;

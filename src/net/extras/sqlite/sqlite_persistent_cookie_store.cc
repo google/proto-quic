@@ -19,7 +19,6 @@
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
 #include "base/metrics/histogram_macros.h"
-#include "base/profiler/scoped_tracker.h"
 #include "base/sequenced_task_runner.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
@@ -233,10 +232,8 @@ class SQLitePersistentCookieStore::Backend
   void DatabaseErrorCallback(int error, sql::Statement* stmt);
   void KillDatabase();
 
-  void PostBackgroundTask(const tracked_objects::Location& origin,
-                          base::OnceClosure task);
-  void PostClientTask(const tracked_objects::Location& origin,
-                      base::OnceClosure task);
+  void PostBackgroundTask(const base::Location& origin, base::OnceClosure task);
+  void PostClientTask(const base::Location& origin, base::OnceClosure task);
 
   // Shared code between the different load strategies to be used after all
   // cookies have been loaded.
@@ -823,7 +820,7 @@ void SQLitePersistentCookieStore::Backend::MakeCookiesFromSQLStatement(
     } else {
       value = smt.ColumnString(3);
     }
-    std::unique_ptr<CanonicalCookie> cc(base::MakeUnique<CanonicalCookie>(
+    std::unique_ptr<CanonicalCookie> cc(std::make_unique<CanonicalCookie>(
         smt.ColumnString(2),                           // name
         value,                                         // value
         smt.ColumnString(1),                           // domain
@@ -1360,7 +1357,7 @@ void SQLitePersistentCookieStore::Backend::BackgroundDeleteAllInList(
 }
 
 void SQLitePersistentCookieStore::Backend::PostBackgroundTask(
-    const tracked_objects::Location& origin,
+    const base::Location& origin,
     base::OnceClosure task) {
   if (!background_task_runner_->PostTask(origin, std::move(task))) {
     LOG(WARNING) << "Failed to post task from " << origin.ToString()
@@ -1369,7 +1366,7 @@ void SQLitePersistentCookieStore::Backend::PostBackgroundTask(
 }
 
 void SQLitePersistentCookieStore::Backend::PostClientTask(
-    const tracked_objects::Location& origin,
+    const base::Location& origin,
     base::OnceClosure task) {
   if (!client_task_runner_->PostTask(origin, std::move(task))) {
     LOG(WARNING) << "Failed to post task from " << origin.ToString()

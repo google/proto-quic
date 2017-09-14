@@ -60,6 +60,9 @@ analyzer_wrapper =
 #      The content of this array, if specified, will be added to the list of
 #      outputs from the link command. This can be useful in conjunction with
 #      the post_link parameter.
+#  - use_unstripped_as_runtime_outputs
+#      When |strip| is set, mark unstripped executables as runtime deps rather
+#      than stripped ones.
 #  - post_link
 #      The content of this string, if specified, will be run as a separate
 #      command following the the link command.
@@ -423,6 +426,10 @@ template("gcc_toolchain") {
       }
       if (sofile != unstripped_sofile) {
         outputs += [ unstripped_sofile ]
+        if (defined(invoker.use_unstripped_as_runtime_outputs) &&
+            invoker.use_unstripped_as_runtime_outputs) {
+          runtime_outputs = [ unstripped_sofile ]
+        }
       }
       if (defined(map_file)) {
         outputs += [ map_file ]
@@ -446,7 +453,7 @@ template("gcc_toolchain") {
       command = "$ld -shared {{ldflags}}${extra_ldflags} -o \"$unstripped_sofile\" -Wl,-soname=\"$soname\" @\"$rspfile\""
 
       if (defined(invoker.strip)) {
-        strip_command = "${invoker.strip} --strip-unneeded -o \"$sofile\" \"$unstripped_sofile\""
+        strip_command = "${invoker.strip} -o \"$sofile\" \"$unstripped_sofile\""
         command += " && " + strip_command
       }
       rspfile_content = "-Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive $solink_libs_section_prefix {{libs}} $solink_libs_section_postfix"
@@ -474,6 +481,10 @@ template("gcc_toolchain") {
       ]
       if (sofile != unstripped_sofile) {
         outputs += [ unstripped_sofile ]
+        if (defined(invoker.use_unstripped_as_runtime_outputs) &&
+            invoker.use_unstripped_as_runtime_outputs) {
+          runtime_outputs = [ unstripped_sofile ]
+        }
       }
     }
 
@@ -529,6 +540,10 @@ template("gcc_toolchain") {
       ]
       if (outfile != unstripped_outfile) {
         outputs += [ unstripped_outfile ]
+        if (defined(invoker.use_unstripped_as_runtime_outputs) &&
+            invoker.use_unstripped_as_runtime_outputs) {
+          runtime_outputs = [ unstripped_outfile ]
+        }
       }
       if (defined(invoker.link_outputs)) {
         outputs += invoker.link_outputs

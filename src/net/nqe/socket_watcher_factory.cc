@@ -33,7 +33,7 @@ std::unique_ptr<SocketPerformanceWatcher>
 SocketWatcherFactory::CreateSocketPerformanceWatcher(
     const Protocol protocol,
     const AddressList& address_list) {
-  return base::MakeUnique<SocketWatcher>(
+  return std::make_unique<SocketWatcher>(
       protocol, address_list, min_notification_interval_,
       allow_rtt_private_address_, task_runner_,
       updated_rtt_observation_callback_, tick_clock_);

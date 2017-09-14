@@ -49,13 +49,10 @@
 #include "base/post_task_and_reply_with_result_internal.h"
 #include "base/sequence_checker.h"
 
-namespace tracked_objects {
-class Location;
-}  // namespace tracked_objects
-
 namespace base {
 
 class CancellationFlag;
+class Location;
 class TaskRunner;
 
 class BASE_EXPORT CancelableTaskTracker {
@@ -72,17 +69,17 @@ class BASE_EXPORT CancelableTaskTracker {
   ~CancelableTaskTracker();
 
   TaskId PostTask(TaskRunner* task_runner,
-                  const tracked_objects::Location& from_here,
+                  const Location& from_here,
                   OnceClosure task);
 
   TaskId PostTaskAndReply(TaskRunner* task_runner,
-                          const tracked_objects::Location& from_here,
+                          const Location& from_here,
                           OnceClosure task,
                           OnceClosure reply);
 
   template <typename TaskReturnType, typename ReplyArgType>
   TaskId PostTaskAndReplyWithResult(TaskRunner* task_runner,
-                                    const tracked_objects::Location& from_here,
+                                    const Location& from_here,
                                     OnceCallback<TaskReturnType()> task,
                                     OnceCallback<void(ReplyArgType)> reply) {
     TaskReturnType* result = new TaskReturnType();
@@ -101,7 +98,7 @@ class BASE_EXPORT CancelableTaskTracker {
   // TODO(tzik): Update all callers of the Callback version to use OnceCallback.
   template <typename TaskReturnType, typename ReplyArgType>
   TaskId PostTaskAndReplyWithResult(TaskRunner* task_runner,
-                                    const tracked_objects::Location& from_here,
+                                    const Location& from_here,
                                     Callback<TaskReturnType()> task,
                                     Callback<void(ReplyArgType)> reply) {
     return PostTaskAndReplyWithResult(

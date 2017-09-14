@@ -117,7 +117,7 @@ TEST_F(SpdyServerPropertiesTest, SetWithSchemeHostPort) {
   // Initializing https://www.google.com:443 and https://photos.google.com:443
   // as spdy servers.
   std::unique_ptr<SpdyServersMap> spdy_servers1 =
-      base::MakeUnique<SpdyServersMap>(SpdyServersMap::NO_AUTO_EVICT);
+      std::make_unique<SpdyServersMap>(SpdyServersMap::NO_AUTO_EVICT);
   spdy_servers1->Put(spdy_server_g, true);
   spdy_servers1->Put(spdy_server_p, true);
   impl_.SetSpdyServers(std::move(spdy_servers1));
@@ -143,14 +143,14 @@ TEST_F(SpdyServerPropertiesTest, Set) {
 
   // Check by initializing empty spdy servers.
   std::unique_ptr<SpdyServersMap> spdy_servers =
-      base::MakeUnique<SpdyServersMap>(SpdyServersMap::NO_AUTO_EVICT);
+      std::make_unique<SpdyServersMap>(SpdyServersMap::NO_AUTO_EVICT);
   impl_.SetSpdyServers(std::move(spdy_servers));
   EXPECT_FALSE(impl_.SupportsRequestPriority(spdy_server_google));
 
   // Check by initializing www.google.com:443 and photos.google.com:443 as spdy
   // servers.
   std::unique_ptr<SpdyServersMap> spdy_servers1 =
-      base::MakeUnique<SpdyServersMap>(SpdyServersMap::NO_AUTO_EVICT);
+      std::make_unique<SpdyServersMap>(SpdyServersMap::NO_AUTO_EVICT);
   spdy_servers1->Put(spdy_server_g, true);
   spdy_servers1->Put(spdy_server_p, true);
   impl_.SetSpdyServers(std::move(spdy_servers1));
@@ -168,7 +168,7 @@ TEST_F(SpdyServerPropertiesTest, Set) {
   // Check by initializing mail.google.com:443 and docs.google.com:443 as spdy
   // servers.
   std::unique_ptr<SpdyServersMap> spdy_servers2 =
-      base::MakeUnique<SpdyServersMap>(SpdyServersMap::NO_AUTO_EVICT);
+      std::make_unique<SpdyServersMap>(SpdyServersMap::NO_AUTO_EVICT);
   spdy_servers2->Put(spdy_server_m, true);
   spdy_servers2->Put(spdy_server_d, true);
   impl_.SetSpdyServers(std::move(spdy_servers2));
@@ -197,7 +197,7 @@ TEST_F(SpdyServerPropertiesTest, Set) {
   // Change supports SPDY value for photos and mails servers and order of
   // initalization shouldn't matter.
   std::unique_ptr<SpdyServersMap> spdy_servers3 =
-      base::MakeUnique<SpdyServersMap>(SpdyServersMap::NO_AUTO_EVICT);
+      std::make_unique<SpdyServersMap>(SpdyServersMap::NO_AUTO_EVICT);
   spdy_servers3->Put(spdy_server_m, false);
   spdy_servers3->Put(spdy_server_p, false);
   impl_.SetSpdyServers(std::move(spdy_servers3));
@@ -438,7 +438,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, Set) {
   // Prepare |alternative_service_map| to be loaded by
   // SetAlternativeServiceServers().
   std::unique_ptr<AlternativeServiceMap> alternative_service_map =
-      base::MakeUnique<AlternativeServiceMap>(
+      std::make_unique<AlternativeServiceMap>(
           AlternativeServiceMap::NO_AUTO_EVICT);
   const AlternativeService alternative_service3(kProtoHTTP2, "bar3", 123);
   base::Time expiration3 = now + base::TimeDelta::FromDays(3);
@@ -499,7 +499,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, SetWithEmptyHostname) {
   impl_.MarkAlternativeServiceBroken(alternative_service_with_foo_hostname);
 
   std::unique_ptr<AlternativeServiceMap> alternative_service_map =
-      base::MakeUnique<AlternativeServiceMap>(
+      std::make_unique<AlternativeServiceMap>(
           AlternativeServiceMap::NO_AUTO_EVICT);
   impl_.SetAlternativeServiceServers(std::move(alternative_service_map));
 
@@ -523,7 +523,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, EmptyVector) {
       AlternativeServiceInfo::CreateHttp2AlternativeServiceInfo(
           alternative_service, expiration);
   std::unique_ptr<AlternativeServiceMap> alternative_service_map =
-      base::MakeUnique<AlternativeServiceMap>(
+      std::make_unique<AlternativeServiceMap>(
           AlternativeServiceMap::NO_AUTO_EVICT);
   alternative_service_map->Put(
       server,
@@ -558,7 +558,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, EmptyVectorForCanonical) {
       AlternativeServiceInfo::CreateHttp2AlternativeServiceInfo(
           alternative_service, expiration);
   std::unique_ptr<AlternativeServiceMap> alternative_service_map =
-      base::MakeUnique<AlternativeServiceMap>(
+      std::make_unique<AlternativeServiceMap>(
           AlternativeServiceMap::NO_AUTO_EVICT);
   alternative_service_map->Put(
       canonical_server,
@@ -1148,7 +1148,7 @@ TEST_F(ServerNetworkStatsServerPropertiesTest, Set) {
 
   // Check by initializing empty ServerNetworkStats.
   std::unique_ptr<ServerNetworkStatsMap> init_server_network_stats_map =
-      base::MakeUnique<ServerNetworkStatsMap>(
+      std::make_unique<ServerNetworkStatsMap>(
           ServerNetworkStatsMap::NO_AUTO_EVICT);
   impl_.SetServerNetworkStats(std::move(init_server_network_stats_map));
   const ServerNetworkStats* stats = impl_.GetServerNetworkStats(google_server);
@@ -1158,7 +1158,7 @@ TEST_F(ServerNetworkStatsServerPropertiesTest, Set) {
   ServerNetworkStats stats_google;
   stats_google.srtt = base::TimeDelta::FromMicroseconds(10);
   stats_google.bandwidth_estimate = QuicBandwidth::FromBitsPerSecond(100);
-  init_server_network_stats_map = base::MakeUnique<ServerNetworkStatsMap>(
+  init_server_network_stats_map = std::make_unique<ServerNetworkStatsMap>(
       ServerNetworkStatsMap::NO_AUTO_EVICT);
   init_server_network_stats_map->Put(google_server, stats_google);
   impl_.SetServerNetworkStats(std::move(init_server_network_stats_map));
@@ -1182,7 +1182,7 @@ TEST_F(ServerNetworkStatsServerPropertiesTest, Set) {
   // Prepare |server_network_stats_map| to be loaded by
   // SetServerNetworkStats().
   std::unique_ptr<ServerNetworkStatsMap> server_network_stats_map =
-      base::MakeUnique<ServerNetworkStatsMap>(
+      std::make_unique<ServerNetworkStatsMap>(
           ServerNetworkStatsMap::NO_AUTO_EVICT);
 
   // Change the values for |docs_server|.
@@ -1261,14 +1261,14 @@ TEST_F(QuicServerInfoServerPropertiesTest, Set) {
 
   // Check empty map.
   std::unique_ptr<QuicServerInfoMap> init_quic_server_info_map =
-      base::MakeUnique<QuicServerInfoMap>(QuicServerInfoMap::NO_AUTO_EVICT);
+      std::make_unique<QuicServerInfoMap>(QuicServerInfoMap::NO_AUTO_EVICT);
   impl_.SetQuicServerInfoMap(std::move(init_quic_server_info_map));
   EXPECT_EQ(0u, impl_.quic_server_info_map().size());
 
   // Check by initializing with www.google.com:443.
   std::string google_server_info("google_quic_server_info");
   init_quic_server_info_map =
-      base::MakeUnique<QuicServerInfoMap>(QuicServerInfoMap::NO_AUTO_EVICT);
+      std::make_unique<QuicServerInfoMap>(QuicServerInfoMap::NO_AUTO_EVICT);
   init_quic_server_info_map->Put(google_quic_server_id, google_server_info);
   impl_.SetQuicServerInfoMap(std::move(init_quic_server_info_map));
 
@@ -1300,7 +1300,7 @@ TEST_F(QuicServerInfoServerPropertiesTest, Set) {
   // Prepare |quic_server_info_map| to be loaded by
   // SetQuicServerInfoMap().
   std::unique_ptr<QuicServerInfoMap> quic_server_info_map =
-      base::MakeUnique<QuicServerInfoMap>(QuicServerInfoMap::NO_AUTO_EVICT);
+      std::make_unique<QuicServerInfoMap>(QuicServerInfoMap::NO_AUTO_EVICT);
   // Change the values for |docs_server|.
   std::string new_docs_server_info("new_docs_quic_server_info");
   quic_server_info_map->Put(docs_quic_server_id, new_docs_server_info);

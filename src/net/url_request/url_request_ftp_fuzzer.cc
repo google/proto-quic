@@ -40,7 +40,7 @@ class FuzzedFtpTransactionFactory : public net::FtpTransactionFactory {
 
   // FtpTransactionFactory:
   std::unique_ptr<net::FtpTransaction> CreateTransaction() override {
-    return base::MakeUnique<net::FtpNetworkTransaction>(host_resolver_,
+    return std::make_unique<net::FtpNetworkTransaction>(host_resolver_,
                                                         client_socket_factory_);
   }
 
@@ -70,7 +70,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   net::URLRequestJobFactoryImpl job_factory;
   job_factory.SetProtocolHandler(
       "ftp", net::FtpProtocolHandler::CreateForTesting(
-                 base::MakeUnique<FuzzedFtpTransactionFactory>(
+                 std::make_unique<FuzzedFtpTransactionFactory>(
                      &host_resolver, &fuzzed_socket_factory)));
   url_request_context.set_job_factory(&job_factory);
 

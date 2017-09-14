@@ -6,7 +6,6 @@
 
 #include "net/quic/platform/api/quic_test.h"
 
-using testing::Return;
 using testing::Invoke;
 
 namespace net {

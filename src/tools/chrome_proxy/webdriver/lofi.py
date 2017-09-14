@@ -229,11 +229,16 @@ class LoFi(IntegrationTest):
   def testClientLoFiInterventionHeader(self):
     with TestDriver() as test_driver:
       test_driver.AddChromeArg('--enable-spdy-proxy-auth')
-      test_driver.AddChromeArg('--force-fieldtrials='
-                               'PreviewsClientLoFi/Enabled')
-      test_driver.AddChromeArg('--force-fieldtrial-params='
-                               'PreviewsClientLoFi.Enabled:'
-                               'max_allowed_effective_connection_type/4G')
+      test_driver.AddChromeArg('--enable-features='
+                               'DataReductionProxyDecidesTransform')
+      test_driver.AddChromeArg(
+          '--force-fieldtrial-params=NetworkQualityEstimator.Enabled:'
+          'force_effective_connection_type/2G,'
+          'PreviewsClientLoFi.Enabled:'
+          'max_allowed_effective_connection_type/4G')
+      test_driver.AddChromeArg(
+          '--force-fieldtrials=NetworkQualityEstimator/Enabled/'
+          'PreviewsClientLoFi/Enabled')
 
       test_driver.LoadURL('http://check.googlezip.net/static/index.html')
 

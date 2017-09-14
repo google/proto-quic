@@ -83,7 +83,7 @@ def main(argv):
       'lib.java', 'findbugs_plugin_test.jar')
 
   findbugs_command, findbugs_warnings = findbugs.Run(
-      None, 'org.chromium.tools.findbugs.plugin.*', None, None, None,
+      None, 'org.chromium.tools.findbugs.plugin.*', None, None, None, None,
       [test_jar_path])
 
   missing_warnings = _EXPECTED_WARNINGS.difference(findbugs_warnings)

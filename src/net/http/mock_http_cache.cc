@@ -68,6 +68,7 @@ struct MockDiskEntry::CallbackInfo {
 
 MockDiskEntry::MockDiskEntry(const std::string& key)
     : key_(key),
+      in_memory_data_(0),
       doomed_(false),
       sparse_(false),
       fail_requests_(false),
@@ -394,6 +395,7 @@ MockDiskCache::MockDiskCache()
       soft_failures_(false),
       double_create_check_(true),
       fail_sparse_requests_(false),
+      support_in_memory_entry_data_(true),
       defer_op_(MockDiskEntry::DEFER_NONE),
       resume_return_code_(0) {}
 
@@ -552,6 +554,22 @@ size_t MockDiskCache::DumpMemoryStats(
   return 0u;
 }
 
+uint8_t MockDiskCache::GetEntryInMemoryData(const std::string& key) {
+  if (!support_in_memory_entry_data_)
+    return 0;
+
+  EntryMap::iterator it = entries_.find(key);
+  if (it != entries_.end())
+    return it->second->in_memory_data();
+  return 0;
+}
+
+void MockDiskCache::SetEntryInMemoryData(const std::string& key, uint8_t data) {
+  EntryMap::iterator it = entries_.find(key);
+  if (it != entries_.end())
+    it->second->set_in_memory_data(data);
+}
+
 void MockDiskCache::ReleaseAll() {
   for (auto entry : entries_)
     entry.second->Release();
@@ -606,12 +624,12 @@ MockHttpCache::MockHttpCache(
     : MockHttpCache(std::move(disk_cache_factory), false) {}
 
 MockHttpCache::MockHttpCache(bool is_main_cache)
-    : MockHttpCache(base::MakeUnique<MockBackendFactory>(), is_main_cache) {}
+    : MockHttpCache(std::make_unique<MockBackendFactory>(), is_main_cache) {}
 
 MockHttpCache::MockHttpCache(
     std::unique_ptr<HttpCache::BackendFactory> disk_cache_factory,
     bool is_main_cache)
-    : http_cache_(base::MakeUnique<MockNetworkLayer>(),
+    : http_cache_(std::make_unique<MockNetworkLayer>(),
                   std::move(disk_cache_factory),
                   is_main_cache) {}
 

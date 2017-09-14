@@ -94,7 +94,7 @@ int HostResolverMojo::Resolve(const RequestInfo& info,
                                    host_cache_weak_factory_.GetWeakPtr()));
   request->reset(new RequestImpl(std::move(job)));
 
-  impl_->ResolveDns(base::MakeUnique<HostResolver::RequestInfo>(info),
+  impl_->ResolveDns(std::make_unique<HostResolver::RequestInfo>(info),
                     std::move(handle));
   return ERR_IO_PENDING;
 }

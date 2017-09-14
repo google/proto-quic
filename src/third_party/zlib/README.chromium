@@ -28,3 +28,4 @@ Local Modifications:
    https://github.com/jtkukunas/zlib/
  - 0002-uninitializedcheck.patch: default-initialize state->check, see
    crbug.com/697481
+ - 0003-arm-inffast.patch: ARM optimized inflate using NEON.

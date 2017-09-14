@@ -378,7 +378,7 @@ TEST_F(QuicTimeWaitListManagerTest, SendQueuedPackets) {
               WritePacket(_, _, server_address_.host(), client_address_, _))
       .With(Args<0, 1>(PublicResetPacketEq(other_connection_id)))
       .WillOnce(Return(WriteResult(WRITE_STATUS_OK, other_packet->length())));
-  time_wait_list_manager_.OnCanWrite();
+  time_wait_list_manager_.OnBlockedWriterCanWrite();
 }
 
 TEST_F(QuicTimeWaitListManagerTest, GetQuicVersionFromMap) {

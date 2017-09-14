@@ -416,6 +416,12 @@ E.g.,
     else:
       arguments.insert(1, '--browser=release')
 
+    dummy_parser = argparse.ArgumentParser()
+    dummy_parser.add_argument('--output-format', action='append')
+    args, _ = dummy_parser.parse_known_args(arguments)
+    if not args.output_format or 'html' not in args.output_format:
+      arguments.append('--output-format=html')
+
     command = ' '.join(arguments)
 
     return {

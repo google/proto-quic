@@ -14,6 +14,7 @@
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_test.h"
+#include "net/quic/platform/api/quic_test_mem_slice_vector.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"
@@ -56,9 +57,11 @@ class TestStream : public QuicStream {
 
   using QuicStream::CanWriteNewData;
   using QuicStream::WriteOrBufferData;
+  using QuicStream::WriteMemSlices;
   using QuicStream::WritevData;
   using QuicStream::CloseWriteSide;
   using QuicStream::OnClose;
+  using QuicStream::fin_buffered;
 
  private:
   string data_;
@@ -1000,6 +1003,70 @@ TEST_F(QuicStreamTest, WriteBufferedData) {
   EXPECT_EQ(data.length() + GetQuicFlag(FLAGS_quic_buffered_data_threshold) - 1,
             stream_->queued_data_bytes());
   EXPECT_FALSE(stream_->CanWriteNewData());
+}
+
+TEST_F(QuicStreamTest, WriteMemSlices) {
+  // Set buffered data low water mark to be 100.
+  SetQuicFlag(&FLAGS_quic_buffered_data_threshold, 100);
+  // Do not flow control block this stream.
+  set_initial_flow_control_window_bytes(500000);
+
+  Initialize(kShouldProcessData);
+  if (!session_->can_use_slices()) {
+    return;
+  }
+  char data[1024];
+  std::vector<std::pair<char*, int>> buffers;
+  buffers.push_back(std::make_pair(data, arraysize(data)));
+  buffers.push_back(std::make_pair(data, arraysize(data)));
+  QuicTestMemSliceVector vector1(buffers);
+  QuicTestMemSliceVector vector2(buffers);
+  QuicMemSliceSpan span1 = vector1.span();
+  QuicMemSliceSpan span2 = vector2.span();
+
+  EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
+      .WillOnce(Return(QuicConsumedData(100, false)));
+  // There is no buffered data before, all data should be consumed.
+  QuicConsumedData consumed = stream_->WriteMemSlices(span1, false);
+  EXPECT_EQ(2048u, consumed.bytes_consumed);
+  EXPECT_FALSE(consumed.fin_consumed);
+  EXPECT_EQ(2 * arraysize(data) - 100, stream_->queued_data_bytes());
+  EXPECT_FALSE(stream_->fin_buffered());
+
+  EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _)).Times(0);
+  // No Data can be consumed as buffered data is beyond upper limit.
+  consumed = stream_->WriteMemSlices(span2, true);
+  EXPECT_EQ(0u, consumed.bytes_consumed);
+  EXPECT_FALSE(consumed.fin_consumed);
+  EXPECT_EQ(2 * arraysize(data) - 100, stream_->queued_data_bytes());
+  EXPECT_FALSE(stream_->fin_buffered());
+
+  EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
+      .WillOnce(Return(QuicConsumedData(
+          2 * arraysize(data) - 100 -
+              GetQuicFlag(FLAGS_quic_buffered_data_threshold) + 1,
+          false)));
+  EXPECT_CALL(*stream_, OnCanWriteNewData()).Times(1);
+  stream_->OnCanWrite();
+  EXPECT_EQ(GetQuicFlag(FLAGS_quic_buffered_data_threshold) - 1,
+            stream_->queued_data_bytes());
+  // Try to write slices2 again.
+  EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _)).Times(0);
+  consumed = stream_->WriteMemSlices(span2, true);
+  EXPECT_EQ(2048u, consumed.bytes_consumed);
+  EXPECT_TRUE(consumed.fin_consumed);
+  EXPECT_EQ(
+      2 * arraysize(data) + GetQuicFlag(FLAGS_quic_buffered_data_threshold) - 1,
+      stream_->queued_data_bytes());
+  EXPECT_TRUE(stream_->fin_buffered());
+
+  // Flush all buffered data.
+  EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
+      .WillOnce(Invoke(MockQuicSession::ConsumeAllData));
+  stream_->OnCanWrite();
+  EXPECT_CALL(*stream_, OnCanWriteNewData()).Times(0);
+  EXPECT_FALSE(stream_->HasBufferedData());
+  EXPECT_TRUE(stream_->write_side_closed());
 }
 
 }  // namespace

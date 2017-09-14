@@ -151,7 +151,7 @@ class ProofVerifierChromiumTest : public ::testing::Test {
     std::string signature;
     source.GetProof(QuicSocketAddress(), kTestHostname, kTestConfig,
                     QUIC_VERSION_35, kTestChloHash, QuicTagVector(),
-                    base::MakeUnique<SignatureSaver>(&signature));
+                    std::make_unique<SignatureSaver>(&signature));
     return signature;
   }
 

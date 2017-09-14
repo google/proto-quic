@@ -211,8 +211,8 @@ class HttpStreamFactoryImpl::Job {
   // connecting.
   virtual void Resume();
 
-  // Called to detach |this| Job. May resume the other Job, will disconnect
-  // the socket for |this| Job, and notify |delegate| upon completion.
+  // Called when |this| is orphaned by Delegate. This is valid for
+  // ALTERNATIVE job only.
   void Orphan();
 
   void SetPriority(RequestPriority priority);
@@ -257,6 +257,8 @@ class HttpStreamFactoryImpl::Job {
   // TODO(xunjieli): Added to investigate crbug.com/711721. Remove when no
   // longer needed.
   void LogHistograms() const;
+
+  NetErrorDetails* net_error_details() { return &net_error_details_; }
 
  private:
   friend class test::HttpStreamFactoryImplJobPeer;
@@ -500,6 +502,8 @@ class HttpStreamFactoryImpl::Job {
 
   // Whether Job has continued to DoInitConnection().
   bool init_connection_already_resumed_;
+
+  NetErrorDetails net_error_details_;
 
   base::WeakPtrFactory<Job> ptr_factory_;
 

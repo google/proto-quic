@@ -23,9 +23,14 @@ class ThreadTimes(legacy_page_test.LegacyPageTest):
     if self._report_silk_details:
       # We need the other traces in order to have any details to report.
       self._timeline_controller.trace_categories = None
+      if self.options and self.options.extra_chrome_categories:
+        assert False, ('--extra_chrome_categories cannot be combined with'
+                       '--report-silk-details')
     else:
-      self._timeline_controller.trace_categories = \
-          chrome_trace_category_filter.CreateLowOverheadFilter().filter_string
+      category_filter = chrome_trace_category_filter.CreateLowOverheadFilter()
+      if self.options and self.options.extra_chrome_categories:
+        category_filter.AddFilterString(self.options.extra_chrome_categories)
+      self._timeline_controller.trace_categories = category_filter.filter_string
     self._timeline_controller.SetUp(page, tab)
 
   def DidNavigateToPage(self, page, tab):

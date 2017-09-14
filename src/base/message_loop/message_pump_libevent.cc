@@ -44,7 +44,7 @@
 namespace base {
 
 MessagePumpLibevent::FileDescriptorWatcher::FileDescriptorWatcher(
-    const tracked_objects::Location& from_here)
+    const Location& from_here)
     : event_(NULL),
       pump_(NULL),
       watcher_(NULL),

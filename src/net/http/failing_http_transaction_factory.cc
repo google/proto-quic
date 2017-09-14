@@ -71,6 +71,7 @@ class FailingHttpTransaction : public HttpTransaction {
   int ResumeNetworkStart() override;
   void GetConnectionAttempts(ConnectionAttempts* out) const override;
   void SetRequestHeadersCallback(RequestHeadersCallback) override {}
+  void SetResponseHeadersCallback(ResponseHeadersCallback) override {}
 
  private:
   Error error_;

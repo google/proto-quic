@@ -5,6 +5,7 @@
 #include "net/cert/x509_util_ios_and_mac.h"
 
 #include "net/cert/x509_certificate.h"
+#include "net/cert/x509_util.h"
 #include "net/test/cert_test_util.h"
 #include "net/test/test_data_directory.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -73,6 +74,47 @@ TEST(X509UtilTest, CreateSecCertificateArrayForX509Certificate) {
             BytesForSecCert(CFArrayGetValueAtIndex(sec_certs.get(), 2)));
   EXPECT_EQ(BytesForX509CertHandle(cert->GetIntermediateCertificates()[2]),
             BytesForSecCert(CFArrayGetValueAtIndex(sec_certs.get(), 3)));
+}
+
+TEST(X509UtilTest, CreateSecCertificateArrayForX509CertificateErrors) {
+  scoped_refptr<X509Certificate> ok_cert(
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem"));
+  ASSERT_TRUE(ok_cert);
+
+  bssl::UniquePtr<CRYPTO_BUFFER> bad_cert =
+      x509_util::CreateCryptoBuffer(base::StringPiece("invalid"));
+  ASSERT_TRUE(bad_cert);
+
+  scoped_refptr<X509Certificate> ok_cert2(
+      ImportCertFromFile(GetTestCertsDirectory(), "root_ca_cert.pem"));
+  ASSERT_TRUE(ok_cert);
+
+  scoped_refptr<X509Certificate> cert_with_intermediates(
+      X509Certificate::CreateFromHandle(
+          ok_cert->os_cert_handle(),
+          {bad_cert.get(), ok_cert2->os_cert_handle()}));
+  ASSERT_TRUE(cert_with_intermediates);
+  EXPECT_EQ(2U, cert_with_intermediates->GetIntermediateCertificates().size());
+
+  // Normal CreateSecCertificateArrayForX509Certificate fails with invalid
+  // certs in chain.
+  EXPECT_FALSE(CreateSecCertificateArrayForX509Certificate(
+      cert_with_intermediates.get()));
+
+  // With InvalidIntermediateBehavior::kIgnore, invalid intermediate certs
+  // should be silently dropped.
+  base::ScopedCFTypeRef<CFMutableArrayRef> sec_certs(
+      CreateSecCertificateArrayForX509Certificate(
+          cert_with_intermediates.get(), InvalidIntermediateBehavior::kIgnore));
+  ASSERT_TRUE(sec_certs);
+  ASSERT_EQ(2, CFArrayGetCount(sec_certs.get()));
+  for (int i = 0; i < 2; ++i)
+    ASSERT_TRUE(CFArrayGetValueAtIndex(sec_certs.get(), i));
+
+  EXPECT_EQ(BytesForX509Cert(ok_cert.get()),
+            BytesForSecCert(CFArrayGetValueAtIndex(sec_certs.get(), 0)));
+  EXPECT_EQ(BytesForX509Cert(ok_cert2.get()),
+            BytesForSecCert(CFArrayGetValueAtIndex(sec_certs.get(), 1)));
 }
 
 TEST(X509UtilTest,

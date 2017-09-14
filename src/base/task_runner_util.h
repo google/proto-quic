@@ -32,7 +32,7 @@ namespace base {
 //     BindOnce(&Callback));
 template <typename TaskReturnType, typename ReplyArgType>
 bool PostTaskAndReplyWithResult(TaskRunner* task_runner,
-                                const tracked_objects::Location& from_here,
+                                const Location& from_here,
                                 OnceCallback<TaskReturnType()> task,
                                 OnceCallback<void(ReplyArgType)> reply) {
   DCHECK(task);
@@ -54,7 +54,7 @@ bool PostTaskAndReplyWithResult(TaskRunner* task_runner,
 // OnceCallback.
 template <typename TaskReturnType, typename ReplyArgType>
 bool PostTaskAndReplyWithResult(TaskRunner* task_runner,
-                                const tracked_objects::Location& from_here,
+                                const Location& from_here,
                                 Callback<TaskReturnType()> task,
                                 Callback<void(ReplyArgType)> reply) {
   return PostTaskAndReplyWithResult(

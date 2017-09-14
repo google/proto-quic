@@ -50,16 +50,18 @@ bool ParseProcStats(const std::string& stats_data,
 // If the ordering ever changes, carefully review functions that use these
 // values.
 enum ProcStatsFields {
-  VM_COMM           = 1,   // Filename of executable, without parentheses.
-  VM_STATE          = 2,   // Letter indicating the state of the process.
-  VM_PPID           = 3,   // PID of the parent.
-  VM_PGRP           = 4,   // Process group id.
-  VM_UTIME          = 13,  // Time scheduled in user mode in clock ticks.
-  VM_STIME          = 14,  // Time scheduled in kernel mode in clock ticks.
-  VM_NUMTHREADS     = 19,  // Number of threads.
-  VM_STARTTIME      = 21,  // The time the process started in clock ticks.
-  VM_VSIZE          = 22,  // Virtual memory size in bytes.
-  VM_RSS            = 23,  // Resident Set Size in pages.
+  VM_COMM = 1,         // Filename of executable, without parentheses.
+  VM_STATE = 2,        // Letter indicating the state of the process.
+  VM_PPID = 3,         // PID of the parent.
+  VM_PGRP = 4,         // Process group id.
+  VM_MINFLT = 9,       // Minor page fault count excluding children.
+  VM_MAJFLT = 11,      // Major page fault count excluding children.
+  VM_UTIME = 13,       // Time scheduled in user mode in clock ticks.
+  VM_STIME = 14,       // Time scheduled in kernel mode in clock ticks.
+  VM_NUMTHREADS = 19,  // Number of threads.
+  VM_STARTTIME = 21,   // The time the process started in clock ticks.
+  VM_VSIZE = 22,       // Virtual memory size in bytes.
+  VM_RSS = 23,         // Resident Set Size in pages.
 };
 
 // Reads the |field_num|th field from |proc_stats|. Returns 0 on failure.

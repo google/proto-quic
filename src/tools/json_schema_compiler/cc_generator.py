@@ -1015,7 +1015,7 @@ class _Generator(object):
       c.Append('// static')
     maybe_namespace = '' if cpp_namespace is None else '%s::' % cpp_namespace
 
-    c.Sblock('std::string %sToString(%s enum_param) {' %
+    c.Sblock('const char* %sToString(%s enum_param) {' %
                  (maybe_namespace, classname))
     c.Sblock('switch (enum_param) {')
     for enum_value in self._type_helper.FollowRef(type_).enum_values:

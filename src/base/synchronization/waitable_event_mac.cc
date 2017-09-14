@@ -4,11 +4,18 @@
 
 #include "base/synchronization/waitable_event.h"
 
+#include <dispatch/dispatch.h>
 #include <mach/mach.h>
+#include <sys/event.h>
 
 #include "base/debug/activity_tracker.h"
+#include "base/files/scoped_file.h"
+#include "base/mac/dispatch_source_mach.h"
 #include "base/mac/mac_util.h"
 #include "base/mac/mach_logging.h"
+#include "base/mac/scoped_dispatch_object.h"
+#include "base/posix/eintr_wrapper.h"
+#include "base/threading/scoped_blocking_call.h"
 #include "base/threading/thread_restrictions.h"
 #include "build/build_config.h"
 
@@ -105,6 +112,7 @@ bool WaitableEvent::TimedWait(const TimeDelta& wait_delta) {
 
 bool WaitableEvent::TimedWaitUntil(const TimeTicks& end_time) {
   ThreadRestrictions::AssertWaitAllowed();
+  ScopedBlockingCall scoped_blocking_call(BlockingType::MAY_BLOCK);
   // Record the event that this thread is blocking upon (for hang diagnosis).
   debug::ScopedEventWaitActivity event_activity(this);
 
@@ -160,47 +168,149 @@ bool WaitableEvent::UseSlowWatchList(ResetPolicy policy) {
 size_t WaitableEvent::WaitMany(WaitableEvent** raw_waitables, size_t count) {
   ThreadRestrictions::AssertWaitAllowed();
   DCHECK(count) << "Cannot wait on no events";
+  ScopedBlockingCall scoped_blocking_call(BlockingType::MAY_BLOCK);
+  // Record an event (the first) that this thread is blocking upon.
+  debug::ScopedEventWaitActivity event_activity(raw_waitables[0]);
 
-  kern_return_t kr;
-
-  mac::ScopedMachPortSet port_set;
-  {
-    mach_port_t name;
-    kr = mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_PORT_SET, &name);
-    MACH_CHECK(kr == KERN_SUCCESS, kr) << "mach_port_allocate";
-    port_set.reset(name);
-  }
-
-  for (size_t i = 0; i < count; ++i) {
-    kr = mach_port_insert_member(mach_task_self(),
-                                 raw_waitables[i]->receive_right_->Name(),
-                                 port_set.get());
-    MACH_CHECK(kr == KERN_SUCCESS, kr) << "index " << i;
-  }
-
-  mach_msg_empty_rcv_t msg{};
-  // Wait on the port set. Only specify space enough for the header, to
-  // identify which port in the set is signaled. Otherwise, receiving from the
-  // port set may dequeue a message for a manual-reset event object, which
-  // would cause it to be reset.
-  kr = mach_msg(&msg.header,
-                MACH_RCV_MSG | MACH_RCV_LARGE | MACH_RCV_LARGE_IDENTITY, 0,
-                sizeof(msg.header), port_set.get(), 0, MACH_PORT_NULL);
-  MACH_CHECK(kr == MACH_RCV_TOO_LARGE, kr) << "mach_msg";
-
-  for (size_t i = 0; i < count; ++i) {
-    WaitableEvent* event = raw_waitables[i];
-    if (msg.header.msgh_local_port == event->receive_right_->Name()) {
-      if (event->policy_ == ResetPolicy::AUTOMATIC) {
-        // The message needs to be dequeued to reset the event.
-        PeekPort(msg.header.msgh_local_port, true);
-      }
-      return i;
+  // On macOS 10.11+, using Mach port sets may cause system instability, per
+  // https://crbug.com/756102. On macOS 10.12+, a kqueue can be used
+  // instead to work around that. On macOS 10.9 and 10.10, kqueue only works
+  // for port sets, so port sets are just used directly. On macOS 10.11,
+  // libdispatch sources are used. Therefore, there are three different
+  // primitives that can be used to implement WaitMany. Which one to use is
+  // selected at run-time by OS version checks.
+  enum WaitManyPrimitive {
+    KQUEUE,
+    DISPATCH,
+    PORT_SET,
+  };
+#if defined(OS_IOS)
+  const WaitManyPrimitive kPrimitive = PORT_SET;
+#else
+  const WaitManyPrimitive kPrimitive =
+      mac::IsAtLeastOS10_12() ? KQUEUE
+                              : (mac::IsOS10_11() ? DISPATCH : PORT_SET);
+#endif
+  if (kPrimitive == KQUEUE) {
+    std::vector<kevent64_s> events(count);
+    for (size_t i = 0; i < count; ++i) {
+      EV_SET64(&events[i], raw_waitables[i]->receive_right_->Name(),
+               EVFILT_MACHPORT, EV_ADD, 0, 0, i, 0, 0);
     }
-  }
 
-  NOTREACHED();
-  return 0;
+    std::vector<kevent64_s> out_events(count);
+
+    ScopedFD wait_many(kqueue());
+    PCHECK(wait_many.is_valid()) << "kqueue";
+
+    int rv = HANDLE_EINTR(kevent64(wait_many.get(), events.data(), count,
+                                   out_events.data(), count, 0, nullptr));
+    PCHECK(rv > 0) << "kevent64";
+
+    size_t triggered = -1;
+    for (size_t i = 0; i < static_cast<size_t>(rv); ++i) {
+      // WaitMany should return the lowest index in |raw_waitables| that was
+      // triggered.
+      size_t index = static_cast<size_t>(out_events[i].udata);
+      triggered = std::min(triggered, index);
+    }
+
+    if (raw_waitables[triggered]->policy_ == ResetPolicy::AUTOMATIC) {
+      // The message needs to be dequeued to reset the event.
+      PeekPort(raw_waitables[triggered]->receive_right_->Name(), true);
+    }
+
+    return triggered;
+  } else if (kPrimitive == DISPATCH) {
+    // Each item in |raw_waitables| will be watched using a dispatch souce
+    // scheduled on the serial |queue|. The first one to be invoked will
+    // signal the |semaphore| that this method will wait on.
+    ScopedDispatchObject<dispatch_queue_t> queue(dispatch_queue_create(
+        "org.chromium.base.WaitableEvent.WaitMany", DISPATCH_QUEUE_SERIAL));
+    ScopedDispatchObject<dispatch_semaphore_t> semaphore(
+        dispatch_semaphore_create(0));
+
+    // Block capture references. |signaled| will identify the index in
+    // |raw_waitables| whose source was invoked.
+    dispatch_semaphore_t semaphore_ref = semaphore.get();
+    const size_t kUnsignaled = -1;
+    __block size_t signaled = kUnsignaled;
+
+    // Create a MACH_RECV dispatch source for each event. These must be
+    // destroyed before the |queue| and |semaphore|.
+    std::vector<std::unique_ptr<DispatchSourceMach>> sources;
+    for (size_t i = 0; i < count; ++i) {
+      const bool auto_reset =
+          raw_waitables[i]->policy_ == WaitableEvent::ResetPolicy::AUTOMATIC;
+      // The block will copy a reference to |right|.
+      scoped_refptr<WaitableEvent::ReceiveRight> right =
+          raw_waitables[i]->receive_right_;
+      auto source =
+          std::make_unique<DispatchSourceMach>(queue, right->Name(), ^{
+            // After the semaphore is signaled, another event be signaled and
+            // the source may have its block put on the |queue|. WaitMany
+            // should only report (and auto-reset) one event, so the first
+            // event to signal is reported.
+            if (signaled == kUnsignaled) {
+              signaled = i;
+              if (auto_reset) {
+                PeekPort(right->Name(), true);
+              }
+              dispatch_semaphore_signal(semaphore_ref);
+            }
+          });
+      source->Resume();
+      sources.push_back(std::move(source));
+    }
+
+    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+    DCHECK_NE(signaled, kUnsignaled);
+    return signaled;
+  } else {
+    DCHECK_EQ(kPrimitive, PORT_SET);
+
+    kern_return_t kr;
+
+    mac::ScopedMachPortSet port_set;
+    {
+      mach_port_t name;
+      kr =
+          mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_PORT_SET, &name);
+      MACH_CHECK(kr == KERN_SUCCESS, kr) << "mach_port_allocate";
+      port_set.reset(name);
+    }
+
+    for (size_t i = 0; i < count; ++i) {
+      kr = mach_port_insert_member(mach_task_self(),
+                                   raw_waitables[i]->receive_right_->Name(),
+                                   port_set.get());
+      MACH_CHECK(kr == KERN_SUCCESS, kr) << "index " << i;
+    }
+
+    mach_msg_empty_rcv_t msg{};
+    // Wait on the port set. Only specify space enough for the header, to
+    // identify which port in the set is signaled. Otherwise, receiving from the
+    // port set may dequeue a message for a manual-reset event object, which
+    // would cause it to be reset.
+    kr = mach_msg(&msg.header,
+                  MACH_RCV_MSG | MACH_RCV_LARGE | MACH_RCV_LARGE_IDENTITY, 0,
+                  sizeof(msg.header), port_set.get(), 0, MACH_PORT_NULL);
+    MACH_CHECK(kr == MACH_RCV_TOO_LARGE, kr) << "mach_msg";
+
+    for (size_t i = 0; i < count; ++i) {
+      WaitableEvent* event = raw_waitables[i];
+      if (msg.header.msgh_local_port == event->receive_right_->Name()) {
+        if (event->policy_ == ResetPolicy::AUTOMATIC) {
+          // The message needs to be dequeued to reset the event.
+          PeekPort(msg.header.msgh_local_port, true);
+        }
+        return i;
+      }
+    }
+
+    NOTREACHED();
+    return 0;
+  }
 }
 
 // static

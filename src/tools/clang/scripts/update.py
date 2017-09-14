@@ -27,7 +27,7 @@ import zipfile
 # Do NOT CHANGE this if you don't know what you're doing -- see
 # https://chromium.googlesource.com/chromium/src/+/master/docs/updating_clang.md
 # Reverting problematic clang rolls is safe, though.
-CLANG_REVISION = '310694'
+CLANG_REVISION = '312679'
 
 use_head_revision = 'LLVM_FORCE_HEAD_REVISION' in os.environ
 if use_head_revision:
@@ -438,6 +438,20 @@ def UpdateClang(args):
   DeleteChromeToolsShim()
 
   Checkout('LLVM', LLVM_REPO_URL + '/llvm/trunk', LLVM_DIR)
+
+  # Back out previous local patches. This needs to be kept around a bit
+  # until all bots have cycled. See https://crbug.com/755777.
+  files = [
+    'lib/Transforms/InstCombine/InstructionCombining.cpp',
+    'test/DebugInfo/X86/formal_parameter.ll',
+    'test/DebugInfo/X86/instcombine-instrinsics.ll',
+    'test/Transforms/InstCombine/debuginfo-skip.ll',
+    'test/Transforms/InstCombine/debuginfo.ll',
+    'test/Transforms/Util/simplify-dbg-declare-load.ll',
+  ]
+  for f in [os.path.join(LLVM_DIR, f) for f in files]:
+    RunCommand(['svn', 'revert', f])
+
   Checkout('Clang', LLVM_REPO_URL + '/cfe/trunk', CLANG_DIR)
   if sys.platform != 'darwin':
     Checkout('LLD', LLVM_REPO_URL + '/lld/trunk', LLD_DIR)
@@ -582,9 +596,10 @@ def UpdateClang(args):
 
   # Build PDBs for archival on Windows.  Don't use RelWithDebInfo since it
   # has different optimization defaults than Release.
+  # Also disable stack cookies (/GS-) for performance.
   if sys.platform == 'win32':
-    cflags += ['/Zi']
-    cxxflags += ['/Zi']
+    cflags += ['/Zi', '/GS-']
+    cxxflags += ['/Zi', '/GS-']
     ldflags += ['/DEBUG', '/OPT:REF', '/OPT:ICF']
 
   CreateChromeToolsShim()

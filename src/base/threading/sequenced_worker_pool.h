@@ -19,12 +19,9 @@
 #include "base/task_runner.h"
 #include "base/task_scheduler/task_traits.h"
 
-namespace tracked_objects {
-class Location;
-}  // namespace tracked_objects
-
 namespace base {
 
+class Location;
 class SequencedTaskRunner;
 
 template <class T> class DeleteHelper;
@@ -272,14 +269,12 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
   //
   // Returns true if the task was posted successfully. This may fail during
   // shutdown regardless of the specified ShutdownBehavior.
-  bool PostWorkerTask(const tracked_objects::Location& from_here,
-                      OnceClosure task);
+  bool PostWorkerTask(const Location& from_here, OnceClosure task);
 
   // Same as PostWorkerTask but allows specification of the shutdown behavior.
-  bool PostWorkerTaskWithShutdownBehavior(
-      const tracked_objects::Location& from_here,
-      OnceClosure task,
-      WorkerShutdown shutdown_behavior);
+  bool PostWorkerTaskWithShutdownBehavior(const Location& from_here,
+                                          OnceClosure task,
+                                          WorkerShutdown shutdown_behavior);
 
   // Like PostWorkerTask above, but provides sequencing semantics. This means
   // that tasks posted with the same sequence token (see GetSequenceToken())
@@ -293,13 +288,13 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
   // Returns true if the task was posted successfully. This may fail during
   // shutdown regardless of the specified ShutdownBehavior.
   bool PostSequencedWorkerTask(SequenceToken sequence_token,
-                               const tracked_objects::Location& from_here,
+                               const Location& from_here,
                                OnceClosure task);
 
   // Like PostSequencedWorkerTask above, but allows you to specify a named
   // token, which saves an extra call to GetNamedSequenceToken.
   bool PostNamedSequencedWorkerTask(const std::string& token_name,
-                                    const tracked_objects::Location& from_here,
+                                    const Location& from_here,
                                     OnceClosure task);
 
   // Same as PostSequencedWorkerTask but allows a delay to be specified
@@ -311,22 +306,21 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
   // If the delay is zero, this behaves exactly like PostSequencedWorkerTask,
   // i.e. the task will be guaranteed to run to completion before shutdown
   // (BLOCK_SHUTDOWN semantics).
-  bool PostDelayedSequencedWorkerTask(
-      SequenceToken sequence_token,
-      const tracked_objects::Location& from_here,
-      OnceClosure task,
-      TimeDelta delay);
+  bool PostDelayedSequencedWorkerTask(SequenceToken sequence_token,
+                                      const Location& from_here,
+                                      OnceClosure task,
+                                      TimeDelta delay);
 
   // Same as PostSequencedWorkerTask but allows specification of the shutdown
   // behavior.
   bool PostSequencedWorkerTaskWithShutdownBehavior(
       SequenceToken sequence_token,
-      const tracked_objects::Location& from_here,
+      const Location& from_here,
       OnceClosure task,
       WorkerShutdown shutdown_behavior);
 
   // TaskRunner implementation. Forwards to PostDelayedWorkerTask().
-  bool PostDelayedTask(const tracked_objects::Location& from_here,
+  bool PostDelayedTask(const Location& from_here,
                        OnceClosure task,
                        TimeDelta delay) override;
   bool RunsTasksInCurrentSequence() const override;

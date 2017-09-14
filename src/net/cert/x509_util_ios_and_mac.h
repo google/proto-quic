@@ -25,6 +25,22 @@ namespace x509_util {
 NET_EXPORT base::ScopedCFTypeRef<CFMutableArrayRef>
 CreateSecCertificateArrayForX509Certificate(X509Certificate* cert);
 
+// Specify behavior if an intermediate certificate fails SecCertificate
+// parsing. kFail means the function should return a failure result
+// immediately. kIgnore means the invalid intermediate is not added to the
+// output container.
+enum class InvalidIntermediateBehavior { kFail, kIgnore };
+
+// Returns a new CFMutableArrayRef containing this certificate and its
+// intermediate certificates in the form expected by Security.framework
+// and Keychain Services. Returns NULL if the certificate could not be
+// converted. |invalid_intermediate_behavior| specifies behavior if
+// intermediates of |cert| could not be converted.
+NET_EXPORT base::ScopedCFTypeRef<CFMutableArrayRef>
+CreateSecCertificateArrayForX509Certificate(
+    X509Certificate* cert,
+    InvalidIntermediateBehavior invalid_intermediate_behavior);
+
 }  // namespace x509_util
 
 }  // namespace net

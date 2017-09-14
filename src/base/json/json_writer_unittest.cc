@@ -61,7 +61,7 @@ TEST(JSONWriterTest, NestedTypes) {
   std::unique_ptr<DictionaryValue> inner_dict(new DictionaryValue());
   inner_dict->SetInteger("inner int", 10);
   list->Append(std::move(inner_dict));
-  list->Append(MakeUnique<ListValue>());
+  list->Append(std::make_unique<ListValue>());
   list->AppendBoolean(true);
   root_dict.Set("list", std::move(list));
 
@@ -119,9 +119,9 @@ TEST(JSONWriterTest, BinaryValues) {
 
   ListValue binary_list;
   binary_list.Append(Value::CreateWithCopiedBuffer("asdf", 4));
-  binary_list.Append(MakeUnique<Value>(5));
+  binary_list.Append(std::make_unique<Value>(5));
   binary_list.Append(Value::CreateWithCopiedBuffer("asdf", 4));
-  binary_list.Append(MakeUnique<Value>(2));
+  binary_list.Append(std::make_unique<Value>(2));
   binary_list.Append(Value::CreateWithCopiedBuffer("asdf", 4));
   EXPECT_FALSE(JSONWriter::Write(binary_list, &output_js));
   EXPECT_TRUE(JSONWriter::WriteWithOptions(

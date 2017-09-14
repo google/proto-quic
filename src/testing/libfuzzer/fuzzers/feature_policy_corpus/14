@@ -1,1 +1,1 @@
-{"vibrate": ["*"]}, {"docwrite": ["*"]}
+vibrate *; docwrite *

@@ -25,7 +25,7 @@ namespace net {
 namespace {
 
 std::unique_ptr<base::Value> SerializeOrigin(const url::Origin& origin) {
-  auto serialized = base::MakeUnique<base::DictionaryValue>();
+  auto serialized = std::make_unique<base::DictionaryValue>();
 
   serialized->SetString("scheme", origin.scheme());
   serialized->SetString("host", origin.host());
@@ -87,7 +87,7 @@ class ReportingPersisterImpl : public ReportingPersister {
   }
 
   std::unique_ptr<base::Value> SerializeReport(const ReportingReport& report) {
-    auto serialized = base::MakeUnique<base::DictionaryValue>();
+    auto serialized = std::make_unique<base::DictionaryValue>();
 
     serialized->SetString("url", report.url.spec());
     serialized->SetString("group", report.group);
@@ -141,7 +141,7 @@ class ReportingPersisterImpl : public ReportingPersister {
     std::vector<const ReportingReport*> reports;
     cache()->GetReports(&reports);
 
-    auto serialized = base::MakeUnique<base::ListValue>();
+    auto serialized = std::make_unique<base::ListValue>();
     for (const ReportingReport* report : reports)
       serialized->Append(SerializeReport(*report));
 
@@ -161,7 +161,7 @@ class ReportingPersisterImpl : public ReportingPersister {
   }
 
   std::unique_ptr<base::Value> SerializeClient(const ReportingClient& client) {
-    auto serialized = base::MakeUnique<base::DictionaryValue>();
+    auto serialized = std::make_unique<base::DictionaryValue>();
 
     serialized->Set("origin", SerializeOrigin(client.origin));
     serialized->SetString("endpoint", client.endpoint.spec());
@@ -215,7 +215,7 @@ class ReportingPersisterImpl : public ReportingPersister {
     std::vector<const ReportingClient*> clients;
     cache()->GetClients(&clients);
 
-    auto serialized = base::MakeUnique<base::ListValue>();
+    auto serialized = std::make_unique<base::ListValue>();
     for (const ReportingClient* client : clients)
       serialized->Append(SerializeClient(*client));
 
@@ -237,7 +237,7 @@ class ReportingPersisterImpl : public ReportingPersister {
   static const int kSupportedVersion = 1;
 
   std::unique_ptr<base::Value> Serialize() {
-    auto serialized = base::MakeUnique<base::DictionaryValue>();
+    auto serialized = std::make_unique<base::DictionaryValue>();
 
     serialized->SetInteger("reporting_serialized_cache_version",
                            kSupportedVersion);
@@ -314,7 +314,7 @@ class ReportingPersisterImpl : public ReportingPersister {
 // static
 std::unique_ptr<ReportingPersister> ReportingPersister::Create(
     ReportingContext* context) {
-  return base::MakeUnique<ReportingPersisterImpl>(context);
+  return std::make_unique<ReportingPersisterImpl>(context);
 }
 
 ReportingPersister::~ReportingPersister() {}

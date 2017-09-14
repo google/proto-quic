@@ -118,7 +118,7 @@ class WritersTest : public testing::Test {
   void CreateWriters(const std::string& url) {
     cache_.CreateBackendEntry(kSimpleGET_Transaction.url, &disk_entry_,
                               nullptr);
-    writers_ = base::MakeUnique<HttpCache::Writers>(disk_entry_);
+    writers_ = std::make_unique<HttpCache::Writers>(disk_entry_);
   }
 
   std::unique_ptr<HttpTransaction> CreateNetworkTransaction() {
@@ -140,7 +140,7 @@ class WritersTest : public testing::Test {
 
     // Create a mock cache transaction.
     std::unique_ptr<MockHttpCacheTransaction> transaction =
-        base::MakeUnique<MockHttpCacheTransaction>(DEFAULT_PRIORITY,
+        std::make_unique<MockHttpCacheTransaction>(DEFAULT_PRIORITY,
                                                    cache_.http_cache());
 
     CreateWriters(kSimpleGET_Transaction.url);
@@ -163,7 +163,7 @@ class WritersTest : public testing::Test {
 
     // Create a mock cache transaction.
     std::unique_ptr<MockHttpCacheTransaction> transaction =
-        base::MakeUnique<MockHttpCacheTransaction>(DEFAULT_PRIORITY,
+        std::make_unique<MockHttpCacheTransaction>(DEFAULT_PRIORITY,
                                                    cache_.http_cache());
 
     writers_->AddTransaction(transaction.get(), nullptr, false);

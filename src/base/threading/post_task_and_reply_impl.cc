@@ -28,7 +28,7 @@ namespace {
 // violations caused by invoking the Closure destructor on the wrong sequence.
 class PostTaskAndReplyRelay {
  public:
-  PostTaskAndReplyRelay(const tracked_objects::Location& from_here,
+  PostTaskAndReplyRelay(const Location& from_here,
                         OnceClosure task,
                         OnceClosure reply)
       : sequence_checker_(),
@@ -64,7 +64,7 @@ class PostTaskAndReplyRelay {
   }
 
   const SequenceChecker sequence_checker_;
-  const tracked_objects::Location from_here_;
+  const Location from_here_;
   const scoped_refptr<SequencedTaskRunner> origin_task_runner_;
   OnceClosure reply_;
   OnceClosure task_;
@@ -74,10 +74,9 @@ class PostTaskAndReplyRelay {
 
 namespace internal {
 
-bool PostTaskAndReplyImpl::PostTaskAndReply(
-    const tracked_objects::Location& from_here,
-    OnceClosure task,
-    OnceClosure reply) {
+bool PostTaskAndReplyImpl::PostTaskAndReply(const Location& from_here,
+                                            OnceClosure task,
+                                            OnceClosure reply) {
   DCHECK(!task.is_null()) << from_here.ToString();
   DCHECK(!reply.is_null()) << from_here.ToString();
   PostTaskAndReplyRelay* relay =

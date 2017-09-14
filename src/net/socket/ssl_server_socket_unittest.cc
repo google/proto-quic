@@ -17,11 +17,11 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <queue>
 #include <utility>
 
 #include "base/callback_helpers.h"
 #include "base/compiler_specific.h"
+#include "base/containers/queue.h"
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/location.h"
@@ -203,7 +203,7 @@ class FakeDataChannel {
 
   CompletionCallback write_callback_;
 
-  std::queue<scoped_refptr<DrainableIOBuffer> > data_;
+  base::queue<scoped_refptr<DrainableIOBuffer>> data_;
 
   // True if Close() has been called.
   bool closed_;

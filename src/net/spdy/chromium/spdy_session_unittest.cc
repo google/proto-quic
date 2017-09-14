@@ -155,7 +155,7 @@ class SpdySessionTest : public PlatformTest {
     DCHECK(!spdy_session_pool_);
     http_session_ =
         SpdySessionDependencies::SpdyCreateSession(&session_deps_);
-    auto test_push_delegate = base::MakeUnique<TestServerPushDelegate>();
+    auto test_push_delegate = std::make_unique<TestServerPushDelegate>();
     test_push_delegate_ = test_push_delegate.get();
     http_session_->SetServerPushDelegate(std::move(test_push_delegate));
     spdy_session_pool_ = http_session_->spdy_session_pool();
@@ -288,7 +288,7 @@ TEST_F(SpdySessionTest, PendingStreamCancellingAnother) {
   }
 
   SpdyStreamRequest request1;
-  auto request2 = base::MakeUnique<SpdyStreamRequest>();
+  auto request2 = std::make_unique<SpdyStreamRequest>();
 
   StreamRequestDestroyingCallback callback1;
   ASSERT_EQ(ERR_IO_PENDING,
@@ -646,7 +646,7 @@ TEST_F(SpdySessionTest, GoAwayWhileDraining) {
   size_t joint_size = goaway.size() * 2 + body.size();
 
   // Compose interleaved |goaway| and |body| frames into a single read.
-  auto buffer = base::MakeUnique<char[]>(joint_size);
+  auto buffer = std::make_unique<char[]>(joint_size);
   {
     size_t out = 0;
     memcpy(&buffer[out], goaway.data(), goaway.size());
@@ -1900,7 +1900,7 @@ TEST_F(SpdySessionTest, CancelPendingCreateStream) {
 
   // Use unique_ptr to let us invalidate the memory when we want to, to trigger
   // a valgrind error if the callback is invoked when it's not supposed to be.
-  auto callback = base::MakeUnique<TestCompletionCallback>();
+  auto callback = std::make_unique<TestCompletionCallback>();
 
   SpdyStreamRequest request;
   ASSERT_THAT(
@@ -3346,7 +3346,7 @@ TEST_F(SpdySessionTest, CloseOneIdleConnection) {
   scoped_refptr<TransportSocketParams> params2(new TransportSocketParams(
       host_port2, false, OnHostResolutionCallback(),
       TransportSocketParams::COMBINE_CONNECT_AND_WRITE_DEFAULT));
-  auto connection2 = base::MakeUnique<ClientSocketHandle>();
+  auto connection2 = std::make_unique<ClientSocketHandle>();
   EXPECT_EQ(ERR_IO_PENDING,
             connection2->Init(host_port2.ToString(), params2, DEFAULT_PRIORITY,
                               ClientSocketPool::RespectLimits::ENABLED,
@@ -3426,7 +3426,7 @@ TEST_F(SpdySessionTest, CloseOneIdleConnectionWithAlias) {
   scoped_refptr<TransportSocketParams> params3(new TransportSocketParams(
       host_port3, false, OnHostResolutionCallback(),
       TransportSocketParams::COMBINE_CONNECT_AND_WRITE_DEFAULT));
-  auto connection3 = base::MakeUnique<ClientSocketHandle>();
+  auto connection3 = std::make_unique<ClientSocketHandle>();
   EXPECT_EQ(ERR_IO_PENDING,
             connection3->Init(host_port3.ToString(), params3, DEFAULT_PRIORITY,
                               ClientSocketPool::RespectLimits::ENABLED,
@@ -3505,7 +3505,7 @@ TEST_F(SpdySessionTest, CloseSessionOnIdleWhenPoolStalled) {
   scoped_refptr<TransportSocketParams> params2(new TransportSocketParams(
       host_port2, false, OnHostResolutionCallback(),
       TransportSocketParams::COMBINE_CONNECT_AND_WRITE_DEFAULT));
-  auto connection2 = base::MakeUnique<ClientSocketHandle>();
+  auto connection2 = std::make_unique<ClientSocketHandle>();
   EXPECT_EQ(ERR_IO_PENDING,
             connection2->Init(host_port2.ToString(), params2, DEFAULT_PRIORITY,
                               ClientSocketPool::RespectLimits::ENABLED,
@@ -4563,6 +4563,120 @@ TEST_F(SpdySessionTest, ResumeByPriorityAfterSendWindowSizeIncrease) {
   EXPECT_TRUE(data.AllReadDataConsumed());
 }
 
+// An upload stream is stalled when the session gets unstalled, then the session
+// is stalled again when the stream gets unstalled.  The stream should not fail.
+// Regression test for https://crbug.com/761919.
+TEST_F(SpdySessionTest, ResumeSessionWithStalledStream) {
+  SpdySerializedFrame req1(spdy_util_.ConstructSpdyPost(
+      kDefaultUrl, 1, kBodyDataSize, LOWEST, nullptr, 0));
+  SpdySerializedFrame req2(spdy_util_.ConstructSpdyPost(
+      kDefaultUrl, 3, kBodyDataSize, LOWEST, nullptr, 0));
+  SpdySerializedFrame body1(
+      spdy_util_.ConstructSpdyDataFrame(3, kBodyData, kBodyDataSize, true));
+  SpdySerializedFrame body2(
+      spdy_util_.ConstructSpdyDataFrame(1, kBodyData, kBodyDataSize, true));
+  MockWrite writes[] = {CreateMockWrite(req1, 0), CreateMockWrite(req2, 1),
+                        CreateMockWrite(body1, 2), CreateMockWrite(body2, 3)};
+
+  SpdySerializedFrame resp1(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
+  SpdySerializedFrame resp2(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 3));
+  MockRead reads[] = {CreateMockRead(resp1, 4), CreateMockRead(resp2, 5),
+                      MockRead(ASYNC, 0, 6)};
+
+  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
+  session_deps_.socket_factory->AddSocketDataProvider(&data);
+
+  AddSSLSocketData();
+
+  CreateNetworkSession();
+  CreateSpdySession();
+
+  base::WeakPtr<SpdyStream> stream1 =
+      CreateStreamSynchronously(SPDY_REQUEST_RESPONSE_STREAM, session_,
+                                test_url_, LOWEST, NetLogWithSource());
+  ASSERT_TRUE(stream1);
+
+  test::StreamDelegateWithBody delegate1(stream1, kBodyDataStringPiece);
+  stream1->SetDelegate(&delegate1);
+
+  base::WeakPtr<SpdyStream> stream2 =
+      CreateStreamSynchronously(SPDY_REQUEST_RESPONSE_STREAM, session_,
+                                test_url_, LOWEST, NetLogWithSource());
+  ASSERT_TRUE(stream2);
+
+  test::StreamDelegateWithBody delegate2(stream2, kBodyDataStringPiece);
+  stream2->SetDelegate(&delegate2);
+
+  EXPECT_FALSE(stream1->send_stalled_by_flow_control());
+  EXPECT_FALSE(stream2->send_stalled_by_flow_control());
+
+  StallSessionSend();
+
+  SpdyHeaderBlock headers1(
+      spdy_util_.ConstructPostHeaderBlock(kDefaultUrl, kBodyDataSize));
+  EXPECT_EQ(ERR_IO_PENDING, stream1->SendRequestHeaders(std::move(headers1),
+                                                        MORE_DATA_TO_SEND));
+  EXPECT_EQ(kDefaultUrl, stream1->GetUrlFromHeaders().spec());
+
+  base::RunLoop().RunUntilIdle();
+  EXPECT_EQ(1u, stream1->stream_id());
+  EXPECT_TRUE(stream1->send_stalled_by_flow_control());
+
+  SpdyHeaderBlock headers2(
+      spdy_util_.ConstructPostHeaderBlock(kDefaultUrl, kBodyDataSize));
+  EXPECT_EQ(ERR_IO_PENDING, stream2->SendRequestHeaders(std::move(headers2),
+                                                        MORE_DATA_TO_SEND));
+  EXPECT_EQ(kDefaultUrl, stream2->GetUrlFromHeaders().spec());
+
+  base::RunLoop().RunUntilIdle();
+  EXPECT_EQ(3u, stream2->stream_id());
+  EXPECT_TRUE(stream2->send_stalled_by_flow_control());
+
+  StallStreamSend(stream1.get());
+
+  // At this point, both |session| and |stream1| are stalled
+  // by their respective flow control mechanisms.  Now unstall the session.
+  // This calls session->ResumeSendStalledStreams(), which calls
+  // stream1->PossiblyResumeIfSendStalled().  However, |stream1| is stalled, so
+  // no data are sent on that stream.  At this point, |stream1| should not be
+  // removed from session_->stream_send_unstall_queue_.
+  // Then stream2->PossiblyResumeIfSendStalled() is called,
+  // data are sent on |stream2|, and |session_| stalls again.
+  UnstallSessionSend(kBodyDataSize);
+
+  EXPECT_TRUE(stream1->send_stalled_by_flow_control());
+  EXPECT_FALSE(stream2->send_stalled_by_flow_control());
+
+  // Make sure that the session is stalled.  Otherwise
+  // stream1->PossiblyResumeIfSendStalled() would resume the stream as soon as
+  // the stream is unstalled, hiding the bug.
+  EXPECT_TRUE(session_->IsSendStalled());
+  UnstallStreamSend(stream1.get(), kBodyDataSize);
+
+  // Finally, unstall session.
+  UnstallSessionSend(kBodyDataSize);
+
+  EXPECT_FALSE(stream1->send_stalled_by_flow_control());
+  EXPECT_FALSE(stream2->send_stalled_by_flow_control());
+
+  base::RunLoop().RunUntilIdle();
+
+  EXPECT_THAT(delegate1.WaitForClose(), IsError(ERR_CONNECTION_CLOSED));
+  EXPECT_THAT(delegate2.WaitForClose(), IsError(ERR_CONNECTION_CLOSED));
+
+  EXPECT_TRUE(delegate1.send_headers_completed());
+  EXPECT_EQ("200", delegate1.GetResponseHeaderValue(":status"));
+  EXPECT_EQ(SpdyString(), delegate1.TakeReceivedData());
+
+  EXPECT_TRUE(delegate2.send_headers_completed());
+  EXPECT_EQ("200", delegate2.GetResponseHeaderValue(":status"));
+  EXPECT_EQ(SpdyString(), delegate2.TakeReceivedData());
+
+  EXPECT_FALSE(session_);
+  EXPECT_TRUE(data.AllWriteDataConsumed());
+  EXPECT_TRUE(data.AllReadDataConsumed());
+}
+
 // Delegate that closes a given stream after sending its body.
 class StreamClosingDelegate : public test::StreamDelegateWithBody {
  public:
@@ -5079,7 +5193,7 @@ TEST_F(SpdySessionTest, TrustedSpdyProxy) {
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
   session_deps_.socket_factory->AddSocketDataProvider(&data);
 
-  auto proxy_delegate = base::MakeUnique<TestProxyDelegate>();
+  auto proxy_delegate = std::make_unique<TestProxyDelegate>();
   proxy_delegate->set_trusted_spdy_proxy(
       net::ProxyServer(net::ProxyServer::SCHEME_HTTPS,
                        HostPortPair(GURL(kDefaultUrl).host(), 443)));
@@ -5429,10 +5543,12 @@ class SpdySessionReadIfReadyTest
       public testing::WithParamInterface<ReadIfReadySupport> {
  public:
   void SetUp() override {
-    if (GetParam() != READ_IF_READY_DISABLED)
-      scoped_feature_list_.InitAndEnableFeature(Socket::kReadIfReadyExperiment);
-    if (GetParam() == READ_IF_READY_ENABLED_SUPPORTED)
+    if (GetParam() == READ_IF_READY_DISABLED) {
+      scoped_feature_list_.InitAndDisableFeature(
+          Socket::kReadIfReadyExperiment);
+    } else if (GetParam() == READ_IF_READY_ENABLED_SUPPORTED) {
       session_deps_.socket_factory->set_enable_read_if_ready(true);
+    }
     SpdySessionTest::SetUp();
   }
 
@@ -5597,7 +5713,7 @@ class AltSvcFrameTest : public SpdySessionTest {
     reads_.push_back(CreateMockRead(altsvc_frame_, 0));
     reads_.push_back(MockRead(ASYNC, 0, 1));
 
-    data_ = base::MakeUnique<SequencedSocketData>(reads_.data(), reads_.size(),
+    data_ = std::make_unique<SequencedSocketData>(reads_.data(), reads_.size(),
                                                   nullptr, 0);
     session_deps_.socket_factory->AddSocketDataProvider(data_.get());
   }
@@ -5869,31 +5985,36 @@ TEST_F(AltSvcFrameTest, DoNotProcessAltSvcFrameOnNonExistentStream) {
 }
 
 TEST(MapFramerErrorToProtocolError, MapsValues) {
-  CHECK_EQ(
-      SPDY_ERROR_INVALID_CONTROL_FRAME,
-      MapFramerErrorToProtocolError(SpdyFramer::SPDY_INVALID_CONTROL_FRAME));
-  CHECK_EQ(
-      SPDY_ERROR_INVALID_DATA_FRAME_FLAGS,
-      MapFramerErrorToProtocolError(SpdyFramer::SPDY_INVALID_DATA_FRAME_FLAGS));
-  CHECK_EQ(
-      SPDY_ERROR_GOAWAY_FRAME_CORRUPT,
-      MapFramerErrorToProtocolError(SpdyFramer::SPDY_GOAWAY_FRAME_CORRUPT));
+  CHECK_EQ(SPDY_ERROR_INVALID_CONTROL_FRAME,
+           MapFramerErrorToProtocolError(
+               Http2DecoderAdapter::SPDY_INVALID_CONTROL_FRAME));
+  CHECK_EQ(SPDY_ERROR_INVALID_DATA_FRAME_FLAGS,
+           MapFramerErrorToProtocolError(
+               Http2DecoderAdapter::SPDY_INVALID_DATA_FRAME_FLAGS));
+  CHECK_EQ(SPDY_ERROR_GOAWAY_FRAME_CORRUPT,
+           MapFramerErrorToProtocolError(
+               Http2DecoderAdapter::SPDY_GOAWAY_FRAME_CORRUPT));
   CHECK_EQ(SPDY_ERROR_UNEXPECTED_FRAME,
-           MapFramerErrorToProtocolError(SpdyFramer::SPDY_UNEXPECTED_FRAME));
+           MapFramerErrorToProtocolError(
+               Http2DecoderAdapter::SPDY_UNEXPECTED_FRAME));
 }
 
 TEST(MapFramerErrorToNetError, MapsValue) {
   CHECK_EQ(ERR_SPDY_PROTOCOL_ERROR,
-           MapFramerErrorToNetError(SpdyFramer::SPDY_INVALID_CONTROL_FRAME));
-  CHECK_EQ(ERR_SPDY_COMPRESSION_ERROR,
-           MapFramerErrorToNetError(SpdyFramer::SPDY_COMPRESS_FAILURE));
-  CHECK_EQ(ERR_SPDY_COMPRESSION_ERROR,
-           MapFramerErrorToNetError(SpdyFramer::SPDY_DECOMPRESS_FAILURE));
+           MapFramerErrorToNetError(
+               Http2DecoderAdapter::SPDY_INVALID_CONTROL_FRAME));
+  CHECK_EQ(
+      ERR_SPDY_COMPRESSION_ERROR,
+      MapFramerErrorToNetError(Http2DecoderAdapter::SPDY_COMPRESS_FAILURE));
+  CHECK_EQ(
+      ERR_SPDY_COMPRESSION_ERROR,
+      MapFramerErrorToNetError(Http2DecoderAdapter::SPDY_DECOMPRESS_FAILURE));
+  CHECK_EQ(ERR_SPDY_FRAME_SIZE_ERROR,
+           MapFramerErrorToNetError(
+               Http2DecoderAdapter::SPDY_CONTROL_PAYLOAD_TOO_LARGE));
   CHECK_EQ(
       ERR_SPDY_FRAME_SIZE_ERROR,
-      MapFramerErrorToNetError(SpdyFramer::SPDY_CONTROL_PAYLOAD_TOO_LARGE));
-  CHECK_EQ(ERR_SPDY_FRAME_SIZE_ERROR,
-           MapFramerErrorToNetError(SpdyFramer::SPDY_OVERSIZED_PAYLOAD));
+      MapFramerErrorToNetError(Http2DecoderAdapter::SPDY_OVERSIZED_PAYLOAD));
 }
 
 TEST(MapRstStreamStatusToProtocolError, MapsValues) {

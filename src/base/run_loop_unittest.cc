@@ -67,7 +67,7 @@ class SimpleSingleThreadTaskRunner : public SingleThreadTaskRunner {
  public:
   SimpleSingleThreadTaskRunner() = default;
 
-  bool PostDelayedTask(const tracked_objects::Location& from_here,
+  bool PostDelayedTask(const Location& from_here,
                        OnceClosure task,
                        base::TimeDelta delay) override {
     if (delay > base::TimeDelta())
@@ -77,7 +77,7 @@ class SimpleSingleThreadTaskRunner : public SingleThreadTaskRunner {
     return true;
   }
 
-  bool PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
+  bool PostNonNestableDelayedTask(const Location& from_here,
                                   OnceClosure task,
                                   base::TimeDelta delay) override {
     return PostDelayedTask(from_here, std::move(task), delay);
@@ -118,13 +118,13 @@ class SimpleSingleThreadTaskRunner : public SingleThreadTaskRunner {
 
 // A simple test RunLoop::Delegate to exercise Runloop logic independent of any
 // other base constructs.
-class TestDelegate : public RunLoop::Delegate {
+class TestDelegate final : public RunLoop::Delegate {
  public:
   TestDelegate() = default;
 
   void BindToCurrentThread() {
     thread_task_runner_handle_ =
-        MakeUnique<ThreadTaskRunnerHandle>(simple_task_runner_);
+        std::make_unique<ThreadTaskRunnerHandle>(simple_task_runner_);
     run_loop_client_ = RunLoop::RegisterDelegateForCurrentThread(this);
   }
 
@@ -206,10 +206,10 @@ class RunLoopTestEnvironment {
   RunLoopTestEnvironment(RunLoopTestType type) {
     switch (type) {
       case RunLoopTestType::kRealEnvironment:
-        task_environment_ = base::MakeUnique<test::ScopedTaskEnvironment>();
+        task_environment_ = std::make_unique<test::ScopedTaskEnvironment>();
         break;
       case RunLoopTestType::kTestDelegate:
-        test_delegate_ = base::MakeUnique<TestDelegate>();
+        test_delegate_ = std::make_unique<TestDelegate>();
         test_delegate_->BindToCurrentThread();
         break;
     }
@@ -523,6 +523,17 @@ TEST_P(RunLoopTest, DisallowNestingDeathTest) {
   EXPECT_DEATH({ run_loop_.RunUntilIdle(); }, "");
 }
 #endif  // defined(GTEST_HAS_DEATH_TEST) && !defined(OS_ANDROID)
+
+TEST_P(RunLoopTest, DisallowRunningForTesting) {
+  RunLoop::ScopedDisallowRunningForTesting disallow_running;
+  EXPECT_DCHECK_DEATH({ run_loop_.Run(); });
+}
+
+TEST_P(RunLoopTest, ExpiredDisallowRunningForTesting) {
+  { RunLoop::ScopedDisallowRunningForTesting disallow_running; }
+  // Running should be fine after |disallow_running| goes out of scope.
+  run_loop_.RunUntilIdle();
+}
 
 INSTANTIATE_TEST_CASE_P(Real,
                         RunLoopTest,

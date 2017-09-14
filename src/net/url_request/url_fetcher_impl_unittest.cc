@@ -191,7 +191,7 @@ class FetcherTestURLRequestContext : public TestURLRequestContext {
     context_storage_.set_host_resolver(
         std::unique_ptr<HostResolver>(mock_resolver_));
     context_storage_.set_throttler_manager(
-        base::MakeUnique<URLRequestThrottlerManager>());
+        std::make_unique<URLRequestThrottlerManager>());
     Init();
   }
 
@@ -530,7 +530,7 @@ TEST_F(URLFetcherTest, DifferentThreadsTest) {
 // the expected response is received.
 TEST_F(URLFetcherTest, SequencedTaskTest) {
   auto sequenced_task_runner = base::CreateSequencedTaskRunnerWithTraits({});
-  auto delegate = base::MakeUnique<WaitingURLFetcherDelegate>();
+  auto delegate = std::make_unique<WaitingURLFetcherDelegate>();
   sequenced_task_runner->PostTask(
       FROM_HERE, base::Bind(&WaitingURLFetcherDelegate::CreateFetcher,
                             base::Unretained(delegate.get()),

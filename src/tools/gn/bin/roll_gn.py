@@ -41,28 +41,29 @@ import tempfile
 import time
 import urllib2
 
-depot_tools_path = None
-for p in os.environ['PATH'].split(os.pathsep):
-  if (p.rstrip(os.sep).endswith('depot_tools') and
-      os.path.isfile(os.path.join(p, 'gclient.py'))):
-    depot_tools_path = p
 
-assert depot_tools_path
+depot_tools_path = os.path.abspath(os.path.normpath(os.path.join(
+    os.path.dirname(__file__), '..', '..', '..', 'third_party', 'depot_tools')))
 if not depot_tools_path in sys.path:
   sys.path.insert(0, depot_tools_path)
-
-third_party_path = os.path.join(depot_tools_path, 'third_party')
-if not third_party_path in sys.path:
-  sys.path.insert(0, third_party_path)
-
-import upload
 
 
 CHROMIUM_REPO = 'https://chromium.googlesource.com/chromium/src.git'
 
-CODE_REVIEW_SERVER = 'https://codereview.chromium.org'
-
 COMMITISH_DIGITS = 10
+
+UNKNOWN, PENDING, STARTED, SUCCESS = (
+  'unknown', 'pending', 'started', 'success')
+
+class BuildResult(object):
+  def __init__(self):
+    self.masterName = '-'
+    self.builderName = '-'
+    self.buildNumber = '-'
+    self.state = UNKNOWN
+    self.sha1 = '-'
+    self.url = '-'
+
 
 class GNRoller(object):
   def __init__(self):
@@ -98,8 +99,8 @@ class GNRoller(object):
     return ret
 
   def SetUp(self):
-    if sys.platform != 'linux2':
-      print('roll_gn is only tested and working on Linux for now.')
+    if sys.platform not in ('darwin', 'linux2'):
+      print('roll_gn is only tested and working on Linux and Mac for now.')
       return 1
 
     ret, out, _ = self.Call('git config --get remote.origin.url')
@@ -155,7 +156,7 @@ class GNRoller(object):
 
     print('Uploading CL to build GN at {#%s} - %s' %
           (self.new_gn_version, self.new_gn_commitish))
-    ret, out, err = self.Call('git cl upload --rietveld -f')
+    ret, out, err = self.Call('git cl upload -f')
     if ret:
       print('git-cl upload failed: %s' % out + err)
       return 1
@@ -186,15 +187,14 @@ class GNRoller(object):
 
     print('Checking build')
     results = self.CheckBuild()
-    while (any(r['state'] in ('pending', 'started')
-               for r in results.values())):
+    while (any(r.state in (PENDING, STARTED) for r in results.values())):
       print()
       print('Sleeping for 30 seconds')
       time.sleep(30)
       print('Checking build')
       results = self.CheckBuild()
 
-    ret = 0 if all(r['state'] == 'success' for r in results.values()) else 1
+    ret = 0 if all(r.state == SUCCESS for r in results.values()) else 1
     if ret:
       print('Build failed.')
     else:
@@ -218,91 +218,75 @@ class GNRoller(object):
     return ret
 
   def CheckBuild(self):
-    _, out, _ = self.Call('git-cl issue')
+    _, out, _ = self.Call('git-cl try-results')
 
-    issue = int(out.split()[2])
-
-    _, out, _ = self.Call('git config user.email')
-    email = ''
-    rpc_server = upload.GetRpcServer(CODE_REVIEW_SERVER, email)
-    try:
-      props = json.loads(rpc_server.Send('/api/%d' % issue))
-    except Exception as e:
-      print('Failed to load patch data: %s' % e)
-      return {}
-
-    patchset = int(props['patchsets'][-1])
-
-    try:
-      try_job_results = json.loads(rpc_server.Send(
-          '/api/%d/%d/try_job_results' % (issue, patchset)))
-    except Exception as e:
-      print('Failed to load try job results: %s' % e)
-      return {}
-
-    if not try_job_results:
-      print('No try jobs found on most recent patchset')
-      return {}
+    builders = {
+        'linux_chromium_gn_upload': 'linux64',
+        'mac_chromium_gn_upload': 'mac',
+        'win8_chromium_gn_upload': 'win'
+    }
 
     results = {}
-    for job in try_job_results:
-      builder = job['builder']
-      if builder == 'linux_chromium_gn_upload':
-        platform = 'linux64'
-      elif builder == 'mac_chromium_gn_upload':
-        platform = 'mac'
-      elif builder == 'win8_chromium_gn_upload':
-        platform = 'win'
-      else:
-        print('Unexpected builder: %s')
-        continue
+    for platform in ('linux64', 'mac', 'win'):
+      results[platform] = BuildResult()
 
-      TRY_JOB_RESULT_STATES = ('started', 'success', 'warnings', 'failure',
-                               'skipped', 'exception', 'retry', 'pending')
-      state = TRY_JOB_RESULT_STATES[int(job['result']) + 1]
-      url_str = ' %s' % job['url']
-      build = url_str.split('/')[-1]
+    state = PENDING
+    for line in out.splitlines():
+      fields = line.strip().split()
+      if fields[0] == 'Started:':
+        state = STARTED
+      if fields[0] == 'Successes:':
+        state = SUCCESS
+      elif fields[0] == 'Total':
+        pass
+      elif fields[0] in builders:
+        builder = fields[0]
+        platform = builders[builder]
+        result = results[platform]
+        result.masterName = ('tryserver.chromium.%s' %
+                                platform.replace('linux64', 'linux'))
+        result.builderName = builder
+        result.url = fields[1]
+        if result.url.startswith('id'):
+          result.state = PENDING
+        else:
+          result.state = state
+          result.buildNumber = int(result.url[result.url.rfind('/')+1:])
 
-      sha1 = '-'
-      results.setdefault(platform, {'build': -1, 'sha1': '', 'url': url_str})
+    for result in results.values():
+      if result.state == SUCCESS:
+        url = 'https://luci-milo.appspot.com/prpc/milo.BuildInfo/Get'
+        data = json.dumps({"buildbot": {
+            'masterName': result.masterName,
+            'builderName': result.builderName,
+            'buildNumber': result.buildNumber,
+            }})
+        headers = {
+            'content-type': 'application/json',
+            'accept': 'application/json',
+        }
 
-      if state == 'success':
-        jsurl = url_str.replace('http://build.chromium.org/',
-                                'http://chrome-build-extract.appspot.com/')
-        jsurl = jsurl + '?json=1'
-        try:
-          fp = urllib2.urlopen(jsurl)
-        except urllib2.HTTPError as e:
-          print('Failed to open %s: %s' % (jsurl, e))
-          return {}
+        req = urllib2.Request(url, data, headers)
+        resp = urllib2.urlopen(req)
+        data = resp.read()
+        resp.close()
 
-        js = json.loads(fp.read())
-        fp.close()
+        # The first line of the response is garbage; skip it.
+        js = json.loads(data.splitlines()[1])
+
         sha1_step_name = 'gn sha1'
-        for step in js['steps']:
-          if step['name'] == sha1_step_name:
-            # TODO: At some point infra changed the step text to
-            # contain the step name; once all of the masters have been
-            # restarted we can probably assert that the step text
-            # with the step_name.
-            sha1_step_text_prefix = sha1_step_name + '<br>'
-            if step['text'][-1].startswith(sha1_step_text_prefix):
-              sha1 = step['text'][-1][len(sha1_step_text_prefix):]
-            else:
-              sha1 = step['text'][-1]
+        for step in js['step']['substep']:
+          if step['step']['name'] == sha1_step_name:
+            sha1 = step['step']['text'][-1]
 
-      if results[platform]['build'] < build:
-        results[platform]['build'] = build
-        results[platform]['sha1'] = sha1
-        results[platform]['state'] = state
-        results[platform]['url'] = url_str
+        result.sha1 = sha1
 
     for platform, r in results.items():
       print(platform)
-      print('  sha1:  %s' % r['sha1'])
-      print('  state: %s' % r['state'])
-      print('  build: %s' % r['build'])
-      print('  url:   %s' % r['url'])
+      print('  sha1:  %s' % r.sha1)
+      print('  state: %s' % r.state)
+      print('  build: %s' % r.buildNumber)
+      print('  url:   %s' % r.url)
       print()
 
     return results
@@ -314,8 +298,8 @@ class GNRoller(object):
 
     results = self.CheckBuild()
     if (len(results) < 3 or
-        not all(r['state'] == 'success' for r in results.values()) or
-        not all(r['sha1'] != '-' for r in results.values())):
+        not all(r.state == SUCCESS for r in results.values()) or
+        not all(r.sha1 != '-' for r in results.values())):
       print("Roll isn't done or didn't succeed, exiting:")
       return 1
 
@@ -328,7 +312,7 @@ class GNRoller(object):
       fname = 'gn.exe.sha1' if platform == 'win' else 'gn.sha1'
       path = os.path.join(self.buildtools_dir, platform, fname)
       with open(path, 'w') as fp:
-        fp.write('%s\n' % results[platform]['sha1'])
+        fp.write('%s\n' % results[platform].sha1)
 
     desc_file = tempfile.NamedTemporaryFile(delete=False)
     try:
@@ -336,7 +320,7 @@ class GNRoller(object):
       desc_file.close()
       self.Call('git commit -a -F %s' % desc_file.name,
                 cwd=self.buildtools_dir)
-      self.Call('git-cl upload --rietveld -f --send-mail',
+      self.Call('git-cl upload -f --send-mail',
                 cwd=self.buildtools_dir)
     finally:
       os.remove(desc_file.name)
@@ -401,7 +385,7 @@ class GNRoller(object):
       desc_file.write(desc)
       desc_file.close()
       self.Call('git commit -a -F %s' % desc_file.name)
-      self.Call('git-cl upload --rietveld -f --send-mail --use-commit-queue')
+      self.Call('git-cl upload -f --send-mail --use-commit-queue')
     finally:
       os.remove(desc_file.name)
 

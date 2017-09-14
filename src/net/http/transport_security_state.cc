@@ -101,13 +101,13 @@ std::string TimeToISO8601(const base::Time& t) {
 std::unique_ptr<base::ListValue> GetPEMEncodedChainAsList(
     const net::X509Certificate* cert_chain) {
   if (!cert_chain)
-    return base::MakeUnique<base::ListValue>();
+    return std::make_unique<base::ListValue>();
 
   std::unique_ptr<base::ListValue> result(new base::ListValue());
   std::vector<std::string> pem_encoded_chain;
   cert_chain->GetPEMEncodedChain(&pem_encoded_chain);
   for (const std::string& cert : pem_encoded_chain)
-    result->Append(base::MakeUnique<base::Value>(cert));
+    result->Append(std::make_unique<base::Value>(cert));
 
   return result;
 }
@@ -741,7 +741,7 @@ bool SerializeExpectStapleReport(const HostPortPair& host_port_pair,
 
 // static
 const base::Feature TransportSecurityState::kDynamicExpectCTFeature{
-    "DynamicExpectCT", base::FEATURE_DISABLED_BY_DEFAULT};
+    "DynamicExpectCT", base::FEATURE_ENABLED_BY_DEFAULT};
 
 void SetTransportSecurityStateSourceForTesting(
     const TransportSecurityStateSource* source) {

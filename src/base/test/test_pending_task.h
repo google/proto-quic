@@ -22,7 +22,7 @@ struct TestPendingTask {
 
   TestPendingTask();
   TestPendingTask(TestPendingTask&& other);
-  TestPendingTask(const tracked_objects::Location& location,
+  TestPendingTask(const Location& location,
                   OnceClosure task,
                   TimeTicks post_time,
                   TimeDelta delay,
@@ -52,7 +52,7 @@ struct TestPendingTask {
   //   - std::sort.
   bool ShouldRunBefore(const TestPendingTask& other) const;
 
-  tracked_objects::Location location;
+  Location location;
   OnceClosure task;
   TimeTicks post_time;
   TimeDelta delay;

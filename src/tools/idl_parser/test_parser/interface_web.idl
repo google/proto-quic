@@ -7,10 +7,6 @@
 Run with --test to generate an AST and verify that all comments accurately
 reflect the state of the Nodes.
 
-BUILD Type(Name)
-This comment signals that a node of type <Type> is created with the
-name <Name>.
-
 ERROR Error String
 This comment signals that a error of <Error String> is generated.  The error
 is not assigned to a node, but are expected in order.
@@ -39,6 +35,7 @@ interface MyIFaceInherit : Foo {};
 
 /** TREE
  *Interface(MyIFacePartial)
+ *  PARTIAL: True
  */
 partial interface MyIFacePartial { };
 
@@ -102,7 +99,8 @@ interface MyIFaceWrongRecordKeyType {
  *Interface(MyIFaceBig)
  *  Const(setString)
  *    StringType(DOMString)
- *    Value(NULL)
+ *      NULLABLE: True
+ *    Value() = "NULL"
  */
 interface MyIFaceBig {
   const DOMString? setString = null;
@@ -113,11 +111,12 @@ interface MyIFaceBig {
  *  Operation(foo)
  *    Arguments()
  *      Argument(arg)
+ *        OPTIONAL: True
  *        Type()
  *          Sequence()
  *            Type()
  *              StringType(DOMString)
- *        Default()
+ *        Default() = "[]"
  *    Type()
  *      PrimitiveType(void)
  */
@@ -135,6 +134,8 @@ interface MyIfaceEmptySequenceDefalutValue {
  *            StringType(DOMString)
  *            Type()
  *              PrimitiveType(long)
+ *              ExtAttributes()
+ *                ExtAttribute(EnforceRange)
  *    Type()
  *      PrimitiveType(void)
  *  Operation(bar)
@@ -152,7 +153,7 @@ interface MyIfaceEmptySequenceDefalutValue {
  *      PrimitiveType(double)
  */
 interface MyIfaceWithRecords {
-  void foo(record<DOMString, long> arg);
+  void foo(record<DOMString, [EnforceRange] long> arg);
   double bar(int arg1, record<ByteString, float> arg2);
 };
 
@@ -160,20 +161,23 @@ interface MyIfaceWithRecords {
  *Interface(MyIFaceBig2)
  *  Const(nullValue)
  *    StringType(DOMString)
- *    Value(NULL)
+ *      NULLABLE: True
+ *    Value() = "NULL"
  *  Const(longValue)
  *    PrimitiveType(long)
- *    Value(123)
+ *    Value() = "123"
  *  Const(longValue2)
  *    PrimitiveType(long long)
- *    Value(123)
+ *    Value() = "123"
  *  Attribute(myString)
  *    Type()
  *      StringType(DOMString)
  *  Attribute(readOnlyString)
+ *    READONLY: True
  *    Type()
  *      StringType(DOMString)
  *  Attribute(staticString)
+ *    STATIC: True
  *    Type()
  *      StringType(DOMString)
  *  Operation(myFunction)
@@ -184,6 +188,7 @@ interface MyIfaceWithRecords {
  *    Type()
  *      PrimitiveType(void)
  *  Operation(staticFunction)
+ *    STATIC: True
  *    Arguments()
  *      Argument(myLong)
  *        Type()
@@ -202,10 +207,11 @@ interface MyIFaceBig2 {
   static void staticFunction(long long myLong);
 };
 
-
 /** TREE
  *Interface(MyIFaceSpecials)
  *  Operation(set)
+ *    CREATOR: True
+ *    SETTER: True
  *    Arguments()
  *      Argument(property)
  *        Type()
@@ -213,26 +219,17 @@ interface MyIFaceBig2 {
  *    Type()
  *      PrimitiveType(void)
  *  Operation(_unnamed_)
+ *    GETTER: True
  *    Arguments()
  *      Argument(property)
  *        Type()
  *          StringType(DOMString)
  *    Type()
  *      PrimitiveType(double)
- *  Operation(GetFiveSix)
- *    Arguments()
- *      Argument(arg)
- *        Type()
- *          Typeref(SomeType)
- *    Type()
- *      PrimitiveType(long long)
- *      Array(5)
- *        Array(6)
  */
 interface MyIFaceSpecials {
   setter creator void set(DOMString property);
   getter double (DOMString property);
-  long long [5][6] GetFiveSix(SomeType arg);
 };
 
 /** TREE
@@ -268,10 +265,10 @@ interface MyIFaceStringifiers {
  *      PrimitiveType(void)
  *    ExtAttributes()
  *      ExtAttribute(Attr)
- *      ExtAttribute(MethodIdentList)
+ *      ExtAttribute(MethodIdentList) = "['Foo', 'Bar']"
  *  ExtAttributes()
  *    ExtAttribute(MyExtendedAttribute)
- *    ExtAttribute(MyExtendedIdentListAttribute)
+ *    ExtAttribute(MyExtendedIdentListAttribute) = "['Foo', 'Bar', 'Baz']"
  */
 [MyExtendedAttribute,
  MyExtendedIdentListAttribute=(Foo, Bar, Baz)]
@@ -323,15 +320,45 @@ interface MyIfacePromise {
  *      PrimitiveType(double)
  *    Type()
  *      StringType(DOMString)
+ *  Iterable()
+ *    Type()
+ *      PrimitiveType(long)
+ *      ExtAttributes()
+ *        ExtAttribute(Clamp)
+ *  Iterable()
+ *    Type()
+ *      StringType(DOMString)
+ *      ExtAttributes()
+ *        ExtAttribute(TreatNullAs) = "EmptyString"
+ *  Iterable()
+ *    Type()
+ *      PrimitiveType(long)
+ *      ExtAttributes()
+ *        ExtAttribute(Clamp)
+ *        ExtAttribute(XAttr)
+ *  Iterable()
+ *    Type()
+ *      PrimitiveType(long)
+ *      ExtAttributes()
+ *        ExtAttribute(Clamp)
+ *    Type()
+ *      PrimitiveType(long long)
+ *      ExtAttributes()
+ *        ExtAttribute(EnforceRange)
  */
 interface MyIfaceIterable {
   iterable<long>;
   iterable<double, DOMString>;
+  iterable<[Clamp] long>;
+  iterable<[TreatNullAs=EmptyString] DOMString>;
+  iterable<[Clamp, XAttr] long>;
+  iterable<[Clamp] long, [EnforceRange] long long>;
 };
 
 /** TREE
  *Interface(MyIfaceMaplike)
  *  Maplike()
+ *    READONLY: True
  *    Type()
  *      PrimitiveType(long)
  *    Type()
@@ -341,24 +368,41 @@ interface MyIfaceIterable {
  *      PrimitiveType(double)
  *    Type()
  *      PrimitiveType(boolean)
+ *  Maplike()
+ *    Type()
+ *      PrimitiveType(long)
+ *      ExtAttributes()
+ *        ExtAttribute(Clamp)
+ *    Type()
+ *      StringType(DOMString)
+ *      ExtAttributes()
+ *        ExtAttribute(XAttr)
  */
 interface MyIfaceMaplike {
   readonly maplike<long, DOMString>;
   maplike<double, boolean>;
+  maplike<[Clamp] long, [XAttr] DOMString>;
 };
 
 /** TREE
  *Interface(MyIfaceSetlike)
  *  Setlike()
+ *    READONLY: True
  *    Type()
  *      PrimitiveType(long)
  *  Setlike()
  *    Type()
  *      PrimitiveType(double)
+ *  Setlike()
+ *    Type()
+ *      PrimitiveType(long)
+ *      ExtAttributes()
+ *        ExtAttribute(EnforceRange)
  */
 interface MyIfaceSetlike {
   readonly setlike<long>;
   setlike<double>;
+  setlike<[EnforceRange] long>;
 };
 
 /** TREE
@@ -370,26 +414,38 @@ interface MyIfaceSetlike {
  *      Type()
  *        Any()
  *  Serializer()
+ *    ATTRIBUTE: name
  *  Serializer()
  *    Map()
  *  Serializer()
  *    Map()
+ *      GETTER: True
  *  Serializer()
  *    Map()
+ *      ATTRIBUTE: True
  *  Serializer()
  *    Map()
+ *      ATTRIBUTE: True
+ *      INHERIT: True
  *  Serializer()
  *    Map()
+ *      INHERIT: True
+ *      ATTRIBUTES: None
  *  Serializer()
  *    Map()
+ *      INHERIT: True
+ *      ATTRIBUTES: ['name1', 'name2']
  *  Serializer()
  *    Map()
+ *      ATTRIBUTES: ['name1', 'name2']
  *  Serializer()
  *    List()
  *  Serializer()
  *    List()
+ *      GETTER: True
  *  Serializer()
  *    List()
+ *      ATTRIBUTES: ['name1', 'name2']
  */
 interface MyIfaceSerializer {
   serializer;
@@ -410,6 +466,7 @@ interface MyIfaceSerializer {
 /** TREE
  *Interface(MyIfaceFrozenArray)
  *  Attribute(foo)
+ *    READONLY: True
  *    Type()
  *      FrozenArray()
  *        Type()
@@ -431,4 +488,61 @@ interface MyIfaceFrozenArray {
  */
 interface MyIfaceUnion {
   attribute (DOMString or long) foo;
+};
+
+/** TREE
+ *Interface(MyIfaceAttributeRestClamp)
+ *  Attribute(myLong)
+ *    Type()
+ *      PrimitiveType(long)
+ *      ExtAttributes()
+ *        ExtAttribute(Clamp)
+ */
+interface MyIfaceAttributeRestClamp {
+  attribute [Clamp] long myLong;
+};
+
+/** TREE
+ *Interface(MyIFaceArgumentWithAnnotatedType1)
+ *  Operation(myFunction)
+ *    Arguments()
+ *      Argument(myLong)
+ *        OPTIONAL: True
+ *        Type()
+ *          PrimitiveType(long long)
+ *          ExtAttributes()
+ *            ExtAttribute(Clamp)
+ *    Type()
+ *      PrimitiveType(void)
+ */
+interface MyIFaceArgumentWithAnnotatedType1 {
+  void myFunction(optional [Clamp] long long myLong);
+};
+
+/** TREE
+ *Interface(MyIFaceArgumentWithAnnotatedType2)
+ *  Operation(voidMethodTestArgumentWithExtAttribute1)
+ *    Arguments()
+ *      Argument(myLong)
+ *        Type()
+ *          PrimitiveType(long long)
+ *          ExtAttributes()
+ *            ExtAttribute(Clamp)
+ *        ExtAttributes()
+ *          ExtAttribute(XAttr)
+ *    Type()
+ *      PrimitiveType(void)
+ *  Operation(voidMethodTestArgumentWithExtAttribute2)
+ *    Arguments()
+ *      Argument(longArg)
+ *        Type()
+ *          PrimitiveType(long)
+ *          ExtAttributes()
+ *            ExtAttribute(EnforceRange)
+ *    Type()
+ *      PrimitiveType(void)
+ */
+interface MyIFaceArgumentWithAnnotatedType2 {
+  void voidMethodTestArgumentWithExtAttribute1([Clamp, XAttr] long long myLong);
+  void voidMethodTestArgumentWithExtAttribute2([EnforceRange] long longArg);
 };

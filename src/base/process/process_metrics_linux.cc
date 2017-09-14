@@ -24,7 +24,6 @@
 #include "base/strings/string_split.h"
 #include "base/strings/string_tokenizer.h"
 #include "base/strings/string_util.h"
-#include "base/sys_info.h"
 #include "base/threading/thread_restrictions.h"
 #include "build/build_config.h"
 
@@ -256,7 +255,7 @@ bool ProcessMetrics::GetWorkingSetKBytes(WorkingSetKBytes* ws_usage) const {
   return GetWorkingSetKBytesStatm(ws_usage);
 }
 
-double ProcessMetrics::GetCPUUsage() {
+double ProcessMetrics::GetPlatformIndependentCPUUsage() {
   TimeTicks time = TimeTicks::Now();
 
   if (last_cpu_ == 0) {
@@ -334,6 +333,25 @@ uint64_t ProcessMetrics::GetVmSwapBytes() const {
 }
 #endif  // defined(OS_LINUX) || defined(OS_ANDROID)
 
+#if defined(OS_LINUX) || defined(OS_ANDROID)
+bool ProcessMetrics::GetPageFaultCounts(PageFaultCounts* counts) const {
+  // We are not using internal::ReadStatsFileAndGetFieldAsInt64(), since it
+  // would read the file twice, and return inconsistent numbers.
+  std::string stats_data;
+  if (!internal::ReadProcStats(process_, &stats_data))
+    return false;
+  std::vector<std::string> proc_stats;
+  if (!internal::ParseProcStats(stats_data, &proc_stats))
+    return false;
+
+  counts->minor =
+      internal::GetProcStatsFieldAsInt64(proc_stats, internal::VM_MINFLT);
+  counts->major =
+      internal::GetProcStatsFieldAsInt64(proc_stats, internal::VM_MAJFLT);
+  return true;
+}
+#endif  // defined(OS_LINUX) || defined(OS_ANDROID)
+
 #if defined(OS_LINUX) || defined(OS_AIX)
 int ProcessMetrics::GetOpenFdCount() const {
   // Use /proc/<pid>/fd to count the number of entries there.
@@ -386,7 +404,6 @@ ProcessMetrics::ProcessMetrics(ProcessHandle process)
       last_absolute_idle_wakeups_(0),
 #endif
       last_cpu_(0) {
-  processor_count_ = SysInfo::NumberOfProcessors();
 }
 
 #if defined(OS_CHROMEOS)
@@ -600,7 +617,7 @@ const size_t kDiskWeightedIOTime = 13;
 }  // namespace
 
 std::unique_ptr<Value> SystemMemoryInfoKB::ToValue() const {
-  auto res = base::MakeUnique<DictionaryValue>();
+  auto res = std::make_unique<DictionaryValue>();
   res->SetInteger("total", total);
   res->SetInteger("free", free);
   res->SetInteger("available", available);
@@ -795,7 +812,7 @@ SystemDiskInfo::SystemDiskInfo() {
 SystemDiskInfo::SystemDiskInfo(const SystemDiskInfo& other) = default;
 
 std::unique_ptr<Value> SystemDiskInfo::ToValue() const {
-  auto res = base::MakeUnique<DictionaryValue>();
+  auto res = std::make_unique<DictionaryValue>();
 
   // Write out uint64_t variables as doubles.
   // Note: this may discard some precision, but for JS there's no other option.
@@ -924,7 +941,7 @@ TimeDelta GetUserCpuTimeSinceBoot() {
 
 #if defined(OS_CHROMEOS)
 std::unique_ptr<Value> SwapInfo::ToValue() const {
-  auto res = base::MakeUnique<DictionaryValue>();
+  auto res = std::make_unique<DictionaryValue>();
 
   // Write out uint64_t variables as doubles.
   // Note: this may discard some precision, but for JS there's no other option.

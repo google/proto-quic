@@ -17,6 +17,8 @@ public class AndroidProxyConfigServiceTestUtil {
      */
     @CalledByNative
     private static void prepareLooper() {
-        Looper.prepare();
+        if (Looper.myLooper() == null) {
+            Looper.prepare();
+        }
     }
 }

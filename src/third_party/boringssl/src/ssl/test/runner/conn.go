@@ -151,14 +151,15 @@ func (c *Conn) SetWriteDeadline(t time.Time) error {
 type halfConn struct {
 	sync.Mutex
 
-	err     error  // first permanent error
-	version uint16 // protocol version
-	isDTLS  bool
-	cipher  interface{} // cipher algorithm
-	mac     macFunction
-	seq     [8]byte // 64-bit sequence number
-	outSeq  [8]byte // Mapped sequence number
-	bfree   *block  // list of free blocks
+	err         error  // first permanent error
+	version     uint16 // protocol version
+	wireVersion uint16 // wire version
+	isDTLS      bool
+	cipher      interface{} // cipher algorithm
+	mac         macFunction
+	seq         [8]byte // 64-bit sequence number
+	outSeq      [8]byte // Mapped sequence number
+	bfree       *block  // list of free blocks
 
 	nextCipher interface{} // next encryption state
 	nextMac    macFunction // next MAC algorithm
@@ -188,7 +189,12 @@ func (hc *halfConn) error() error {
 // prepareCipherSpec sets the encryption and MAC states
 // that a subsequent changeCipherSpec will use.
 func (hc *halfConn) prepareCipherSpec(version uint16, cipher interface{}, mac macFunction) {
-	hc.version = version
+	hc.wireVersion = version
+	protocolVersion, ok := wireToVersion(version, hc.isDTLS)
+	if !ok {
+		panic("TLS: unknown version")
+	}
+	hc.version = protocolVersion
 	hc.nextCipher = cipher
 	hc.nextMac = mac
 }
@@ -215,7 +221,12 @@ func (hc *halfConn) changeCipherSpec(config *Config) error {
 
 // useTrafficSecret sets the current cipher state for TLS 1.3.
 func (hc *halfConn) useTrafficSecret(version uint16, suite *cipherSuite, secret []byte, side trafficDirection) {
-	hc.version = version
+	hc.wireVersion = version
+	protocolVersion, ok := wireToVersion(version, hc.isDTLS)
+	if !ok {
+		panic("TLS: unknown version")
+	}
+	hc.version = protocolVersion
 	hc.cipher = deriveTrafficAEAD(version, suite, secret, side)
 	if hc.config.Bugs.NullAllCiphers {
 		hc.cipher = nullCipher{}
@@ -237,7 +248,7 @@ func (hc *halfConn) doKeyUpdate(c *Conn, isOutgoing bool) {
 	if c.isClient == isOutgoing {
 		side = clientWrite
 	}
-	hc.useTrafficSecret(hc.version, c.cipherSuite, updateTrafficSecret(c.cipherSuite.hash(), hc.trafficSecret), side)
+	hc.useTrafficSecret(hc.wireVersion, c.cipherSuite, updateTrafficSecret(c.cipherSuite.hash(), hc.trafficSecret), side)
 }
 
 // incSeq increments the sequence number.
@@ -781,6 +792,9 @@ RestartReadRecord:
 			if c.vers >= VersionTLS13 {
 				expect = VersionTLS10
 			}
+			if isResumptionRecordVersionExperiment(c.wireVersion) {
+				expect = VersionTLS12
+			}
 		} else {
 			expect = c.config.Bugs.ExpectInitialRecordVersion
 		}
@@ -929,7 +943,7 @@ Again:
 			c.in.setErrorLocked(c.sendAlert(alertUnexpectedMessage))
 			break
 		}
-		if c.wireVersion != tls13ExperimentVersion {
+		if !isResumptionExperiment(c.wireVersion) {
 			err := c.in.changeCipherSpec(c.config)
 			if err != nil {
 				c.in.setErrorLocked(c.sendAlert(err.(alert)))
@@ -1125,6 +1139,11 @@ func (c *Conn) doWriteRecord(typ recordType, data []byte) (n int, err error) {
 			// layer to {3, 1}.
 			vers = VersionTLS10
 		}
+		if isResumptionRecordVersionExperiment(c.wireVersion) || isResumptionRecordVersionExperiment(c.out.wireVersion) {
+			vers = VersionTLS12
+		} else {
+		}
+
 		if c.config.Bugs.SendRecordVersion != 0 {
 			vers = c.config.Bugs.SendRecordVersion
 		}
@@ -1156,7 +1175,7 @@ func (c *Conn) doWriteRecord(typ recordType, data []byte) (n int, err error) {
 	}
 	c.out.freeBlock(b)
 
-	if typ == recordTypeChangeCipherSpec && c.wireVersion != tls13ExperimentVersion {
+	if typ == recordTypeChangeCipherSpec && !isResumptionExperiment(c.wireVersion) {
 		err = c.out.changeCipherSpec(c.config)
 		if err != nil {
 			return n, c.sendAlertLocked(alertLevelError, err.(alert))
@@ -1458,6 +1477,7 @@ func (c *Conn) processTLS13NewSessionTicket(newSessionTicket *newSessionTicketMs
 	session := &ClientSessionState{
 		sessionTicket:      newSessionTicket.ticket,
 		vers:               c.vers,
+		wireVersion:        c.wireVersion,
 		cipherSuite:        cipherSuite.id,
 		masterSecret:       c.resumptionSecret,
 		serverCertificates: c.peerCertificates,
@@ -1881,6 +1901,10 @@ func (c *Conn) sendFakeEarlyData(len int) error {
 	payload[0] = byte(recordTypeApplicationData)
 	payload[1] = 3
 	payload[2] = 1
+	if c.config.TLS13Variant == TLS13Experiment2 || c.config.TLS13Variant == TLS13Experiment3 {
+		payload[1] = 3
+		payload[2] = 3
+	}
 	payload[3] = byte(len >> 8)
 	payload[4] = byte(len)
 	_, err := c.conn.Write(payload)

@@ -62,6 +62,7 @@ class Queue : public Actor, public UnconstrainedPortInterface {
   struct EnqueuedPacket {
     EnqueuedPacket(std::unique_ptr<Packet> packet,
                    AggregationBundleNumber bundle);
+    EnqueuedPacket(EnqueuedPacket&& other);
     ~EnqueuedPacket();
 
     std::unique_ptr<Packet> packet;
@@ -106,7 +107,7 @@ class Queue : public Actor, public UnconstrainedPortInterface {
   std::unique_ptr<QuicAlarm> aggregation_timeout_alarm_;
 
   ConstrainedPortInterface* tx_port_;
-  std::queue<EnqueuedPacket> queue_;
+  QuicQueue<EnqueuedPacket> queue_;
 
   ListenerInterface* listener_;
 

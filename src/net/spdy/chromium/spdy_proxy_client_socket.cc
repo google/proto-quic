@@ -35,7 +35,6 @@ SpdyProxyClientSocket::SpdyProxyClientSocket(
     const base::WeakPtr<SpdyStream>& spdy_stream,
     const SpdyString& user_agent,
     const HostPortPair& endpoint,
-    const HostPortPair& proxy_server,
     const NetLogWithSource& source_net_log,
     HttpAuthController* auth_controller)
     : next_state_(STATE_DISCONNECTED),
@@ -96,7 +95,7 @@ NextProto SpdyProxyClientSocket::GetProxyNegotiatedProtocol() const {
 
 std::unique_ptr<HttpStream>
 SpdyProxyClientSocket::CreateConnectResponseStream() {
-  return base::MakeUnique<ProxyConnectRedirectHttpStream>(
+  return std::make_unique<ProxyConnectRedirectHttpStream>(
       redirect_has_load_timing_info_ ? &redirect_load_timing_info_ : nullptr);
 }
 

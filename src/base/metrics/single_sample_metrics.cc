@@ -39,7 +39,7 @@ DefaultSingleSampleMetricsFactory::CreateCustomCountsMetric(
     HistogramBase::Sample min,
     HistogramBase::Sample max,
     uint32_t bucket_count) {
-  return MakeUnique<DefaultSingleSampleMetric>(
+  return std::make_unique<DefaultSingleSampleMetric>(
       histogram_name, min, max, bucket_count,
       HistogramBase::kUmaTargetedHistogramFlag);
 }

@@ -47,7 +47,6 @@
 #include "base/strings/string_util.h"
 #include "crypto/nss_util_internal.h"
 #include "net/base/net_errors.h"
-#include "net/cert/x509_certificate.h"
 
 namespace mozilla_security_manager {
 
@@ -145,15 +144,13 @@ pip_ucs2_ascii_conversion_fn(PRBool toUnicode,
 }
 
 // Based on nsPKCS12Blob::ImportFromFileHelper.
-int
-nsPKCS12Blob_ImportHelper(const char* pkcs12_data,
-                          size_t pkcs12_len,
-                          const base::string16& password,
-                          bool is_extractable,
-                          bool try_zero_length_secitem,
-                          PK11SlotInfo *slot,
-                          net::CertificateList* imported_certs)
-{
+int nsPKCS12Blob_ImportHelper(const char* pkcs12_data,
+                              size_t pkcs12_len,
+                              const base::string16& password,
+                              bool is_extractable,
+                              bool try_zero_length_secitem,
+                              PK11SlotInfo* slot,
+                              net::ScopedCERTCertificateList* imported_certs) {
   DCHECK(pkcs12_data);
   DCHECK(slot);
   int import_result = net::ERR_PKCS12_IMPORT_FAILED;
@@ -212,37 +209,22 @@ nsPKCS12Blob_ImportHelper(const char* pkcs12_data,
     if (decoder_item->type != SEC_OID_PKCS12_V1_CERT_BAG_ID)
       continue;
 
-    CERTCertificate* cert = PK11_FindCertFromDERCertItem(
-        slot, decoder_item->der,
-        NULL);  // wincx
+    net::ScopedCERTCertificate cert(
+        PK11_FindCertFromDERCertItem(slot, decoder_item->der,
+                                     NULL));  // wincx
     if (!cert) {
       LOG(ERROR) << "Could not grab a handle to the certificate in the slot "
                  << "from the corresponding PKCS#12 DER certificate.";
       continue;
     }
 
-    // Add the cert to the list
-    if (imported_certs) {
-      // Empty list of intermediates.
-      net::X509Certificate::OSCertHandles intermediates;
-      scoped_refptr<net::X509Certificate> x509_cert =
-          net::X509Certificate::CreateFromHandle(cert, intermediates);
-      if (x509_cert)
-        imported_certs->push_back(std::move(x509_cert));
-    }
-
     // Once we have determined that the imported certificate has an
     // associated private key too, only then can we mark the key as
     // non-extractable.
-    if (!decoder_item->hasKey) {
-      CERT_DestroyCertificate(cert);
-      continue;
-    }
-
     // Iterate through all the imported PKCS12 items and mark any accompanying
     // private keys as non-extractable.
-    if (!is_extractable) {
-      SECKEYPrivateKey* privKey = PK11_FindPrivateKeyFromCert(slot, cert,
+    if (decoder_item->hasKey && !is_extractable) {
+      SECKEYPrivateKey* privKey = PK11_FindPrivateKeyFromCert(slot, cert.get(),
                                                               NULL);  // wincx
       if (privKey) {
         // Mark the private key as non-extractable.
@@ -252,12 +234,15 @@ nsPKCS12Blob_ImportHelper(const char* pkcs12_data,
         if (srv) {
           LOG(ERROR) << "Could not set CKA_EXTRACTABLE attribute on private "
                      << "key.";
-          CERT_DestroyCertificate(cert);
           break;
         }
       }
     }
-    CERT_DestroyCertificate(cert);
+
+    // Add the cert to the list
+    if (imported_certs)
+      imported_certs->push_back(std::move(cert));
+
     if (srv) goto finish;
   }
   import_result = net::OK;
@@ -359,8 +344,7 @@ int nsPKCS12Blob_Import(PK11SlotInfo* slot,
                         size_t pkcs12_len,
                         const base::string16& password,
                         bool is_extractable,
-                        net::CertificateList* imported_certs) {
-
+                        net::ScopedCERTCertificateList* imported_certs) {
   int rv = nsPKCS12Blob_ImportHelper(pkcs12_data, pkcs12_len, password,
                                      is_extractable, false, slot,
                                      imported_certs);
@@ -391,11 +375,9 @@ int nsPKCS12Blob_Import(PK11SlotInfo* slot,
 //       mirror "slotToUse" behavior from PSM 1.x
 //       verify the cert array to start off with?
 //       set appropriate error codes
-int
-nsPKCS12Blob_Export(std::string* output,
-                    const net::CertificateList& certs,
-                    const base::string16& password)
-{
+int nsPKCS12Blob_Export(std::string* output,
+                        const net::ScopedCERTCertificateList& certs,
+                        const base::string16& password) {
   int return_count = 0;
   SECStatus srv = SECSuccess;
   SEC_PKCS12ExportContext *ecx = NULL;
@@ -423,7 +405,7 @@ nsPKCS12Blob_Export(std::string* output,
 
   for (size_t i=0; i<certs.size(); i++) {
     DCHECK(certs[i].get());
-    CERTCertificate* nssCert = certs[i]->os_cert_handle();
+    CERTCertificate* nssCert = certs[i].get();
     DCHECK(nssCert);
 
     // We only allow certificate and private key extraction if the corresponding

@@ -1,1 +1,1 @@
-{"docwrite": ["self", "https://example.org/"]}
+docwrite 'self' https://example.org/

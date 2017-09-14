@@ -13,15 +13,19 @@
 #include "base/files/file_util.h"
 #include "base/hash.h"
 #include "base/location.h"
+#include "base/memory/ptr_util.h"
+#include "base/metrics/field_trial_params.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/sha1.h"
+#include "base/strings/string_piece.h"
 #include "base/timer/elapsed_timer.h"
 #include "crypto/secure_hash.h"
 #include "net/base/hash_value.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
 #include "net/disk_cache/simple/simple_backend_version.h"
+#include "net/disk_cache/simple/simple_experiment.h"
 #include "net/disk_cache/simple/simple_histogram_enums.h"
 #include "net/disk_cache/simple/simple_histogram_macros.h"
 #include "net/disk_cache/simple/simple_util.h"
@@ -74,6 +78,10 @@ void RecordKeySHA256Result(net::CacheType cache_type, KeySHA256Result result) {
                    static_cast<int>(KeySHA256Result::MAX));
 }
 
+void RecordWhetherOpenDidPrefetch(net::CacheType cache_type, bool result) {
+  SIMPLE_CACHE_UMA(BOOLEAN, "SyncOpenDidPrefetch", cache_type, result);
+}
+
 bool CanOmitEmptyFile(int file_index) {
   DCHECK_GE(file_index, 0);
   DCHECK_LT(file_index, kSimpleEntryFileCount);
@@ -109,6 +117,15 @@ using simple_util::GetHeaderSize;
 using simple_util::GetDataSizeFromFileSize;
 using simple_util::GetFileSizeFromDataSize;
 using simple_util::GetFileIndexFromStreamIndex;
+
+const base::Feature kSimpleCachePrefetchExperiment = {
+    "SimpleCachePrefetchExperiment", base::FEATURE_DISABLED_BY_DEFAULT};
+const char kSimplePrefetchBytesParam[] = "Bytes";
+
+int GetSimpleCachePrefetchSize() {
+  return base::GetFieldTrialParamByFeatureAsInt(kSimpleCachePrefetchExperiment,
+                                                kSimplePrefetchBytesParam, 0);
+}
 
 SimpleEntryStat::SimpleEntryStat(base::Time last_used,
                                  base::Time last_modified,
@@ -162,13 +179,14 @@ int64_t SimpleEntryStat::GetFileSize(size_t key_length, int file_index) const {
   return GetFileSizeFromDataSize(key_length, total_data_size);
 }
 
+SimpleStreamPrefetchData::SimpleStreamPrefetchData()
+    : stream_crc32(crc32(0, Z_NULL, 0)) {}
+
+SimpleStreamPrefetchData::~SimpleStreamPrefetchData() {}
+
 SimpleEntryCreationResults::SimpleEntryCreationResults(
     SimpleEntryStat entry_stat)
-    : sync_entry(NULL),
-      entry_stat(entry_stat),
-      stream_0_crc32(crc32(0, Z_NULL, 0)),
-      result(net::OK) {
-}
+    : sync_entry(NULL), entry_stat(entry_stat), result(net::OK) {}
 
 SimpleEntryCreationResults::~SimpleEntryCreationResults() {
 }
@@ -222,13 +240,13 @@ void SimpleSynchronousEntry::OpenEntry(
   SimpleSynchronousEntry* sync_entry =
       new SimpleSynchronousEntry(cache_type, path, key, entry_hash, had_index);
   out_results->result = sync_entry->InitializeForOpen(
-      &out_results->entry_stat, &out_results->stream_0_data,
-      &out_results->stream_0_crc32);
+      &out_results->entry_stat, out_results->stream_prefetch_data);
   if (out_results->result != net::OK) {
     sync_entry->Doom();
     delete sync_entry;
     out_results->sync_entry = NULL;
-    out_results->stream_0_data = NULL;
+    out_results->stream_prefetch_data[0].data = nullptr;
+    out_results->stream_prefetch_data[1].data = nullptr;
     return;
   }
   SIMPLE_CACHE_UMA(TIMES, "DiskOpenLatency", cache_type,
@@ -644,26 +662,58 @@ void SimpleSynchronousEntry::GetAvailableRange(
   *out_result = static_cast<int>(std::min(avail_so_far, len_from_start));
 }
 
-int SimpleSynchronousEntry::CheckEOFRecord(int index,
+int SimpleSynchronousEntry::CheckEOFRecord(int stream_index,
                                            const SimpleEntryStat& entry_stat,
-                                           uint32_t expected_crc32) const {
+                                           uint32_t expected_crc32) {
   DCHECK(initialized_);
-  uint32_t crc32;
-  bool has_crc32;
-  bool has_key_sha256;
-  int32_t stream_size;
-  int rv = GetEOFRecordData(index, entry_stat, &has_crc32, &has_key_sha256,
-                            &crc32, &stream_size);
+  SimpleFileEOF eof_record;
+  int file_offset = entry_stat.GetEOFOffsetInFile(key_.size(), stream_index);
+  int file_index = GetFileIndexFromStreamIndex(stream_index);
+  int rv = GetEOFRecordData(base::StringPiece(), file_index, file_offset,
+                            &eof_record);
+
   if (rv != net::OK) {
     Doom();
     return rv;
   }
-  if (has_crc32 && crc32 != expected_crc32) {
+  if ((eof_record.flags & SimpleFileEOF::FLAG_HAS_CRC32) &&
+      eof_record.data_crc32 != expected_crc32) {
     DVLOG(1) << "EOF record had bad crc.";
     RecordCheckEOFResult(cache_type_, CHECK_EOF_RESULT_CRC_MISMATCH);
     Doom();
     return net::ERR_CACHE_CHECKSUM_MISMATCH;
   }
+  RecordCheckEOFResult(cache_type_, CHECK_EOF_RESULT_SUCCESS);
+  return net::OK;
+}
+
+int SimpleSynchronousEntry::PreReadStreamPayload(
+    base::StringPiece file_0_prefetch,
+    int stream_index,
+    int extra_size,
+    const SimpleEntryStat& entry_stat,
+    const SimpleFileEOF& eof_record,
+    SimpleStreamPrefetchData* out) {
+  DCHECK(stream_index == 0 || stream_index == 1);
+
+  int stream_size = entry_stat.data_size(stream_index);
+  int read_size = stream_size + extra_size;
+  out->data = new net::GrowableIOBuffer();
+  out->data->SetCapacity(read_size);
+  int file_offset = entry_stat.GetOffsetInFile(key_.size(), 0, stream_index);
+  if (!ReadFromFileOrPrefetched(file_0_prefetch, 0, file_offset, read_size,
+                                out->data->data()))
+    return net::ERR_FAILED;
+
+  // Check the CRC32.
+  uint32_t expected_crc32 = simple_util::Crc32(out->data->data(), stream_size);
+  if ((eof_record.flags & SimpleFileEOF::FLAG_HAS_CRC32) &&
+      eof_record.data_crc32 != expected_crc32) {
+    DVLOG(1) << "EOF record had bad crc.";
+    RecordCheckEOFResult(cache_type_, CHECK_EOF_RESULT_CRC_MISMATCH);
+    return net::ERR_CACHE_CHECKSUM_MISMATCH;
+  }
+  out->stream_crc32 = expected_crc32;
   RecordCheckEOFResult(cache_type_, CHECK_EOF_RESULT_SUCCESS);
   return net::OK;
 }
@@ -905,7 +955,7 @@ bool SimpleSynchronousEntry::OpenFiles(SimpleEntryStat* out_entry_stat) {
     // data_size(2). In the case of file 0, it is the combined size of stream
     // 0, stream 1 and one EOF record. The exact distribution of sizes between
     // stream 1 and stream 0 is only determined after reading the EOF record
-    // for stream 0 in ReadAndValidateStream0.
+    // for stream 0 in ReadAndValidateStream0AndMaybe1.
     if (!base::IsValueInRangeForNumericType<int>(file_info.size)) {
       RecordSyncOpenResult(cache_type_, OPEN_ENTRY_INVALID_FILE_LENGTH,
                            had_index_);
@@ -1049,8 +1099,7 @@ bool SimpleSynchronousEntry::CheckHeaderAndKey(int file_index) {
 
 int SimpleSynchronousEntry::InitializeForOpen(
     SimpleEntryStat* out_entry_stat,
-    scoped_refptr<net::GrowableIOBuffer>* stream_0_data,
-    uint32_t* out_stream_0_crc32) {
+    SimpleStreamPrefetchData stream_prefetch_data[2]) {
   DCHECK(!initialized_);
   if (!OpenFiles(out_entry_stat)) {
     DLOG(WARNING) << "Could not open platform files for entry.";
@@ -1078,9 +1127,8 @@ int SimpleSynchronousEntry::InitializeForOpen(
 
     if (i == 0) {
       // File size for stream 0 has been stored temporarily in data_size[1].
-      int ret_value_stream_0 =
-          ReadAndValidateStream0(out_entry_stat->data_size(1), out_entry_stat,
-                                 stream_0_data, out_stream_0_crc32);
+      int ret_value_stream_0 = ReadAndValidateStream0AndMaybe1(
+          out_entry_stat->data_size(1), out_entry_stat, stream_prefetch_data);
       if (ret_value_stream_0 != net::OK)
         return ret_value_stream_0;
     } else {
@@ -1171,65 +1219,89 @@ int SimpleSynchronousEntry::InitializeForCreate(
   return net::OK;
 }
 
-int SimpleSynchronousEntry::ReadAndValidateStream0(
+int SimpleSynchronousEntry::ReadAndValidateStream0AndMaybe1(
     int file_size,
     SimpleEntryStat* out_entry_stat,
-    scoped_refptr<net::GrowableIOBuffer>* stream_0_data,
-    uint32_t* out_stream_0_crc32) {
-  // Pretend this file has a null stream zero, and contains the optional key
-  // SHA256. This is good enough to read the EOF record on the file, which gives
-  // the actual size of stream 0.
-  int temp_data_size = GetDataSizeFromFileSize(key_.size(), file_size);
-  out_entry_stat->set_data_size(0, 0);
-  out_entry_stat->set_data_size(
-      1, temp_data_size - sizeof(net::SHA256HashValue) - sizeof(SimpleFileEOF));
+    SimpleStreamPrefetchData stream_prefetch_data[2]) {
+  // If the file is sufficiently small, we will prefetch everything --
+  // in which case |prefetch_buf| will be non-null, and we should look at it
+  // rather than call ::Read for the bits.
+  std::unique_ptr<char[]> prefetch_buf;
+  base::StringPiece file_0_prefetch;
 
-  bool has_crc32;
-  bool has_key_sha256;
-  uint32_t read_crc32;
-  int32_t stream_0_size;
-  int ret_value_crc32 =
-      GetEOFRecordData(0, *out_entry_stat, &has_crc32, &has_key_sha256,
-                       &read_crc32, &stream_0_size);
-  if (ret_value_crc32 != net::OK)
-    return ret_value_crc32;
+  if (file_size > GetSimpleCachePrefetchSize()) {
+    RecordWhetherOpenDidPrefetch(cache_type_, false);
+  } else {
+    RecordWhetherOpenDidPrefetch(cache_type_, true);
+    prefetch_buf = base::MakeUnique<char[]>(file_size);
+    if (files_[0].Read(0, prefetch_buf.get(), file_size) != file_size)
+      return net::ERR_FAILED;
+    file_0_prefetch.set(prefetch_buf.get(), file_size);
+  }
 
-  // Calculate and set the real values for the two streams.
-  int32_t total_size = out_entry_stat->data_size(1);
-  if (!has_key_sha256)
-    total_size += sizeof(net::SHA256HashValue);
-  if (stream_0_size > total_size)
+  // Read stream 0 footer first --- it has size/feature info required to figure
+  // out file 0's layout.
+  SimpleFileEOF stream_0_eof;
+  int rv = GetEOFRecordData(
+      file_0_prefetch, /* file_index = */ 0,
+      /* file_offset = */ file_size - sizeof(SimpleFileEOF), &stream_0_eof);
+  if (rv != net::OK)
+    return rv;
+
+  int32_t stream_0_size = stream_0_eof.stream_size;
+  if (stream_0_size < 0 || stream_0_size > file_size)
     return net::ERR_FAILED;
   out_entry_stat->set_data_size(0, stream_0_size);
-  out_entry_stat->set_data_size(1, total_size - stream_0_size);
 
-  // Put stream 0 data in memory.
-  *stream_0_data = new net::GrowableIOBuffer();
-  (*stream_0_data)->SetCapacity(stream_0_size + sizeof(net::SHA256HashValue));
-  int file_offset = out_entry_stat->GetOffsetInFile(key_.size(), 0, 0);
-  int read_size = stream_0_size;
+  // Calculate size for stream 1, now we know stream 0's.
+  // See comments in simple_entry_format.h for background.
+  bool has_key_sha256 =
+      (stream_0_eof.flags & SimpleFileEOF::FLAG_HAS_KEY_SHA256) ==
+      SimpleFileEOF::FLAG_HAS_KEY_SHA256;
+  int extra_post_stream_0_read = 0;
   if (has_key_sha256)
-    read_size += sizeof(net::SHA256HashValue);
-  if (files_[0].Read(file_offset, (*stream_0_data)->data(), read_size) !=
-      read_size)
+    extra_post_stream_0_read += sizeof(net::SHA256HashValue);
+
+  int32_t stream1_size = file_size - 2 * sizeof(SimpleFileEOF) - stream_0_size -
+                         sizeof(SimpleFileHeader) - key_.size() -
+                         extra_post_stream_0_read;
+  if (stream1_size < 0 || stream1_size > file_size)
     return net::ERR_FAILED;
 
-  // Check the CRC32.
-  uint32_t expected_crc32 =
-      simple_util::Crc32((*stream_0_data)->data(), stream_0_size);
-  if (has_crc32 && read_crc32 != expected_crc32) {
-    DVLOG(1) << "EOF record had bad crc.";
-    RecordCheckEOFResult(cache_type_, CHECK_EOF_RESULT_CRC_MISMATCH);
-    return net::ERR_FAILED;
+  out_entry_stat->set_data_size(1, stream1_size);
+
+  // Put stream 0 data in memory --- plus maybe the sha256(key) footer.
+  rv = PreReadStreamPayload(file_0_prefetch, /* stream_index = */ 0,
+                            extra_post_stream_0_read, *out_entry_stat,
+                            stream_0_eof, &stream_prefetch_data[0]);
+  if (rv != net::OK)
+    return rv;
+
+  // If prefetch buffer is available, and we have sha256(key) (so we don't need
+  // to look at the header), extract out stream 1 info as well.
+  if (prefetch_buf && has_key_sha256) {
+    SimpleFileEOF stream_1_eof;
+    rv = GetEOFRecordData(
+        file_0_prefetch, /* file_index = */ 0,
+        out_entry_stat->GetEOFOffsetInFile(key_.size(), /* stream_index = */ 1),
+        &stream_1_eof);
+    if (rv != net::OK)
+      return rv;
+
+    rv = PreReadStreamPayload(file_0_prefetch, /* stream_index = */ 1,
+                              /* extra_size = */ 0, *out_entry_stat,
+                              stream_1_eof, &stream_prefetch_data[1]);
+    if (rv != net::OK)
+      return rv;
   }
-  *out_stream_0_crc32 = expected_crc32;
 
   // If present, check the key SHA256.
   if (has_key_sha256) {
     net::SHA256HashValue hash_value;
     CalculateSHA256OfKey(key_, &hash_value);
     bool matched =
-        std::memcmp(&hash_value, (*stream_0_data)->data() + stream_0_size,
+        std::memcmp(&hash_value,
+                    stream_prefetch_data[0].data->data() + stream_0_size,
                     sizeof(hash_value)) == 0;
     if (!matched) {
       RecordKeySHA256Result(cache_type_, KeySHA256Result::NO_MATCH);
@@ -1246,44 +1318,62 @@ int SimpleSynchronousEntry::ReadAndValidateStream0(
   if (!has_key_sha256 && header_and_key_check_needed_[0])
     CheckHeaderAndKey(0);
 
-  RecordCheckEOFResult(cache_type_, CHECK_EOF_RESULT_SUCCESS);
   return net::OK;
 }
 
-int SimpleSynchronousEntry::GetEOFRecordData(int index,
-                                             const SimpleEntryStat& entry_stat,
-                                             bool* out_has_crc32,
-                                             bool* out_has_key_sha256,
-                                             uint32_t* out_crc32,
-                                             int32_t* out_data_size) const {
-  SimpleFileEOF eof_record;
-  int file_offset = entry_stat.GetEOFOffsetInFile(key_.size(), index);
-  int file_index = GetFileIndexFromStreamIndex(index);
-  File* file = const_cast<File*>(&files_[file_index]);
-  if (file->Read(file_offset, reinterpret_cast<char*>(&eof_record),
-                 sizeof(eof_record)) !=
-      sizeof(eof_record)) {
+bool SimpleSynchronousEntry::ReadFromFileOrPrefetched(
+    base::StringPiece file_0_prefetch,
+    int file_index,
+    int offset,
+    int size,
+    char* dest) {
+  if (file_0_prefetch.empty() || file_index != 0) {
+    return files_[file_index].Read(offset, dest, size) == size;
+  } else {
+    if (offset < 0 || size < 0)
+      return false;
+    if (size == 0)
+      return true;
+
+    base::CheckedNumeric<size_t> start(offset);
+    size_t start_numeric;
+    if (!start.AssignIfValid(&start_numeric) ||
+        start_numeric >= file_0_prefetch.size())
+      return false;
+
+    base::CheckedNumeric<size_t> end = start + size - 1;
+    size_t end_numeric;
+    if (!end.AssignIfValid(&end_numeric) ||
+        end_numeric >= file_0_prefetch.size())
+      return false;
+
+    memcpy(dest, file_0_prefetch.data() + offset, size);
+    return true;
+  }
+}
+
+int SimpleSynchronousEntry::GetEOFRecordData(base::StringPiece file_0_prefetch,
+                                             int file_index,
+                                             int file_offset,
+                                             SimpleFileEOF* eof_record) {
+  if (!ReadFromFileOrPrefetched(file_0_prefetch, file_index, file_offset,
+                                sizeof(SimpleFileEOF),
+                                reinterpret_cast<char*>(eof_record))) {
     RecordCheckEOFResult(cache_type_, CHECK_EOF_RESULT_READ_FAILURE);
     return net::ERR_CACHE_CHECKSUM_READ_FAILURE;
   }
 
-  if (eof_record.final_magic_number != kSimpleFinalMagicNumber) {
+  if (eof_record->final_magic_number != kSimpleFinalMagicNumber) {
     RecordCheckEOFResult(cache_type_, CHECK_EOF_RESULT_MAGIC_NUMBER_MISMATCH);
     DVLOG(1) << "EOF record had bad magic number.";
     return net::ERR_CACHE_CHECKSUM_READ_FAILURE;
   }
 
-  if (!base::IsValueInRangeForNumericType<int32_t>(eof_record.stream_size))
+  if (!base::IsValueInRangeForNumericType<int32_t>(eof_record->stream_size))
     return net::ERR_FAILED;
-
-  *out_has_crc32 = (eof_record.flags & SimpleFileEOF::FLAG_HAS_CRC32) ==
-                   SimpleFileEOF::FLAG_HAS_CRC32;
-  *out_has_key_sha256 =
-      (eof_record.flags & SimpleFileEOF::FLAG_HAS_KEY_SHA256) ==
-      SimpleFileEOF::FLAG_HAS_KEY_SHA256;
-  *out_crc32 = eof_record.data_crc32;
-  *out_data_size = eof_record.stream_size;
-  SIMPLE_CACHE_UMA(BOOLEAN, "SyncCheckEOFHasCrc", cache_type_, *out_has_crc32);
+  SIMPLE_CACHE_UMA(BOOLEAN, "SyncCheckEOFHasCrc", cache_type_,
+                   (eof_record->flags & SimpleFileEOF::FLAG_HAS_CRC32) ==
+                       SimpleFileEOF::FLAG_HAS_CRC32);
   return net::OK;
 }
 
@@ -1449,7 +1539,8 @@ bool SimpleSynchronousEntry::ScanSparseFile(int32_t* out_sparse_data_size) {
     return false;
   }
 
-  if (header.version != kSimpleVersion) {
+  if (header.version < kLastCompatSparseVersion ||
+      header.version > kSimpleVersion) {
     DLOG(WARNING) << "Sparse file unreadable version.";
     return false;
   }

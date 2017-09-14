@@ -90,7 +90,7 @@ void QuicServerSessionBase::OnConnectionClosed(QuicErrorCode error,
   QuicSession::OnConnectionClosed(error, error_details, source);
   // In the unlikely event we get a connection close while doing an asynchronous
   // crypto event, make sure we cancel the callback.
-  if (crypto_stream_.get() != nullptr) {
+  if (crypto_stream_ != nullptr) {
     crypto_stream_->CancelOutstandingCallbacks();
   }
 }
@@ -194,7 +194,6 @@ void QuicServerSessionBase::OnCongestionWindowChange(QuicTime now) {
 }
 
 bool QuicServerSessionBase::ShouldCreateIncomingDynamicStream(QuicStreamId id) {
-  DCHECK(!FLAGS_quic_reloadable_flag_quic_refactor_stream_creation);
   if (!connection()->connected()) {
     QUIC_BUG << "ShouldCreateIncomingDynamicStream called when disconnected";
     return false;
@@ -211,7 +210,6 @@ bool QuicServerSessionBase::ShouldCreateIncomingDynamicStream(QuicStreamId id) {
 }
 
 bool QuicServerSessionBase::ShouldCreateOutgoingDynamicStream() {
-  DCHECK(!FLAGS_quic_reloadable_flag_quic_refactor_stream_creation);
   if (!connection()->connected()) {
     QUIC_BUG << "ShouldCreateOutgoingDynamicStream called when disconnected";
     return false;

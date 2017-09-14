@@ -258,8 +258,6 @@ static base::android::ScopedJavaLocalRef<jobject>
   return base::android::ScopedJavaLocalRef<jobject>(env, ret);
 }
 
-// Step 3: RegisterNatives.
-
 }  // namespace JNI_InputStream
 
 #endif  // java_io_InputStream_JNI

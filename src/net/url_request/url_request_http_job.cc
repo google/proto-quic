@@ -17,7 +17,6 @@
 #include "base/metrics/field_trial.h"
 #include "base/metrics/histogram_functions.h"
 #include "base/metrics/histogram_macros.h"
-#include "base/profiler/scoped_tracker.h"
 #include "base/rand_util.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_util.h"
@@ -32,8 +31,6 @@
 #include "net/base/net_errors.h"
 #include "net/base/network_delegate.h"
 #include "net/base/registry_controlled_domains/registry_controlled_domain.h"
-#include "net/base/sdch_manager.h"
-#include "net/base/sdch_problem_codes.h"
 #include "net/base/trace_constants.h"
 #include "net/base/url_util.h"
 #include "net/cert/cert_status_flags.h"
@@ -41,7 +38,6 @@
 #include "net/filter/brotli_source_stream.h"
 #include "net/filter/filter_source_stream.h"
 #include "net/filter/gzip_source_stream.h"
-#include "net/filter/sdch_source_stream.h"
 #include "net/filter/source_stream.h"
 #include "net/http/http_content_disposition.h"
 #include "net/http/http_network_session.h"
@@ -81,8 +77,6 @@
 #include "net/reporting/reporting_header_parser.h"
 #include "net/reporting/reporting_service.h"
 #endif  // BUILDFLAG(ENABLE_REPORTING)
-
-static const char kAvailDictionaryHeader[] = "Avail-Dictionary";
 
 namespace {
 
@@ -255,8 +249,6 @@ URLRequestHttpJob::URLRequestHttpJob(
       server_auth_state_(AUTH_STATE_DONT_NEED_AUTH),
       read_in_progress_(false),
       throttling_entry_(nullptr),
-      sdch_test_activated_(false),
-      sdch_test_control_(false),
       is_cached_content_(false),
       packet_timing_enabled_(false),
       done_(false),
@@ -276,15 +268,10 @@ URLRequestHttpJob::URLRequestHttpJob(
 URLRequestHttpJob::~URLRequestHttpJob() {
   CHECK(!awaiting_callback_);
 
-  DCHECK(!sdch_test_control_ || !sdch_test_activated_);
-  if (!is_cached_content_) {
-    if (sdch_test_control_)
-      RecordPacketStats(SdchPolicyDelegate::SDCH_EXPERIMENT_HOLDBACK);
-    if (sdch_test_activated_)
-      RecordPacketStats(SdchPolicyDelegate::SDCH_EXPERIMENT_DECODE);
-  }
   // Make sure SdchSourceStream are told to emit histogram data while |this|
   // is still alive.
+  // TODO(xunjieli): This is probably not needed. Remove once crbug.com/762686
+  // is fixed.
   DestroySourceStream();
 
   DoneWithRequest(ABORTED);
@@ -297,10 +284,6 @@ void URLRequestHttpJob::SetPriority(RequestPriority priority) {
 }
 
 void URLRequestHttpJob::Start() {
-  // TODO(mmenke): Remove ScopedTracker below once crbug.com/456327 is fixed.
-  tracked_objects::ScopedTracker tracking_profile(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION("456327 URLRequestHttpJob::Start"));
-
   DCHECK(!transaction_.get());
 
   // URLRequest::SetReferrer ensures that we do not send username and password
@@ -390,57 +373,6 @@ void URLRequestHttpJob::NotifyHeadersComplete() {
   ProcessReportToHeader();
   ProcessNetworkErrorLoggingHeader();
 
-  // Handle the server notification of a new SDCH dictionary.
-  SdchManager* sdch_manager(request()->context()->sdch_manager());
-  if (sdch_manager) {
-    SdchProblemCode rv = sdch_manager->IsInSupportedDomain(request()->url());
-    if (rv != SDCH_OK) {
-      SdchManager::LogSdchProblem(request()->net_log(), rv);
-    } else {
-      const std::string name = "Get-Dictionary";
-      std::string url_text;
-      size_t iter = 0;
-      // TODO(jar): We need to not fetch dictionaries the first time they are
-      // seen, but rather wait until we can justify their usefulness.
-      // For now, we will only fetch the first dictionary, which will at least
-      // require multiple suggestions before we get additional ones for this
-      // site. Eventually we should wait until a dictionary is requested
-      // several times
-      // before we even download it (so that we don't waste memory or
-      // bandwidth).
-      if (GetResponseHeaders()->EnumerateHeader(&iter, name, &url_text)) {
-        // Resolve suggested URL relative to request url.
-        GURL sdch_dictionary_url = request_->url().Resolve(url_text);
-        // Don't try to download Dictionary for cached responses. It's either
-        // useless or too late.
-        if (sdch_dictionary_url.is_valid() && !is_cached_content_) {
-          rv = sdch_manager->OnGetDictionary(request_->url(),
-                                             sdch_dictionary_url);
-          if (rv != SDCH_OK)
-            SdchManager::LogSdchProblem(request()->net_log(), rv);
-        }
-      }
-    }
-  }
-
-  // Handle the server signalling no SDCH encoding.
-  if (dictionaries_advertised_) {
-    // We are wary of proxies that discard or damage SDCH encoding. If a server
-    // explicitly states that this is not SDCH content, then we can correct our
-    // assumption that this is an SDCH response, and avoid the need to recover
-    // as though the content is corrupted (when we discover it is not SDCH
-    // encoded).
-    std::string sdch_response_status;
-    size_t iter = 0;
-    while (GetResponseHeaders()->EnumerateHeader(&iter, "X-Sdch-Encode",
-                                                 &sdch_response_status)) {
-      if (sdch_response_status == "0") {
-        dictionaries_advertised_.reset();
-        break;
-      }
-    }
-  }
-
   // The HTTP transaction may be restarted several times for the purposes
   // of sending authorization information. Each time it restarts, we get
   // notified of the headers completion so that we can update the cookie store.
@@ -472,11 +404,6 @@ void URLRequestHttpJob::DestroyTransaction() {
 }
 
 void URLRequestHttpJob::StartTransaction() {
-  // TODO(mmenke): Remove ScopedTracker below once crbug.com/456327 is fixed.
-  tracked_objects::ScopedTracker tracking_profile(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION(
-          "456327 URLRequestHttpJob::StartTransaction"));
-
   if (network_delegate()) {
     OnCallToDelegate();
     // The NetworkDelegate must watch for OnRequestDestroyed and not modify
@@ -506,11 +433,6 @@ void URLRequestHttpJob::NotifyBeforeStartTransactionCallback(int result) {
 }
 
 void URLRequestHttpJob::MaybeStartTransactionInternal(int result) {
-  // TODO(mmenke): Remove ScopedTracker below once crbug.com/456327 is fixed.
-  tracked_objects::ScopedTracker tracking_profile(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION(
-          "456327 URLRequestHttpJob::MaybeStartTransactionInternal"));
-
   OnCallToDelegateComplete();
   if (result == OK) {
     StartTransactionInternal();
@@ -576,6 +498,7 @@ void URLRequestHttpJob::StartTransactionInternal() {
           base::Bind(&URLRequestHttpJob::NotifyBeforeSendHeadersCallback,
                      base::Unretained(this)));
       transaction_->SetRequestHeadersCallback(request_headers_callback_);
+      transaction_->SetResponseHeadersCallback(response_headers_callback_);
 
       if (!throttling_entry_.get() ||
           !throttling_entry_->ShouldRejectRequest(*request_)) {
@@ -602,53 +525,8 @@ void URLRequestHttpJob::StartTransactionInternal() {
 }
 
 void URLRequestHttpJob::AddExtraHeaders() {
-  SdchManager* sdch_manager = request()->context()->sdch_manager();
-
-  // Supply Accept-Encoding field only if it is not already provided.
-  // It should be provided IF the content is known to have restrictions on
-  // potential encoding, such as streaming multi-media.
-  // For details see bug 47381.
-  // TODO(jar, enal): jpeg files etc. should set up a request header if
-  // possible. Right now it is done only by buffered_resource_loader and
-  // simple_data_source.
   if (!request_info_.extra_headers.HasHeader(
-      HttpRequestHeaders::kAcceptEncoding)) {
-    // We don't support SDCH responses to POST as there is a possibility
-    // of having SDCH encoded responses returned (e.g. by the cache)
-    // which we cannot decode, and in those situations, we will need
-    // to retransmit the request without SDCH, which is illegal for a POST.
-    bool advertise_sdch = sdch_manager != NULL && request()->method() != "POST";
-    if (advertise_sdch) {
-      SdchProblemCode rv = sdch_manager->IsInSupportedDomain(request()->url());
-      if (rv != SDCH_OK) {
-        advertise_sdch = false;
-        SdchManager::LogSdchProblem(request()->net_log(), rv);
-      }
-    }
-    if (advertise_sdch) {
-      dictionaries_advertised_ =
-          sdch_manager->GetDictionarySet(request_->url());
-    }
-
-    // The AllowLatencyExperiment() is only true if we've successfully done a
-    // full SDCH compression recently in this browser session for this host.
-    // Note that for this path, there might be no applicable dictionaries,
-    // and hence we can't participate in the experiment.
-    if (dictionaries_advertised_ &&
-        sdch_manager->AllowLatencyExperiment(request_->url())) {
-      // We are participating in the test (or control), and hence we'll
-      // eventually record statistics via either SDCH_EXPERIMENT_DECODE or
-      // SDCH_EXPERIMENT_HOLDBACK, and we'll need some packet timing data.
-      packet_timing_enabled_ = true;
-      if (base::RandDouble() < .01) {
-        sdch_test_control_ = true;  // 1% probability.
-        dictionaries_advertised_.reset();
-        advertise_sdch = false;
-      } else {
-        sdch_test_activated_ = true;
-      }
-    }
-
+          HttpRequestHeaders::kAcceptEncoding)) {
     // Advertise "br" encoding only if transferred data is opaque to proxy.
     bool advertise_brotli = false;
     if (request()->context()->enable_brotli()) {
@@ -664,25 +542,11 @@ void URLRequestHttpJob::AddExtraHeaders() {
     // damaged these headers. Some proxies deliberately corrupt Accept-Encoding
     // headers.
     std::string advertised_encodings = "gzip, deflate";
-    if (advertise_sdch)
-      advertised_encodings += ", sdch";
     if (advertise_brotli)
       advertised_encodings += ", br";
     // Tell the server what compression formats are supported.
     request_info_.extra_headers.SetHeader(HttpRequestHeaders::kAcceptEncoding,
                                           advertised_encodings);
-
-    if (dictionaries_advertised_) {
-      request_info_.extra_headers.SetHeader(
-          kAvailDictionaryHeader,
-          dictionaries_advertised_->GetDictionaryClientHashList());
-      // Since we're tagging this transaction as advertising a dictionary,
-      // we'll definitely employ an SDCH filter (or tentative sdch filter)
-      // when we get a response. When done, we'll record histograms via
-      // SDCH_DECODE or SDCH_PASSTHROUGH. Hence we need to record packet
-      // arrival times.
-      packet_timing_enabled_ = true;
-    }
   }
 
   if (http_user_agent_settings_) {
@@ -1146,21 +1010,17 @@ std::unique_ptr<SourceStream> URLRequestHttpJob::SetUpSourceStream() {
   while (headers->EnumerateHeader(&iter, "Content-Encoding", &type)) {
     SourceStream::SourceType source_type =
         FilterSourceStream::ParseEncodingType(type);
-    if (source_type == SourceStream::TYPE_SDCH &&
-        !request()->context()->sdch_manager()) {
-      // If SDCH support is not configured, pass through raw response.
-      return upstream;
-    }
     switch (source_type) {
       case SourceStream::TYPE_BROTLI:
       case SourceStream::TYPE_DEFLATE:
       case SourceStream::TYPE_GZIP:
-      case SourceStream::TYPE_SDCH:
         types.push_back(source_type);
         break;
       case SourceStream::TYPE_NONE:
         // Identity encoding type. Pass through raw response body.
         return upstream;
+      case SourceStream::TYPE_SDCH:
+      // Pass through raw sdch response.
       default:
         // Unknown encoding type. Pass through raw response body.
         // Despite of reporting to UMA, request will not be canceled; though
@@ -1171,13 +1031,6 @@ std::unique_ptr<SourceStream> URLRequestHttpJob::SetUpSourceStream() {
     }
   }
 
-  // Sdch specific hacks:
-  std::string mime_type;
-  bool success = GetMimeType(&mime_type);
-  DCHECK(success || mime_type.empty());
-  SdchPolicyDelegate::FixUpSdchContentEncodings(
-      request()->net_log(), mime_type, dictionaries_advertised_.get(), &types);
-
   for (std::vector<SourceStream::SourceType>::reverse_iterator r_iter =
            types.rbegin();
        r_iter != types.rend(); ++r_iter) {
@@ -1187,25 +1040,13 @@ std::unique_ptr<SourceStream> URLRequestHttpJob::SetUpSourceStream() {
       case SourceStream::TYPE_BROTLI:
         downstream = CreateBrotliSourceStream(std::move(upstream));
         break;
-      case SourceStream::TYPE_SDCH:
-      case SourceStream::TYPE_SDCH_POSSIBLE: {
-        if (request()->context()->sdch_manager()) {
-          GURL url = request()->url();
-          std::unique_ptr<SdchPolicyDelegate> delegate(new SdchPolicyDelegate(
-              type == SourceStream::TYPE_SDCH_POSSIBLE, this, mime_type, url,
-              is_cached_content_, request()->context()->sdch_manager(),
-              std::move(dictionaries_advertised_), GetResponseCode(),
-              request()->net_log()));
-          downstream.reset(new SdchSourceStream(std::move(upstream),
-                                                std::move(delegate), type));
-        }
-        break;
-      }
       case SourceStream::TYPE_GZIP:
       case SourceStream::TYPE_DEFLATE:
       case SourceStream::TYPE_GZIP_FALLBACK:
         downstream = GzipSourceStream::Create(std::move(upstream), type);
         break;
+      case SourceStream::TYPE_SDCH:
+      case SourceStream::TYPE_SDCH_POSSIBLE:
       case SourceStream::TYPE_NONE:
       case SourceStream::TYPE_INVALID:
       case SourceStream::TYPE_REJECTED:
@@ -1514,48 +1355,18 @@ void URLRequestHttpJob::UpdatePacketReadTimes() {
   bytes_observed_in_packets_ = prefilter_bytes_read();
 }
 
-void URLRequestHttpJob::RecordPacketStats(
-    SdchPolicyDelegate::StatisticSelector statistic) const {
-  if (!packet_timing_enabled_ || (final_packet_time_ == base::Time()))
-    return;
-
-  base::TimeDelta duration = final_packet_time_ - request_time_snapshot_;
-  switch (statistic) {
-    case SdchPolicyDelegate::StatisticSelector::SDCH_DECODE: {
-      UMA_HISTOGRAM_CUSTOM_COUNTS("Sdch3.Network_Decode_Bytes_Processed_b",
-                                  static_cast<int>(bytes_observed_in_packets_),
-                                  500, 100000, 100);
-      return;
-    }
-    case SdchPolicyDelegate::StatisticSelector::SDCH_PASSTHROUGH: {
-      // Despite advertising a dictionary, we handled non-sdch compressed
-      // content.
-      return;
-    }
-
-    case SdchPolicyDelegate::SDCH_EXPERIMENT_DECODE: {
-      UMA_HISTOGRAM_CUSTOM_TIMES("Sdch3.Experiment3_Decode", duration,
-                                 base::TimeDelta::FromMilliseconds(20),
-                                 base::TimeDelta::FromMinutes(10), 100);
-      return;
-    }
-    case SdchPolicyDelegate::SDCH_EXPERIMENT_HOLDBACK: {
-      UMA_HISTOGRAM_CUSTOM_TIMES("Sdch3.Experiment3_Holdback", duration,
-                                 base::TimeDelta::FromMilliseconds(20),
-                                 base::TimeDelta::FromMinutes(10), 100);
-      return;
-    }
-    default:
-      NOTREACHED();
-      return;
-  }
-}
-
 void URLRequestHttpJob::SetRequestHeadersCallback(
     RequestHeadersCallback callback) {
   DCHECK(!transaction_);
   DCHECK(!request_headers_callback_);
   request_headers_callback_ = std::move(callback);
+}
+
+void URLRequestHttpJob::SetResponseHeadersCallback(
+    ResponseHeadersCallback callback) {
+  DCHECK(!transaction_);
+  DCHECK(!response_headers_callback_);
+  response_headers_callback_ = std::move(callback);
 }
 
 void URLRequestHttpJob::RecordPerfHistograms(CompletionCause reason) {

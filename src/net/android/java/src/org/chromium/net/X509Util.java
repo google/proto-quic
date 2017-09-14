@@ -34,6 +34,7 @@ import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -500,14 +501,21 @@ public class X509Util {
             return new AndroidCertVerifyResult(CertVerifyStatusAndroid.FAILED);
         }
 
-        X509Certificate[] serverCertificates = new X509Certificate[certChain.length];
+        List<X509Certificate> serverCertificatesList = new ArrayList<X509Certificate>();
         try {
-            for (int i = 0; i < certChain.length; ++i) {
-                serverCertificates[i] = createCertificateFromBytes(certChain[i]);
-            }
+            serverCertificatesList.add(createCertificateFromBytes(certChain[0]));
         } catch (CertificateException e) {
             return new AndroidCertVerifyResult(CertVerifyStatusAndroid.UNABLE_TO_PARSE);
         }
+        for (int i = 1; i < certChain.length; ++i) {
+            try {
+                serverCertificatesList.add(createCertificateFromBytes(certChain[i]));
+            } catch (CertificateException e) {
+                Log.w(TAG, "intermediate " + i + " failed parsing");
+            }
+        }
+        X509Certificate[] serverCertificates =
+                serverCertificatesList.toArray(new X509Certificate[serverCertificatesList.size()]);
 
         // Expired and not yet valid certificates would be rejected by the trust managers, but the
         // trust managers report all certificate errors using the general CertificateException. In

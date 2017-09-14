@@ -43,7 +43,6 @@ void HpackExampleToStringOrDie(Http2StringPiece example, Http2String* output) {
                  << "\nExample: " << example;
   }
   CHECK_LT(0u, output->size()) << "Example is empty.";
-  return;
 }
 
 }  // namespace

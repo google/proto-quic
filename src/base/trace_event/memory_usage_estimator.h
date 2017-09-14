@@ -22,9 +22,11 @@
 #include <vector>
 
 #include "base/base_export.h"
+#include "base/containers/circular_deque.h"
 #include "base/containers/flat_map.h"
 #include "base/containers/flat_set.h"
 #include "base/containers/linked_list.h"
+#include "base/containers/queue.h"
 #include "base/strings/string16.h"
 
 // Composable memory usage estimators.
@@ -151,6 +153,9 @@ size_t EstimateMemoryUsage(const std::priority_queue<T, C>& queue);
 
 template <class T, class C>
 size_t EstimateMemoryUsage(const std::stack<T, C>& stack);
+
+template <class T>
+size_t EstimateMemoryUsage(const base::circular_deque<T>& deque);
 
 template <class T, class C>
 size_t EstimateMemoryUsage(const base::flat_set<T, C>& set);
@@ -548,6 +553,13 @@ size_t EstimateMemoryUsage(const std::priority_queue<T, C>& queue) {
 template <class T, class C>
 size_t EstimateMemoryUsage(const std::stack<T, C>& stack) {
   return EstimateMemoryUsage(internal::GetUnderlyingContainer(stack));
+}
+
+// base::circular_deque
+
+template <class T>
+size_t EstimateMemoryUsage(const base::circular_deque<T>& deque) {
+  return sizeof(T) * deque.capacity() + EstimateIterableMemoryUsage(deque);
 }
 
 // Flat containers

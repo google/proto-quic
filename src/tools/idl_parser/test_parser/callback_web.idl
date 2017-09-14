@@ -7,10 +7,6 @@
 Run with --test to generate an AST and verify that all comments accurately
 reflect the state of the Nodes.
 
-BUILD Type(Name)
-This comment signals that a node of type <Type> is created with the
-name <Name>.
-
 ERROR Error String
 This comment signals that a error of <Error String> is generated.  The error
 is not assigned to a node, but are expected in order.
@@ -55,46 +51,17 @@ callback VoidFuncLongErr = void ( long );
 callback VoidFuncLong = void ( long L1 );
 
 /** TREE
- *Callback(VoidFuncLongArray)
+ *Callback(VoidFuncLongSequence)
  *  Type()
  *    PrimitiveType(void)
  *  Arguments()
  *    Argument(L1)
  *      Type()
- *        PrimitiveType(long)
- *        Array()
+ *        Sequence()
+ *          Type()
+ *            PrimitiveType(long)
  */
-callback VoidFuncLongArray = void ( long[] L1 );
-
-/** TREE
- *Callback(VoidFuncLongArray5)
- *  Type()
- *    PrimitiveType(void)
- *  Arguments()
- *    Argument(L1)
- *      Type()
- *        PrimitiveType(long)
- *        Array(5)
- */
-callback VoidFuncLongArray5 = void ( long[5] L1 );
-
-
-/** TREE
- *Callback(VoidFuncLongArray54)
- *  Type()
- *    PrimitiveType(void)
- *  Arguments()
- *    Argument(L1)
- *      Type()
- *        PrimitiveType(long)
- *        Array(5)
- *    Argument(L2)
- *      Type()
- *        PrimitiveType(long long)
- *        Array(4)
- */
-callback VoidFuncLongArray54 = void ( long[5] L1, long long [4] L2 );
-
+callback VoidFuncLongSequence = void ( sequence<long> L1 );
 
 /** TREE
  *Callback(VoidFuncLongIdent)
@@ -103,10 +70,11 @@ callback VoidFuncLongArray54 = void ( long[5] L1, long long [4] L2 );
  *  Arguments()
  *    Argument(L1)
  *      Type()
- *        PrimitiveType(long)
- *        Array(5)
+ *        Sequence()
+ *          Type()
+ *            PrimitiveType(long)
  *    Argument(L2)
  *      Type()
- *        Typeref(VoidFuncLongArray)
+ *        Typeref(VoidFuncLongSequence)
  */
-callback VoidFuncLongIdent = void ( long[5] L1, VoidFuncLongArray L2 );
+callback VoidFuncLongIdent = void ( sequence<long> L1, VoidFuncLongSequence L2 );

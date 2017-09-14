@@ -445,9 +445,9 @@ static void ThreadSafeObserverHarness(int num_threads,
   threaded_observer.reserve(num_threads);
   ready.reserve(num_threads);
   for (int index = 0; index < num_threads; index++) {
-    ready.push_back(
-        MakeUnique<WaitableEvent>(WaitableEvent::ResetPolicy::MANUAL,
-                                  WaitableEvent::InitialState::NOT_SIGNALED));
+    ready.push_back(std::make_unique<WaitableEvent>(
+        WaitableEvent::ResetPolicy::MANUAL,
+        WaitableEvent::InitialState::NOT_SIGNALED));
     threaded_observer.push_back(new AddRemoveThread(
         observer_list.get(), cross_thread_notifies, ready.back().get()));
     EXPECT_TRUE(

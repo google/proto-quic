@@ -70,7 +70,10 @@ template <typename T>
 void VoidPolymorphic1(T t) {
 }
 
-#if defined(NCTEST_METHOD_ON_CONST_OBJECT)  // [r"fatal error: static_assert failed \"|Param| needs to be constructible from |Unwrapped| type\.\""]
+void TakesMoveOnly(std::unique_ptr<int>) {
+}
+
+#if defined(NCTEST_METHOD_ON_CONST_OBJECT)  // [r"fatal error: static_assert failed \"Bound argument \|i\| of type \|Arg\| cannot be forwarded as \|Unwrapped\| to the bound functor, which declares it as \|Param\|\.\""]
 
 // Method bound to const-object.
 //
@@ -107,7 +110,7 @@ void WontCompile() {
   no_ref_const_cb.Run();
 }
 
-#elif defined(NCTEST_CONST_POINTER)  // [r"fatal error: static_assert failed \"|Param| needs to be constructible from |Unwrapped| type\.\""]
+#elif defined(NCTEST_CONST_POINTER)  // [r"fatal error: static_assert failed \"Bound argument \|i\| of type \|Arg\| cannot be forwarded as \|Unwrapped\| to the bound functor, which declares it as \|Param\|\.\""]
 
 // Const argument used with non-const pointer parameter of same type.
 //
@@ -119,7 +122,7 @@ void WontCompile() {
   pointer_same_cb.Run();
 }
 
-#elif defined(NCTEST_CONST_POINTER_SUBTYPE)  // [r"fatal error: static_assert failed \"|Param| needs to be constructible from |Unwrapped| type\.\""]
+#elif defined(NCTEST_CONST_POINTER_SUBTYPE)  // [r"fatal error: static_assert failed \"Bound argument \|i\| of type \|Arg\| cannot be forwarded as \|Unwrapped\| to the bound functor, which declares it as \|Param\|\.\""]
 
 // Const argument used with non-const pointer parameter of super type.
 //
@@ -148,7 +151,7 @@ void WontCompile() {
   ref_arg_cb.Run(p);
 }
 
-#elif defined(NCTEST_DISALLOW_BIND_TO_NON_CONST_REF_PARAM)  // [r"fatal error: static_assert failed \"|Param| needs to be constructible from |Unwrapped| type\.\""]
+#elif defined(NCTEST_DISALLOW_BIND_TO_NON_CONST_REF_PARAM)  // [r"fatal error: static_assert failed \"Bound argument \|i\| of type \|Arg\| cannot be forwarded as \|Unwrapped\| to the bound functor, which declares it as \|Param\|\.\""]
 
 // Binding functions with reference parameters, unsupported.
 //
@@ -159,7 +162,7 @@ void WontCompile() {
   ref_cb.Run();
 }
 
-#elif defined(NCTEST_NO_IMPLICIT_ARRAY_PTR_CONVERSION)  // [r"fatal error: static_assert failed \"First bound argument to a method cannot be an array.\""]
+#elif defined(NCTEST_NO_IMPLICIT_ARRAY_PTR_CONVERSION)  // [r"fatal error: static_assert failed \"First bound argument to a method cannot be an array\.\""]
 
 // A method should not be bindable with an array of objects.
 //
@@ -173,7 +176,7 @@ void WontCompile() {
   method_bound_to_array_cb.Run();
 }
 
-#elif defined(NCTEST_NO_RVALUE_RAW_PTR_FOR_REFCOUNTED_TYPES)  // [r"fatal error: static_assert failed \"A parameter is a refcounted type and needs scoped_refptr.\""]
+#elif defined(NCTEST_NO_RVALUE_RAW_PTR_FOR_REFCOUNTED_TYPES)  // [r"fatal error: static_assert failed \"A parameter is a refcounted type and needs scoped_refptr\.\""]
 
 // Refcounted types should not be bound as a raw pointer.
 void WontCompile() {
@@ -185,7 +188,7 @@ void WontCompile() {
       Bind(&VoidPolymorphic1<HasRef*>, &for_raw_ptr);
 }
 
-#elif defined(NCTEST_NO_LVALUE_RAW_PTR_FOR_REFCOUNTED_TYPES)  // [r"fatal error: static_assert failed \"A parameter is a refcounted type and needs scoped_refptr.\""]
+#elif defined(NCTEST_NO_LVALUE_RAW_PTR_FOR_REFCOUNTED_TYPES)  // [r"fatal error: static_assert failed \"A parameter is a refcounted type and needs scoped_refptr\.\""]
 
 // Refcounted types should not be bound as a raw pointer.
 void WontCompile() {
@@ -194,7 +197,7 @@ void WontCompile() {
       Bind(&VoidPolymorphic1<HasRef*>, for_raw_ptr);
 }
 
-#elif defined(NCTEST_NO_RVALUE_CONST_RAW_PTR_FOR_REFCOUNTED_TYPES)  // [r"fatal error: static_assert failed \"A parameter is a refcounted type and needs scoped_refptr.\""]
+#elif defined(NCTEST_NO_RVALUE_CONST_RAW_PTR_FOR_REFCOUNTED_TYPES)  // [r"fatal error: static_assert failed \"A parameter is a refcounted type and needs scoped_refptr\.\""]
 
 // Refcounted types should not be bound as a raw pointer.
 void WontCompile() {
@@ -203,7 +206,7 @@ void WontCompile() {
       Bind(&VoidPolymorphic1<const HasRef*>, &for_raw_ptr);
 }
 
-#elif defined(NCTEST_NO_LVALUE_CONST_RAW_PTR_FOR_REFCOUNTED_TYPES)  // [r"fatal error: static_assert failed \"A parameter is a refcounted type and needs scoped_refptr.\""]
+#elif defined(NCTEST_NO_LVALUE_CONST_RAW_PTR_FOR_REFCOUNTED_TYPES)  // [r"fatal error: static_assert failed \"A parameter is a refcounted type and needs scoped_refptr\.\""]
 
 // Refcounted types should not be bound as a raw pointer.
 void WontCompile() {
@@ -235,20 +238,6 @@ void WontCompile() {
 void WontCompile() {
   int i = 0, j = 0;
   Bind([i,&j]() {j = i;});
-}
-
-#elif defined(NCTEST_DISALLOW_BINDING_ONCE_CALLBACK_WITH_NO_ARGS)  // [r"static_assert failed \"Attempting to bind a base::Callback with no additional arguments: save a heap allocation and use the original base::Callback object\""]
-
-void WontCompile() {
-  OnceClosure cb = BindOnce([] {});
-  OnceClosure cb2 = BindOnce(std::move(cb));
-}
-
-#elif defined(NCTEST_DISALLOW_BINDING_REPEATING_CALLBACK_WITH_NO_ARGS)  // [r"static_assert failed \"Attempting to bind a base::Callback with no additional arguments: save a heap allocation and use the original base::Callback object\""]
-
-void WontCompile() {
-  Closure cb = Bind([] {});
-  Closure cb2 = Bind(cb);
 }
 
 #elif defined(NCTEST_DISALLOW_ONCECALLBACK_RUN_ON_LVALUE)  // [r"static_assert failed \"OnceCallback::Run\(\) may only be invoked on a non-const rvalue, i\.e\. std::move\(callback\)\.Run\(\)\.\""]
@@ -290,6 +279,28 @@ void WontCompile() {
   const auto cb = BindOnce([](int) {});
   BindOnce(std::move(cb), 42);
 }
+
+#elif defined(NCTEST_BINDONCE_MOVEONLY_TYPE_BY_VALUE)  // [r"fatal error: static_assert failed \"Bound argument \|i\| is move-only but will be bound by copy\. Ensure \|Arg\| is mutable and bound using std::move\(\)\.\""]
+
+void WontCompile() {
+  std::unique_ptr<int> x;
+  BindOnce(&TakesMoveOnly, x);
+}
+
+#elif defined(NCTEST_BIND_MOVEONLY_TYPE_BY_VALUE)  // [r"Bound argument \|i\| is move-only but will be forwarded by copy\. Ensure \|Arg\| is bound using base::Passed\(\), not std::move\(\)."]
+
+void WontCompile() {
+  std::unique_ptr<int> x;
+  Bind(&TakesMoveOnly, x);
+}
+
+#elif defined(NCTEST_BIND_MOVEONLY_TYPE_WITH_STDMOVE)  // [r"Bound argument \|i\| is move-only but will be forwarded by copy\. Ensure \|Arg\| is bound using base::Passed\(\), not std::move\(\)."]
+
+void WontCompile() {
+  std::unique_ptr<int> x;
+  Bind(&TakesMoveOnly, std::move(x));
+}
+
 
 #endif
 

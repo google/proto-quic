@@ -34,7 +34,7 @@
       <Item Name="Length">length_</Item>
       <Item Name="Hash">hash_</Item>
       <Item Name="AsciiText" Condition="is8_bit_">(this+1),[length_]s</Item>
-      <Item Name="UnicodeText" Condition="!is8_bit_">(this+1),[length_]su</Item>
+      <Item Name="UnicodeText" Condition="!is8_bit_">(wchar_t*)(this+1),[length_]su</Item>
     </Expand>
   </Type>
   <Type Name="WTF::AtomicString">
@@ -211,14 +211,12 @@
   </Type>
   <!-- Layout: LayoutNG -->
   <Type Name="blink::NGBlockNode">
-    <DisplayString>{layout_box_}</DisplayString>
+    <DisplayString>{*box_}</DisplayString>
   </Type>
   <Type Name="blink::NGInlineNode">
-    <DisplayString>{*start_inline_}</DisplayString>
+    <DisplayString>{*box_}</DisplayString>
     <Expand>
-      <Item Name="inline_node_data">*block_->ng_inline_node_data_</Item>
-      <Item Name="text_content">block_->ng_inline_node_data_->text_content_</Item>
-      <Item Name="items">block_->ng_inline_node_data_->items_</Item>
+      <Item Name="inline_node_data">*((blink::LayoutNGBlockFlow*)box_)->ng_inline_node_data_</Item>
     </Expand>
   </Type>
   <Type Name="blink::NGInlineItem">
@@ -276,6 +274,6 @@
     <DisplayString>{platform_data_}</DisplayString>
   </Type>
   <Type Name="blink::FontPlatformData">
-    <DisplayString>{*typeface_.ptr_}, {text_size_}px</DisplayString>
+    <DisplayString>{*typeface_.fPtr}, {text_size_}px</DisplayString>
   </Type>
 </AutoVisualizer>

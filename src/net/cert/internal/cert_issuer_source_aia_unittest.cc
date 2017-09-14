@@ -105,7 +105,7 @@ class MockCertNetFetcherRequest : public CertNetFetcher::Request {
 
 // Creates a CertNetFetcher::Request that completes with an error.
 std::unique_ptr<CertNetFetcher::Request> CreateMockRequest(Error error) {
-  return base::MakeUnique<MockCertNetFetcherRequest>(error,
+  return std::make_unique<MockCertNetFetcherRequest>(error,
                                                      std::vector<uint8_t>());
 }
 
@@ -113,7 +113,7 @@ std::unique_ptr<CertNetFetcher::Request> CreateMockRequest(Error error) {
 // code and bytes.
 std::unique_ptr<CertNetFetcher::Request> CreateMockRequest(
     const std::vector<uint8_t>& bytes) {
-  return base::MakeUnique<MockCertNetFetcherRequest>(OK, bytes);
+  return std::make_unique<MockCertNetFetcherRequest>(OK, bytes);
 }
 
 // CertIssuerSourceAia does not return results for SyncGetIssuersOf.

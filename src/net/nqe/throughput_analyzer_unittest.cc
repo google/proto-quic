@@ -6,7 +6,6 @@
 
 #include <stdint.h>
 
-#include <deque>
 #include <map>
 #include <memory>
 #include <string>
@@ -15,6 +14,7 @@
 
 #include "base/bind.h"
 #include "base/bind_helpers.h"
+#include "base/containers/circular_deque.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
@@ -46,7 +46,7 @@ class TestThroughputAnalyzer : public internal::ThroughputAnalyzer {
             base::Bind(
                 &TestThroughputAnalyzer::OnNewThroughputObservationAvailable,
                 base::Unretained(this)),
-            base::MakeUnique<BoundTestNetLog>()->bound()),
+            std::make_unique<BoundTestNetLog>()->bound()),
         throughput_observations_received_(0),
         bits_received_(0) {}
 
@@ -109,7 +109,7 @@ TEST(ThroughputAnalyzerTest, MaximumRequests) {
     throughput_analyzer.AddIPAddressResolution(&context);
 
     ASSERT_FALSE(throughput_analyzer.disable_throughput_measurements());
-    std::deque<std::unique_ptr<URLRequest>> requests;
+    base::circular_deque<std::unique_ptr<URLRequest>> requests;
 
     // Start more requests than the maximum number of requests that can be held
     // in the memory.
@@ -133,6 +133,53 @@ TEST(ThroughputAnalyzerTest, MaximumRequests) {
     // throughput measurements.
     EXPECT_NE(test.use_local_requests,
               throughput_analyzer.IsCurrentlyTrackingThroughput());
+  }
+}
+
+// Tests that the throughput observation is taken only if there are sufficient
+// number of requests in-flight.
+TEST(ThroughputAnalyzerTest, TestMinRequestsForThroughputSample) {
+  std::map<std::string, std::string> variation_params;
+  NetworkQualityEstimatorParams params(variation_params);
+
+  for (size_t num_requests = 1;
+       num_requests <= params.throughput_min_requests_in_flight() + 1;
+       ++num_requests) {
+    TestThroughputAnalyzer throughput_analyzer(&params);
+    TestDelegate test_delegate;
+    TestURLRequestContext context;
+    throughput_analyzer.AddIPAddressResolution(&context);
+    std::vector<std::unique_ptr<URLRequest>> requests_not_local;
+
+    for (size_t i = 0; i < num_requests; ++i) {
+      std::unique_ptr<URLRequest> request_not_local(context.CreateRequest(
+          GURL("http://example.com/echo.html"), DEFAULT_PRIORITY,
+          &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
+      request_not_local->Start();
+      requests_not_local.push_back(std::move(request_not_local));
+    }
+
+    base::RunLoop().Run();
+
+    EXPECT_EQ(0, throughput_analyzer.throughput_observations_received());
+
+    for (size_t i = 0; i < requests_not_local.size(); ++i) {
+      throughput_analyzer.NotifyStartTransaction(*requests_not_local.at(i));
+    }
+
+    // Increment the bytes received count to emulate the bytes received for
+    // |request_local| and |requests_not_local|.
+    throughput_analyzer.IncrementBitsReceived(100 * 1000 * 8);
+
+    for (size_t i = 0; i < requests_not_local.size(); ++i) {
+      throughput_analyzer.NotifyRequestCompleted(*requests_not_local.at(i));
+    }
+    base::RunLoop().RunUntilIdle();
+
+    int expected_throughput_observations =
+        num_requests >= params.throughput_min_requests_in_flight() ? 1 : 0;
+    EXPECT_EQ(expected_throughput_observations,
+              throughput_analyzer.throughput_observations_received());
   }
 }
 
@@ -167,10 +214,15 @@ TEST(ThroughputAnalyzerTest, TestThroughputWithMultipleRequestsOverlap) {
 
     std::unique_ptr<URLRequest> request_local;
 
-    std::unique_ptr<URLRequest> request_not_local(context.CreateRequest(
-        GURL("http://example.com/echo.html"), DEFAULT_PRIORITY, &test_delegate,
-        TRAFFIC_ANNOTATION_FOR_TESTS));
-    request_not_local->Start();
+    std::vector<std::unique_ptr<URLRequest>> requests_not_local;
+
+    for (size_t i = 0; i < params.throughput_min_requests_in_flight(); ++i) {
+      std::unique_ptr<URLRequest> request_not_local(context.CreateRequest(
+          GURL("http://example.com/echo.html"), DEFAULT_PRIORITY,
+          &test_delegate, TRAFFIC_ANNOTATION_FOR_TESTS));
+      request_not_local->Start();
+      requests_not_local.push_back(std::move(request_not_local));
+    }
 
     if (test.start_local_request) {
       request_local = context.CreateRequest(GURL("http://127.0.0.1/echo.html"),
@@ -190,7 +242,10 @@ TEST(ThroughputAnalyzerTest, TestThroughputWithMultipleRequestsOverlap) {
     // at all times.
     if (test.start_local_request)
       throughput_analyzer.NotifyStartTransaction(*request_local);
-    throughput_analyzer.NotifyStartTransaction(*request_not_local);
+
+    for (size_t i = 0; i < requests_not_local.size(); ++i) {
+      throughput_analyzer.NotifyStartTransaction(*requests_not_local.at(i));
+    }
 
     if (test.local_request_completes_first) {
       ASSERT_TRUE(test.start_local_request);
@@ -198,10 +253,12 @@ TEST(ThroughputAnalyzerTest, TestThroughputWithMultipleRequestsOverlap) {
     }
 
     // Increment the bytes received count to emulate the bytes received for
-    // |request_local| and |request_not_local|.
+    // |request_local| and |requests_not_local|.
     throughput_analyzer.IncrementBitsReceived(100 * 1000 * 8);
 
-    throughput_analyzer.NotifyRequestCompleted(*request_not_local);
+    for (size_t i = 0; i < requests_not_local.size(); ++i) {
+      throughput_analyzer.NotifyRequestCompleted(*requests_not_local.at(i));
+    }
     if (test.start_local_request && !test.local_request_completes_first)
       throughput_analyzer.NotifyRequestCompleted(*request_local);
 

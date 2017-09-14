@@ -61,8 +61,6 @@ class EmbeddedTestServerAndroid {
       const base::android::JavaParamRef<jobject>& jobj,
       const base::android::JavaParamRef<jstring>& jdirectory_path);
 
-  static bool RegisterEmbeddedTestServerAndroid(JNIEnv* env);
-
  private:
   // Connection listener forwarding notifications to EmbeddedTestServerAndroid.
   class ConnectionListener : public EmbeddedTestServerConnectionListener {

@@ -122,7 +122,7 @@ PersistentSparseHistogramDataManager::GetSampleMapRecordsWhileLocked(
     return found->second.get();
 
   std::unique_ptr<PersistentSampleMapRecords>& samples = sample_records_[id];
-  samples = MakeUnique<PersistentSampleMapRecords>(this, id);
+  samples = std::make_unique<PersistentSampleMapRecords>(this, id);
   return samples.get();
 }
 
@@ -764,7 +764,7 @@ void GlobalHistogramAllocator::CreateWithPersistentMemory(
     uint64_t id,
     StringPiece name) {
   Set(WrapUnique(
-      new GlobalHistogramAllocator(MakeUnique<PersistentMemoryAllocator>(
+      new GlobalHistogramAllocator(std::make_unique<PersistentMemoryAllocator>(
           base, size, page_size, id, name, false))));
 }
 
@@ -774,7 +774,7 @@ void GlobalHistogramAllocator::CreateWithLocalMemory(
     uint64_t id,
     StringPiece name) {
   Set(WrapUnique(new GlobalHistogramAllocator(
-      MakeUnique<LocalPersistentMemoryAllocator>(size, id, name))));
+      std::make_unique<LocalPersistentMemoryAllocator>(size, id, name))));
 }
 
 #if !defined(OS_NACL)
@@ -803,9 +803,9 @@ bool GlobalHistogramAllocator::CreateWithFile(
     return false;
   }
 
-  Set(WrapUnique(
-      new GlobalHistogramAllocator(MakeUnique<FilePersistentMemoryAllocator>(
-          std::move(mmfile), size, id, name, false))));
+  Set(WrapUnique(new GlobalHistogramAllocator(
+      std::make_unique<FilePersistentMemoryAllocator>(std::move(mmfile), size,
+                                                      id, name, false))));
   Get()->SetPersistentLocation(file_path);
   return true;
 }
@@ -937,8 +937,8 @@ void GlobalHistogramAllocator::CreateWithSharedMemoryHandle(
     return;
   }
 
-  Set(WrapUnique(
-      new GlobalHistogramAllocator(MakeUnique<SharedPersistentMemoryAllocator>(
+  Set(WrapUnique(new GlobalHistogramAllocator(
+      std::make_unique<SharedPersistentMemoryAllocator>(
           std::move(shm), 0, StringPiece(), /*readonly=*/false))));
 }
 

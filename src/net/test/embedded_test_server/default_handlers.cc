@@ -176,7 +176,7 @@ std::unique_ptr<HttpResponse> HandleEchoAll(const HttpRequest& request) {
 // /echo-raw
 // Returns the query string as the raw response (no HTTP headers).
 std::unique_ptr<HttpResponse> HandleEchoRaw(const HttpRequest& request) {
-  return base::MakeUnique<RawHttpResponse>("", request.GetURL().query());
+  return std::make_unique<RawHttpResponse>("", request.GetURL().query());
 }
 
 // /set-cookie?COOKIES
@@ -618,7 +618,7 @@ class HungHttpResponse : public HttpResponse {
 // /hung
 // Never returns a response.
 std::unique_ptr<HttpResponse> HandleHungResponse(const HttpRequest& request) {
-  return base::MakeUnique<HungHttpResponse>();
+  return std::make_unique<HungHttpResponse>();
 }
 
 // Return headers, then hangs.
@@ -639,7 +639,7 @@ class HungAfterHeadersHttpResponse : public HttpResponse {
 // Never returns a response.
 std::unique_ptr<HttpResponse> HandleHungAfterHeadersResponse(
     const HttpRequest& request) {
-  return base::MakeUnique<HungAfterHeadersHttpResponse>();
+  return std::make_unique<HungAfterHeadersHttpResponse>();
 }
 
 // /gzip-body?<body>

@@ -35,6 +35,11 @@ void NetworkQualityStore::Add(
   DCHECK_LE(cached_network_qualities_.size(),
             static_cast<size_t>(kMaximumNetworkQualityCacheSize));
 
+  if (cached_network_quality.effective_connection_type() ==
+      EFFECTIVE_CONNECTION_TYPE_UNKNOWN) {
+    return;
+  }
+
   if (!EligibleForCaching(network_id))
     return;
 

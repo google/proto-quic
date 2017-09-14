@@ -24,14 +24,10 @@ class _LoadingBase(perf_benchmark.PerfBenchmark):
     return tbm_options
 
 
-@benchmark.Disabled('android')
 @benchmark.Owner(emails=['kouhei@chormium.org', 'ksakamoto@chromium.org'])
 class LoadingDesktop(_LoadingBase):
   """ A benchmark measuring loading performance of desktop sites. """
-
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    return possible_browser.browser_type == 'reference'
+  SUPPORTED_PLATFORMS = [story.expectations.ALL_DESKTOP]
 
   def CreateStorySet(self, options):
     return page_sets.LoadingDesktopStorySet(
@@ -52,24 +48,10 @@ class LoadingDesktop(_LoadingBase):
     return 'loading.desktop'
 
 
-@benchmark.Enabled('android')
 @benchmark.Owner(emails=['kouhei@chromium.org', 'ksakamoto@chromium.org'])
 class LoadingMobile(_LoadingBase):
   """ A benchmark measuring loading performance of mobile sites. """
-
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    # crbug.com/619254
-    if possible_browser.browser_type == 'reference':
-      return True
-
-    # crbug.com/676612
-    if ((possible_browser.platform.GetDeviceTypeName() == 'Nexus 6' or
-         possible_browser.platform.GetDeviceTypeName() == 'AOSP on Shamu') and
-        possible_browser.browser_type == 'android-webview'):
-      return True
-
-    return False
+  SUPPORTED_PLATFORMS = [story.expectations.ALL_MOBILE]
 
   def CreateStorySet(self, options):
     return page_sets.LoadingMobileStorySet(
@@ -79,6 +61,8 @@ class LoadingMobile(_LoadingBase):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
+        self.DisableBenchmark(
+            [story.expectations.ANDROID_NEXUS6_WEBVIEW], 'crbug.com/676612')
         self.DisableStory('GFK', [story.expectations.ALL],
                           'N5X Timeout issue: crbug.com/702175')
         self.DisableStory('MLSMatrix', [story.expectations.ALL],
@@ -100,6 +84,8 @@ class LoadingMobile(_LoadingBase):
                           'Test Failure: crbug.com/750747')
         self.DisableStory('Hongkiat', [story.expectations.ANDROID_NEXUS5X],
                           'Test Failure: crbug.com/750747')
+        self.DisableStory('Facebook', [story.expectations.ANDROID_NEXUS7],
+                          'Nexus7v2 Timeout: crbug.com/759861')
         # TODO(rnephew): Uncomment Disablings. crbug.com/728882
         # self.DisableStory(
         #     'AirHorner', [story.expectations.ALL], 'crbug.com/653775')

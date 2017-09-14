@@ -262,7 +262,7 @@ std::unique_ptr<base::DictionaryValue> ProxyConfig::ToValue() const {
       if (proxy_rules_.reverse_bypass)
         dict->SetBoolean("reverse_bypass", true);
 
-      auto list = base::MakeUnique<base::ListValue>();
+      auto list = std::make_unique<base::ListValue>();
 
       for (ProxyBypassRules::RuleList::const_iterator it =
               bypass.rules().begin();

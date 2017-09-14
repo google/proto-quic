@@ -88,7 +88,7 @@ class TestDelegateBase : public BidirectionalStream::Delegate {
   TestDelegateBase(IOBuffer* read_buf, int read_buf_len)
       : TestDelegateBase(read_buf,
                          read_buf_len,
-                         base::MakeUnique<base::Timer>(false, false)) {}
+                         std::make_unique<base::Timer>(false, false)) {}
 
   TestDelegateBase(IOBuffer* read_buf,
                    int read_buf_len,
@@ -372,7 +372,7 @@ class MockTimer : public base::MockTimer {
   MockTimer() : base::MockTimer(false, false) {}
   ~MockTimer() override {}
 
-  void Start(const tracked_objects::Location& posted_from,
+  void Start(const base::Location& posted_from,
              base::TimeDelta delay,
              const base::Closure& user_task) override {
     // Sets a maximum delay, so the timer does not fire unless it is told to.

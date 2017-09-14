@@ -48,7 +48,18 @@ class _DiffAction(object):
     args.output_directory = None
     args.tool_prefix = None
     args.inputs = [args.before, args.after]
-    args.query = ('Print(Diff(), verbose=%s)' % bool(args.all))
+    args.query = '\n'.join([
+        'd = Diff()',
+        'sis = canned_queries.StaticInitializers(d.symbols)',
+        'count = sis.CountsByDiffStatus()[models.DIFF_STATUS_ADDED]',
+        'count += sis.CountsByDiffStatus()[models.DIFF_STATUS_REMOVED]',
+        'if count > 0:',
+        '  print "Static Initializers Diff:"',
+        '  Print(sis, summarize=False)',
+        '  print',
+        '  print "Full diff:"',
+        'Print(d, verbose=%s)' % bool(args.all),
+    ])
     console.Run(args, parser)
 
 
@@ -64,7 +75,8 @@ def main():
       'Starts an interactive Python console for analyzing .size files.')
   actions['diff'] = (
       _DiffAction(),
-      'Shorthand for console --query "Print(Diff())"')
+      'Shorthand for console --query "Print(Diff())" (plus highlights static '
+      'initializers in diff)')
 
   for name, tup in actions.iteritems():
     sub_parser = sub_parsers.add_parser(name, help=tup[1])

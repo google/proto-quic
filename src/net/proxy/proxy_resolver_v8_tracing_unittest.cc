@@ -95,7 +95,7 @@ class MockBindings {
   }
 
   std::unique_ptr<ProxyResolverV8Tracing::Bindings> CreateBindings() {
-    return base::MakeUnique<ForwardingBindings>(this);
+    return std::make_unique<ForwardingBindings>(this);
   }
 
  private:

@@ -266,7 +266,7 @@ std::unique_ptr<base::DictionaryValue> GetNetConstants() {
   // older builds of Chrome. Safe to remove this once M45 is on the stable
   // channel.
   constants_dict->Set("logLevelType",
-                      base::MakeUnique<base::DictionaryValue>());
+                      std::make_unique<base::DictionaryValue>());
 
   // Information about the relationship between address family enums and
   // their symbolic names.
@@ -306,13 +306,13 @@ std::unique_ptr<base::DictionaryValue> GetNetConstants() {
   // TODO(eroman): Is this needed?
   // "clientInfo" key is required for some log readers. Provide a default empty
   // value for compatibility.
-  constants_dict->Set("clientInfo", base::MakeUnique<base::DictionaryValue>());
+  constants_dict->Set("clientInfo", std::make_unique<base::DictionaryValue>());
 
   // Add a list of active field experiments.
   {
     base::FieldTrial::ActiveGroups active_groups;
     base::FieldTrialList::GetActiveFieldTrialGroups(&active_groups);
-    auto field_trial_groups = base::MakeUnique<base::ListValue>();
+    auto field_trial_groups = std::make_unique<base::ListValue>();
     for (base::FieldTrial::ActiveGroups::const_iterator it =
              active_groups.begin();
          it != active_groups.end(); ++it) {
@@ -353,14 +353,14 @@ NET_EXPORT std::unique_ptr<base::DictionaryValue> GetNetInfo(
     const ProxyRetryInfoMap& bad_proxies_map =
         context->proxy_service()->proxy_retry_info();
 
-    auto list = base::MakeUnique<base::ListValue>();
+    auto list = std::make_unique<base::ListValue>();
 
     for (ProxyRetryInfoMap::const_iterator it = bad_proxies_map.begin();
          it != bad_proxies_map.end(); ++it) {
       const std::string& proxy_uri = it->first;
       const ProxyRetryInfo& retry_info = it->second;
 
-      auto dict = base::MakeUnique<base::DictionaryValue>();
+      auto dict = std::make_unique<base::DictionaryValue>();
       dict->SetString("proxy_uri", proxy_uri);
       dict->SetString("bad_until",
                       NetLog::TickCountToString(retry_info.bad_until));
@@ -377,14 +377,14 @@ NET_EXPORT std::unique_ptr<base::DictionaryValue> GetNetInfo(
     DCHECK(host_resolver);
     HostCache* cache = host_resolver->GetHostCache();
     if (cache) {
-      auto dict = base::MakeUnique<base::DictionaryValue>();
+      auto dict = std::make_unique<base::DictionaryValue>();
       std::unique_ptr<base::Value> dns_config =
           host_resolver->GetDnsConfigAsValue();
       if (dns_config)
         dict->Set("dns_config", std::move(dns_config));
 
-      auto cache_info_dict = base::MakeUnique<base::DictionaryValue>();
-      auto cache_contents_list = base::MakeUnique<base::ListValue>();
+      auto cache_info_dict = std::make_unique<base::DictionaryValue>();
+      auto cache_contents_list = std::make_unique<base::ListValue>();
 
       cache_info_dict->SetInteger("capacity",
                                   static_cast<int>(cache->max_entries()));
@@ -414,7 +414,7 @@ NET_EXPORT std::unique_ptr<base::DictionaryValue> GetNetInfo(
   }
 
   if (info_sources & NET_INFO_SPDY_STATUS) {
-    auto status_dict = base::MakeUnique<base::DictionaryValue>();
+    auto status_dict = std::make_unique<base::DictionaryValue>();
 
     status_dict->SetBoolean("enable_http2",
                             http_network_session->params().enable_http2);
@@ -449,8 +449,8 @@ NET_EXPORT std::unique_ptr<base::DictionaryValue> GetNetInfo(
   }
 
   if (info_sources & NET_INFO_HTTP_CACHE) {
-    auto info_dict = base::MakeUnique<base::DictionaryValue>();
-    auto stats_dict = base::MakeUnique<base::DictionaryValue>();
+    auto info_dict = std::make_unique<base::DictionaryValue>();
+    auto stats_dict = std::make_unique<base::DictionaryValue>();
 
     disk_cache::Backend* disk_cache = GetDiskCacheBackend(context);
 
@@ -459,8 +459,7 @@ NET_EXPORT std::unique_ptr<base::DictionaryValue> GetNetInfo(
       base::StringPairs stats;
       disk_cache->GetStats(&stats);
       for (size_t i = 0; i < stats.size(); ++i) {
-        stats_dict->SetStringWithoutPathExpansion(stats[i].first,
-                                                  stats[i].second);
+        stats_dict->SetKey(stats[i].first, base::Value(stats[i].second));
       }
     }
     info_dict->Set("stats", std::move(stats_dict));

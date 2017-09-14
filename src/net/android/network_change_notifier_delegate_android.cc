@@ -284,11 +284,6 @@ void NetworkChangeNotifierDelegateAndroid::RemoveObserver(
   observers_->RemoveObserver(observer);
 }
 
-// static
-bool NetworkChangeNotifierDelegateAndroid::Register(JNIEnv* env) {
-  return RegisterNativesImpl(env);
-}
-
 void NetworkChangeNotifierDelegateAndroid::SetCurrentConnectionType(
     ConnectionType new_connection_type) {
   base::AutoLock auto_lock(connection_lock_);

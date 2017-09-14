@@ -222,6 +222,13 @@ DelayedCookieMonster::AddCallbackForCookie(
   return std::unique_ptr<CookieStore::CookieChangedSubscription>();
 }
 
+std::unique_ptr<CookieStore::CookieChangedSubscription>
+DelayedCookieMonster::AddCallbackForAllChanges(
+    const CookieChangedCallback& callback) {
+  ADD_FAILURE();
+  return std::unique_ptr<CookieStore::CookieChangedSubscription>();
+}
+
 bool DelayedCookieMonster::IsEphemeral() {
   return true;
 }

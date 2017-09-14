@@ -61,8 +61,8 @@ namespace mozilla_security_manager {
 
 // Based on nsNSSCertificateDB::handleCACertDownload, minus the UI bits.
 bool ImportCACerts(PK11SlotInfo* slot,
-                   const net::CertificateList& certificates,
-                   net::X509Certificate* root,
+                   const net::ScopedCERTCertificateList& certificates,
+                   CERTCertificate* root,
                    net::NSSCertDatabase::TrustBits trustBits,
                    net::NSSCertDatabase::ImportCertFailureList* not_imported) {
   if (!slot || certificates.empty() || !root)
@@ -72,26 +72,27 @@ bool ImportCACerts(PK11SlotInfo* slot,
   // already and use that, but CERT_NewTempCertificate actually does that
   // itself, so we skip it here.
 
-  if (!CERT_IsCACert(root->os_cert_handle(), NULL)) {
+  if (!CERT_IsCACert(root, NULL)) {
     not_imported->push_back(net::NSSCertDatabase::ImportCertFailure(
-        root, net::ERR_IMPORT_CA_CERT_NOT_CA));
-  } else if (root->os_cert_handle()->isperm) {
+        net::x509_util::DupCERTCertificate(root),
+        net::ERR_IMPORT_CA_CERT_NOT_CA));
+  } else if (root->isperm) {
     // Mozilla just returns here, but we continue in case there are other certs
     // in the list which aren't already imported.
     // TODO(mattm): should we set/add trust if it differs from the present
     // settings?
     not_imported->push_back(net::NSSCertDatabase::ImportCertFailure(
-        root, net::ERR_IMPORT_CERT_ALREADY_EXISTS));
+        net::x509_util::DupCERTCertificate(root),
+        net::ERR_IMPORT_CERT_ALREADY_EXISTS));
   } else {
     // Mozilla uses CERT_AddTempCertToPerm, however it is privately exported,
     // and it doesn't take the slot as an argument either.  Instead, we use
     // PK11_ImportCert and CERT_ChangeCertTrust.
-    SECStatus srv =
-        PK11_ImportCert(slot, root->os_cert_handle(), CK_INVALID_HANDLE,
-                        net::x509_util::GetDefaultUniqueNickname(
-                            root->os_cert_handle(), net::CA_CERT, slot)
-                            .c_str(),
-                        PR_FALSE /* includeTrust (unused) */);
+    SECStatus srv = PK11_ImportCert(
+        slot, root, CK_INVALID_HANDLE,
+        net::x509_util::GetDefaultUniqueNickname(root, net::CA_CERT, slot)
+            .c_str(),
+        PR_FALSE /* includeTrust (unused) */);
     if (srv != SECSuccess) {
       LOG(ERROR) << "PK11_ImportCert failed with error " << PORT_GetError();
       return false;
@@ -108,7 +109,7 @@ bool ImportCACerts(PK11SlotInfo* slot,
   // |not_imported| result.  So, we keep using our net::CertificateList and
   // filter it ourself.
   for (size_t i = 0; i < certificates.size(); i++) {
-    const scoped_refptr<net::X509Certificate>& cert = certificates[i];
+    CERTCertificate* cert = certificates[i].get();
     if (cert == root) {
       // we already processed that one
       continue;
@@ -116,45 +117,47 @@ bool ImportCACerts(PK11SlotInfo* slot,
 
     // Mozilla uses CERT_FilterCertListByUsage(certList, certUsageAnyCA,
     // PR_TRUE).  Afaict, checking !CERT_IsCACert on each cert is equivalent.
-    if (!CERT_IsCACert(cert->os_cert_handle(), NULL)) {
+    if (!CERT_IsCACert(cert, NULL)) {
       not_imported->push_back(net::NSSCertDatabase::ImportCertFailure(
-          cert, net::ERR_IMPORT_CA_CERT_NOT_CA));
+          net::x509_util::DupCERTCertificate(cert),
+          net::ERR_IMPORT_CA_CERT_NOT_CA));
       VLOG(1) << "skipping cert (non-ca)";
       continue;
     }
 
-    if (cert->os_cert_handle()->isperm) {
+    if (cert->isperm) {
       not_imported->push_back(net::NSSCertDatabase::ImportCertFailure(
-          cert, net::ERR_IMPORT_CERT_ALREADY_EXISTS));
+          net::x509_util::DupCERTCertificate(cert),
+          net::ERR_IMPORT_CERT_ALREADY_EXISTS));
       VLOG(1) << "skipping cert (perm)";
       continue;
     }
 
-    if (CERT_VerifyCert(CERT_GetDefaultCertDB(), cert->os_cert_handle(),
-        PR_TRUE, certUsageVerifyCA, now, NULL, NULL) != SECSuccess) {
+    if (CERT_VerifyCert(CERT_GetDefaultCertDB(), cert, PR_TRUE,
+                        certUsageVerifyCA, now, NULL, NULL) != SECSuccess) {
       // TODO(mattm): use better error code (map PORT_GetError to an appropriate
       // error value).  (maybe make MapSecurityError or MapCertErrorToCertStatus
       // public.)
       not_imported->push_back(net::NSSCertDatabase::ImportCertFailure(
-          cert, net::ERR_FAILED));
+          net::x509_util::DupCERTCertificate(cert), net::ERR_FAILED));
       VLOG(1) << "skipping cert (verify) " << PORT_GetError();
       continue;
     }
 
     // Mozilla uses CERT_ImportCerts, which doesn't take a slot arg.  We use
     // PK11_ImportCert instead.
-    SECStatus srv =
-        PK11_ImportCert(slot, cert->os_cert_handle(), CK_INVALID_HANDLE,
-                        net::x509_util::GetDefaultUniqueNickname(
-                            cert->os_cert_handle(), net::CA_CERT, slot)
-                            .c_str(),
-                        PR_FALSE /* includeTrust (unused) */);
+    SECStatus srv = PK11_ImportCert(
+        slot, cert, CK_INVALID_HANDLE,
+        net::x509_util::GetDefaultUniqueNickname(cert, net::CA_CERT, slot)
+            .c_str(),
+        PR_FALSE /* includeTrust (unused) */);
     if (srv != SECSuccess) {
       LOG(ERROR) << "PK11_ImportCert failed with error " << PORT_GetError();
       // TODO(mattm): Should we bail or continue on error here?  Mozilla doesn't
       // check error code at all.
       not_imported->push_back(net::NSSCertDatabase::ImportCertFailure(
-          cert, net::ERR_IMPORT_CA_CERT_FAILED));
+          net::x509_util::DupCERTCertificate(cert),
+          net::ERR_IMPORT_CA_CERT_FAILED));
     }
   }
 
@@ -165,27 +168,27 @@ bool ImportCACerts(PK11SlotInfo* slot,
 // Based on nsNSSCertificateDB::ImportServerCertificate.
 bool ImportServerCert(
     PK11SlotInfo* slot,
-    const net::CertificateList& certificates,
+    const net::ScopedCERTCertificateList& certificates,
     net::NSSCertDatabase::TrustBits trustBits,
     net::NSSCertDatabase::ImportCertFailureList* not_imported) {
   if (!slot || certificates.empty())
     return false;
 
   for (size_t i = 0; i < certificates.size(); ++i) {
-    const scoped_refptr<net::X509Certificate>& cert = certificates[i];
+    CERTCertificate* cert = certificates[i].get();
 
     // Mozilla uses CERT_ImportCerts, which doesn't take a slot arg.  We use
     // PK11_ImportCert instead.
-    SECStatus srv =
-        PK11_ImportCert(slot, cert->os_cert_handle(), CK_INVALID_HANDLE,
-                        net::x509_util::GetDefaultUniqueNickname(
-                            cert->os_cert_handle(), net::SERVER_CERT, slot)
-                            .c_str(),
-                        PR_FALSE /* includeTrust (unused) */);
+    SECStatus srv = PK11_ImportCert(
+        slot, cert, CK_INVALID_HANDLE,
+        net::x509_util::GetDefaultUniqueNickname(cert, net::SERVER_CERT, slot)
+            .c_str(),
+        PR_FALSE /* includeTrust (unused) */);
     if (srv != SECSuccess) {
       LOG(ERROR) << "PK11_ImportCert failed with error " << PORT_GetError();
       not_imported->push_back(net::NSSCertDatabase::ImportCertFailure(
-          cert, net::ERR_IMPORT_SERVER_CERT_FAILED));
+          net::x509_util::DupCERTCertificate(cert),
+          net::ERR_IMPORT_SERVER_CERT_FAILED));
       continue;
     }
   }
@@ -199,26 +202,23 @@ bool ImportServerCert(
 }
 
 // Based on nsNSSCertificateDB::ImportUserCertificate.
-int ImportUserCert(const net::CertificateList& certificates) {
-  if (certificates.empty())
+int ImportUserCert(CERTCertificate* cert) {
+  if (!cert)
     return net::ERR_CERT_INVALID;
 
-  const scoped_refptr<net::X509Certificate>& cert = certificates[0];
   CK_OBJECT_HANDLE key;
-  crypto::ScopedPK11Slot slot(
-      PK11_KeyForCertExists(cert->os_cert_handle(), &key, NULL));
+  crypto::ScopedPK11Slot slot(PK11_KeyForCertExists(cert, &key, NULL));
 
   if (!slot.get())
     return net::ERR_NO_PRIVATE_KEY_FOR_CERT;
 
   // Mozilla uses CERT_ImportCerts, which doesn't take a slot arg.  We use
   // PK11_ImportCert instead.
-  SECStatus srv =
-      PK11_ImportCert(slot.get(), cert->os_cert_handle(), key,
-                      net::x509_util::GetDefaultUniqueNickname(
-                          cert->os_cert_handle(), net::USER_CERT, slot.get())
-                          .c_str(),
-                      PR_FALSE /* includeTrust (unused) */);
+  SECStatus srv = PK11_ImportCert(
+      slot.get(), cert, key,
+      net::x509_util::GetDefaultUniqueNickname(cert, net::USER_CERT, slot.get())
+          .c_str(),
+      PR_FALSE /* includeTrust (unused) */);
 
   if (srv != SECSuccess) {
     LOG(ERROR) << "PK11_ImportCert failed with error " << PORT_GetError();
@@ -229,11 +229,9 @@ int ImportUserCert(const net::CertificateList& certificates) {
 }
 
 // Based on nsNSSCertificateDB::SetCertTrust.
-bool
-SetCertTrust(const net::X509Certificate* cert,
-             net::CertType type,
-             net::NSSCertDatabase::TrustBits trustBits)
-{
+bool SetCertTrust(CERTCertificate* nsscert,
+                  net::CertType type,
+                  net::NSSCertDatabase::TrustBits trustBits) {
   const unsigned kSSLTrustBits = net::NSSCertDatabase::TRUSTED_SSL |
       net::NSSCertDatabase::DISTRUSTED_SSL;
   const unsigned kEmailTrustBits = net::NSSCertDatabase::TRUSTED_EMAIL |
@@ -250,7 +248,6 @@ SetCertTrust(const net::X509Certificate* cert,
   }
 
   SECStatus srv;
-  CERTCertificate *nsscert = cert->os_cert_handle();
   if (type == net::CA_CERT) {
     // Note that we start with CERTDB_VALID_CA for default trust and explicit
     // trust, but explicitly distrusted usages will be set to

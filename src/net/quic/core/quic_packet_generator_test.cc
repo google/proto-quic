@@ -132,7 +132,7 @@ class TestPacketGenerator : public QuicPacketGenerator {
       }
     }
     return QuicPacketGenerator::ConsumeDataFastPath(id, iov, offset, fin, 0,
-                                                    std::move(ack_listener));
+                                                    ack_listener);
   }
 
   QuicConsumedData ConsumeData(

@@ -211,7 +211,7 @@ class QuicEndToEndTest : public ::testing::TestWithParam<TestParams> {
   void InitializePostRequest(size_t length) {
     GenerateBody(length);
     std::vector<std::unique_ptr<UploadElementReader>> element_readers;
-    element_readers.push_back(base::MakeUnique<UploadBytesElementReader>(
+    element_readers.push_back(std::make_unique<UploadBytesElementReader>(
         request_body_.data(), request_body_.length()));
     upload_data_stream_.reset(
         new ElementsUploadDataStream(std::move(element_readers), 0));

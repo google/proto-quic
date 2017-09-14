@@ -14,6 +14,7 @@
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_crypto_server_stream.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_containers.h"
 #include "net/quic/platform/api/quic_flags.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/platform/api/quic_string_piece.h"
@@ -56,21 +57,16 @@ class QuicSimpleServerSessionPeer {
 
   static QuicSpdyStream* CreateIncomingDynamicStream(QuicSimpleServerSession* s,
                                                      QuicStreamId id) {
-    return FLAGS_quic_reloadable_flag_quic_refactor_stream_creation
-               ? s->MaybeCreateIncomingDynamicStream(id)
-               : s->CreateIncomingDynamicStream(id);
+    return s->CreateIncomingDynamicStream(id);
   }
 
   static QuicSimpleServerStream* CreateOutgoingDynamicStream(
       QuicSimpleServerSession* s,
       SpdyPriority priority) {
-    return FLAGS_quic_reloadable_flag_quic_refactor_stream_creation
-               ? static_cast<QuicSimpleServerStream*>(
-                     s->MaybeCreateOutgoingDynamicStream(priority))
-               : s->CreateOutgoingDynamicStream(priority);
+    return s->CreateOutgoingDynamicStream(priority);
   }
 
-  static std::deque<PromisedStreamInfo>* promised_streams(
+  static QuicDeque<PromisedStreamInfo>* promised_streams(
       QuicSimpleServerSession* s) {
     return &(s->promised_streams_);
   }
@@ -326,24 +322,13 @@ TEST_P(QuicSimpleServerSessionTest, CreateIncomingDynamicStreamDisconnected) {
   // Tests that incoming stream creation fails when connection is not connected.
   size_t initial_num_open_stream = session_->GetNumOpenIncomingStreams();
   QuicConnectionPeer::TearDownLocalConnectionState(connection_);
-  if (FLAGS_quic_reloadable_flag_quic_refactor_stream_creation) {
-    EXPECT_EQ(nullptr, QuicSimpleServerSessionPeer::CreateIncomingDynamicStream(
-                           session_.get(), GetNthClientInitiatedId(0)));
-  } else {
-    EXPECT_QUIC_BUG(QuicSimpleServerSessionPeer::CreateIncomingDynamicStream(
-                        session_.get(), GetNthClientInitiatedId(0)),
-                    "ShouldCreateIncomingDynamicStream called when "
-                    "disconnected");
-  }
+  EXPECT_QUIC_BUG(QuicSimpleServerSessionPeer::CreateIncomingDynamicStream(
+                      session_.get(), GetNthClientInitiatedId(0)),
+                  "ShouldCreateIncomingDynamicStream called when disconnected");
   EXPECT_EQ(initial_num_open_stream, session_->GetNumOpenIncomingStreams());
 }
 
 TEST_P(QuicSimpleServerSessionTest, CreateEvenIncomingDynamicStream) {
-  if (FLAGS_quic_reloadable_flag_quic_refactor_stream_creation) {
-    EXPECT_EQ(nullptr, QuicSimpleServerSessionPeer::CreateIncomingDynamicStream(
-                           session_.get(), 2));
-    return;
-  }
   // Tests that incoming stream creation fails when given stream id is even.
   size_t initial_num_open_stream = session_->GetNumOpenIncomingStreams();
   EXPECT_CALL(*connection_,
@@ -365,15 +350,9 @@ TEST_P(QuicSimpleServerSessionTest, CreateOutgoingDynamicStreamDisconnected) {
   // Tests that outgoing stream creation fails when connection is not connected.
   size_t initial_num_open_stream = session_->GetNumOpenOutgoingStreams();
   QuicConnectionPeer::TearDownLocalConnectionState(connection_);
-  if (FLAGS_quic_reloadable_flag_quic_refactor_stream_creation) {
-    EXPECT_EQ(nullptr, QuicSimpleServerSessionPeer::CreateOutgoingDynamicStream(
-                           session_.get(), kDefaultPriority));
-  } else {
-    EXPECT_QUIC_BUG(QuicSimpleServerSessionPeer::CreateOutgoingDynamicStream(
-                        session_.get(), kDefaultPriority),
-                    "ShouldCreateOutgoingDynamicStream called when "
-                    "disconnected");
-  }
+  EXPECT_QUIC_BUG(QuicSimpleServerSessionPeer::CreateOutgoingDynamicStream(
+                      session_.get(), kDefaultPriority),
+                  "ShouldCreateOutgoingDynamicStream called when disconnected");
 
   EXPECT_EQ(initial_num_open_stream, session_->GetNumOpenOutgoingStreams());
 }
@@ -382,15 +361,9 @@ TEST_P(QuicSimpleServerSessionTest, CreateOutgoingDynamicStreamUnencrypted) {
   // Tests that outgoing stream creation fails when encryption has not yet been
   // established.
   size_t initial_num_open_stream = session_->GetNumOpenOutgoingStreams();
-  if (FLAGS_quic_reloadable_flag_quic_refactor_stream_creation) {
-    EXPECT_EQ(nullptr, QuicSimpleServerSessionPeer::CreateOutgoingDynamicStream(
-                           session_.get(), kDefaultPriority));
-  } else {
-    EXPECT_QUIC_BUG(QuicSimpleServerSessionPeer::CreateOutgoingDynamicStream(
-                        session_.get(), kDefaultPriority),
-                    "Encryption not established so no outgoing stream "
-                    "created.");
-  }
+  EXPECT_QUIC_BUG(QuicSimpleServerSessionPeer::CreateOutgoingDynamicStream(
+                      session_.get(), kDefaultPriority),
+                  "Encryption not established so no outgoing stream created.");
   EXPECT_EQ(initial_num_open_stream, session_->GetNumOpenOutgoingStreams());
 }
 

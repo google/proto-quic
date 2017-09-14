@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import json
 import time
 
 from devil.android import forwarder
@@ -11,6 +12,11 @@ from pylib.constants import host_paths
 
 with host_paths.SysPath(host_paths.BUILD_COMMON_PATH):
   import chrome_test_server_spawner
+
+
+# The tests should not need more than one test server instance.
+MAX_TEST_SERVER_INSTANCES = 1
+
 
 def _WaitUntil(predicate, max_attempts=5):
   """Blocks until the provided predicate (function) is true.
@@ -57,7 +63,7 @@ class LocalTestServerSpawner(test_server.TestServer):
     super(LocalTestServerSpawner, self).__init__()
     self._device = device
     self._spawning_server = chrome_test_server_spawner.SpawningServer(
-        port, PortForwarderAndroid(device, tool))
+        port, PortForwarderAndroid(device, tool), MAX_TEST_SERVER_INSTANCES)
     self._tool = tool
 
   @property
@@ -70,9 +76,15 @@ class LocalTestServerSpawner(test_server.TestServer):
 
   #override
   def SetUp(self):
+    # See net/test/spawned_test_server/test_server_config.h for description of
+    # the fields in the config file.
+    test_server_config = json.dumps({
+      'address': '127.0.0.1',
+      'spawner_url_base': 'http://localhost:%d' % self.port
+    })
     self._device.WriteFile(
-        '%s/net-test-server-ports' % self._device.GetExternalStoragePath(),
-        '%s:0' % str(self.port))
+        '%s/net-test-server-config' % self._device.GetExternalStoragePath(),
+        test_server_config)
     forwarder.Forwarder.Map(
         [(self.port, self.port)], self._device, self._tool)
     self._spawning_server.Start()

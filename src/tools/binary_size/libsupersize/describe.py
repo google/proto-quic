@@ -3,7 +3,10 @@
 # found in the LICENSE file.
 """Methods for converting model objects to human-readable formats."""
 
+import abc
+import cStringIO
 import collections
+import csv
 import datetime
 import itertools
 import time
@@ -30,54 +33,101 @@ def _PrettySize(size):
   return '%.1fmb' % size
 
 
-def _FormatPss(pss):
+def _FormatPss(pss, force_sign=False):
   # Shows a decimal for small numbers to make it clear that a shared symbol has
   # a non-zero pss.
   if abs(pss) > 10:
     return str(int(pss))
-  ret = str(round(pss, 1))
-  if ret.endswith('.0'):
-    ret = ret[:-2]
-    if ret == '0' and pss:
-      ret = '~0'
-  return ret
+  near_int = abs(pss) % 1 < 0.05
+  if near_int and abs(pss) < 1 and pss:
+    return '~0'
+  if force_sign:
+    return ('%+.0f' if near_int else '%+.1f') % pss
+  return ('%.0f' if near_int else '%.1f') % pss
 
 
 def _Divide(a, b):
   return float(a) / b if b else 0
 
 
+def _IncludeInTotals(section_name):
+  return section_name != '.bss' and '(' not in section_name
+
+
+def _GetSectionSizeInfo(section_sizes):
+  total_bytes = sum(v for k, v in section_sizes.iteritems()
+                    if _IncludeInTotals(k))
+  max_bytes = max(abs(v) for k, v in section_sizes.iteritems()
+                  if _IncludeInTotals(k))
+
+  def is_relevant_section(name, size):
+    # Show all sections containing symbols, plus relocations.
+    # As a catch-all, also include any section that comprises > 4% of the
+    # largest section. Use largest section rather than total so that it still
+    # works out when showing a diff containing +100, -100 (total=0).
+    return (name in models.SECTION_TO_SECTION_NAME.values() or
+            name in ('.rela.dyn', '.rel.dyn') or
+            _IncludeInTotals(name) and abs(_Divide(size, max_bytes)) > .04)
+
+  section_names = sorted(k for k, v  in section_sizes.iteritems()
+                         if is_relevant_section(k, v))
+
+  return (total_bytes, section_names)
+
+
 class Describer(object):
-  def __init__(self, verbose=False, recursive=False):
+  def __init__(self):
+    pass
+
+  @abc.abstractmethod
+  def _DescribeDeltaSizeInfo(self, diff):
+    pass
+
+  @abc.abstractmethod
+  def _DescribeSizeInfo(self, size_info):
+    pass
+
+  @abc.abstractmethod
+  def _DescribeDeltaSymbolGroup(self, delta_group):
+    pass
+
+  @abc.abstractmethod
+  def _DescribeSymbolGroup(self, group):
+    pass
+
+  @abc.abstractmethod
+  def _DescribeSymbol(self, sym, single_line=False):
+    pass
+
+  def GenerateLines(self, obj):
+    if isinstance(obj, models.DeltaSizeInfo):
+      return self._DescribeDeltaSizeInfo(obj)
+    if isinstance(obj, models.SizeInfo):
+      return self._DescribeSizeInfo(obj)
+    if isinstance(obj, models.DeltaSymbolGroup):
+      return self._DescribeDeltaSymbolGroup(obj)
+    if isinstance(obj, models.SymbolGroup):
+      return self._DescribeSymbolGroup(obj)
+    if isinstance(obj, models.Symbol) or isinstance(obj, models.DeltaSymbol):
+      return self._DescribeSymbol(obj)
+    return (repr(obj),)
+
+
+class DescriberText(Describer):
+  def __init__(self, verbose=False, recursive=False, summarize=True):
+    super(DescriberText, self).__init__()
     self.verbose = verbose
     self.recursive = recursive
+    self.summarize = summarize
 
   def _DescribeSectionSizes(self, section_sizes):
-    def include_in_totals(name):
-      return name != '.bss' and '(' not in name
-
-    total_bytes = sum(v for k, v in section_sizes.iteritems()
-                      if include_in_totals(k))
-    max_bytes = max(abs(v) for k, v in section_sizes.iteritems()
-                    if include_in_totals(k))
-
-    def is_relevant_section(name, size):
-      # Show all sections containing symbols, plus relocations.
-      # As a catch-all, also include any section that comprises > 4% of the
-      # largest section. Use largest section rather than total so that it still
-      # works out when showing a diff containing +100, -100 (total=0).
-      return (name in models.SECTION_TO_SECTION_NAME.values() or
-              name in ('.rela.dyn', '.rel.dyn') or
-              include_in_totals(name) and abs(_Divide(size, max_bytes)) > .04)
-
-    section_names = sorted(k for k, v  in section_sizes.iteritems()
-                           if is_relevant_section(k, v))
+    total_bytes, section_names = _GetSectionSizeInfo(section_sizes)
     yield ''
     yield 'Section Sizes (Total={} ({} bytes)):'.format(
         _PrettySize(total_bytes), total_bytes)
     for name in section_names:
       size = section_sizes[name]
-      if not include_in_totals(name):
+      if not _IncludeInTotals(name):
         yield '    {}: {} ({} bytes) (not included in totals)'.format(
             name, _PrettySize(size), size)
       else:
@@ -92,53 +142,35 @@ class Describer(object):
                              if k not in section_names)
       for name in section_names:
         not_included_part = ''
-        if not include_in_totals(name):
+        if not _IncludeInTotals(name):
           not_included_part = ' (not included in totals)'
         yield '    {}: {} ({} bytes){}'.format(
             name, _PrettySize(section_sizes[name]), section_sizes[name],
             not_included_part)
 
   def _DescribeSymbol(self, sym, single_line=False):
-    if sym.IsGroup():
-      address = 'Group'
-    else:
-      address = hex(sym.address)
+    address = 'Group' if sym.IsGroup() else hex(sym.address)
+
     last_field = ''
     if sym.IsGroup():
       last_field = 'count=%d' % len(sym)
-    elif sym.IsDelta():
-      if sym.before_symbol is None:
-        num_aliases = sym.after_symbol.num_aliases
-      elif sym.after_symbol is None:
-        num_aliases = sym.before_symbol.num_aliases
-      elif sym.before_symbol.num_aliases == sym.after_symbol.num_aliases:
-        num_aliases = sym.before_symbol.num_aliases
-      else:
-        last_field = 'num_aliases=%d->%d' % (
-            sym.before_symbol.num_aliases, sym.after_symbol.num_aliases)
-      if not last_field and (num_aliases > 1 or self.verbose):
-        last_field = 'num_aliases=%d' % num_aliases
-    elif sym.num_aliases > 1 or self.verbose:
-      last_field = 'num_aliases=%d' % sym.num_aliases
-
-    if sym.IsDelta():
-      if sym.IsGroup():
-        b = sum(s.before_symbol.pss_without_padding if s.before_symbol else 0
-                for s in sym.IterLeafSymbols())
-        a = sum(s.after_symbol.pss_without_padding if s.after_symbol else 0
-                for s in sym.IterLeafSymbols())
-      else:
-        b = sym.before_symbol.pss_without_padding if sym.before_symbol else 0
-        a = sym.after_symbol.pss_without_padding if sym.after_symbol else 0
-      pss_with_sign = _FormatPss(sym.pss)
-      if pss_with_sign[0] not in '~-':
-        pss_with_sign = '+' + pss_with_sign
-      pss_field = '{} ({}->{})'.format(
-          pss_with_sign, _FormatPss(b), _FormatPss(a))
-    elif sym.num_aliases > 1:
-      pss_field = '{} (size={})'.format(_FormatPss(sym.pss), sym.size)
     else:
-      pss_field = '{}'.format(_FormatPss(sym.pss))
+      syms = [sym.before_symbol, sym.after_symbol] if sym.IsDelta() else [sym]
+      num_aliases = [s.num_aliases for s in syms if not s is None]
+      if num_aliases[0] != num_aliases[-1]:  # If 2 distinct values.
+        last_field = 'num_aliases=%d->%d' % tuple(num_aliases)
+      elif num_aliases[0] > 1 or self.verbose:
+        last_field = 'num_aliases=%d' % num_aliases[0]
+
+    pss_field = _FormatPss(sym.pss, sym.IsDelta())
+    if sym.IsDelta():
+      b = sum(s.before_symbol.pss_without_padding if s.before_symbol else 0
+              for s in sym.IterLeafSymbols())
+      a = sum(s.after_symbol.pss_without_padding if s.after_symbol else 0
+              for s in sym.IterLeafSymbols())
+      pss_field = '{} ({}->{})'.format(pss_field, _FormatPss(b), _FormatPss(a))
+    elif sym.num_aliases > 1:
+      pss_field = '{} (size={})'.format(pss_field, sym.size)
 
     if self.verbose:
       if last_field:
@@ -205,40 +237,54 @@ class Describer(object):
           yield l
 
   def _DescribeSymbolGroup(self, group):
-    total_size = group.pss
-    section_sizes = collections.defaultdict(float)
-    for s in group.IterLeafSymbols():
-      section_sizes[s.section_name] += s.pss
+    if self.summarize:
+      total_size = group.pss
+      section_sizes = collections.defaultdict(float)
+      for s in group.IterLeafSymbols():
+        section_sizes[s.section_name] += s.pss
 
     # Apply this filter after calcualating size since an alias being removed
     # causes some symbols to be UNCHANGED, yet have pss != 0.
     if group.IsDelta() and not self.verbose:
       group = group.WhereDiffStatusIs(models.DIFF_STATUS_UNCHANGED).Inverted()
 
-    unique_paths = set()
-    for s in group.IterLeafSymbols():
-      # Ignore paths like foo/{shared}/2
-      if '{' not in s.object_path:
-        unique_paths.add(s.object_path)
+    if self.summarize:
+      unique_paths = set()
+      for s in group.IterLeafSymbols():
+        # Ignore paths like foo/{shared}/2
+        if '{' not in s.object_path:
+          unique_paths.add(s.object_path)
 
-    if group.IsDelta():
-      unique_part = 'aliases not grouped for diffs'
+      if group.IsDelta():
+        unique_part = 'aliases not grouped for diffs'
+      else:
+        unique_part = '{:,} unique'.format(group.CountUniqueSymbols())
+
+      relevant_sections = [
+          s for s in models.SECTION_TO_SECTION_NAME.itervalues()
+          if s in section_sizes]
+      if models.SECTION_NAME_MULTIPLE in relevant_sections:
+        relevant_sections.remove(models.SECTION_NAME_MULTIPLE)
+
+      size_summary = ' '.join(
+          '{}={:<10}'.format(k, _PrettySize(int(section_sizes[k])))
+          for k in relevant_sections)
+      size_summary += ' total={:<10}'.format(_PrettySize(int(total_size)))
+
+      section_legend = ', '.join(
+          '{}={}'.format(models.SECTION_NAME_TO_SECTION[k], k)
+          for k in relevant_sections if k in models.SECTION_NAME_TO_SECTION)
+
+      summary_desc = [
+          'Showing {:,} symbols ({}) with total pss: {} bytes'.format(
+              len(group), unique_part, int(total_size)),
+          size_summary,
+          'Number of unique paths: {}'.format(len(unique_paths)),
+          '',
+          'Section Legend: {}'.format(section_legend),
+      ]
     else:
-      unique_part = '{:,} unique'.format(group.CountUniqueSymbols())
-
-    relevant_sections = [s for s in models.SECTION_TO_SECTION_NAME.itervalues()
-                         if s in section_sizes]
-    if models.SECTION_NAME_MULTIPLE in relevant_sections:
-      relevant_sections.remove(models.SECTION_NAME_MULTIPLE)
-
-    size_summary = ' '.join(
-        '{}={:<10}'.format(k, _PrettySize(int(section_sizes[k])))
-        for k in relevant_sections)
-    size_summary += ' total={:<10}'.format(_PrettySize(int(total_size)))
-
-    section_legend = ', '.join(
-        '{}={}'.format(models.SECTION_NAME_TO_SECTION[k], k)
-        for k in relevant_sections if k in models.SECTION_NAME_TO_SECTION)
+      summary_desc = ()
 
     if self.verbose:
       titles = 'Index | Running Total | Section@Address | ...'
@@ -248,18 +294,10 @@ class Describer(object):
     else:
       titles = ('Index | Running Total | Section@Address | PSS | Path')
 
-    header_desc = [
-        'Showing {:,} symbols ({}) with total pss: {} bytes'.format(
-            len(group), unique_part, int(total_size)),
-        size_summary,
-        'Number of unique paths: {}'.format(len(unique_paths)),
-        '',
-        'Section Legend: {}'.format(section_legend),
-        titles,
-        '-' * 60
-    ]
+    header_desc = (titles, '-' * 60)
+
     children_desc = self._DescribeSymbolGroupChildren(group)
-    return itertools.chain(header_desc, children_desc)
+    return itertools.chain(summary_desc, header_desc, children_desc)
 
   def _DescribeDiffObjectPaths(self, delta_group):
     paths_by_status = [set(), set(), set(), set()]
@@ -297,28 +335,32 @@ class Describer(object):
         yield '  ' + p
 
   def _DescribeDeltaSymbolGroup(self, delta_group):
-    header_template = ('{} symbols added (+), {} changed (~), {} removed (-), '
-                       '{} unchanged ({})')
-    unchanged_msg = '=' if self.verbose else 'not shown'
-    counts = delta_group.CountsByDiffStatus()
-    num_unique_before_symbols, num_unique_after_symbols = (
-        delta_group.CountUniqueSymbols())
-    diff_summary_desc = [
-        header_template.format(
-            counts[models.DIFF_STATUS_ADDED],
-            counts[models.DIFF_STATUS_CHANGED],
-            counts[models.DIFF_STATUS_REMOVED],
-            counts[models.DIFF_STATUS_UNCHANGED],
-            unchanged_msg),
-        'Number of unique symbols {} -> {} ({:+})'.format(
-            num_unique_before_symbols, num_unique_after_symbols,
-            num_unique_after_symbols - num_unique_before_symbols),
-        ]
-    path_delta_desc = self._DescribeDiffObjectPaths(delta_group)
+    if self.summarize:
+      header_template = ('{} symbols added (+), {} changed (~), '
+                         '{} removed (-), {} unchanged ({})')
+      unchanged_msg = '=' if self.verbose else 'not shown'
+      counts = delta_group.CountsByDiffStatus()
+      num_unique_before_symbols, num_unique_after_symbols = (
+          delta_group.CountUniqueSymbols())
+      diff_summary_desc = [
+          header_template.format(
+              counts[models.DIFF_STATUS_ADDED],
+              counts[models.DIFF_STATUS_CHANGED],
+              counts[models.DIFF_STATUS_REMOVED],
+              counts[models.DIFF_STATUS_UNCHANGED],
+              unchanged_msg),
+          'Number of unique symbols {} -> {} ({:+})'.format(
+              num_unique_before_symbols, num_unique_after_symbols,
+              num_unique_after_symbols - num_unique_before_symbols),
+          ]
+      path_delta_desc = itertools.chain(
+          self._DescribeDiffObjectPaths(delta_group), ('',))
+    else:
+      diff_summary_desc = ()
+      path_delta_desc = ()
 
     group_desc = self._DescribeSymbolGroup(delta_group)
-    return itertools.chain(diff_summary_desc, path_delta_desc, ('',),
-                           group_desc)
+    return itertools.chain(diff_summary_desc, path_delta_desc, group_desc)
 
   def _DescribeDeltaSizeInfo(self, diff):
     common_metadata = {k: v for k, v in diff.before_metadata.iteritems()
@@ -350,20 +392,6 @@ class Describer(object):
     group_desc = self.GenerateLines(size_info.symbols)
     return itertools.chain(metadata_desc, section_desc, coverage_desc, ('',),
                            group_desc)
-
-  def GenerateLines(self, obj):
-    if isinstance(obj, models.DeltaSizeInfo):
-      return self._DescribeDeltaSizeInfo(obj)
-    if isinstance(obj, models.SizeInfo):
-      return self._DescribeSizeInfo(obj)
-    if isinstance(obj, models.DeltaSymbolGroup):
-      return self._DescribeDeltaSymbolGroup(obj)
-    if isinstance(obj, models.SymbolGroup):
-      return self._DescribeSymbolGroup(obj)
-    if isinstance(obj, models.Symbol):
-      return self._DescribeSymbol(obj)
-    return (repr(obj),)
-
 
 def DescribeSizeInfoCoverage(size_info):
   """Yields lines describing how accurate |size_info| is."""
@@ -410,6 +438,107 @@ def DescribeSizeInfoCoverage(size_info):
       yield '* 0 symbols have shared ownership'
 
 
+class DescriberCsv(Describer):
+  def __init__(self, verbose=False):
+    super(DescriberCsv, self).__init__()
+    self.verbose = verbose
+    self.stringio = cStringIO.StringIO()
+    self.csv_writer = csv.writer(self.stringio)
+
+  def _RenderCsv(self, data):
+    self.stringio.truncate(0)
+    self.csv_writer.writerow(data)
+    return self.stringio.getvalue().rstrip()
+
+  def _DescribeSectionSizes(self, section_sizes):
+    relevant_section_names = _GetSectionSizeInfo(section_sizes)[1]
+
+    if self.verbose:
+      relevant_set = set(relevant_section_names)
+      section_names = sorted(section_sizes.iterkeys())
+      yield self._RenderCsv(['Name', 'Size', 'IsRelevant'])
+      for name in section_names:
+        size = section_sizes[name]
+        yield self._RenderCsv([name, size, int(name in relevant_set)])
+    else:
+      yield self._RenderCsv(['Name', 'Size'])
+      for name in relevant_section_names:
+        size = section_sizes[name]
+        yield self._RenderCsv([name, size])
+
+  def _DescribeDeltaSizeInfo(self, diff):
+    section_desc = self._DescribeSectionSizes(diff.section_sizes)
+    group_desc = self.GenerateLines(diff.symbols)
+    return itertools.chain(section_desc, ('',), group_desc)
+
+  def _DescribeSizeInfo(self, size_info):
+    section_desc = self._DescribeSectionSizes(size_info.section_sizes)
+    group_desc = self.GenerateLines(size_info.symbols)
+    return itertools.chain(section_desc, ('',), group_desc)
+
+  def _DescribeDeltaSymbolGroup(self, delta_group):
+    yield self._RenderSymbolHeader(True);
+    # Apply filter to remove UNCHANGED groups.
+    if not self.verbose:
+      delta_group = delta_group.WhereDiffStatusIs(
+          models.DIFF_STATUS_UNCHANGED).Inverted()
+    for sym in delta_group:
+      yield self._RenderSymbolData(sym)
+
+  def _DescribeSymbolGroup(self, group):
+    yield self._RenderSymbolHeader(False);
+    for sym in group:
+      yield self._RenderSymbolData(sym)
+
+  def _DescribeSymbol(self, sym, single_line=False):
+    yield self._RenderSymbolHeader(sym.IsDelta());
+    yield self._RenderSymbolData(sym)
+
+  def _RenderSymbolHeader(self, isDelta):
+    fields = []
+    fields.append('GroupCount')
+    fields.append('Address')
+    fields.append('SizeWithoutPadding')
+    fields.append('Padding')
+    if isDelta:
+      fields += ['BeforeNumAliases', 'AfterNumAliases']
+    else:
+      fields.append('NumAliases')
+    fields.append('PSS')
+    fields.append('Section')
+    if self.verbose:
+      fields.append('Flags')
+      fields.append('SourcePath')
+      fields.append('ObjectPath')
+    fields.append('Name')
+    if self.verbose:
+      fields.append('FullName')
+    return self._RenderCsv(fields)
+
+  def _RenderSymbolData(self, sym):
+    data = []
+    data.append(len(sym) if sym.IsGroup() else None)
+    data.append(None if sym.IsGroup() else hex(sym.address))
+    data.append(sym.size_without_padding)
+    data.append(sym.padding)
+    if sym.IsDelta():
+      b, a = (None, None) if sym.IsGroup() else (sym.before_symbol,
+                                                 sym.after_symbol)
+      data.append(b.num_aliases if b else None)
+      data.append(a.num_aliases if a else None)
+    else:
+      data.append(sym.num_aliases)
+    data.append(round(sym.pss, 3))
+    data.append(sym.section)
+    if self.verbose:
+      data.append(sym.FlagsString())
+      data.append(sym.source_path);
+      data.append(sym.object_path);
+    data.append(sym.name)
+    if self.verbose:
+      data.append(sym.full_name)
+    return self._RenderCsv(data)
+
 
 def _UtcToLocal(utc):
   epoch = time.mktime(utc.timetuple())
@@ -431,9 +560,16 @@ def DescribeMetadata(metadata):
   return sorted('%s=%s' % t for t in display_dict.iteritems())
 
 
-def GenerateLines(obj, verbose=False, recursive=False):
+def GenerateLines(obj, verbose=False, recursive=False, summarize=True,
+                  format_name='text'):
   """Returns an iterable of lines (without \n) that describes |obj|."""
-  return Describer(verbose=verbose, recursive=recursive).GenerateLines(obj)
+  if format_name == 'text':
+    d = DescriberText(verbose=verbose, recursive=recursive, summarize=summarize)
+  elif format_name == 'csv':
+    d = DescriberCsv(verbose=verbose)
+  else:
+    raise ValueError('Unknown format_name \'{}\''.format(format_name));
+  return d.GenerateLines(obj)
 
 
 def WriteLines(lines, func):

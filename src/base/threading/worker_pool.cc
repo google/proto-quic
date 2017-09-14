@@ -26,8 +26,7 @@ class PostTaskAndReplyWorkerPool : public internal::PostTaskAndReplyImpl {
   ~PostTaskAndReplyWorkerPool() override = default;
 
  private:
-  bool PostTask(const tracked_objects::Location& from_here,
-                OnceClosure task) override {
+  bool PostTask(const Location& from_here, OnceClosure task) override {
     return WorkerPool::PostTask(from_here, std::move(task), task_is_slow_);
   }
 
@@ -44,7 +43,7 @@ class WorkerPoolTaskRunner : public TaskRunner {
   explicit WorkerPoolTaskRunner(bool tasks_are_slow);
 
   // TaskRunner implementation
-  bool PostDelayedTask(const tracked_objects::Location& from_here,
+  bool PostDelayedTask(const Location& from_here,
                        OnceClosure task,
                        TimeDelta delay) override;
   bool RunsTasksInCurrentSequence() const override;
@@ -54,10 +53,9 @@ class WorkerPoolTaskRunner : public TaskRunner {
 
   // Helper function for posting a delayed task. Asserts that the delay is
   // zero because non-zero delays are not supported.
-  bool PostDelayedTaskAssertZeroDelay(
-      const tracked_objects::Location& from_here,
-      OnceClosure task,
-      base::TimeDelta delay);
+  bool PostDelayedTaskAssertZeroDelay(const Location& from_here,
+                                      OnceClosure task,
+                                      base::TimeDelta delay);
 
   const bool tasks_are_slow_;
 
@@ -71,10 +69,9 @@ WorkerPoolTaskRunner::WorkerPoolTaskRunner(bool tasks_are_slow)
 WorkerPoolTaskRunner::~WorkerPoolTaskRunner() {
 }
 
-bool WorkerPoolTaskRunner::PostDelayedTask(
-    const tracked_objects::Location& from_here,
-    OnceClosure task,
-    TimeDelta delay) {
+bool WorkerPoolTaskRunner::PostDelayedTask(const Location& from_here,
+                                           OnceClosure task,
+                                           TimeDelta delay) {
   return PostDelayedTaskAssertZeroDelay(from_here, std::move(task), delay);
 }
 
@@ -83,7 +80,7 @@ bool WorkerPoolTaskRunner::RunsTasksInCurrentSequence() const {
 }
 
 bool WorkerPoolTaskRunner::PostDelayedTaskAssertZeroDelay(
-    const tracked_objects::Location& from_here,
+    const Location& from_here,
     OnceClosure task,
     base::TimeDelta delay) {
   DCHECK_EQ(delay.InMillisecondsRoundedUp(), 0)
@@ -101,7 +98,7 @@ struct TaskRunnerHolder {
 
 }  // namespace
 
-bool WorkerPool::PostTaskAndReply(const tracked_objects::Location& from_here,
+bool WorkerPool::PostTaskAndReply(const Location& from_here,
                                   OnceClosure task,
                                   OnceClosure reply,
                                   bool task_is_slow) {

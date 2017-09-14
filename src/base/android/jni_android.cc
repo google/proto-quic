@@ -285,6 +285,9 @@ std::string GetJavaExceptionInfo(JNIEnv* env, jthrowable java_throwable) {
       env, static_cast<jstring>(
           env->CallObjectMethod(bytearray_output_stream.obj(),
                                 bytearray_output_stream_tostring)));
+  if (ClearException(env)) {
+    return "Java OOM'd in exception handling, check logcat";
+  }
 
   return ConvertJavaStringToUTF8(exception_string);
 }

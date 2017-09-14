@@ -89,5 +89,8 @@ class OilpanGCTimesSyncScrollKeyMobileSites(perf_benchmark.PerfBenchmark):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing disabled.
+        self.DisableStory(
+            'http://digg.com',
+            [story.expectations.ALL],
+            'crbug.com/756119')
     return StoryExpectations()

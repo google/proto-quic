@@ -116,7 +116,7 @@ bool PerformAIAFetchAndAddResultToVector(scoped_refptr<CertNetFetcher> fetcher,
   return ParsedCertificate::CreateAndAddToVector(
       x509_util::CreateCryptoBuffer(aia_fetch_bytes.data(),
                                     aia_fetch_bytes.size()),
-      {}, cert_list, &errors);
+      x509_util::DefaultParseCertificateOptions(), cert_list, &errors);
 }
 
 // Uses android::VerifyX509CertChain() to verify the certificates in |certs| for
@@ -177,7 +177,8 @@ android::CertVerifyStatusAndroid TryVerifyWithAIAFetching(
   ParsedCertificateList certs;
   for (const auto& cert : cert_bytes) {
     if (!ParsedCertificate::CreateAndAddToVector(
-            x509_util::CreateCryptoBuffer(cert), {}, &certs, &errors)) {
+            x509_util::CreateCryptoBuffer(cert),
+            x509_util::DefaultParseCertificateOptions(), &certs, &errors)) {
       return android::CERT_VERIFY_STATUS_ANDROID_NO_TRUSTED_ROOT;
     }
   }

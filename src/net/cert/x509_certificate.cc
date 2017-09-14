@@ -19,7 +19,6 @@
 #include "base/memory/singleton.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/pickle.h"
-#include "base/profiler/scoped_tracker.h"
 #include "base/stl_util.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
@@ -242,12 +241,6 @@ scoped_refptr<X509Certificate> X509Certificate::CreateFromHandle(
 scoped_refptr<X509Certificate> X509Certificate::CreateFromDERCertChain(
     const std::vector<base::StringPiece>& der_certs) {
   TRACE_EVENT0("io", "X509Certificate::CreateFromDERCertChain");
-
-  // TODO(cbentzel): Remove ScopedTracker below once crbug.com/424386 is fixed.
-  tracked_objects::ScopedTracker tracking_profile(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION(
-          "424386 X509Certificate::CreateFromDERCertChain"));
-
   if (der_certs.empty())
     return NULL;
 

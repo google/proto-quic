@@ -6,9 +6,9 @@
 #define NET_SERVER_HTTP_CONNECTION_H_
 
 #include <memory>
-#include <queue>
 #include <string>
 
+#include "base/containers/queue.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "net/base/io_buffer.h"
@@ -103,7 +103,7 @@ class HttpConnection {
    private:
     ~QueuedWriteIOBuffer() override;
 
-    std::queue<std::string> pending_data_;
+    base::queue<std::string> pending_data_;
     int total_size_;
     int max_buffer_size_;
 

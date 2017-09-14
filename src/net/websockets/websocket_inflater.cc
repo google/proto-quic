@@ -5,7 +5,6 @@
 #include "net/websockets/websocket_inflater.h"
 
 #include <algorithm>
-#include <deque>
 #include <vector>
 
 #include "base/logging.h"

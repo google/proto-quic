@@ -19,15 +19,12 @@ class NET_EXPORT ExternalEstimateProvider {
  public:
   class NET_EXPORT UpdatedEstimateDelegate {
    public:
-    // Will be called with updated RTT, downstream and upstream throughput (both
-    // in kilobits per second) when an updated estimate is available. If |rtt|
-    // is unavailable, it is set to base::TimeDelta(). If
-    // |downstream_throughput_kbps| or |upstream_throughput_kbps| are
-    // unavailble, they are set to -1, respectively.
+    // Will be called with updated RTT, and downstream throughput (in kilobits
+    // per second) when an updated estimate is available. If the estimate is
+    // unavailable, it is set to a negative value.
     virtual void OnUpdatedEstimateAvailable(
         const base::TimeDelta& rtt,
-        int32_t downstream_throughput_kbps,
-        int32_t upstream_throughput_kbps) = 0;
+        int32_t downstream_throughput_kbps) = 0;
 
    protected:
     UpdatedEstimateDelegate() {}
@@ -39,27 +36,6 @@ class NET_EXPORT ExternalEstimateProvider {
 
   ExternalEstimateProvider() {}
   virtual ~ExternalEstimateProvider() {}
-
-  // Returns true if the estimated RTT duration is available, and sets |rtt|
-  // to the estimate.
-  virtual bool GetRTT(base::TimeDelta* rtt) const = 0;
-
-  // Returns true if the estimated downstream throughput (in Kbps -- Kilobits
-  // per second) is available, and sets |downstream_throughput_kbps| to the
-  // estimate.
-  virtual bool GetDownstreamThroughputKbps(
-      int32_t* downstream_throughput_kbps) const = 0;
-
-  // Returns true if the estimated upstream throughput (in Kbps -- Kilobits
-  // per second) is available, and sets |upstream_throughput_kbps| to the
-  // estimate.
-  virtual bool GetUpstreamThroughputKbps(
-      int32_t* upstream_throughput_kbps) const = 0;
-
-  // Returns true if the time since network quality was last updated is
-  // available, and sets |time_since_last_update| to that value.
-  virtual bool GetTimeSinceLastUpdate(
-      base::TimeDelta* time_since_last_update) const = 0;
 
   // Sets delegate that is notified when an updated estimate is available.
   // |delegate| should outlive |ExternalEstimateProvider|.

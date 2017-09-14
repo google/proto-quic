@@ -397,11 +397,13 @@ class URL_EXPORT GURL {
   // "www.google.com", this will return true for "com", "google.com", and
   // "www.google.com".
   //
-  // The input domain should be lower-case ASCII to match the canonicalized
-  // scheme. This call is more efficient than getting the host and check
-  // whether host has the specific domain or not because no copies or
-  // object constructions are done.
-  bool DomainIs(base::StringPiece lower_ascii_domain) const;
+  // The input domain should match host canonicalization rules. i.e. the input
+  // show be lowercase except for escape chars.
+  //
+  // This call is more efficient than getting the host and checking whether the
+  // host has the specific domain or not because no copies or object
+  // constructions are done.
+  bool DomainIs(base::StringPiece canonical_domain) const;
 
   // Checks whether or not two URLs are differing only in the ref (the part
   // after the # character).

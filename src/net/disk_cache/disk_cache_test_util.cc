@@ -82,22 +82,23 @@ MessageLoopHelper::MessageLoopHelper()
       last_(0),
       completed_(false),
       callback_reused_error_(false),
-      callbacks_called_(0) {
-}
+      callbacks_called_(0) {}
 
-MessageLoopHelper::~MessageLoopHelper() {
-}
+MessageLoopHelper::~MessageLoopHelper() {}
 
 bool MessageLoopHelper::WaitUntilCacheIoFinished(int num_callbacks) {
   if (num_callbacks == callbacks_called_)
     return true;
 
   ExpectCallbacks(num_callbacks);
-  // Create a recurrent timer of 50 mS.
-  if (!timer_.IsRunning())
-    timer_.Start(FROM_HERE, TimeDelta::FromMilliseconds(50), this,
-                 &MessageLoopHelper::TimerExpired);
-  base::RunLoop().Run();
+  // Create a recurrent timer of 50 ms.
+  base::RepeatingTimer timer;
+  timer.Start(FROM_HERE, TimeDelta::FromMilliseconds(50), this,
+              &MessageLoopHelper::TimerExpired);
+  run_loop_ = std::make_unique<base::RunLoop>();
+  run_loop_->Run();
+  run_loop_.reset();
+
   return completed_;
 }
 
@@ -107,7 +108,7 @@ void MessageLoopHelper::TimerExpired() {
   CHECK_LE(callbacks_called_, num_callbacks_);
   if (callbacks_called_ == num_callbacks_) {
     completed_ = true;
-    base::RunLoop::QuitCurrentWhenIdleDeprecated();
+    run_loop_->Quit();
   } else {
     // Not finished yet. See if we have to abort.
     if (last_ == callbacks_called_)
@@ -115,7 +116,7 @@ void MessageLoopHelper::TimerExpired() {
     else
       last_ = callbacks_called_;
     if (40 == num_iterations_)
-      base::RunLoop::QuitCurrentWhenIdleDeprecated();
+      run_loop_->Quit();
   }
 }
 

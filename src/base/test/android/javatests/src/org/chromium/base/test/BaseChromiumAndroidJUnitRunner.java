@@ -8,6 +8,9 @@ import android.app.Activity;
 import android.app.Application;
 import android.app.Instrumentation;
 import android.content.Context;
+import android.content.pm.InstrumentationInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Bundle;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.internal.runner.RunnerArgs;
@@ -27,10 +30,22 @@ import java.io.IOException;
  * This class is the equivalent of BaseChromiumInstrumentationTestRunner in JUnit3. Please
  * beware that is this not a class runner. It is declared in test apk AndroidManifest.xml
  * <instrumentation>
+ *
+ * TODO(yolandyan): remove this class after all tests are converted to JUnit4. Use class runner
+ * for test listing.
  */
 public class BaseChromiumAndroidJUnitRunner extends AndroidJUnitRunner {
     private static final String LIST_ALL_TESTS_FLAG =
             "org.chromium.base.test.BaseChromiumAndroidJUnitRunner.TestList";
+    private static final String LIST_TESTS_PACKAGE_FLAG =
+            "org.chromium.base.test.BaseChromiumAndroidJUnitRunner.TestListPackage";
+    /**
+     * This flag is supported by AndroidJUnitRunner.
+     *
+     * See the following page for detail
+     * https://developer.android.com/reference/android/support/test/runner/AndroidJUnitRunner.html
+     */
+    private static final String ARGUMENT_TEST_PACKAGE = "package";
 
     /**
      * The following arguments are corresponding to AndroidJUnitRunner command line arguments.
@@ -84,6 +99,23 @@ public class BaseChromiumAndroidJUnitRunner extends AndroidJUnitRunner {
         }
     }
 
+    // TODO(yolandyan): Move this to test harness side once this class gets removed
+    private void addTestListPackage(Bundle bundle) {
+        PackageManager pm = getContext().getPackageManager();
+        InstrumentationInfo info;
+        try {
+            info = pm.getInstrumentationInfo(getComponentName(), PackageManager.GET_META_DATA);
+        } catch (NameNotFoundException e) {
+            Log.e(TAG, String.format("Could not find component %s", getComponentName()));
+            throw new RuntimeException(e);
+        }
+        Bundle metaDataBundle = info.metaData;
+        if (metaDataBundle != null && metaDataBundle.getString(LIST_TESTS_PACKAGE_FLAG) != null) {
+            bundle.putString(
+                    ARGUMENT_TEST_PACKAGE, metaDataBundle.getString(LIST_TESTS_PACKAGE_FLAG));
+        }
+    }
+
     private void listTests() {
         Bundle results = new Bundle();
         TestListInstrumentationRunListener listener = new TestListInstrumentationRunListener();
@@ -92,11 +124,13 @@ public class BaseChromiumAndroidJUnitRunner extends AndroidJUnitRunner {
             executorBuilder.addRunListener(listener);
             Bundle junit3Arguments = new Bundle(InstrumentationRegistry.getArguments());
             junit3Arguments.putString(ARGUMENT_NOT_ANNOTATION, "org.junit.runner.RunWith");
+            addTestListPackage(junit3Arguments);
             TestRequest listJUnit3TestRequest = createListTestRequest(junit3Arguments);
             results = executorBuilder.build().execute(listJUnit3TestRequest);
 
             Bundle junit4Arguments = new Bundle(InstrumentationRegistry.getArguments());
             junit4Arguments.putString(ARGUMENT_ANNOTATION, "org.junit.runner.RunWith");
+            addTestListPackage(junit4Arguments);
 
             // Do not use Log runner from android test support.
             //

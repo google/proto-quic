@@ -20,6 +20,8 @@ source_set("base_numerics") {
   public = [
     "checked_math.h",
     "clamped_math.h",
+    "math_constants.h",
+    "ranges.h",
     "safe_conversions.h",
     "safe_math.h",
   ]

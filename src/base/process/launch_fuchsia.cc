@@ -10,63 +10,47 @@
 #include <unistd.h>
 
 #include "base/command_line.h"
+#include "base/fuchsia/default_job.h"
 #include "base/logging.h"
 
 namespace base {
 
 namespace {
 
-bool GetAppOutputInternal(const std::vector<std::string>& argv,
+bool GetAppOutputInternal(const CommandLine& cmd_line,
                           bool include_stderr,
                           std::string* output,
                           int* exit_code) {
   DCHECK(exit_code);
 
-  std::vector<const char*> argv_cstr;
-  argv_cstr.reserve(argv.size() + 1);
-  for (const auto& arg : argv)
-    argv_cstr.push_back(arg.c_str());
-  argv_cstr.push_back(nullptr);
+  LaunchOptions options;
 
-  launchpad_t* lp;
-  launchpad_create(MX_HANDLE_INVALID, argv_cstr[0], &lp);
-  launchpad_load_from_file(lp, argv_cstr[0]);
-  launchpad_set_args(lp, argv.size(), argv_cstr.data());
-  launchpad_clone(lp, LP_CLONE_MXIO_NAMESPACE | LP_CLONE_MXIO_CWD |
-                          LP_CLONE_DEFAULT_JOB | LP_CLONE_ENVIRON);
-  launchpad_clone_fd(lp, STDIN_FILENO, STDIN_FILENO);
-  int pipe_fd;
-  mx_status_t status = launchpad_add_pipe(lp, &pipe_fd, STDOUT_FILENO);
-  if (status != MX_OK) {
-    LOG(ERROR) << "launchpad_add_pipe failed: " << status;
-    launchpad_destroy(lp);
+  // LaunchProcess will automatically clone any stdio fd we do not explicitly
+  // map.
+  int pipe_fd[2];
+  if (pipe(pipe_fd) < 0)
     return false;
-  }
-
+  options.fds_to_remap.emplace_back(pipe_fd[1], STDOUT_FILENO);
   if (include_stderr)
-    launchpad_clone_fd(lp, pipe_fd, STDERR_FILENO);
-  else
-    launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
+    options.fds_to_remap.emplace_back(pipe_fd[1], STDERR_FILENO);
 
-  mx_handle_t proc;
-  const char* errmsg;
-  status = launchpad_go(lp, &proc, &errmsg);
-  if (status != MX_OK) {
-    LOG(ERROR) << "launchpad_go failed: " << errmsg << ", status=" << status;
+  Process process = LaunchProcess(cmd_line, options);
+  close(pipe_fd[1]);
+  if (!process.IsValid()) {
+    close(pipe_fd[0]);
     return false;
   }
 
   output->clear();
   for (;;) {
     char buffer[256];
-    ssize_t bytes_read = read(pipe_fd, buffer, sizeof(buffer));
+    ssize_t bytes_read = read(pipe_fd[0], buffer, sizeof(buffer));
     if (bytes_read <= 0)
       break;
     output->append(buffer, bytes_read);
   }
-  close(pipe_fd);
+  close(pipe_fd[0]);
 
-  Process process(proc);
   return process.WaitForExit(exit_code);
 }
 
@@ -89,8 +73,12 @@ Process LaunchProcess(const std::vector<std::string>& argv,
   // used in a "builder" style. From launchpad_create() to launchpad_go() the
   // status is tracked in the launchpad_t object, and launchpad_go() reports on
   // the final status, and cleans up |lp| (assuming it was even created).
-  launchpad_t* lp;
-  launchpad_create(options.job_handle, argv_cstr[0], &lp);
+  launchpad_t* lp = nullptr;
+  mx_handle_t job = options.job_handle != MX_HANDLE_INVALID ? options.job_handle
+                                                            : GetDefaultJob();
+  DCHECK_NE(MX_HANDLE_INVALID, job);
+
+  launchpad_create(job, argv_cstr[0], &lp);
   launchpad_load_from_file(lp, argv_cstr[0]);
   launchpad_set_args(lp, argv.size(), argv_cstr.data());
 
@@ -107,6 +95,22 @@ Process LaunchProcess(const std::vector<std::string>& argv,
     environ_modifications["PWD"] = options.current_directory.value();
   } else {
     to_clone |= LP_CLONE_MXIO_CWD;
+  }
+
+  if (to_clone & LP_CLONE_DEFAULT_JOB) {
+    // Override Fuchsia's built in default job cloning behavior with our own
+    // logic which uses |job| instead of mx_job_default().
+    // This logic is based on the launchpad implementation.
+    mx_handle_t job_duplicate = MX_HANDLE_INVALID;
+    mx_status_t status =
+        mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_duplicate);
+    if (status != MX_OK) {
+      LOG(ERROR) << "mx_handle_duplicate(job): "
+                 << mx_status_get_string(status);
+      return Process();
+    }
+    launchpad_add_handle(lp, job_duplicate, PA_HND(PA_JOB_DEFAULT, 0));
+    to_clone &= ~LP_CLONE_DEFAULT_JOB;
   }
 
   if (!environ_modifications.empty())
@@ -141,7 +145,8 @@ Process LaunchProcess(const std::vector<std::string>& argv,
   const char* errmsg;
   mx_status_t status = launchpad_go(lp, &proc, &errmsg);
   if (status != MX_OK) {
-    LOG(ERROR) << "launchpad_go failed: " << errmsg << ", status=" << status;
+    LOG(ERROR) << "launchpad_go failed: " << errmsg
+               << ", status=" << mx_status_get_string(status);
     return Process();
   }
 
@@ -149,24 +154,24 @@ Process LaunchProcess(const std::vector<std::string>& argv,
 }
 
 bool GetAppOutput(const CommandLine& cl, std::string* output) {
-  return GetAppOutput(cl.argv(), output);
-}
-
-bool GetAppOutput(const std::vector<std::string>& argv, std::string* output) {
   int exit_code;
-  bool result = GetAppOutputInternal(argv, false, output, &exit_code);
+  bool result = GetAppOutputInternal(cl, false, output, &exit_code);
   return result && exit_code == EXIT_SUCCESS;
 }
 
+bool GetAppOutput(const std::vector<std::string>& argv, std::string* output) {
+  return GetAppOutput(CommandLine(argv), output);
+}
+
 bool GetAppOutputAndError(const CommandLine& cl, std::string* output) {
-  return GetAppOutputAndError(cl.argv(), output);
+  int exit_code;
+  bool result = GetAppOutputInternal(cl, true, output, &exit_code);
+  return result && exit_code == EXIT_SUCCESS;
 }
 
 bool GetAppOutputAndError(const std::vector<std::string>& argv,
                           std::string* output) {
-  int exit_code;
-  bool result = GetAppOutputInternal(argv, true, output, &exit_code);
-  return result && exit_code == EXIT_SUCCESS;
+  return GetAppOutputAndError(CommandLine(argv), output);
 }
 
 bool GetAppOutputWithExitCode(const CommandLine& cl,
@@ -175,7 +180,7 @@ bool GetAppOutputWithExitCode(const CommandLine& cl,
   // Contrary to GetAppOutput(), |true| return here means that the process was
   // launched and the exit code was waited upon successfully, but not
   // necessarily that the exit code was EXIT_SUCCESS.
-  return GetAppOutputInternal(cl.argv(), false, output, exit_code);
+  return GetAppOutputInternal(cl, false, output, exit_code);
 }
 
 }  // namespace base

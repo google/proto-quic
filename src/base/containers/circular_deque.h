@@ -5,6 +5,7 @@
 #ifndef BASE_CONTAINERS_CIRCULAR_DEQUE_H_
 #define BASE_CONTAINERS_CIRCULAR_DEQUE_H_
 
+#include <algorithm>
 #include <cstddef>
 #include <iterator>
 #include <type_traits>
@@ -31,12 +32,6 @@
 //
 //  - Container-wide comparisons are not implemented. If you want to compare
 //    two containers, use an algorithm so the expensive iteration is explicit.
-//
-//  - Insert and erase in the middle is not supported. This complicates the
-//    implementation and is not necessary for our current goals. We can
-//    consider adding this in the future if necessary. But consider that
-//    the implementation will be relatively inefficient (linear time). If
-//    a use wants arbitrary queue mutations, consider a std::list.
 //
 // If you want a similar container with only a queue API, use base::queue in
 // base/containers/queue.h.
@@ -85,7 +80,7 @@
 //   const_reverse_iterator crend() const;
 //
 // Memory management:
-//   void reserve(size_t);
+//   void reserve(size_t);  // SEE IMPLEMENTATION FOR SOME GOTCHAS.
 //   size_t capacity() const;
 //   void shrink_to_fit();
 //
@@ -95,6 +90,16 @@
 //   size_t size() const;
 //   void resize(size_t);
 //   void resize(size_t count, const T& value);
+//
+// Positional insert and erase:
+//   void insert(const_iterator pos, size_type count, const T& value);
+//   void insert(const_iterator pos,
+//               InputIterator first, InputIterator last);
+//   iterator insert(const_iterator pos, const T& value);
+//   iterator insert(const_iterator pos, T&& value);
+//   iterator emplace(const_iterator pos, Args&&... args);
+//   iterator erase(const_iterator pos);
+//   iterator erase(const_iterator first, const_iterator last);
 //
 // End insert and erase:
 //   void push_front(const T&);
@@ -116,6 +121,12 @@ class circular_deque;
 
 namespace internal {
 
+// Start allocating nonempty buffers with this many entries. This is the
+// external capacity so the internal buffer will be one larger (= 4) which is
+// more even for the allocator. See the descriptions of internal vs. external
+// capacity on the comment above the buffer_ variable below.
+constexpr size_t kCircularBufferInitialCapacity = 3;
+
 template <typename T>
 class circular_deque_const_iterator {
  public:
@@ -125,10 +136,9 @@ class circular_deque_const_iterator {
   using reference = const T&;
   using iterator_category = std::random_access_iterator_tag;
 
-  circular_deque_const_iterator(const circular_deque<T>* parent, size_t index)
-      : parent_deque_(parent), index_(index) {
+  circular_deque_const_iterator() : parent_deque_(nullptr), index_(0) {
 #if DCHECK_IS_ON()
-    created_generation_ = parent->generation_;
+    created_generation_ = 0;
 #endif  // DCHECK_IS_ON()
   }
 
@@ -224,8 +234,17 @@ class circular_deque_const_iterator {
   }
 
  protected:
+  friend class circular_deque<T>;
+
+  circular_deque_const_iterator(const circular_deque<T>* parent, size_t index)
+      : parent_deque_(parent), index_(index) {
+#if DCHECK_IS_ON()
+    created_generation_ = parent->generation_;
+#endif  // DCHECK_IS_ON()
+  }
+
   // Returns the offset from the beginning index of the buffer to the current
-  // iten.
+  // item.
   size_t OffsetFromBegin() const {
     if (index_ >= parent_deque_->begin_)
       return index_ - parent_deque_->begin_;  // On the same side as begin.
@@ -250,7 +269,19 @@ class circular_deque_const_iterator {
   }
   void Add(difference_type delta) {
     CheckUnstableUsage();
-    parent_deque_->CheckValidIndex(index_);
+#if DCHECK_IS_ON()
+    if (delta <= 0)
+      parent_deque_->CheckValidIndexOrEnd(index_);
+    else
+      parent_deque_->CheckValidIndex(index_);
+#endif
+    // It should be valid to add 0 to any iterator, even if the container is
+    // empty and the iterator points to end(). The modulo below will divide
+    // by 0 if the buffer capacity is empty, so it's important to check for
+    // this case explicitly.
+    if (delta == 0)
+      return;
+
     difference_type new_offset = OffsetFromBegin() + delta;
     DCHECK(new_offset >= 0 &&
            new_offset <= static_cast<difference_type>(parent_deque_->size()));
@@ -260,17 +291,20 @@ class circular_deque_const_iterator {
 
 #if DCHECK_IS_ON()
   void CheckUnstableUsage() const {
+    DCHECK(parent_deque_);
     // Since circular_deque doesn't guarantee stability, any attempt to
     // dereference this iterator after a mutation (i.e. the generation doesn't
     // match the original) in the container is illegal.
-    DCHECK(parent_deque_);
     DCHECK_EQ(created_generation_, parent_deque_->generation_)
         << "circular_deque iterator dereferenced after mutation.";
   }
   void CheckComparable(const circular_deque_const_iterator& other) const {
     DCHECK_EQ(parent_deque_, other.parent_deque_);
-    CheckUnstableUsage();
-    other.CheckUnstableUsage();
+    // Since circular_deque doesn't guarantee stability, two iterators that
+    // are compared must have been generated without mutating the container.
+    // If this fires, the container was mutated between generating the two
+    // iterators being compared.
+    DCHECK_EQ(created_generation_, other.created_generation_);
   }
 #else
   inline void CheckUnstableUsage() const {}
@@ -293,6 +327,8 @@ class circular_deque_iterator : public circular_deque_const_iterator<T> {
   using base = circular_deque_const_iterator<T>;
 
  public:
+  friend class circular_deque<T>;
+
   using difference_type = std::ptrdiff_t;
   using value_type = T;
   using pointer = T*;
@@ -300,11 +336,11 @@ class circular_deque_iterator : public circular_deque_const_iterator<T> {
   using iterator_category = std::random_access_iterator_tag;
 
   // Expose the base class' constructor.
-  using base::circular_deque_const_iterator;
+  circular_deque_iterator() : circular_deque_const_iterator<T>() {}
 
   // Dereferencing.
-  T& operator*() { return const_cast<T&>(base::operator*()); }
-  T* operator->() { return const_cast<T*>(base::operator->()); }
+  T& operator*() const { return const_cast<T&>(base::operator*()); }
+  T* operator->() const { return const_cast<T*>(base::operator->()); }
 
   // Random access mutation.
   friend circular_deque_iterator operator+(const circular_deque_iterator& iter,
@@ -347,6 +383,10 @@ class circular_deque_iterator : public circular_deque_const_iterator<T> {
     base::Decrement();
     return ret;
   }
+
+ private:
+  circular_deque_iterator(const circular_deque<T>* parent, size_t index)
+      : circular_deque_const_iterator<T>(parent, index) {}
 };
 
 }  // namespace internal
@@ -509,27 +549,39 @@ class circular_deque {
   const_iterator end() const { return const_iterator(this, end_); }
   const_iterator cend() const { return const_iterator(this, end_); }
 
-  reverse_iterator rbegin() { return reverse_iterator(begin()); }
+  reverse_iterator rbegin() { return reverse_iterator(end()); }
   const_reverse_iterator rbegin() const {
-    return const_reverse_iterator(begin());
+    return const_reverse_iterator(end());
   }
   const_reverse_iterator crbegin() const { return rbegin(); }
 
-  reverse_iterator rend() { return reverse_iterator(end()); }
-  const_reverse_iterator rend() const { return const_reverse_iterator(end()); }
+  reverse_iterator rend() { return reverse_iterator(begin()); }
+  const_reverse_iterator rend() const {
+    return const_reverse_iterator(begin());
+  }
   const_reverse_iterator crend() const { return rend(); }
 
   // ---------------------------------------------------------------------------
   // Memory management.
 
+  // IMPORTANT NOTE ON reserve(...): This class implements auto-shrinking of
+  // the buffer when elements are deleted and there is "too much" wasted space.
+  // So if you call reserve() with a large size in anticipation of pushing many
+  // elements, but pop an element before the queue is full, the capacity you
+  // reserved may be lost.
+  //
+  // As a result, it's only worthwhile to call reserve() when you're adding
+  // many things at once with no intermediate operations.
   void reserve(size_type new_capacity) {
     if (new_capacity > capacity())
-      ExpandCapacityTo(new_capacity + 1);
+      SetCapacityTo(new_capacity);
   }
+
   size_type capacity() const {
     // One item is wasted to indicate end().
     return buffer_.capacity() == 0 ? 0 : buffer_.capacity() - 1;
   }
+
   void shrink_to_fit() {
     if (empty()) {
       // Optimize empty case to really delete everything if there was
@@ -537,8 +589,7 @@ class circular_deque {
       if (buffer_.capacity())
         buffer_ = VectorBuffer();
     } else {
-      // One item is wasted to indicate end().
-      ExpandCapacityTo(size() + 1);
+      SetCapacityTo(size());
     }
   }
 
@@ -563,7 +614,9 @@ class circular_deque {
 
   // When reducing size, the elements are deleted from the end. When expanding
   // size, elements are added to the end with |value| or the default
-  // constructed version.
+  // constructed version. Even when using resize(count) to shrink, a default
+  // constructor is required for the code to compile, even though it will not
+  // be called.
   //
   // There are two versions rather than using a default value to avoid
   // creating a temporary when shrinking (when it's not needed). Plus if
@@ -581,11 +634,11 @@ class circular_deque {
       while (size() < count)
         emplace_back();
     } else if (count < size()) {
-      // This doesn't resize the storage.
-      // TODO(brettw) revisit this decision (change below version also).
       size_t new_end = (begin_ + count) % buffer_.capacity();
       DestructRange(new_end, end_);
       end_ = new_end;
+
+      ShrinkCapacityIfNecessary();
     }
     IncrementGeneration();
   }
@@ -599,6 +652,8 @@ class circular_deque {
       size_t new_end = (begin_ + count) % buffer_.capacity();
       DestructRange(new_end, end_);
       end_ = new_end;
+
+      ShrinkCapacityIfNecessary();
     }
     IncrementGeneration();
   }
@@ -606,17 +661,159 @@ class circular_deque {
   // ---------------------------------------------------------------------------
   // Insert and erase.
   //
-  // These bulk insert operations are not provided as described in the file
-  // level comment above:
+  // Insertion and deletion in the middle is O(n) and invalidates all existing
+  // iterators.
   //
-  //   void insert(const_iterator pos, size_type count, const T& value);
-  //   void insert(const_iterator pos, InputIterator first, InputIterator last);
-  //   iterator insert(const_iterator pos, const T& value);
-  //   iterator insert(const_iterator pos, T&& value);
-  //   iterator emplace(const_iterator pos, Args&&... args);
-  //
-  //   iterator erase(const_iterator pos);
-  //   iterator erase(const_iterator first, const_iterator last);
+  // The implementation of insert isn't optimized as much as it could be. If
+  // the insertion requires that the buffer be grown, it will first be grown
+  // and everything moved, and then the items will be inserted, potentially
+  // moving some items twice. This simplifies the implemntation substantially
+  // and means less generated templatized code. Since this is an uncommon
+  // operation for deques, and already relatively slow, it doesn't seem worth
+  // the benefit to optimize this.
+
+  void insert(const_iterator pos, size_type count, const T& value) {
+    ValidateIterator(pos);
+
+    // Optimize insert at the beginning.
+    if (pos == begin()) {
+      ExpandCapacityIfNecessary(count);
+      for (size_t i = 0; i < count; i++)
+        push_front(value);
+      return;
+    }
+
+    iterator insert_cur(this, pos.index_);
+    iterator insert_end;
+    MakeRoomFor(count, &insert_cur, &insert_end);
+    while (insert_cur < insert_end) {
+      new (&buffer_[insert_cur.index_]) T(value);
+      ++insert_cur;
+    }
+
+    IncrementGeneration();
+  }
+
+  // This enable_if keeps this call from getting confused with the (pos, count,
+  // value) version when value is an integer.
+  template <class InputIterator>
+  typename std::enable_if<::base::internal::is_iterator<InputIterator>::value,
+                          void>::type
+  insert(const_iterator pos, InputIterator first, InputIterator last) {
+    ValidateIterator(pos);
+
+    size_t inserted_items = std::distance(first, last);
+    if (inserted_items == 0)
+      return;  // Can divide by 0 when doing modulo below, so return early.
+
+    // Make a hole to copy the items into.
+    iterator insert_cur;
+    iterator insert_end;
+    if (pos == begin()) {
+      // Optimize insert at the beginning, nothing needs to be shifted and the
+      // hole is the |inserted_items| block immediately before |begin_|.
+      ExpandCapacityIfNecessary(inserted_items);
+      insert_end = begin();
+      begin_ =
+          (begin_ + buffer_.capacity() - inserted_items) % buffer_.capacity();
+      insert_cur = begin();
+    } else {
+      insert_cur = iterator(this, pos.index_);
+      MakeRoomFor(inserted_items, &insert_cur, &insert_end);
+    }
+
+    // Copy the items.
+    while (insert_cur < insert_end) {
+      new (&buffer_[insert_cur.index_]) T(*first);
+      ++insert_cur;
+      ++first;
+    }
+
+    IncrementGeneration();
+  }
+
+  // These all return an iterator to the inserted item. Existing iterators will
+  // be invalidated.
+  iterator insert(const_iterator pos, const T& value) {
+    return emplace(pos, value);
+  }
+  iterator insert(const_iterator pos, T&& value) {
+    return emplace(pos, std::move(value));
+  }
+  template <class... Args>
+  iterator emplace(const_iterator pos, Args&&... args) {
+    ValidateIterator(pos);
+
+    // Optimize insert at beginning which doesn't require shifting.
+    if (pos == cbegin()) {
+      emplace_front(std::forward<Args>(args)...);
+      return begin();
+    }
+
+    // Do this before we make the new iterators we return.
+    IncrementGeneration();
+
+    iterator insert_begin(this, pos.index_);
+    iterator insert_end;
+    MakeRoomFor(1, &insert_begin, &insert_end);
+    new (&buffer_[insert_begin.index_]) T(std::forward<Args>(args)...);
+
+    return insert_begin;
+  }
+
+  // Calling erase() won't automatically resize the buffer smaller like resize
+  // or the pop functions. Erase is slow and relatively uncommon, and for
+  // normal deque usage a pop will normally be done on a regular basis that
+  // will prevent excessive buffer usage over long periods of time. It's not
+  // worth having the extra code for every template instantiation of erase()
+  // to resize capacity downward to a new buffer.
+  iterator erase(const_iterator pos) { return erase(pos, pos + 1); }
+  iterator erase(const_iterator first, const_iterator last) {
+    ValidateIterator(first);
+    ValidateIterator(last);
+
+    IncrementGeneration();
+
+    // First, call the destructor on the deleted items.
+    if (first.index_ == last.index_) {
+      // Nothing deleted. Need to return early to avoid falling through to
+      // moving items on top of themselves.
+      return iterator(this, first.index_);
+    } else if (first.index_ < last.index_) {
+      // Contiguous range.
+      buffer_.DestructRange(&buffer_[first.index_], &buffer_[last.index_]);
+    } else {
+      // Deleted range wraps around.
+      buffer_.DestructRange(&buffer_[first.index_],
+                            &buffer_[buffer_.capacity()]);
+      buffer_.DestructRange(&buffer_[0], &buffer_[last.index_]);
+    }
+
+    if (last.index_ == begin_) {
+      // This deletion is from the beginning. Nothing needs to be copied, only
+      // begin_ needs to be updated.
+      begin_ = last.index_;
+      return iterator(this, last.index_);
+    }
+
+    // In an erase operation, the shifted items all move logically to the left,
+    // so move them from left-to-right.
+    iterator move_src(this, last.index_);
+    iterator move_src_end = end();
+    iterator move_dest(this, first.index_);
+    for (; move_src < move_src_end; move_src++, move_dest++) {
+      buffer_.MoveRange(&buffer_[move_src.index_],
+                        &buffer_[move_src.index_ + 1],
+                        &buffer_[move_dest.index_]);
+    }
+
+    end_ = move_dest.index_;
+
+    // Since we did not reallocate and only changed things after the erase
+    // element(s), the input iterator's index points to the thing following the
+    // deletion.
+    return iterator(this, first.index_);
+  }
 
   // ---------------------------------------------------------------------------
   // Begin/end operations.
@@ -656,6 +853,8 @@ class circular_deque {
     if (begin_ == buffer_.capacity())
       begin_ = 0;
 
+    ShrinkCapacityIfNecessary();
+
     // Technically popping will not invalidate any iterators since the
     // underlying buffer will be stable. But in the future we may want to add a
     // feature that resizes the buffer smaller if there is too much wasted
@@ -669,6 +868,8 @@ class circular_deque {
     else
       end_--;
     buffer_.DestructRange(&buffer_[end_], &buffer_[end_ + 1]);
+
+    ShrinkCapacityIfNecessary();
 
     // See pop_front comment about why this is here.
     IncrementGeneration();
@@ -724,29 +925,48 @@ class circular_deque {
 
   // Expands the buffer size. This assumes the size is larger than the
   // number of elements in the vector (it won't call delete on anything).
-  // Note the capacity passed here will be one larger than the "publicly
-  // exposed capacity" to account for the unused end element.
-  void ExpandCapacityTo(size_t new_capacity) {
-    VectorBuffer new_buffer(new_capacity);
+  void SetCapacityTo(size_t new_capacity) {
+    // Use the capacity + 1 as the internal buffer size to differentiate
+    // empty and full (see definition of buffer_ below).
+    VectorBuffer new_buffer(new_capacity + 1);
     MoveBuffer(buffer_, begin_, end_, &new_buffer, &begin_, &end_);
     buffer_ = std::move(new_buffer);
   }
   void ExpandCapacityIfNecessary(size_t additional_elts) {
-    // Capacity is internal capacity, which is one extra.
-    size_t min_new_capacity = size() + additional_elts + 1;
-    if (buffer_.capacity() >= min_new_capacity)
+    size_t min_new_capacity = size() + additional_elts;
+    if (capacity() >= min_new_capacity)
       return;  // Already enough room.
 
-    // Start allocating nonempty buffers with this many entries.
-    constexpr size_t min_slots = 4;
-    min_new_capacity = std::max(min_new_capacity, min_slots);
+    min_new_capacity =
+        std::max(min_new_capacity, internal::kCircularBufferInitialCapacity);
 
     // std::vector always grows by at least 50%. WTF::Deque grows by at least
     // 25%. We expect queue workloads to generally stay at a similar size and
     // grow less than a vector might, so use 25%.
-    size_t new_capacity = std::max(
-        min_new_capacity, buffer_.capacity() + buffer_.capacity() / 4 + 1);
-    ExpandCapacityTo(new_capacity);
+    size_t new_capacity =
+        std::max(min_new_capacity, capacity() + capacity() / 4);
+    SetCapacityTo(new_capacity);
+  }
+
+  void ShrinkCapacityIfNecessary() {
+    // Don't auto-shrink below this size.
+    if (capacity() <= internal::kCircularBufferInitialCapacity)
+      return;
+
+    // Shrink when 100% of the size() is wasted.
+    size_t sz = size();
+    size_t empty_spaces = capacity() - sz;
+    if (empty_spaces < sz)
+      return;
+
+    // Leave 1/4 the size as free capacity, not going below the initial
+    // capacity.
+    size_t new_capacity =
+        std::max(internal::kCircularBufferInitialCapacity, sz + sz / 4);
+    if (new_capacity < capacity()) {
+      // Count extra item to convert to internal capacity.
+      SetCapacityTo(new_capacity);
+    }
   }
 
   // Backend for clear() but does not resize the internal buffer.
@@ -773,6 +993,41 @@ class circular_deque {
     }
   }
 
+  // Makes room for |count| items starting at |*insert_begin|. Since iterators
+  // are not stable across buffer resizes, |*insert_begin| will be updated to
+  // point to the beginning of the newly opened position in the new array (it's
+  // in/out), and the end of the newly opened position (it's out-only).
+  void MakeRoomFor(size_t count, iterator* insert_begin, iterator* insert_end) {
+    if (count == 0) {
+      *insert_end = *insert_begin;
+      return;
+    }
+
+    // The offset from the beginning will be stable across reallocations.
+    size_t begin_offset = insert_begin->OffsetFromBegin();
+    ExpandCapacityIfNecessary(count);
+
+    insert_begin->index_ = (begin_ + begin_offset) % buffer_.capacity();
+    *insert_end =
+        iterator(this, (insert_begin->index_ + count) % buffer_.capacity());
+
+    // Update the new end and prepare the iterators for copying.
+    iterator src = end();
+    end_ = (end_ + count) % buffer_.capacity();
+    iterator dest = end();
+
+    // Move the elements. This will always involve shifting logically to the
+    // right, so move in a right-to-left order.
+    while (true) {
+      if (src == *insert_begin)
+        break;
+      --src;
+      --dest;
+      buffer_.MoveRange(&buffer_[src.index_], &buffer_[src.index_ + 1],
+                        &buffer_[dest.index_]);
+    }
+  }
+
 #if DCHECK_IS_ON()
   // Asserts the given index is dereferencable. The index is an index into the
   // buffer, not an index used by operator[] or at() which will be offsets from
@@ -790,28 +1045,54 @@ class circular_deque {
       CheckValidIndex(i);
   }
 
+  void ValidateIterator(const const_iterator& i) const {
+    DCHECK(i.parent_deque_ == this);
+    i.CheckUnstableUsage();
+  }
+
   // See generation_ below.
   void IncrementGeneration() { generation_++; }
 #else
   // No-op versions of these functions for release builds.
   void CheckValidIndex(size_t) const {}
   void CheckValidIndexOrEnd(size_t) const {}
+  void ValidateIterator(const const_iterator& i) const {}
   void IncrementGeneration() {}
 #endif
 
-  // Danger, the buffer_.capacity() is capacity() + 1 since there is an
-  // extra item to indicate the end. Container internal code will want to use
-  // buffer_.capacity() for offset computations.
+  // Danger, the buffer_.capacity() is the "internal capacity" which is
+  // capacity() + 1 since there is an extra item to indicate the end. Otherwise
+  // being completely empty and completely full are indistinguishable (begin ==
+  // end). We could add a separate flag to avoid it, but that adds significant
+  // extra complexity since every computation will have to check for it. Always
+  // keeping one extra unused element in the buffer makes iterator computations
+  // much simpler.
+  //
+  // Container internal code will want to use buffer_.capacity() for offset
+  // computations rather than capacity().
   VectorBuffer buffer_;
   size_type begin_ = 0;
   size_type end_ = 0;
 
 #if DCHECK_IS_ON()
-  // Incremented every time a modification that could affect iterator
+  // Incremented every time a modification is made that could affect iterator
   // invalidations.
   uint64_t generation_ = 0;
 #endif
 };
+
+// Implementations of base::Erase[If] (see base/stl_util.h).
+template <class T, class Value>
+void Erase(circular_deque<T>& container, const Value& value) {
+  container.erase(std::remove(container.begin(), container.end(), value),
+                  container.end());
+}
+
+template <class T, class Predicate>
+void EraseIf(circular_deque<T>& container, Predicate pred) {
+  container.erase(std::remove_if(container.begin(), container.end(), pred),
+                  container.end());
+}
 
 }  // namespace base
 

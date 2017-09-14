@@ -66,6 +66,59 @@ void Unmap(void* addr, size_t size) {
 
 }  // namespace
 
+TEST(ProcessMemoryDumpTest, MoveConstructor) {
+  auto heap_state = MakeRefCounted<HeapProfilerSerializationState>();
+  heap_state->SetStackFrameDeduplicator(MakeUnique<StackFrameDeduplicator>());
+  heap_state->SetTypeNameDeduplicator(MakeUnique<TypeNameDeduplicator>());
+
+  ProcessMemoryDump pmd1 = ProcessMemoryDump(heap_state, kDetailedDumpArgs);
+  pmd1.CreateAllocatorDump("mad1");
+  pmd1.CreateAllocatorDump("mad2");
+  pmd1.AddOwnershipEdge(MemoryAllocatorDumpGuid(42),
+                        MemoryAllocatorDumpGuid(4242));
+
+  ProcessMemoryDump pmd2(std::move(pmd1));
+
+  EXPECT_EQ(1u, pmd2.allocator_dumps().count("mad1"));
+  EXPECT_EQ(1u, pmd2.allocator_dumps().count("mad2"));
+  EXPECT_EQ(MemoryDumpLevelOfDetail::DETAILED,
+            pmd2.dump_args().level_of_detail);
+  EXPECT_EQ(1u, pmd2.allocator_dumps_edges_for_testing().size());
+  EXPECT_EQ(heap_state.get(), pmd2.heap_profiler_serialization_state().get());
+
+  // Check that calling AsValueInto() doesn't cause a crash.
+  auto traced_value = MakeUnique<TracedValue>();
+  pmd2.AsValueInto(traced_value.get());
+}
+
+TEST(ProcessMemoryDumpTest, MoveAssignment) {
+  auto heap_state = MakeRefCounted<HeapProfilerSerializationState>();
+  heap_state->SetStackFrameDeduplicator(MakeUnique<StackFrameDeduplicator>());
+  heap_state->SetTypeNameDeduplicator(MakeUnique<TypeNameDeduplicator>());
+
+  ProcessMemoryDump pmd1 = ProcessMemoryDump(heap_state, kDetailedDumpArgs);
+  pmd1.CreateAllocatorDump("mad1");
+  pmd1.CreateAllocatorDump("mad2");
+  pmd1.AddOwnershipEdge(MemoryAllocatorDumpGuid(42),
+                        MemoryAllocatorDumpGuid(4242));
+
+  ProcessMemoryDump pmd2(nullptr, {MemoryDumpLevelOfDetail::BACKGROUND});
+  pmd2.CreateAllocatorDump("malloc");
+
+  pmd2 = std::move(pmd1);
+  EXPECT_EQ(1u, pmd2.allocator_dumps().count("mad1"));
+  EXPECT_EQ(1u, pmd2.allocator_dumps().count("mad2"));
+  EXPECT_EQ(0u, pmd2.allocator_dumps().count("mad3"));
+  EXPECT_EQ(MemoryDumpLevelOfDetail::DETAILED,
+            pmd2.dump_args().level_of_detail);
+  EXPECT_EQ(1u, pmd2.allocator_dumps_edges_for_testing().size());
+  EXPECT_EQ(heap_state.get(), pmd2.heap_profiler_serialization_state().get());
+
+  // Check that calling AsValueInto() doesn't cause a crash.
+  auto traced_value = MakeUnique<TracedValue>();
+  pmd2.AsValueInto(traced_value.get());
+}
+
 TEST(ProcessMemoryDumpTest, Clear) {
   std::unique_ptr<ProcessMemoryDump> pmd1(
       new ProcessMemoryDump(nullptr, kDetailedDumpArgs));
@@ -333,17 +386,16 @@ TEST(ProcessMemoryDumpTest, SharedMemoryOwnershipTest) {
       pmd->allocator_dumps_edges_for_testing();
 
   auto* client_dump2 = pmd->CreateAllocatorDump("discardable/segment2");
-  MemoryAllocatorDumpGuid client_global_guid2(2);
   auto shm_token2 = UnguessableToken::Create();
   MemoryAllocatorDumpGuid shm_local_guid2 =
-      SharedMemoryTracker::GetDumpIdForTracing(shm_token2);
+      MemoryAllocatorDump::GetDumpIdFromName(
+          SharedMemoryTracker::GetDumpNameForTracing(shm_token2));
   MemoryAllocatorDumpGuid shm_global_guid2 =
       SharedMemoryTracker::GetGlobalDumpIdForTracing(shm_token2);
   pmd->AddOverridableOwnershipEdge(shm_local_guid2, shm_global_guid2,
                                    0 /* importance */);
 
-  pmd->CreateSharedMemoryOwnershipEdge(client_dump2->guid(),
-                                       client_global_guid2, shm_token2,
+  pmd->CreateSharedMemoryOwnershipEdge(client_dump2->guid(), shm_token2,
                                        1 /* importance */);
   EXPECT_EQ(2u, edges.size());
 

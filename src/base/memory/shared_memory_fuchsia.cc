@@ -41,8 +41,9 @@ void SharedMemory::CloseHandle(const SharedMemoryHandle& handle) {
 
 // static
 size_t SharedMemory::GetHandleLimit() {
-  // No documented limit, currently.
-  return std::numeric_limits<size_t>::max();
+  // Duplicated from the internal Magenta kernel constant kMaxHandleCount
+  // (kernel/lib/magenta/magenta.cpp).
+  return 256 * 1024u;
 }
 
 bool SharedMemory::CreateAndMapAnonymous(size_t size) {

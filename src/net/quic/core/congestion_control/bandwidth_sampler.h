@@ -241,8 +241,13 @@ class QUIC_EXPORT_PRIVATE BandwidthSampler : public BandwidthSamplerInterface {
     // PacketNumberIndexedQueue.
     ConnectionStateOnSentPacket()
         : sent_time(QuicTime::Zero()),
+          size(0),
+          total_bytes_sent(0),
+          total_bytes_sent_at_last_acked_packet(0),
           last_acked_packet_sent_time(QuicTime::Zero()),
-          last_acked_packet_ack_time(QuicTime::Zero()) {}
+          last_acked_packet_ack_time(QuicTime::Zero()),
+          total_bytes_acked_at_the_last_acked_packet(0),
+          is_app_limited(false) {}
   };
 
   typedef QuicLinkedHashMap<QuicPacketNumber, ConnectionStateOnSentPacket>

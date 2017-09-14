@@ -84,7 +84,7 @@ FuzzedSocketFactoryWithMockSSLData::CreateSSLClientSocket(
     const HostPortPair& host_and_port,
     const SSLConfig& ssl_config,
     const SSLClientSocketContext& context) {
-  return base::MakeUnique<MockSSLClientSocket>(std::move(transport_socket),
+  return std::make_unique<MockSSLClientSocket>(std::move(transport_socket),
                                                host_and_port, ssl_config,
                                                mock_ssl_data_.GetNext());
 }

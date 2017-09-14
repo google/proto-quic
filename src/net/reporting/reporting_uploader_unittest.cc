@@ -48,7 +48,7 @@ void CheckUpload(const test_server::HttpRequest& request) {
 std::unique_ptr<test_server::HttpResponse> ReturnResponse(
     HttpStatusCode code,
     const test_server::HttpRequest& request) {
-  auto response = base::MakeUnique<test_server::BasicHttpResponse>();
+  auto response = std::make_unique<test_server::BasicHttpResponse>();
   response->set_code(code);
   response->set_content("");
   response->set_content_type("text/plain");
@@ -57,7 +57,7 @@ std::unique_ptr<test_server::HttpResponse> ReturnResponse(
 
 std::unique_ptr<test_server::HttpResponse> ReturnInvalidResponse(
     const test_server::HttpRequest& request) {
-  return base::MakeUnique<test_server::RawHttpResponse>(
+  return std::make_unique<test_server::RawHttpResponse>(
       "", "Not a valid HTTP response.");
 }
 
@@ -178,7 +178,7 @@ std::unique_ptr<test_server::HttpResponse> ReturnRedirect(
   if (request.relative_url != "/")
     return std::unique_ptr<test_server::HttpResponse>();
 
-  auto response = base::MakeUnique<test_server::BasicHttpResponse>();
+  auto response = std::make_unique<test_server::BasicHttpResponse>();
   response->set_code(HTTP_FOUND);
   response->AddCustomHeader("Location", location);
   response->set_content(
@@ -256,7 +256,7 @@ TEST_F(ReportingUploaderTest, DontSendCookies) {
 
 std::unique_ptr<test_server::HttpResponse> SendCookie(
     const test_server::HttpRequest& request) {
-  auto response = base::MakeUnique<test_server::BasicHttpResponse>();
+  auto response = std::make_unique<test_server::BasicHttpResponse>();
   response->set_code(HTTP_OK);
   response->AddCustomHeader("Set-Cookie", "foo=bar");
   response->set_content("");
@@ -287,7 +287,7 @@ std::unique_ptr<test_server::HttpResponse> ReturnCacheableResponse(
     int* request_count_out,
     const test_server::HttpRequest& request) {
   ++*request_count_out;
-  auto response = base::MakeUnique<test_server::BasicHttpResponse>();
+  auto response = std::make_unique<test_server::BasicHttpResponse>();
   response->set_code(HTTP_OK);
   response->AddCustomHeader("Cache-Control", "max-age=86400");
   response->set_content("");

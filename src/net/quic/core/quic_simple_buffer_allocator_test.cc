@@ -7,8 +7,6 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_test.h"
 
-using ::testing::Eq;
-
 namespace net {
 namespace {
 

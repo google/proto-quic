@@ -20,6 +20,17 @@ class FailingProofSource : public ProofSource {
                 QuicStringPiece chlo_hash,
                 const QuicTagVector& connection_options,
                 std::unique_ptr<Callback> callback) override;
+
+  QuicReferenceCountedPointer<Chain> GetCertChain(
+      const QuicSocketAddress& server_address,
+      const std::string& hostname) override;
+
+  void ComputeTlsSignature(
+      const QuicSocketAddress& server_address,
+      const std::string& hostname,
+      uint16_t signature_algorithm,
+      QuicStringPiece in,
+      std::unique_ptr<SignatureCallback> callback) override;
 };
 
 }  // namespace test

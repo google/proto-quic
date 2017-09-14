@@ -124,7 +124,7 @@ std::unique_ptr<HuffmanNode> HuffmanBuilder::BuildTree() {
   nodes.reserve(counts_.size());
 
   for (const auto& item : counts_) {
-    nodes.push_back(base::MakeUnique<HuffmanNode>(item.first, item.second,
+    nodes.push_back(std::make_unique<HuffmanNode>(item.first, item.second,
                                                   nullptr, nullptr));
   }
 
@@ -137,7 +137,7 @@ std::unique_ptr<HuffmanNode> HuffmanBuilder::BuildTree() {
       }
     }
 
-    nodes.push_back(base::MakeUnique<HuffmanNode>(i, 0, nullptr, nullptr));
+    nodes.push_back(std::make_unique<HuffmanNode>(i, 0, nullptr, nullptr));
   }
 
   std::stable_sort(nodes.begin(), nodes.end(), CompareNodes);

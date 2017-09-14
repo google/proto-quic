@@ -38,15 +38,12 @@ QuicPacketCreator::QuicPacketCreator(QuicConnectionId connection_id,
       framer_(framer),
       buffer_allocator_(buffer_allocator),
       send_version_in_packet_(framer->perspective() == Perspective::IS_CLIENT),
-      next_packet_number_length_(PACKET_1BYTE_PACKET_NUMBER),
       have_diversification_nonce_(false),
       max_packet_length_(0),
       connection_id_length_(PACKET_8BYTE_CONNECTION_ID),
       packet_size_(0),
       connection_id_(connection_id),
       packet_(0, PACKET_1BYTE_PACKET_NUMBER, nullptr, 0, false, false),
-      latched_flag_no_stop_waiting_frames_(
-          FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames),
       pending_padding_bytes_(0),
       needs_full_padding_(false) {
   SetMaxPacketLength(kDefaultMaxPacketSize);
@@ -324,7 +321,7 @@ void QuicPacketCreator::CreateAndSerializeStreamFrame(
   FillPacketHeader(&header);
   QUIC_CACHELINE_ALIGNED char encrypted_buffer[kMaxPacketSize];
   QuicDataWriter writer(arraysize(encrypted_buffer), encrypted_buffer,
-                        framer_->perspective(), framer_->endianness());
+                        framer_->endianness());
   if (!framer_->AppendPacketHeader(header, &writer)) {
     QUIC_BUG << "AppendPacketHeader failed";
     return;
@@ -574,9 +571,7 @@ bool QuicPacketCreator::AddFrame(const QuicFrame& frame,
 
   if (frame.type == ACK_FRAME) {
     packet_.has_ack = true;
-    if (latched_flag_no_stop_waiting_frames_) {
-      packet_.largest_acked = frame.ack_frame->largest_observed;
-    }
+    packet_.largest_acked = frame.ack_frame->largest_observed;
   }
   if (frame.type == STOP_WAITING_FRAME) {
     packet_.has_stop_waiting = true;

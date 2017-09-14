@@ -6,7 +6,7 @@
 
 #include "tools/battor_agent/battor_agent.h"
 
-#include "base/test/test_simple_task_runner.h"
+#include "base/test/test_mock_time_task_runner.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -81,10 +81,12 @@ class MockBattOrConnection : public BattOrConnection {
 // TestableBattOrAgent uses a fake BattOrConnection to be testable.
 class TestableBattOrAgent : public BattOrAgent {
  public:
-  TestableBattOrAgent(BattOrAgent::Listener* listener)
+  TestableBattOrAgent(BattOrAgent::Listener* listener,
+                      std::unique_ptr<base::TickClock> tick_clock)
       : BattOrAgent("/dev/test", listener, nullptr) {
     connection_ =
         std::unique_ptr<BattOrConnection>(new MockBattOrConnection(this));
+    tick_clock_ = std::move(tick_clock);
   }
 
   MockBattOrConnection* GetConnection() {
@@ -99,7 +101,7 @@ class TestableBattOrAgent : public BattOrAgent {
 class BattOrAgentTest : public testing::Test, public BattOrAgent::Listener {
  public:
   BattOrAgentTest()
-      : task_runner_(new base::TestSimpleTaskRunner()),
+      : task_runner_(new base::TestMockTimeTaskRunner()),
         thread_task_runner_handle_(task_runner_) {}
 
   void OnStartTracingComplete(BattOrError error) override {
@@ -107,11 +109,11 @@ class BattOrAgentTest : public testing::Test, public BattOrAgent::Listener {
     command_error_ = error;
   }
 
-  void OnStopTracingComplete(const std::string& trace,
+  void OnStopTracingComplete(const BattOrResults& results,
                              BattOrError error) override {
     is_command_complete_ = true;
     command_error_ = error;
-    trace_ = trace;
+    trace_ = results.ToString();
   }
 
   void OnRecordClockSyncMarkerComplete(BattOrError error) override {
@@ -140,7 +142,8 @@ class BattOrAgentTest : public testing::Test, public BattOrAgent::Listener {
 
  protected:
   void SetUp() override {
-    agent_.reset(new TestableBattOrAgent(this));
+    agent_.reset(
+        new TestableBattOrAgent(this, task_runner_->GetMockTickClock()));
     task_runner_->ClearPendingTasks();
     is_command_complete_ = false;
     command_error_ = BATTOR_ERROR_NONE;
@@ -244,6 +247,7 @@ class BattOrAgentTest : public testing::Test, public BattOrAgent::Listener {
     if (end_state == BattOrAgentState::EEPROM_RECEIVED)
       return;
 
+    GetTaskRunner()->FastForwardBy(base::TimeDelta::FromMilliseconds(100));
     OnBytesSent(true);
     if (end_state == BattOrAgentState::SAMPLES_REQUEST_SENT)
       return;
@@ -310,7 +314,7 @@ class BattOrAgentTest : public testing::Test, public BattOrAgent::Listener {
 
   TestableBattOrAgent* GetAgent() { return agent_.get(); }
 
-  scoped_refptr<base::TestSimpleTaskRunner> GetTaskRunner() {
+  scoped_refptr<base::TestMockTimeTaskRunner> GetTaskRunner() {
     return task_runner_;
   }
 
@@ -320,7 +324,7 @@ class BattOrAgentTest : public testing::Test, public BattOrAgent::Listener {
   std::string GetGitHash() { return firmware_git_hash_; }
 
  private:
-  scoped_refptr<base::TestSimpleTaskRunner> task_runner_;
+  scoped_refptr<base::TestMockTimeTaskRunner> task_runner_;
   // Needed to support ThreadTaskRunnerHandle::Get() in code under test.
   base::ThreadTaskRunnerHandle thread_task_runner_handle_;
 
@@ -538,6 +542,20 @@ TEST_F(BattOrAgentTest, StartTracingFailsAfterTooManyCumulativeFailures) {
 
   EXPECT_TRUE(IsCommandComplete());
   EXPECT_EQ(BATTOR_ERROR_TOO_MANY_COMMAND_RETRIES, GetCommandError());
+}
+
+TEST_F(BattOrAgentTest, StartTracingRestartsConnectionUponRetry) {
+  GetAgent()->StartTracing();
+  RunStartTracingTo(BattOrAgentState::INIT_SENT);
+
+  EXPECT_CALL(*GetAgent()->GetConnection(), Close());
+
+  OnMessageRead(false, BATTOR_MESSAGE_TYPE_CONTROL_ACK, nullptr);
+
+  RunStartTracingTo(BattOrAgentState::START_TRACING_COMPLETE);
+
+  EXPECT_TRUE(IsCommandComplete());
+  EXPECT_EQ(BATTOR_ERROR_NONE, GetCommandError());
 }
 
 TEST_F(BattOrAgentTest, StopTracing) {
@@ -885,6 +903,19 @@ TEST_F(BattOrAgentTest, StopTracingSucceedsAfterDataFrameArrivesOutOfOrder) {
   EXPECT_EQ(BATTOR_ERROR_NONE, GetCommandError());
 }
 
+TEST_F(BattOrAgentTest, StopTracingRestartsConnectionUponRetry) {
+  GetAgent()->StopTracing();
+  RunStopTracingTo(BattOrAgentState::SAMPLES_REQUEST_SENT);
+
+  EXPECT_CALL(*GetAgent()->GetConnection(), Close());
+
+  OnMessageRead(true, BATTOR_MESSAGE_TYPE_CONTROL_ACK, ToCharVector(kInitAck));
+  RunStopTracingTo(BattOrAgentState::SAMPLES_END_FRAME_RECEIVED);
+
+  EXPECT_TRUE(IsCommandComplete());
+  EXPECT_EQ(BATTOR_ERROR_NONE, GetCommandError());
+}
+
 TEST_F(BattOrAgentTest, RecordClockSyncMarker) {
   testing::InSequence s;
   EXPECT_CALL(*GetAgent()->GetConnection(), Open());
@@ -921,6 +952,7 @@ TEST_F(BattOrAgentTest, RecordClockSyncMarkerPrintsInStopTracingResult) {
   EXPECT_TRUE(IsCommandComplete());
   EXPECT_EQ(BATTOR_ERROR_NONE, GetCommandError());
 
+  GetTaskRunner()->FastForwardBy(base::TimeDelta::FromMilliseconds(100));
   GetAgent()->StopTracing();
   RunStopTracingTo(BattOrAgentState::SAMPLES_REQUEST_SENT);
 
@@ -1030,6 +1062,20 @@ TEST_F(BattOrAgentTest, GetFirmwareGitHashSucceedsReadHasWrongType) {
                 ToCharVector(current_sample));
 
   EXPECT_FALSE(IsCommandComplete());
+
+  RunGetFirmwareGitHashTo(BattOrAgentState::READ_GIT_HASH_RECEIVED);
+
+  EXPECT_TRUE(IsCommandComplete());
+  EXPECT_EQ(BATTOR_ERROR_NONE, GetCommandError());
+}
+
+TEST_F(BattOrAgentTest, GetFirmwareRestartsConnectionUponRetry) {
+  GetAgent()->GetFirmwareGitHash();
+  RunGetFirmwareGitHashTo(BattOrAgentState::GIT_FIRMWARE_HASH_REQUEST_SENT);
+
+  EXPECT_CALL(*GetAgent()->GetConnection(), Close());
+
+  OnMessageRead(false, BATTOR_MESSAGE_TYPE_CONTROL_ACK, nullptr);
 
   RunGetFirmwareGitHashTo(BattOrAgentState::READ_GIT_HASH_RECEIVED);
 

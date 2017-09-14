@@ -40,12 +40,7 @@ template("midl") {
 
   action_foreach(action_name) {
     visibility = [ ":$source_set_name" ]
-
-    # This functionality is handled by the win-tool because the GYP build has
-    # MIDL support built-in.
-    # TODO(brettw) move this to a separate MIDL wrapper script for better
-    # clarity.
-    script = "//build/toolchain/win/tool_wrapper.py"
+    script = "//build/toolchain/win/midl.py"
 
     sources = invoker.sources
 
@@ -69,7 +64,6 @@ template("midl") {
     }
 
     args = [
-      "midl-wrapper",
       win_tool_arch,
       rebase_path(out_dir, root_build_dir),
       type_library_file,

@@ -5,7 +5,6 @@
 """Classes and functions for generic network communication over HTTP."""
 
 import cookielib
-import httplib
 import itertools
 import json
 import logging
@@ -83,7 +82,6 @@ class NetError(IOError):
   def __init__(self, inner_exc=None):
     super(NetError, self).__init__(str(inner_exc or self.__doc__))
     self.inner_exc = inner_exc
-    self.verbose_info = None
 
 
 class TimeoutError(NetError):
@@ -101,6 +99,16 @@ class HttpError(NetError):
     super(HttpError, self).__init__(inner_exc)
     self.code = code
     self.content_type = content_type
+    self._details = None  # (list with header pairs, response body)
+
+  def _extract_response_details(self, engine):
+    """Returns pair (response headers or None, response body or None)."""
+    # Avoid making multiple calls to parse_request_exception since they may
+    # have side effects on the exception, e.g. urllib2 based exceptions are in
+    # fact file-like objects that can not be read twice.
+    if not self._details:
+      self._details = engine.parse_request_exception(self.inner_exc)
+    return self._details
 
 
 def set_engine_class(engine_cls):
@@ -471,8 +479,9 @@ class HttpService(object):
         # Access denied -> authenticate.
         if e.code in (401, 403):
           logging.warning(
-              'Authentication is required for %s on attempt %d.\n%s',
-              request.get_full_url(), attempt.attempt, self._format_error(e))
+              'Got a reply with HTTP status code %d for %s on attempt %d.\n%s',
+              e.code, request.get_full_url(),
+              attempt.attempt, self._format_error(e, verbose=True))
           # Try forcefully refresh the token. If it doesn't help, then server
           # does not support authentication or user doesn't have required
           # access.
@@ -484,22 +493,27 @@ class HttpService(object):
               continue
           # Authentication attempt was unsuccessful.
           logging.error(
-              'Unable to authenticate to %s (%s).',
-              self.urlhost, self._format_error(e))
+              'Request to %s failed with HTTP status code %d: %s',
+              request.get_full_url(), e.code, self._extract_error_message(e))
           if self.authenticator and self.authenticator.supports_login:
             logging.error(
-                'Use auth.py to login: python auth.py login --service=%s',
-                self.urlhost)
+                'Use auth.py to login if haven\'t done so already:\n'
+                '    python auth.py login --service=%s', self.urlhost)
           return None
 
         # Hit a error that can not be retried -> stop retry loop.
         if not self.is_transient_http_error(
             e.code, retry_404, retry_50x, parsed.path, e.content_type):
           # This HttpError means we reached the server and there was a problem
-          # with the request, so don't retry.
-          logging.warning(
-              'Able to connect to %s but an exception was thrown.\n%s',
-              request.get_full_url(), self._format_error(e, verbose=True))
+          # with the request, so don't retry. Dump entire reply to debug log and
+          # only a friendly error message to error log.
+          logging.debug(
+              'Request to %s failed with HTTP status code %d.\n%s',
+              request.get_full_url(), e.code,
+              self._format_error(e, verbose=True))
+          logging.error(
+              'Request to %s failed with HTTP status code %d: %s',
+              request.get_full_url(), e.code, self._extract_error_message(e))
           return None
 
         # Retry all other errors.
@@ -545,28 +559,49 @@ class HttpService(object):
       return None
 
   def _format_error(self, exc, verbose=False):
-    """Returns readable description of a NetError."""
+    """Returns detailed description of a NetError."""
     if not isinstance(exc, NetError):
       return str(exc)
-    if not verbose:
+    if not verbose or not isinstance(exc, HttpError):
       return str(exc.inner_exc or exc)
-    # Avoid making multiple calls to parse_request_exception since they may
-    # have side effects on the exception, e.g. urllib2 based exceptions are in
-    # fact file-like objects that can not be read twice.
-    if exc.verbose_info is None:
-      out = [str(exc.inner_exc or exc)]
-      headers, body = self.engine.parse_request_exception(exc.inner_exc)
-      if headers or body:
-        out.append('----------')
-        if headers:
-          for header, value in headers:
-            if not header.startswith('x-'):
-              out.append('%s: %s' % (header.capitalize(), value))
-          out.append('')
-        out.append(body or '<empty body>')
-        out.append('----------')
-      exc.verbose_info = '\n'.join(out)
-    return exc.verbose_info
+    out = [str(exc.inner_exc or exc)]
+    headers, body = exc._extract_response_details(self.engine)
+    if headers or body:
+      out.append('----------')
+      if headers:
+        for header, value in headers:
+          if not header.startswith('x-'):
+            out.append('%s: %s' % (header.capitalize(), value))
+        out.append('')
+      out.append(body or '<empty body>')
+      out.append('----------')
+    return '\n'.join(out)
+
+  def _extract_error_message(self, exc):
+    """Attempts to extract a user friendly error message from HttpError body."""
+    headers, body = exc._extract_response_details(self.engine)
+    if not headers or not body:
+      return '<no error message>'
+
+    is_json = False
+    for k, v in headers:
+      if k.lower() == 'content-type':
+        is_json = v.startswith('application/json')
+        break
+
+    # Fish out an error message from Cloud Endpoints response.
+    if is_json:
+      try:
+        as_json = json.loads(body)
+        err = as_json.get('error')
+        if isinstance(err, basestring):
+          return err
+        if isinstance(err, dict):
+          return str(err.get('message') or '<no error message>')
+      except (ValueError, KeyError, TypeError):
+        pass  # not a JSON we recognize
+
+    return body
 
 
 class HttpRequest(object):

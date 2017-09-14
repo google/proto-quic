@@ -5,7 +5,6 @@
 #ifndef NET_SOCKET_CLIENT_SOCKET_POOL_H_
 #define NET_SOCKET_CLIENT_SOCKET_POOL_H_
 
-#include <deque>
 #include <memory>
 #include <string>
 

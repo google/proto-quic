@@ -512,6 +512,10 @@ void QuicDispatcher::StopAcceptingNewConnections() {
   accept_new_connections_ = false;
 }
 
+bool QuicDispatcher::ShouldAddToBlockedList() {
+  return writer_->IsWriteBlocked();
+}
+
 void QuicDispatcher::DeleteSessions() {
   closed_session_list_.clear();
 }
@@ -526,7 +530,7 @@ void QuicDispatcher::OnCanWrite() {
     QuicBlockedWriterInterface* blocked_writer =
         write_blocked_list_.begin()->first;
     write_blocked_list_.erase(write_blocked_list_.begin());
-    blocked_writer->OnCanWrite();
+    blocked_writer->OnBlockedWriterCanWrite();
   }
 }
 
@@ -577,9 +581,9 @@ void QuicDispatcher::OnConnectionClosed(QuicConnectionId connection_id,
 
 void QuicDispatcher::OnWriteBlocked(
     QuicBlockedWriterInterface* blocked_writer) {
-  if (!writer_->IsWriteBlocked()) {
-    QUIC_BUG << "QuicDispatcher::OnWriteBlocked called when the writer is "
-                "not blocked.";
+  if (!ShouldAddToBlockedList()) {
+    QUIC_BUG
+        << "Tried to add writer into blocked list when it shouldn't be added";
     // Return without adding the connection to the blocked list, to avoid
     // infinite loops in OnCanWrite.
     return;
@@ -788,7 +792,6 @@ void QuicDispatcher::ProcessChlo() {
     return;
   }
   if (FLAGS_quic_allow_chlo_buffering &&
-      FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop &&
       new_sessions_allowed_per_event_loop_ <= 0) {
     // Can't create new session any more. Wait till next event loop.
     QUIC_BUG_IF(buffered_packets_.HasChloForConnection(current_connection_id_));
@@ -816,9 +819,7 @@ void QuicDispatcher::ProcessChlo() {
   // Do this even when flag is off because there might be still some packets
   // buffered in the store before flag is turned off.
   DeliverPacketsToSession(packets, session);
-  if (FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop) {
-    --new_sessions_allowed_per_event_loop_;
-  }
+  --new_sessions_allowed_per_event_loop_;
 }
 
 const QuicSocketAddress QuicDispatcher::GetClientAddress() const {

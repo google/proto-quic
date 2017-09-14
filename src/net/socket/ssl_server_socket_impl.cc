@@ -15,7 +15,6 @@
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/client_cert_verifier.h"
 #include "net/cert/x509_util.h"
-#include "net/cert/x509_util_openssl.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_with_source.h"
 #include "net/socket/socket_bio_adapter.h"

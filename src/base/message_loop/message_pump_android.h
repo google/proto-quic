@@ -50,9 +50,10 @@ class BASE_EXPORT MessagePumpForUI : public MessagePump {
  private:
   JNIEnv* StartInternal();
 
-  RunLoop* run_loop_;
+  RunLoop* run_loop_ = nullptr;
   base::android::ScopedJavaGlobalRef<jobject> system_message_handler_obj_;
-  bool should_abort_;
+  bool should_abort_ = false;
+  bool quit_ = false;
 
   DISALLOW_COPY_AND_ASSIGN(MessagePumpForUI);
 };

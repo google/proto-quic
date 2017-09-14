@@ -347,16 +347,30 @@ class QuicStreamFactory::Job {
 
   void OnIOComplete(int rv);
 
-  void Cancel();
-
   const QuicSessionKey& key() const { return key_; }
 
   const NetLogWithSource& net_log() const { return net_log_; }
 
   base::WeakPtr<Job> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
+  void PopulateNetErrorDetails(NetErrorDetails* details) const;
+
   // Returns the estimate of dynamically allocated memory in bytes.
   size_t EstimateMemoryUsage() const;
+
+  void AddRequest(QuicStreamRequest* request) {
+    stream_requests_.insert(request);
+  }
+
+  void RemoveRequest(QuicStreamRequest* request) {
+    auto request_iter = stream_requests_.find(request);
+    DCHECK(request_iter != stream_requests_.end());
+    stream_requests_.erase(request_iter);
+  }
+
+  const std::set<QuicStreamRequest*>& stream_requests() {
+    return stream_requests_;
+  }
 
  private:
   enum IoState {
@@ -382,7 +396,9 @@ class QuicStreamFactory::Job {
   AddressList address_list_;
   base::TimeTicks dns_resolution_start_time_;
   base::TimeTicks dns_resolution_end_time_;
+  std::set<QuicStreamRequest*> stream_requests_;
   base::WeakPtrFactory<Job> weak_factory_;
+
   DISALLOW_COPY_AND_ASSIGN(Job);
 };
 
@@ -466,12 +482,13 @@ void QuicStreamFactory::Job::OnIOComplete(int rv) {
     base::ResetAndReturn(&callback_).Run(rv);
 }
 
-void QuicStreamFactory::Job::Cancel() {
-  callback_.Reset();
-  if (session_)
-    session_->connection()->CloseConnection(
-        QUIC_CONNECTION_CANCELLED, "New job canceled.",
-        ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
+void QuicStreamFactory::Job::PopulateNetErrorDetails(
+    NetErrorDetails* details) const {
+  if (!session_)
+    return;
+  details->connection_info = QuicHttpStream::ConnectionInfoFromQuicVersion(
+      session_->connection()->version());
+  details->quic_connection_error = session_->error();
 }
 
 size_t QuicStreamFactory::Job::EstimateMemoryUsage() const {
@@ -593,10 +610,14 @@ int QuicStreamRequest::Request(const HostPortPair& destination,
                                const GURL& url,
                                QuicStringPiece method,
                                const NetLogWithSource& net_log,
+                               NetErrorDetails* net_error_details,
                                const CompletionCallback& callback) {
   DCHECK_NE(quic_version, QUIC_VERSION_UNSUPPORTED);
+  DCHECK(net_error_details);
   DCHECK(callback_.is_null());
   DCHECK(factory_);
+
+  net_error_details_ = net_error_details;
   server_id_ = QuicServerId(HostPortPair::FromURL(url), privacy_mode);
 
   int rv = factory_->Create(server_id_, destination, quic_version,
@@ -632,7 +653,7 @@ std::unique_ptr<HttpStream> QuicStreamRequest::CreateStream() {
   if (!session_ || !session_->IsConnected())
     return nullptr;
 
-  return base::MakeUnique<QuicHttpStream>(std::move(session_));
+  return std::make_unique<QuicHttpStream>(std::move(session_));
 }
 
 std::unique_ptr<BidirectionalStreamImpl>
@@ -640,7 +661,7 @@ QuicStreamRequest::CreateBidirectionalStreamImpl() {
   if (!session_ || !session_->IsConnected())
     return nullptr;
 
-  return base::MakeUnique<BidirectionalStreamQuicImpl>(std::move(session_));
+  return std::make_unique<BidirectionalStreamQuicImpl>(std::move(session_));
 }
 
 QuicStreamFactory::QuicStreamFactory(
@@ -715,7 +736,7 @@ QuicStreamFactory::QuicStreamFactory(
       force_hol_blocking_(force_hol_blocking),
       race_cert_verification_(race_cert_verification),
       estimate_initial_rtt(estimate_initial_rtt),
-      check_persisted_supports_quic_(true),
+      need_to_check_persisted_supports_quic_(true),
       num_push_streams_created_(0),
       task_runner_(nullptr),
       ssl_config_service_(ssl_config_service),
@@ -787,8 +808,13 @@ void QuicStreamFactory::set_require_confirmation(bool require_confirmation) {
 
 base::TimeDelta QuicStreamFactory::GetTimeDelayForWaitingJob(
     const QuicServerId& server_id) {
-  if (require_confirmation_)
-    return base::TimeDelta();
+  if (require_confirmation_) {
+    IPAddress last_address;
+    if (!need_to_check_persisted_supports_quic_ ||
+        !http_server_properties_->GetSupportsQuic(&last_address)) {
+      return base::TimeDelta();
+    }
+  }
 
   int64_t srtt =
       1.5 * GetServerNetworkStatsSmoothedRttInMicroseconds(server_id);
@@ -815,7 +841,6 @@ void QuicStreamFactory::DumpMemoryStats(
       base::trace_event::EstimateMemoryUsage(session_peer_ip_) +
       base::trace_event::EstimateMemoryUsage(gone_away_aliases_) +
       base::trace_event::EstimateMemoryUsage(active_jobs_) +
-      base::trace_event::EstimateMemoryUsage(job_requests_map_) +
       base::trace_event::EstimateMemoryUsage(active_cert_verifier_jobs_);
   factory_dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameSize,
                           base::trace_event::MemoryAllocatorDump::kUnitsBytes,
@@ -908,7 +933,7 @@ int QuicStreamFactory::Create(const QuicServerId& server_id,
     net_log.AddEvent(
         NetLogEventType::HTTP_STREAM_JOB_BOUND_TO_QUIC_STREAM_FACTORY_JOB,
         job_net_log.source().ToEventParametersCallback());
-    job_requests_map_[server_id].insert(request);
+    it->second->AddRequest(request);
     return ERR_IO_PENDING;
   }
 
@@ -932,13 +957,13 @@ int QuicStreamFactory::Create(const QuicServerId& server_id,
   ignore_result(StartCertVerifyJob(server_id, cert_verify_flags, net_log));
 
   QuicSessionKey key(destination, server_id);
-  std::unique_ptr<Job> job = base::MakeUnique<Job>(
+  std::unique_ptr<Job> job = std::make_unique<Job>(
       this, quic_version, host_resolver_, key, WasQuicRecentlyBroken(server_id),
       cert_verify_flags, net_log);
   int rv = job->Run(base::Bind(&QuicStreamFactory::OnJobComplete,
                                base::Unretained(this), job.get()));
   if (rv == ERR_IO_PENDING) {
-    job_requests_map_[server_id].insert(request);
+    job->AddRequest(request);
     active_jobs_[server_id] = std::move(job);
     return rv;
   }
@@ -1000,41 +1025,34 @@ bool QuicStreamFactory::OnResolution(const QuicSessionKey& key,
 }
 
 void QuicStreamFactory::OnJobComplete(Job* job, int rv) {
-  // Copy |server_id|, because |job| might be destroyed before this method
-  // returns.
-  const QuicServerId server_id(job->key().server_id());
-
-  ServerIDRequestsMap::iterator requests_iter =
-      job_requests_map_.find(server_id);
+  auto iter = active_jobs_.find(job->key().server_id());
   // TODO(xunjieli): Change following CHECKs back to DCHECKs after
   // crbug.com/750271 is fixed.
-  CHECK(requests_iter != job_requests_map_.end());
+  CHECK(iter != active_jobs_.end());
   if (rv == OK) {
     set_require_confirmation(false);
 
-    if (!requests_iter->second.empty()) {
-      SessionMap::iterator session_it = active_sessions_.find(server_id);
-      CHECK(session_it != active_sessions_.end());
-      QuicChromiumClientSession* session = session_it->second;
-      for (QuicStreamRequest* request : requests_iter->second) {
-        CHECK(request->server_id() == server_id);
-        // Do not notify |request| yet.
-        request->SetSession(session->CreateHandle());
-      }
+    SessionMap::iterator session_it =
+        active_sessions_.find(job->key().server_id());
+    CHECK(session_it != active_sessions_.end());
+    QuicChromiumClientSession* session = session_it->second;
+    for (auto* request : iter->second->stream_requests()) {
+      CHECK(request->server_id() == job->key().server_id());
+      // Do not notify |request| yet.
+      request->SetSession(session->CreateHandle());
     }
   }
 
-  // It's okay not to erase |request| from |requests_iter->second| because the
-  // entire RequestSet will be erased from |job_requests_map_|.
-  for (auto* request : requests_iter->second) {
+  for (auto* request : iter->second->stream_requests()) {
     // Even though we're invoking callbacks here, we don't need to worry
     // about |this| being deleted, because the factory is owned by the
     // profile which can not be deleted via callbacks.
+    if (rv < 0) {
+      job->PopulateNetErrorDetails(request->net_error_details());
+    }
     request->OnRequestComplete(rv);
   }
-
-  active_jobs_.erase(server_id);
-  job_requests_map_.erase(requests_iter);
+  active_jobs_.erase(iter);
 }
 
 void QuicStreamFactory::OnCertVerifyJobComplete(CertVerifierJob* job, int rv) {
@@ -1103,10 +1121,8 @@ void QuicStreamFactory::OnBlackholeAfterHandshakeConfirmed(
 }
 
 void QuicStreamFactory::CancelRequest(QuicStreamRequest* request) {
-  ServerIDRequestsMap::iterator requests_it =
-      job_requests_map_.find(request->server_id());
-  DCHECK(requests_it != job_requests_map_.end());
-  requests_it->second.erase(request);
+  auto job_iter = active_jobs_.find(request->server_id());
+  job_iter->second->RemoveRequest(request);
 }
 
 void QuicStreamFactory::CloseAllSessions(int error, QuicErrorCode quic_error) {
@@ -1452,12 +1468,16 @@ int QuicStreamFactory::ConfigureSocket(DatagramClientSocket* socket,
   }
 
   socket->GetLocalAddress(&local_address_);
-  if (check_persisted_supports_quic_) {
-    check_persisted_supports_quic_ = false;
+  if (need_to_check_persisted_supports_quic_) {
+    need_to_check_persisted_supports_quic_ = false;
     IPAddress last_address;
     if (http_server_properties_->GetSupportsQuic(&last_address) &&
         last_address == local_address_.address()) {
       require_confirmation_ = false;
+      // Clear the persisted IP address, in case the network no longer supports
+      // QUIC so the next restart will require confirmation. It will be
+      // re-persisted when the first job completes successfully.
+      http_server_properties_->SetSupportsQuic(false, last_address);
     }
   }
 
@@ -1499,7 +1519,7 @@ int QuicStreamFactory::CreateSession(const QuicSessionKey& key,
   QuicConnectionId connection_id = random_generator_->RandUint64();
   std::unique_ptr<QuicServerInfo> server_info;
   if (store_server_configs_in_properties_) {
-    server_info = base::MakeUnique<PropertiesBasedQuicServerInfo>(
+    server_info = std::make_unique<PropertiesBasedQuicServerInfo>(
         server_id, http_server_properties_);
   }
   InitializeCachedStateInCryptoConfig(server_id, server_info, &connection_id);

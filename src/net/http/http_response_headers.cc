@@ -1266,8 +1266,8 @@ bool HttpResponseHeaders::GetContentRangeFor206(
 
 std::unique_ptr<base::Value> HttpResponseHeaders::NetLogCallback(
     NetLogCaptureMode capture_mode) const {
-  auto dict = base::MakeUnique<base::DictionaryValue>();
-  auto headers = base::MakeUnique<base::ListValue>();
+  auto dict = std::make_unique<base::DictionaryValue>();
+  auto headers = std::make_unique<base::ListValue>();
   headers->AppendString(EscapeNonASCII(GetStatusLine()));
   size_t iterator = 0;
   std::string name;
@@ -1282,37 +1282,6 @@ std::unique_ptr<base::Value> HttpResponseHeaders::NetLogCallback(
   }
   dict->Set("headers", std::move(headers));
   return std::move(dict);
-}
-
-// static
-bool HttpResponseHeaders::FromNetLogParam(
-    const base::Value* event_param,
-    scoped_refptr<HttpResponseHeaders>* http_response_headers) {
-  *http_response_headers = NULL;
-
-  const base::DictionaryValue* dict = NULL;
-  const base::ListValue* header_list = NULL;
-
-  if (!event_param ||
-      !event_param->GetAsDictionary(&dict) ||
-      !dict->GetList("headers", &header_list)) {
-    return false;
-  }
-
-  std::string raw_headers;
-  for (base::ListValue::const_iterator it = header_list->begin();
-       it != header_list->end();
-       ++it) {
-    std::string header_line;
-    if (!it->GetAsString(&header_line))
-      return false;
-
-    raw_headers.append(header_line);
-    raw_headers.push_back('\0');
-  }
-  raw_headers.push_back('\0');
-  *http_response_headers = new HttpResponseHeaders(raw_headers);
-  return true;
 }
 
 bool HttpResponseHeaders::IsChunkEncoded() const {

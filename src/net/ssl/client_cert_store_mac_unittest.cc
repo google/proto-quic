@@ -37,7 +37,7 @@ class ClientCertStoreMacTest : public ::testing::Test {
       const SSLCertRequestInfo& request,
       ClientCertIdentityList* selected_certs) {
     std::unique_ptr<ClientCertIdentity> preferred_identity(
-        base::MakeUnique<FakeClientCertIdentity>(preferred_cert, nullptr));
+        std::make_unique<FakeClientCertIdentity>(preferred_cert, nullptr));
 
     return store_.SelectClientCertsGivenPreferredForTesting(
         std::move(preferred_identity),

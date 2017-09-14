@@ -62,7 +62,7 @@ void TaskScheduler::CreateAndStartWithDefaultParams(StringPiece name) {
 #endif  // !defined(OS_NACL)
 
 void TaskScheduler::Create(StringPiece name) {
-  SetInstance(MakeUnique<internal::TaskSchedulerImpl>(name));
+  SetInstance(std::make_unique<internal::TaskSchedulerImpl>(name));
 }
 
 // static

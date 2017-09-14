@@ -36,12 +36,12 @@ void SerializeReports(const std::vector<const ReportingReport*>& reports,
 
   for (const ReportingReport* report : reports) {
     std::unique_ptr<base::DictionaryValue> report_value =
-        base::MakeUnique<base::DictionaryValue>();
+        std::make_unique<base::DictionaryValue>();
 
     report_value->SetInteger("age", (now - report->queued).InMilliseconds());
     report_value->SetString("type", report->type);
     report_value->SetString("url", report->url.spec());
-    report_value->Set("report", base::MakeUnique<base::Value>(*report->body));
+    report_value->SetKey("report", report->body->Clone());
 
     reports_value.Append(std::move(report_value));
   }
@@ -55,7 +55,7 @@ class ReportingDeliveryAgentImpl : public ReportingDeliveryAgent,
  public:
   ReportingDeliveryAgentImpl(ReportingContext* context)
       : context_(context),
-        timer_(base::MakeUnique<base::OneShotTimer>()),
+        timer_(std::make_unique<base::OneShotTimer>()),
         weak_factory_(this) {
     context_->AddObserver(this);
   }
@@ -163,7 +163,7 @@ class ReportingDeliveryAgentImpl : public ReportingDeliveryAgent,
           endpoint, json,
           base::Bind(&ReportingDeliveryAgentImpl::OnUploadComplete,
                      weak_factory_.GetWeakPtr(),
-                     base::MakeUnique<Delivery>(endpoint, reports)));
+                     std::make_unique<Delivery>(endpoint, reports)));
     }
   }
 
@@ -217,7 +217,7 @@ class ReportingDeliveryAgentImpl : public ReportingDeliveryAgent,
 // static
 std::unique_ptr<ReportingDeliveryAgent> ReportingDeliveryAgent::Create(
     ReportingContext* context) {
-  return base::MakeUnique<ReportingDeliveryAgentImpl>(context);
+  return std::make_unique<ReportingDeliveryAgentImpl>(context);
 }
 
 ReportingDeliveryAgent::~ReportingDeliveryAgent() {}

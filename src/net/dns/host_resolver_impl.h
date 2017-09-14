@@ -152,6 +152,11 @@ class NET_EXPORT HostResolverImpl
                             AddressList* addresses,
                             HostCache::EntryStaleness* stale_info,
                             const NetLogWithSource& source_net_log);
+  // Returns the number of host cache entries that were restored, or 0 if there
+  // is no cache.
+  size_t LastRestoredCacheSize() const;
+  // Returns the number of entries in the host cache, or 0 if there is no cache.
+  size_t CacheSize() const;
 
   void InitializePersistence(
       const PersistCallback& persist_callback,

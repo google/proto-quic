@@ -49,7 +49,10 @@ def main():
   parser.add_argument(
       '--isolated-script-test-perf-output', required=False)
   parser.add_argument('--xvfb', help='Start xvfb.', action='store_true')
+  parser.add_argument('--output-format', action='append')
   args, rest_args = parser.parse_known_args()
+  for output_format in args.output_format:
+    rest_args.append('--output-format=' + output_format)
   env = os.environ.copy()
   # Assume we want to set up the sandbox environment variables all the
   # time; doing so is harmless on non-Linux platforms and is needed
@@ -58,7 +61,7 @@ def main():
   tempfile_dir = tempfile.mkdtemp('telemetry')
   valid = True
   num_failures = 0
-  chartjson_results_present = '--output-format=chartjson' in rest_args
+  chartjson_results_present = 'chartjson' in args.output_format
   chartresults = None
   json_test_results = None
 
@@ -102,10 +105,17 @@ def main():
     if rc == 0:
       rc = 1  # Signal an abnormal exit.
 
-  if chartjson_results_present and args.isolated_script_test_chartjson_output:
-    chartjson_output_file = \
-      open(args.isolated_script_test_chartjson_output, 'w')
-    json.dump(chartresults, chartjson_output_file)
+  if chartjson_results_present:
+    if args.isolated_script_test_perf_output:
+      filename = args.isolated_script_test_perf_output
+    elif args.isolated_script_test_chartjson_output:
+      filename = args.isolated_script_test_chartjson_output
+    else:
+      filename = None
+
+    if filename is not None:
+      with open(filename, 'w') as chartjson_output_file:
+        json.dump(chartresults, chartjson_output_file)
 
   json.dump(json_test_results, args.isolated_script_test_output)
   return rc

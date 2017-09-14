@@ -43,31 +43,28 @@
 
 #include "base/memory/ref_counted.h"
 #include "net/cert/nss_cert_database.h"
+#include "net/cert/scoped_nss_types.h"
 
 typedef struct CERTCertificateStr CERTCertificate;
 typedef struct PK11SlotInfoStr PK11SlotInfo;
-namespace net {
-class X509Certificate;
-typedef std::vector<scoped_refptr<X509Certificate> > CertificateList;
-}  // namespace net
 
 namespace mozilla_security_manager {
 
 bool ImportCACerts(PK11SlotInfo* slot,
-                   const net::CertificateList& certificates,
-                   net::X509Certificate* root,
+                   const net::ScopedCERTCertificateList& certificates,
+                   CERTCertificate* root,
                    net::NSSCertDatabase::TrustBits trustBits,
                    net::NSSCertDatabase::ImportCertFailureList* not_imported);
 
 bool ImportServerCert(
     PK11SlotInfo* slot,
-    const net::CertificateList& certificates,
+    const net::ScopedCERTCertificateList& certificates,
     net::NSSCertDatabase::TrustBits trustBits,
     net::NSSCertDatabase::ImportCertFailureList* not_imported);
 
-int ImportUserCert(const net::CertificateList& certificates);
+int ImportUserCert(CERTCertificate* cert);
 
-bool SetCertTrust(const net::X509Certificate* cert,
+bool SetCertTrust(CERTCertificate* cert,
                   net::CertType type,
                   net::NSSCertDatabase::TrustBits trustBits);
 

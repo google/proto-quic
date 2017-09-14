@@ -7,9 +7,9 @@
 
 #include <stdint.h>
 
-#include <queue>
 #include <string>
 
+#include "base/containers/queue.h"
 #include "base/macros.h"
 #include "base/time/time.h"
 #include "net/base/backoff_entry.h"
@@ -132,7 +132,7 @@ class NET_EXPORT URLRequestThrottlerEntry
 
   // A list of the recent send events. We use them to decide whether there are
   // too many requests sent in sliding window.
-  std::queue<base::TimeTicks> send_log_;
+  base::queue<base::TimeTicks> send_log_;
 
   const base::TimeDelta sliding_window_period_;
   const int max_send_threshold_;

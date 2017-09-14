@@ -26,7 +26,6 @@
 #include "net/base/net_errors.h"
 #include "net/base/network_delegate_impl.h"
 #include "net/base/request_priority.h"
-#include "net/base/sdch_manager.h"
 #include "net/cert/cert_verifier.h"
 #include "net/cookies/cookie_monster.h"
 #include "net/disk_cache/disk_cache.h"
@@ -84,10 +83,6 @@ class TestURLRequestContext : public URLRequestContext {
   void set_http_network_session_context(
       std::unique_ptr<HttpNetworkSession::Context> session_context) {
     http_network_session_context_ = std::move(session_context);
-  }
-
-  void SetSdchManager(std::unique_ptr<SdchManager> sdch_manager) {
-    context_storage_.set_sdch_manager(std::move(sdch_manager));
   }
 
   void SetCTPolicyEnforcer(

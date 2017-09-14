@@ -172,7 +172,7 @@ void ScopedFeatureList::InitWithFeaturesAndFieldTrials(
   std::vector<std::unique_ptr<std::string>> features_with_trial;
   features_with_trial.reserve(trials_for_enabled_features.size());
   while (trial_it != trials_for_enabled_features.end()) {
-    features_with_trial.push_back(MakeUnique<std::string>(
+    features_with_trial.push_back(std::make_unique<std::string>(
         feature_it->as_string() + "<" + (*trial_it)->trial_name()));
     // |features_with_trial| owns the string, and feature_it points to it.
     *feature_it = *(features_with_trial.back());
@@ -189,7 +189,7 @@ void ScopedFeatureList::InitAndEnableFeatureWithParameters(
     const Feature& feature,
     const std::map<std::string, std::string>& feature_parameters) {
   if (!FieldTrialList::IsGlobalSetForTesting()) {
-    field_trial_list_ = base::MakeUnique<base::FieldTrialList>(nullptr);
+    field_trial_list_ = std::make_unique<base::FieldTrialList>(nullptr);
   }
 
   std::string kTrialName = "scoped_feature_list_trial_name";

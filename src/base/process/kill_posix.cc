@@ -27,23 +27,22 @@ namespace {
 TerminationStatus GetTerminationStatusImpl(ProcessHandle handle,
                                            bool can_block,
                                            int* exit_code) {
+  DCHECK(exit_code);
+
   int status = 0;
   const pid_t result = HANDLE_EINTR(waitpid(handle, &status,
                                             can_block ? 0 : WNOHANG));
   if (result == -1) {
     DPLOG(ERROR) << "waitpid(" << handle << ")";
-    if (exit_code)
-      *exit_code = 0;
+    *exit_code = 0;
     return TERMINATION_STATUS_NORMAL_TERMINATION;
   } else if (result == 0) {
     // the child hasn't exited yet.
-    if (exit_code)
-      *exit_code = 0;
+    *exit_code = 0;
     return TERMINATION_STATUS_STILL_RUNNING;
   }
 
-  if (exit_code)
-    *exit_code = status;
+  *exit_code = status;
 
   if (WIFSIGNALED(status)) {
     switch (WTERMSIG(status)) {

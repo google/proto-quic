@@ -16,7 +16,7 @@ TEST(NinjaBinaryTargetWriter, SourceSet) {
   Err err;
   TestWithScope setup;
 
-  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
+  Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"));
   target.set_output_type(Target::SOURCE_SET);
   target.visibility().SetPublic();
   target.sources().push_back(SourceFile("//foo/input1.cc"));
@@ -53,8 +53,7 @@ TEST(NinjaBinaryTargetWriter, SourceSet) {
   }
 
   // A shared library that depends on the source set.
-  Target shlib_target(setup.settings(), Label(SourceDir("//foo/"), "shlib"),
-                      {});
+  Target shlib_target(setup.settings(), Label(SourceDir("//foo/"), "shlib"));
   shlib_target.set_output_type(Target::SHARED_LIBRARY);
   shlib_target.public_deps().push_back(LabelTargetPair(&target));
   shlib_target.SetToolchain(setup.toolchain());
@@ -88,8 +87,7 @@ TEST(NinjaBinaryTargetWriter, SourceSet) {
   }
 
   // A static library that depends on the source set (should not link it).
-  Target stlib_target(setup.settings(), Label(SourceDir("//foo/"), "stlib"),
-                      {});
+  Target stlib_target(setup.settings(), Label(SourceDir("//foo/"), "stlib"));
   stlib_target.set_output_type(Target::STATIC_LIBRARY);
   stlib_target.public_deps().push_back(LabelTargetPair(&target));
   stlib_target.SetToolchain(setup.toolchain());
@@ -261,14 +259,14 @@ TEST(NinjaBinaryTargetWriter, OutputExtensionAndInputDeps) {
   TestWithScope setup;
 
   // An action for our library to depend on.
-  Target action(setup.settings(), Label(SourceDir("//foo/"), "action"), {});
+  Target action(setup.settings(), Label(SourceDir("//foo/"), "action"));
   action.set_output_type(Target::ACTION_FOREACH);
   action.visibility().SetPublic();
   action.SetToolchain(setup.toolchain());
   ASSERT_TRUE(action.OnResolved(&err));
 
   // A shared library w/ the output_extension set to a custom value.
-  Target target(setup.settings(), Label(SourceDir("//foo/"), "shlib"), {});
+  Target target(setup.settings(), Label(SourceDir("//foo/"), "shlib"));
   target.set_output_type(Target::SHARED_LIBRARY);
   target.set_output_extension(std::string("so.6"));
   target.set_output_dir(SourceDir("//out/Debug/foo/"));
@@ -316,7 +314,7 @@ TEST(NinjaBinaryTargetWriter, LibsAndLibDirs) {
   TestWithScope setup;
 
   // A shared library w/ libs and lib_dirs.
-  Target target(setup.settings(), Label(SourceDir("//foo/"), "shlib"), {});
+  Target target(setup.settings(), Label(SourceDir("//foo/"), "shlib"));
   target.set_output_type(Target::SHARED_LIBRARY);
   target.config_values().libs().push_back(LibFile(SourceFile("//foo/lib1.a")));
   target.config_values().libs().push_back(LibFile("foo"));
@@ -353,7 +351,7 @@ TEST(NinjaBinaryTargetWriter, EmptyOutputExtension) {
   // This test is the same as OutputExtensionAndInputDeps, except that we call
   // set_output_extension("") and ensure that we get an empty one and override
   // the output prefix so that the name matches the target exactly.
-  Target target(setup.settings(), Label(SourceDir("//foo/"), "shlib"), {});
+  Target target(setup.settings(), Label(SourceDir("//foo/"), "shlib"));
   target.set_output_type(Target::SHARED_LIBRARY);
   target.set_output_prefix_override(true);
   target.set_output_extension(std::string());
@@ -395,14 +393,14 @@ TEST(NinjaBinaryTargetWriter, SourceSetDataDeps) {
   TestWithScope setup;
 
   // This target is a data (runtime) dependency of the intermediate target.
-  Target data(setup.settings(), Label(SourceDir("//foo/"), "data_target"), {});
+  Target data(setup.settings(), Label(SourceDir("//foo/"), "data_target"));
   data.set_output_type(Target::EXECUTABLE);
   data.visibility().SetPublic();
   data.SetToolchain(setup.toolchain());
   ASSERT_TRUE(data.OnResolved(&err));
 
   // Intermediate source set target.
-  Target inter(setup.settings(), Label(SourceDir("//foo/"), "inter"), {});
+  Target inter(setup.settings(), Label(SourceDir("//foo/"), "inter"));
   inter.set_output_type(Target::SOURCE_SET);
   inter.visibility().SetPublic();
   inter.data_deps().push_back(LabelTargetPair(&data));
@@ -434,7 +432,7 @@ TEST(NinjaBinaryTargetWriter, SourceSetDataDeps) {
   EXPECT_EQ(inter_expected, inter_out.str());
 
   // Final target.
-  Target exe(setup.settings(), Label(SourceDir("//foo/"), "exe"), {});
+  Target exe(setup.settings(), Label(SourceDir("//foo/"), "exe"));
   exe.set_output_type(Target::EXECUTABLE);
   exe.public_deps().push_back(LabelTargetPair(&inter));
   exe.SetToolchain(setup.toolchain());
@@ -474,7 +472,7 @@ TEST(NinjaBinaryTargetWriter, SharedLibraryModuleDefinitionFile) {
   Err err;
   TestWithScope setup;
 
-  Target shared_lib(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
+  Target shared_lib(setup.settings(), Label(SourceDir("//foo/"), "bar"));
   shared_lib.set_output_type(Target::SHARED_LIBRARY);
   shared_lib.SetToolchain(setup.toolchain());
   shared_lib.sources().push_back(SourceFile("//foo/sources.cc"));
@@ -508,8 +506,7 @@ TEST(NinjaBinaryTargetWriter, LoadableModule) {
   Err err;
   TestWithScope setup;
 
-  Target loadable_module(setup.settings(), Label(SourceDir("//foo/"), "bar"),
-                         {});
+  Target loadable_module(setup.settings(), Label(SourceDir("//foo/"), "bar"));
   loadable_module.set_output_type(Target::LOADABLE_MODULE);
   loadable_module.visibility().SetPublic();
   loadable_module.SetToolchain(setup.toolchain());
@@ -539,7 +536,7 @@ TEST(NinjaBinaryTargetWriter, LoadableModule) {
   EXPECT_EQ(loadable_expected, out.str());
 
   // Final target.
-  Target exe(setup.settings(), Label(SourceDir("//foo/"), "exe"), {});
+  Target exe(setup.settings(), Label(SourceDir("//foo/"), "exe"));
   exe.set_output_type(Target::EXECUTABLE);
   exe.public_deps().push_back(LabelTargetPair(&loadable_module));
   exe.SetToolchain(setup.toolchain());
@@ -580,7 +577,7 @@ TEST(NinjaBinaryTargetWriter, WinPrecompiledHeaders) {
   // A precompiled header toolchain.
   Settings pch_settings(setup.build_settings(), "withpch/");
   Toolchain pch_toolchain(&pch_settings,
-                          Label(SourceDir("//toolchain/"), "withpch"), {});
+                          Label(SourceDir("//toolchain/"), "withpch"));
   pch_settings.set_toolchain_label(pch_toolchain.label());
   pch_settings.set_default_toolchain_label(setup.toolchain()->label());
 
@@ -610,7 +607,7 @@ TEST(NinjaBinaryTargetWriter, WinPrecompiledHeaders) {
   // This target doesn't specify precompiled headers.
   {
     Target no_pch_target(&pch_settings,
-                         Label(SourceDir("//foo/"), "no_pch_target"), {});
+                         Label(SourceDir("//foo/"), "no_pch_target"));
     no_pch_target.set_output_type(Target::SOURCE_SET);
     no_pch_target.visibility().SetPublic();
     no_pch_target.sources().push_back(SourceFile("//foo/input1.cc"));
@@ -644,8 +641,7 @@ TEST(NinjaBinaryTargetWriter, WinPrecompiledHeaders) {
 
   // This target specifies PCH.
   {
-    Target pch_target(&pch_settings, Label(SourceDir("//foo/"), "pch_target"),
-                      {});
+    Target pch_target(&pch_settings, Label(SourceDir("//foo/"), "pch_target"));
     pch_target.config_values().set_precompiled_header("build/precompile.h");
     pch_target.config_values().set_precompiled_source(
         SourceFile("//build/precompile.cc"));
@@ -708,7 +704,7 @@ TEST(NinjaBinaryTargetWriter, GCCPrecompiledHeaders) {
   // A precompiled header toolchain.
   Settings pch_settings(setup.build_settings(), "withpch/");
   Toolchain pch_toolchain(&pch_settings,
-                          Label(SourceDir("//toolchain/"), "withpch"), {});
+                          Label(SourceDir("//toolchain/"), "withpch"));
   pch_settings.set_toolchain_label(pch_toolchain.label());
   pch_settings.set_default_toolchain_label(setup.toolchain()->label());
 
@@ -739,7 +735,7 @@ TEST(NinjaBinaryTargetWriter, GCCPrecompiledHeaders) {
   // This target doesn't specify precompiled headers.
   {
     Target no_pch_target(&pch_settings,
-                         Label(SourceDir("//foo/"), "no_pch_target"), {});
+                         Label(SourceDir("//foo/"), "no_pch_target"));
     no_pch_target.set_output_type(Target::SOURCE_SET);
     no_pch_target.visibility().SetPublic();
     no_pch_target.sources().push_back(SourceFile("//foo/input1.cc"));
@@ -773,8 +769,7 @@ TEST(NinjaBinaryTargetWriter, GCCPrecompiledHeaders) {
 
   // This target specifies PCH.
   {
-    Target pch_target(&pch_settings, Label(SourceDir("//foo/"), "pch_target"),
-                      {});
+    Target pch_target(&pch_settings, Label(SourceDir("//foo/"), "pch_target"));
     pch_target.config_values().set_precompiled_source(
         SourceFile("//build/precompile.h"));
     pch_target.config_values().cflags_c().push_back("-std=c99");
@@ -851,7 +846,7 @@ TEST(NinjaBinaryTargetWriter, InputFiles) {
 
   // This target has one input.
   {
-    Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
+    Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"));
     target.set_output_type(Target::SOURCE_SET);
     target.visibility().SetPublic();
     target.sources().push_back(SourceFile("//foo/input1.cc"));
@@ -886,7 +881,7 @@ TEST(NinjaBinaryTargetWriter, InputFiles) {
 
   // This target has multiple inputs.
   {
-    Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"), {});
+    Target target(setup.settings(), Label(SourceDir("//foo/"), "bar"));
     target.set_output_type(Target::SOURCE_SET);
     target.visibility().SetPublic();
     target.sources().push_back(SourceFile("//foo/input1.cc"));

@@ -63,14 +63,14 @@ void DnsConfig::CopyIgnoreHosts(const DnsConfig& d) {
 }
 
 std::unique_ptr<base::Value> DnsConfig::ToValue() const {
-  auto dict = base::MakeUnique<base::DictionaryValue>();
+  auto dict = std::make_unique<base::DictionaryValue>();
 
-  auto list = base::MakeUnique<base::ListValue>();
+  auto list = std::make_unique<base::ListValue>();
   for (size_t i = 0; i < nameservers.size(); ++i)
     list->AppendString(nameservers[i].ToString());
   dict->Set("nameservers", std::move(list));
 
-  list = base::MakeUnique<base::ListValue>();
+  list = std::make_unique<base::ListValue>();
   for (size_t i = 0; i < search.size(); ++i)
     list->AppendString(search[i]);
   dict->Set("search", std::move(list));

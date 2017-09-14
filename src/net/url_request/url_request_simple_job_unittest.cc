@@ -112,7 +112,7 @@ class URLRequestSimpleJobTest : public ::testing::Test {
  public:
   URLRequestSimpleJobTest() : context_(true) {
     job_factory_.SetProtocolHandler(
-        "data", base::MakeUnique<SimpleJobProtocolHandler>());
+        "data", std::make_unique<SimpleJobProtocolHandler>());
     context_.set_job_factory(&job_factory_);
     context_.Init();
 

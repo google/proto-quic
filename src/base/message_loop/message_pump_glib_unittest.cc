@@ -152,8 +152,7 @@ void ExpectProcessedEvents(EventInjector* injector, int count) {
 }
 
 // Posts a task on the current message loop.
-void PostMessageLoopTask(const tracked_objects::Location& from_here,
-                         OnceClosure task) {
+void PostMessageLoopTask(const Location& from_here, OnceClosure task) {
   ThreadTaskRunnerHandle::Get()->PostTask(from_here, std::move(task));
 }
 

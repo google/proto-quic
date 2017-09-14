@@ -57,11 +57,6 @@ chrome/browser/media/router/mojo/media_route_provider_util_win.h
 chrome/browser/media/webrtc/desktop_media_list_ash.h
 chrome/browser/media/webrtc/desktop_media_list_observer.h
 chrome/browser/media/webrtc/rtp_dump_type.h
-chrome/browser/media_galleries/fileapi/file_path_watcher_util.h
-chrome/browser/media_galleries/fileapi/iapps_data_provider.h
-chrome/browser/media_galleries/fileapi/itunes_data_provider.h
-chrome/browser/media_galleries/fileapi/picasa_data_provider.h
-chrome/browser/media_galleries/fileapi/safe_iapps_library_parser.h
 chrome/browser/media_galleries/media_file_system_context.h
 chrome/browser/notifications/displayed_notifications_dispatch_callback.h
 chrome/browser/permissions/permission_queue_controller.h
@@ -79,8 +74,6 @@ chrome/browser/ui/views/frame/browser_header_painter_ash.h
 chrome/browser/ui/webui/large_icon_source.h
 chrome/common/mac/app_shim_launch.h
 chrome/common/mac/app_shim_messages.h
-chrome/common/media_galleries/itunes_library.h
-chrome/common/media_galleries/picasa_types.h
 chrome/install_static/chromium_install_modes.h
 chrome/install_static/install_constants.h
 chrome/install_static/install_details.h
@@ -255,7 +248,6 @@ testing/gmock_mutant.h
 third_party/WebKit/Source/bindings/modules/v8/serialization/WebCryptoSubTags.h
 third_party/WebKit/Source/core/animation/CSSInterpolationEnvironment.h
 third_party/WebKit/Source/core/animation/SVGInterpolationEnvironment.h
-third_party/WebKit/Source/core/css/CSSPropertyMetadata.h
 third_party/WebKit/Source/core/css/resolver/StyleBuilder.h
 third_party/WebKit/Source/core/css/threaded/MultiThreadedTestUtil.h
 third_party/WebKit/Source/core/css/zoomAdjustedPixelValue.h

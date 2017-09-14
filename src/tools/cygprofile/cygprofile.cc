@@ -201,25 +201,21 @@ class Thread {
 };
 
 // Single log entry recorded for each function call.
-LogEntry::LogEntry(const void* address)
-    : time(GetCurrentTime()),
-      pid(getpid()),
-      tid(GetTID()),
-      address(address) {
-}
+LogEntry::LogEntry(const void* address, pid_t pid, pid_t tid)
+    : time(GetCurrentTime()), pid(pid), tid(tid), address(address) {}
 
 ThreadLog::ThreadLog()
-  : tid_(GetTID()),
-    in_use_(false),
-    flush_callback_(
-        base::Bind(&ThreadLog::FlushInternal, base::Unretained(this))) {
-}
+    : pid_(getpid()),
+      tid_(GetTID()),
+      in_use_(false),
+      flush_callback_(
+          base::Bind(&ThreadLog::FlushInternal, base::Unretained(this))) {}
 
 ThreadLog::ThreadLog(const FlushCallback& flush_callback)
-  : tid_(GetTID()),
-    in_use_(false),
-    flush_callback_(flush_callback) {
-}
+    : pid_(getpid()),
+      tid_(GetTID()),
+      in_use_(false),
+      flush_callback_(flush_callback) {}
 
 ThreadLog::~ThreadLog() {
   PCHECK(0 == pthread_setspecific(g_tls_slot, NULL));
@@ -230,14 +226,12 @@ void ThreadLog::AddEntry(void* address) {
     return;
   in_use_ = true;
 
-  CHECK_EQ(tid_, GetTID());
-  const std::pair<base::hash_set<void*>::iterator, bool> pair =
-      called_functions_.insert(address);
-  const bool did_insert = pair.second;
+  DCHECK_EQ(tid_, GetTID());
+  bool did_insert = called_functions_.insert(address).second;
 
   if (did_insert) {
     base::AutoLock auto_lock(lock_);
-    entries_.push_back(LogEntry(address));
+    entries_.emplace_back(address, pid_, tid_);
     // Crash in a quickly understandable way instead of crashing (or maybe not
     // though) due to OOM.
     CHECK_LE(entries_.size(), kMaxBufferSize);

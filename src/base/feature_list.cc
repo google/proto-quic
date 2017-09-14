@@ -276,6 +276,20 @@ void FeatureList::SetInstance(std::unique_ptr<FeatureList> instance) {
 
   // Note: Intentional leak of global singleton.
   g_instance = instance.release();
+
+#if DCHECK_IS_ON() && defined(SYZYASAN)
+  // Update the behaviour of LOG_DCHECK to match the Feature configuration.
+  // DCHECK is also forced to be FATAL if we are running a death-test.
+  // TODO(asvitkine): If we find other use-cases that need integrating here
+  // then define a proper API/hook for the purpose.
+  if (base::FeatureList::IsEnabled(kSyzyAsanDCheckIsFatalFeature) ||
+      base::CommandLine::ForCurrentProcess()->HasSwitch(
+          "gtest_internal_run_death_test")) {
+    logging::LOG_DCHECK = logging::LOG_FATAL;
+  } else {
+    logging::LOG_DCHECK = logging::LOG_INFO;
+  }
+#endif  // DCHECK_IS_ON() && defined(SYZYASAN)
 }
 
 // static

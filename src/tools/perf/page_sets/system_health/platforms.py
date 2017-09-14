@@ -9,7 +9,7 @@ ALL_PLATFORMS = frozenset({DESKTOP, MOBILE})
 
 # Use the constants below to mark on which platforms the story has WPR
 # recordings. To disable a story (e.g. because it crashes or takes too long),
-# use @decorators.Disabled instead.
+# use StoryExpectations instead.
 DESKTOP_ONLY = frozenset({DESKTOP})
 MOBILE_ONLY = frozenset({MOBILE})
 NO_PLATFORMS = frozenset()

@@ -444,6 +444,46 @@ QuicConsumedData QuicStream::WritevData(
   return consumed_data;
 }
 
+QuicConsumedData QuicStream::WriteMemSlices(QuicMemSliceSpan span, bool fin) {
+  DCHECK(session_->can_use_slices());
+  QuicConsumedData consumed_data(0, false);
+  if (span.empty() && !fin) {
+    QUIC_BUG << "span.empty() && !fin";
+    return consumed_data;
+  }
+
+  if (fin_buffered_) {
+    QUIC_BUG << "Fin already buffered";
+    return consumed_data;
+  }
+
+  if (write_side_closed_) {
+    QUIC_DLOG(ERROR) << ENDPOINT << "Stream " << id()
+                     << "attempting to write when the write side is closed";
+    return consumed_data;
+  }
+
+  bool had_buffered_data = HasBufferedData();
+  if (CanWriteNewData() || span.empty()) {
+    consumed_data.fin_consumed = fin;
+    if (!span.empty()) {
+      // Buffer all data if buffered data size is below limit.
+      QuicStreamOffset offset = send_buffer_.stream_offset();
+      consumed_data.bytes_consumed =
+          span.SaveMemSlicesInSendBuffer(&send_buffer_);
+      OnDataBuffered(offset, consumed_data.bytes_consumed, nullptr);
+    }
+  }
+  fin_buffered_ = consumed_data.fin_consumed;
+
+  if (!had_buffered_data && (HasBufferedData() || fin_buffered_)) {
+    // Write data if there is no buffered data before.
+    WriteBufferedData();
+  }
+
+  return consumed_data;
+}
+
 QuicConsumedData QuicStream::WritevDataInner(
     QuicIOVector iov,
     QuicStreamOffset offset,

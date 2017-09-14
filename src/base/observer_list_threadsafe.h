@@ -132,8 +132,7 @@ class ObserverListThreadSafe
   // all Observers have been Notified. The notification may still be pending
   // delivery.
   template <typename Method, typename... Params>
-  void Notify(const tracked_objects::Location& from_here,
-              Method m, Params&&... params) {
+  void Notify(const Location& from_here, Method m, Params&&... params) {
     Callback<void(ObserverType*)> method =
         Bind(&internal::Dispatcher<ObserverType, Method>::Run,
              m, std::forward<Params>(params)...);
@@ -151,11 +150,11 @@ class ObserverListThreadSafe
   friend class RefCountedThreadSafe<ObserverListThreadSafe<ObserverType>>;
 
   struct NotificationData {
-    NotificationData(const tracked_objects::Location& from_here_in,
+    NotificationData(const Location& from_here_in,
                      const Callback<void(ObserverType*)>& method_in)
         : from_here(from_here_in), method(method_in) {}
 
-    tracked_objects::Location from_here;
+    Location from_here;
     Callback<void(ObserverType*)> method;
   };
 

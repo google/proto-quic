@@ -12,29 +12,13 @@ import queue as Queue
 import sublime
 import sublime_plugin
 import subprocess
+import sys
 import tempfile
 import threading
 import time
 
-# Change to an absolute reference if ninja is not on your path
-path_to_ninja = 'ninja'
-
-def find_ninja_file(ninja_root_path, relative_file_path_to_find):
-  '''
-  Returns the first *.ninja file in ninja_root_path that contains
-  relative_file_path_to_find. Otherwise, returns None.
-  '''
-  matches = []
-  for root, dirnames, filenames in os.walk(ninja_root_path):
-    for filename in fnmatch.filter(filenames, '*.ninja'):
-        matches.append(os.path.join(root, filename))
-  logging.debug("Found %d Ninja targets", len(matches))
-
-  for ninja_file in matches:
-    for line in open(ninja_file):
-      if relative_file_path_to_find in line:
-        return ninja_file
-  return None
+# Path to the version of ninja checked in into Chrome.
+rel_path_to_ninja = os.path.join('third_party', 'depot_tools', 'ninja')
 
 
 class PrintOutputCommand(sublime_plugin.TextCommand):
@@ -210,11 +194,16 @@ class CompileCurrentFile(sublime_plugin.TextCommand):
     else:
       output_dir = os.path.join(project_folder, 'out', target_build)
       source_relative_path = os.path.relpath(self.view.file_name(),
-                             output_dir)
+                                             output_dir)
+      # On Windows the caret character needs to be escaped as it's an escape
+      # character.
+      carets = '^'
+      if sys.platform.startswith('win'):
+        carets = '^^'
       command = [
-          path_to_ninja, "-C", os.path.join(project_folder, 'out',
-                                            target_build),
-          source_relative_path + '^']
+          os.path.join(project_folder, rel_path_to_ninja), "-C",
+          os.path.join(project_folder, 'out', target_build),
+          source_relative_path + carets]
       self.update_panel_text(' '.join(command) + '\n')
       self.interrupted = False
       self.thread = threading.Thread(target=self.execute_command,

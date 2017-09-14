@@ -304,6 +304,29 @@ class BaseTestServer {
   // Initialize a TestServer with a specific set of SSLOptions for HTTPS or WSS.
   BaseTestServer(Type type, const SSLOptions& ssl_options);
 
+  // Starts the server blocking until the server is ready.
+  bool Start() WARN_UNUSED_RESULT;
+
+  // Start the test server without blocking. Use this if you need multiple test
+  // servers (such as WebSockets and HTTP, or HTTP and HTTPS). You must call
+  // BlockUntilStarted on all servers your test requires before executing the
+  // test. For example:
+  //
+  //   // Start the servers in parallel.
+  //   ASSERT_TRUE(http_server.StartInBackground());
+  //   ASSERT_TRUE(websocket_server.StartInBackground());
+  //   // Wait for both servers to be ready.
+  //   ASSERT_TRUE(http_server.BlockUntilStarted());
+  //   ASSERT_TRUE(websocket_server.BlockUntilStarted());
+  //   RunMyTest();
+  //
+  // Returns true on success.
+  virtual bool StartInBackground() WARN_UNUSED_RESULT = 0;
+
+  // Block until the test server is ready. Returns true on success. See
+  // StartInBackground() documentation for more information.
+  virtual bool BlockUntilStarted() WARN_UNUSED_RESULT = 0;
+
   // Returns the host port pair used by current Python based test server only
   // if the server is started.
   const HostPortPair& host_port_pair() const;
@@ -354,6 +377,8 @@ class BaseTestServer {
   virtual ~BaseTestServer();
   Type type() const { return type_; }
 
+  bool started() const { return started_; }
+
   // Gets port currently assigned to host_port_pair_ without checking
   // whether it's available (server started) or not.
   uint16_t GetPort();
@@ -371,9 +396,13 @@ class BaseTestServer {
   void SetResourcePath(const base::FilePath& document_root,
                        const base::FilePath& certificates_dir);
 
-  // Parses the server data read from the test server.  Returns true
-  // on success.
-  bool ParseServerData(const std::string& server_data) WARN_UNUSED_RESULT;
+  // Parses the server data read from the test server and sets |server_data_|.
+  // *port is set to the port number specified in server_data. The port may be
+  // different from the local port set in |host_port_pair_|, specifically when
+  // using RemoteTestServer (which proxies connections from 127.0.0.1 to a
+  // different IP). Returns true on success.
+  bool SetAndParseServerData(const std::string& server_data,
+                             int* port) WARN_UNUSED_RESULT;
 
   // Generates a DictionaryValue with the arguments for launching the external
   // Python test server.
@@ -394,7 +423,9 @@ class BaseTestServer {
   // Directory that contains the SSL certificates.
   base::FilePath certificates_dir_;
 
-  // Address the test server listens on.
+  // Address on which the tests should connect to the server. With
+  // RemoteTestServer it may be different from the address on which the server
+  // listens on.
   HostPortPair host_port_pair_;
 
   // Holds the data sent from the server (e.g., port number).

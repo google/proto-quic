@@ -53,6 +53,7 @@ class NET_EXPORT_PRIVATE UDPClientSocket : public DatagramClientSocket {
  private:
   UDPSocket socket_;
   NetworkChangeNotifier::NetworkHandle network_;
+
   DISALLOW_COPY_AND_ASSIGN(UDPClientSocket);
 };
 

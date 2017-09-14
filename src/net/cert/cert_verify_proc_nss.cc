@@ -17,7 +17,6 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/sha1.h"
 #include "build/build_config.h"
 #include "crypto/nss_util.h"
 #include "crypto/scoped_nss_types.h"
@@ -198,7 +197,8 @@ void GetCertChainInfo(CERTCertList* cert_list,
     verified_chain.push_back(root_cert);
 
   scoped_refptr<X509Certificate> verified_cert_with_chain =
-      X509Certificate::CreateFromHandle(verified_cert, verified_chain);
+      x509_util::CreateX509CertificateFromCERTCertificate(verified_cert,
+                                                          verified_chain);
   if (verified_cert_with_chain)
     verify_result->verified_cert = std::move(verified_cert_with_chain);
   else
@@ -728,17 +728,26 @@ bool VerifyEV(CERTCertificate* cert_handle,
       return false;
   }
 
-  SHA1HashValue weak_fingerprint;
-  base::SHA1HashBytes(root_ca->derCert.data, root_ca->derCert.len,
-                      weak_fingerprint.data);
-  return metadata->HasEVPolicyOID(weak_fingerprint, ev_policy_oid);
+  SHA256HashValue fingerprint;
+  crypto::SHA256HashString(
+      base::StringPiece(reinterpret_cast<const char*>(root_ca->derCert.data),
+                        root_ca->derCert.len),
+      fingerprint.data, sizeof(fingerprint.data));
+  return metadata->HasEVPolicyOID(fingerprint, ev_policy_oid);
 }
 
-CERTCertList* CertificateListToCERTCertList(const CertificateList& list) {
-  CERTCertList* result = CERT_NewCertList();
+// Convert a CertificateList to an NSS CERTCertList. If any certs couldn't be
+// converted, they are silently ignored.
+ScopedCERTCertList CertificateListToCERTCertListIgnoringErrors(
+    const CertificateList& list) {
+  ScopedCERTCertList result(CERT_NewCertList());
   for (size_t i = 0; i < list.size(); ++i) {
-    CERTCertificate* cert = list[i]->os_cert_handle();
-    CERT_AddCertToListTail(result, CERT_DupCertificate(cert));
+    ScopedCERTCertificate cert =
+        x509_util::CreateCERTCertificateFromX509Certificate(list[i].get());
+    if (cert)
+      CERT_AddCertToListTail(result.get(), cert.release());
+    else
+      LOG(WARNING) << "ignoring cert: " << list[i]->subject().GetDisplayName();
   }
   return result;
 }
@@ -771,7 +780,18 @@ int CertVerifyProcNSS::VerifyInternalImpl(
     const CertificateList& additional_trust_anchors,
     CERTChainVerifyCallback* chain_verify_callback,
     CertVerifyResult* verify_result) {
-  CERTCertificate* cert_handle = cert->os_cert_handle();
+  // Convert the whole input chain into NSS certificates. Even though only the
+  // target cert is explicitly referred to in this function, creating NSS
+  // certificates for the intermediates is required for PKIXVerifyCert to find
+  // them during chain building.
+  ScopedCERTCertificateList input_chain =
+      x509_util::CreateCERTCertificateListFromX509Certificate(
+          cert, x509_util::InvalidIntermediateBehavior::kIgnore);
+  if (input_chain.empty()) {
+    verify_result->cert_status |= CERT_STATUS_INVALID;
+    return ERR_CERT_INVALID;
+  }
+  CERTCertificate* cert_handle = input_chain[0].get();
 
   if (!ocsp_response.empty() && cache_ocsp_response_from_side_channel_) {
     // Note: NSS uses a thread-safe global hash table, so this call will
@@ -836,8 +856,8 @@ int CertVerifyProcNSS::VerifyInternalImpl(
 
   ScopedCERTCertList trust_anchors;
   if (!additional_trust_anchors.empty()) {
-    trust_anchors.reset(
-        CertificateListToCERTCertList(additional_trust_anchors));
+    trust_anchors =
+        CertificateListToCERTCertListIgnoringErrors(additional_trust_anchors);
   }
 
   SECStatus status =

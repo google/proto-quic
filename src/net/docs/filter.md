@@ -3,7 +3,6 @@ The network stack implements support for Content-Encodings using
 bytes from a URLRequestJob. Currently, the following streams are implemented:
 
 * gzip (handling "deflate" and "gzip" Content-Encodings)
-* sdch (handling "sdch" Content-Encoding)
 * brotli (handling "br" Content-Encoding)
 
 Source streams conceptually form a chain, with the URLRequestJob as both the

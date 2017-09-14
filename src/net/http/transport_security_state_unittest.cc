@@ -2878,7 +2878,7 @@ TEST_F(TransportSecurityStateTest, RequireCTForSymantec) {
   hashes.clear();
   hashes.push_back(HashValue(symantec_hash_value));
   base::FieldTrialList field_trial_list(
-      base::MakeUnique<base::MockEntropyProvider>());
+      std::make_unique<base::MockEntropyProvider>());
   base::FieldTrialList::CreateFieldTrial("EnforceCTForProblematicRoots",
                                          "disabled");
 

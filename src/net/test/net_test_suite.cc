@@ -68,6 +68,6 @@ void NetTestSuite::InitializeTestThreadNoNetworkChangeNotifier() {
   host_resolver_proc_->AddRule("*", "127.0.0.1");
 
   scoped_task_environment_ =
-      base::MakeUnique<base::test::ScopedTaskEnvironment>(
+      std::make_unique<base::test::ScopedTaskEnvironment>(
           base::test::ScopedTaskEnvironment::MainThreadType::IO);
 }

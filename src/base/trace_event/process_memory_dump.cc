@@ -191,20 +191,22 @@ ProcessMemoryDump::ProcessMemoryDump(
     : heap_profiler_serialization_state_(
           std::move(heap_profiler_serialization_state)),
       dump_args_(dump_args) {}
-
 ProcessMemoryDump::~ProcessMemoryDump() {}
+ProcessMemoryDump::ProcessMemoryDump(ProcessMemoryDump&& other) = default;
+ProcessMemoryDump& ProcessMemoryDump::operator=(ProcessMemoryDump&& other) =
+    default;
 
 MemoryAllocatorDump* ProcessMemoryDump::CreateAllocatorDump(
     const std::string& absolute_name) {
   return AddAllocatorDumpInternal(
-      MakeUnique<MemoryAllocatorDump>(absolute_name, this));
+      std::make_unique<MemoryAllocatorDump>(absolute_name, this));
 }
 
 MemoryAllocatorDump* ProcessMemoryDump::CreateAllocatorDump(
     const std::string& absolute_name,
     const MemoryAllocatorDumpGuid& guid) {
   return AddAllocatorDumpInternal(
-      MakeUnique<MemoryAllocatorDump>(absolute_name, this, guid));
+      std::make_unique<MemoryAllocatorDump>(absolute_name, this, guid));
 }
 
 MemoryAllocatorDump* ProcessMemoryDump::AddAllocatorDumpInternal(
@@ -283,14 +285,9 @@ void ProcessMemoryDump::DumpHeapUsage(
         metrics_by_context,
     base::trace_event::TraceEventMemoryOverhead& overhead,
     const char* allocator_name) {
-  if (!metrics_by_context.empty()) {
-    // We shouldn't end up here unless we're doing a detailed dump with
-    // heap profiling enabled and if that is the case tracing should be
-    // enabled which sets up the heap profiler serialization state.
-    if (!heap_profiler_serialization_state()) {
-      NOTREACHED();
-      return;
-    }
+  // The heap profiler serialization state can be null here if heap profiler was
+  // enabled when a process dump is in progress.
+  if (heap_profiler_serialization_state() && !metrics_by_context.empty()) {
     DCHECK_EQ(0ul, heap_dumps_.count(allocator_name));
     std::unique_ptr<TracedValue> heap_dump = ExportHeapDump(
         metrics_by_context, *heap_profiler_serialization_state());
@@ -300,6 +297,31 @@ void ProcessMemoryDump::DumpHeapUsage(
   std::string base_name = base::StringPrintf("tracing/heap_profiler_%s",
                                              allocator_name);
   overhead.DumpInto(base_name.c_str(), this);
+}
+
+void ProcessMemoryDump::SetAllocatorDumpsForSerialization(
+    std::vector<std::unique_ptr<MemoryAllocatorDump>> dumps) {
+  DCHECK(allocator_dumps_.empty());
+  for (std::unique_ptr<MemoryAllocatorDump>& dump : dumps)
+    AddAllocatorDumpInternal(std::move(dump));
+}
+
+std::vector<ProcessMemoryDump::MemoryAllocatorDumpEdge>
+ProcessMemoryDump::GetAllEdgesForSerialization() const {
+  std::vector<MemoryAllocatorDumpEdge> edges;
+  edges.reserve(allocator_dumps_edges_.size());
+  for (const auto& it : allocator_dumps_edges_)
+    edges.push_back(it.second);
+  return edges;
+}
+
+void ProcessMemoryDump::SetAllEdgesForSerialization(
+    const std::vector<ProcessMemoryDump::MemoryAllocatorDumpEdge>& edges) {
+  DCHECK(allocator_dumps_edges_.empty());
+  for (const MemoryAllocatorDumpEdge& edge : edges) {
+    auto it_and_inserted = allocator_dumps_edges_.emplace(edge.source, edge);
+    DCHECK(it_and_inserted.second);
+  }
 }
 
 void ProcessMemoryDump::Clear() {
@@ -349,7 +371,7 @@ void ProcessMemoryDump::AsValueInto(TracedValue* value) const {
     value->SetString("source", edge.source.ToString());
     value->SetString("target", edge.target.ToString());
     value->SetInteger("importance", edge.importance);
-    value->SetString("type", edge.type);
+    value->SetString("type", kEdgeTypeOwnership);
     value->EndDictionary();
   }
   value->EndArray();
@@ -364,8 +386,8 @@ void ProcessMemoryDump::AddOwnershipEdge(const MemoryAllocatorDumpGuid& source,
     DCHECK_EQ(target.ToUint64(),
               allocator_dumps_edges_[source].target.ToUint64());
   }
-  allocator_dumps_edges_[source] = {
-      source, target, importance, kEdgeTypeOwnership, false /* overridable */};
+  allocator_dumps_edges_[source] = {source, target, importance,
+                                    false /* overridable */};
 }
 
 void ProcessMemoryDump::AddOwnershipEdge(
@@ -379,8 +401,8 @@ void ProcessMemoryDump::AddOverridableOwnershipEdge(
     const MemoryAllocatorDumpGuid& target,
     int importance) {
   if (allocator_dumps_edges_.count(source) == 0) {
-    allocator_dumps_edges_[source] = {
-        source, target, importance, kEdgeTypeOwnership, true /* overridable */};
+    allocator_dumps_edges_[source] = {source, target, importance,
+                                      true /* overridable */};
   } else {
     // An edge between the source and target already exits. So, do nothing here
     // since the new overridable edge is implicitly overridden by a strong edge
@@ -391,27 +413,23 @@ void ProcessMemoryDump::AddOverridableOwnershipEdge(
 
 void ProcessMemoryDump::CreateSharedMemoryOwnershipEdge(
     const MemoryAllocatorDumpGuid& client_local_dump_guid,
-    const MemoryAllocatorDumpGuid& client_global_dump_guid,
     const UnguessableToken& shared_memory_guid,
     int importance) {
-  CreateSharedMemoryOwnershipEdgeInternal(
-      client_local_dump_guid, client_global_dump_guid, shared_memory_guid,
-      importance, false /*is_weak*/);
+  CreateSharedMemoryOwnershipEdgeInternal(client_local_dump_guid,
+                                          shared_memory_guid, importance,
+                                          false /*is_weak*/);
 }
 
 void ProcessMemoryDump::CreateWeakSharedMemoryOwnershipEdge(
     const MemoryAllocatorDumpGuid& client_local_dump_guid,
-    const MemoryAllocatorDumpGuid& client_global_dump_guid,
     const UnguessableToken& shared_memory_guid,
     int importance) {
   CreateSharedMemoryOwnershipEdgeInternal(
-      client_local_dump_guid, client_global_dump_guid, shared_memory_guid,
-      importance, true /*is_weak*/);
+      client_local_dump_guid, shared_memory_guid, importance, true /*is_weak*/);
 }
 
 void ProcessMemoryDump::CreateSharedMemoryOwnershipEdgeInternal(
     const MemoryAllocatorDumpGuid& client_local_dump_guid,
-    const MemoryAllocatorDumpGuid& client_global_dump_guid,
     const UnguessableToken& shared_memory_guid,
     int importance,
     bool is_weak) {
@@ -421,8 +439,8 @@ void ProcessMemoryDump::CreateSharedMemoryOwnershipEdgeInternal(
 
   // The guid of the local dump created by SharedMemoryTracker for the memory
   // segment.
-  auto local_shm_guid =
-      SharedMemoryTracker::GetDumpIdForTracing(shared_memory_guid);
+  auto local_shm_guid = MemoryAllocatorDump::GetDumpIdFromName(
+      SharedMemoryTracker::GetDumpNameForTracing(shared_memory_guid));
 
   // The dump guid of the global dump created by the tracker for the memory
   // segment.
@@ -458,6 +476,17 @@ MemoryAllocatorDump* ProcessMemoryDump::GetBlackHoleMad() {
   if (!black_hole_mad_)
     black_hole_mad_.reset(new MemoryAllocatorDump("discarded", this));
   return black_hole_mad_.get();
+}
+
+bool ProcessMemoryDump::MemoryAllocatorDumpEdge::operator==(
+    const MemoryAllocatorDumpEdge& other) const {
+  return source == other.source && target == other.target &&
+         importance == other.importance && overridable == other.overridable;
+}
+
+bool ProcessMemoryDump::MemoryAllocatorDumpEdge::operator!=(
+    const MemoryAllocatorDumpEdge& other) const {
+  return !(*this == other);
 }
 
 }  // namespace trace_event

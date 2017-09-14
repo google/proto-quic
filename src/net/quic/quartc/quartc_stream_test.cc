@@ -53,8 +53,7 @@ class MockQuicSession : public QuicSession {
       // WritevData does not pass down a iovec, data is saved in stream before
       // data is consumed. Retrieve data from stream.
       char* buf = new char[len];
-      QuicDataWriter writer(len, buf, Perspective::IS_CLIENT,
-                            NETWORK_BYTE_ORDER);
+      QuicDataWriter writer(len, buf, NETWORK_BYTE_ORDER);
       QuicStream* stream = GetOrCreateStream(kStreamId);
       DCHECK(stream);
       if (len > 0) {
@@ -96,11 +95,6 @@ class MockQuicSession : public QuicSession {
   // The session take ownership of the stream.
   void ActivateReliableStream(std::unique_ptr<QuicStream> stream) {
     ActivateStream(std::move(stream));
-  }
-
- protected:
-  std::unique_ptr<QuicStream> CreateStream(QuicStreamId id) override {
-    return nullptr;
   }
 
  private:

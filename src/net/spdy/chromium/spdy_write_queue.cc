@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "base/containers/circular_deque.h"
 #include "base/logging.h"
 #include "net/spdy/chromium/spdy_buffer.h"
 #include "net/spdy/chromium/spdy_buffer_producer.h"
@@ -108,7 +109,7 @@ void SpdyWriteQueue::RemovePendingWritesForStream(
   std::vector<std::unique_ptr<SpdyBufferProducer>> erased_buffer_producers;
 
   // Do the actual deletion and removal, preserving FIFO-ness.
-  std::deque<PendingWrite>& queue = queue_[priority];
+  base::circular_deque<PendingWrite>& queue = queue_[priority];
   auto out_it = queue.begin();
   for (auto it = queue.begin(); it != queue.end(); ++it) {
     if (it->stream.get() == stream.get()) {
@@ -130,7 +131,7 @@ void SpdyWriteQueue::RemovePendingWritesForStreamsAfter(
 
   for (int i = MINIMUM_PRIORITY; i <= MAXIMUM_PRIORITY; ++i) {
     // Do the actual deletion and removal, preserving FIFO-ness.
-    std::deque<PendingWrite>& queue = queue_[i];
+    base::circular_deque<PendingWrite>& queue = queue_[i];
     auto out_it = queue.begin();
     for (auto it = queue.begin(); it != queue.end(); ++it) {
       if (it->stream.get() && (it->stream->stream_id() > last_good_stream_id ||

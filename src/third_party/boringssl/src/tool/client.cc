@@ -135,6 +135,14 @@ static const struct argument kArguments[] = {
         "An HTTP proxy server to tunnel the TCP connection through",
     },
     {
+        "-renegotiate-freely", kBooleanArgument,
+        "Allow renegotiations from the peer.",
+    },
+    {
+        "-debug", kBooleanArgument,
+        "Print debug information about the handshake",
+    },
+    {
         "", kOptionalArgument, "",
     },
 };
@@ -262,6 +270,10 @@ static bool DoConnection(SSL_CTX *ctx,
     SSL_set_session(ssl.get(), session.get());
   }
 
+  if (args_map.count("-renegotiate-freely") != 0) {
+    SSL_set_renegotiate_mode(ssl.get(), ssl_renegotiate_freely);
+  }
+
   if (resume_session) {
     SSL_set_session(ssl.get(), resume_session.get());
   }
@@ -306,6 +318,14 @@ static bool GetTLS13Variant(tls13_variant_t *out, const std::string &in) {
     *out = tls13_experiment;
     return true;
   }
+  if (in == "experiment2") {
+    *out = tls13_experiment2;
+    return true;
+  }
+  if (in == "experiment3") {
+    *out = tls13_experiment3;
+    return true;
+  }
   if (in == "record-type") {
     *out = tls13_record_type_experiment;
     return true;
@@ -315,6 +335,20 @@ static bool GetTLS13Variant(tls13_variant_t *out, const std::string &in) {
     return true;
   }
   return false;
+}
+
+static void InfoCallback(const SSL *ssl, int type, int value) {
+  switch (type) {
+    case SSL_CB_HANDSHAKE_START:
+      fprintf(stderr, "Handshake started.\n");
+      break;
+    case SSL_CB_HANDSHAKE_DONE:
+      fprintf(stderr, "Handshake done.\n");
+      break;
+    case SSL_CB_CONNECT_LOOP:
+      fprintf(stderr, "Handshake progress: %s\n", SSL_state_string_long(ssl));
+      break;
+  }
 }
 
 bool Client(const std::vector<std::string> &args) {
@@ -329,7 +363,7 @@ bool Client(const std::vector<std::string> &args) {
     return false;
   }
 
-  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(SSLv23_client_method()));
+  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method()));
 
   const char *keylog_file = getenv("SSLKEYLOGFILE");
   if (keylog_file) {
@@ -495,6 +529,10 @@ bool Client(const std::vector<std::string> &args) {
 
   if (args_map.count("-ed25519") != 0) {
     SSL_CTX_set_ed25519_enabled(ctx.get(), 1);
+  }
+
+  if (args_map.count("-debug") != 0) {
+    SSL_CTX_set_info_callback(ctx.get(), InfoCallback);
   }
 
   if (args_map.count("-test-resumption") != 0) {

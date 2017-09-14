@@ -17,7 +17,6 @@ import (
 	"io"
 	"math/big"
 	"net"
-	"strconv"
 	"time"
 
 	"./ed25519"
@@ -98,6 +97,7 @@ func (c *Conn) clientHandshake() error {
 		pskBinderFirst:          c.config.Bugs.PSKBinderFirst,
 		omitExtensions:          c.config.Bugs.OmitExtensions,
 		emptyExtensions:         c.config.Bugs.EmptyExtensions,
+		sendOnlyECExtensions:    c.config.Bugs.SendOnlyECExtensions,
 	}
 
 	if maxVersion >= VersionTLS13 {
@@ -412,7 +412,7 @@ NextCipherSuite:
 		finishedHash.addEntropy(session.masterSecret)
 		finishedHash.Write(helloBytes)
 		earlyTrafficSecret := finishedHash.deriveSecret(earlyTrafficLabel)
-		c.out.useTrafficSecret(session.vers, pskCipherSuite, earlyTrafficSecret, clientWrite)
+		c.out.useTrafficSecret(session.wireVersion, pskCipherSuite, earlyTrafficSecret, clientWrite)
 		for _, earlyData := range c.config.Bugs.SendEarlyData {
 			if _, err := c.writeRecord(recordTypeApplicationData, earlyData); err != nil {
 				return err
@@ -580,6 +580,10 @@ NextCipherSuite:
 		return errors.New("tls: ServerHello parameters did not match HelloRetryRequest")
 	}
 
+	if c.config.Bugs.ExpectOmitExtensions && !serverHello.omitExtensions {
+		return errors.New("tls: ServerHello did not omit extensions")
+	}
+
 	hs := &clientHandshakeState{
 		c:            c,
 		serverHello:  serverHello,
@@ -687,7 +691,7 @@ NextCipherSuite:
 func (hs *clientHandshakeState) doTLS13Handshake() error {
 	c := hs.c
 
-	if c.wireVersion == tls13ExperimentVersion && !bytes.Equal(hs.hello.sessionId, hs.serverHello.sessionId) {
+	if isResumptionExperiment(c.wireVersion) && !bytes.Equal(hs.hello.sessionId, hs.serverHello.sessionId) {
 		return errors.New("tls: session IDs did not match.")
 	}
 
@@ -741,7 +745,7 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 		hs.finishedHash.addEntropy(zeroSecret)
 	}
 
-	if c.wireVersion == tls13ExperimentVersion {
+	if isResumptionExperiment(c.wireVersion) {
 		if err := c.readRecord(recordTypeChangeCipherSpec); err != nil {
 			return err
 		}
@@ -751,7 +755,7 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	// traffic key.
 	clientHandshakeTrafficSecret := hs.finishedHash.deriveSecret(clientHandshakeTrafficLabel)
 	serverHandshakeTrafficSecret := hs.finishedHash.deriveSecret(serverHandshakeTrafficLabel)
-	c.in.useTrafficSecret(c.vers, hs.suite, serverHandshakeTrafficSecret, serverWrite)
+	c.in.useTrafficSecret(c.wireVersion, hs.suite, serverHandshakeTrafficSecret, serverWrite)
 
 	msg, err := c.readHandshake()
 	if err != nil {
@@ -885,7 +889,7 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 
 	// Switch to application data keys on read. In particular, any alerts
 	// from the client certificate are read over these keys.
-	c.in.useTrafficSecret(c.vers, hs.suite, serverTrafficSecret, serverWrite)
+	c.in.useTrafficSecret(c.wireVersion, hs.suite, serverTrafficSecret, serverWrite)
 
 	// If we're expecting 0.5-RTT messages from the server, read them
 	// now.
@@ -927,11 +931,11 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 		c.sendAlert(alertEndOfEarlyData)
 	}
 
-	if c.wireVersion == tls13ExperimentVersion {
+	if isResumptionClientCCSExperiment(c.wireVersion) {
 		c.writeRecord(recordTypeChangeCipherSpec, []byte{1})
 	}
 
-	c.out.useTrafficSecret(c.vers, hs.suite, clientHandshakeTrafficSecret, clientWrite)
+	c.out.useTrafficSecret(c.wireVersion, hs.suite, clientHandshakeTrafficSecret, clientWrite)
 
 	if certReq != nil && !c.config.Bugs.SkipClientCertificate {
 		certMsg := &certificateMsg{
@@ -1017,7 +1021,7 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	c.flushHandshake()
 
 	// Switch to application data keys.
-	c.out.useTrafficSecret(c.vers, hs.suite, clientTrafficSecret, clientWrite)
+	c.out.useTrafficSecret(c.wireVersion, hs.suite, clientTrafficSecret, clientWrite)
 
 	c.resumptionSecret = hs.finishedHash.deriveSecret(resumptionLabel)
 	return nil
@@ -1284,8 +1288,8 @@ func (hs *clientHandshakeState) establishKeys() error {
 		serverCipher = hs.suite.aead(c.vers, serverKey, serverIV)
 	}
 
-	c.in.prepareCipherSpec(c.vers, serverCipher, serverHash)
-	c.out.prepareCipherSpec(c.vers, clientCipher, clientHash)
+	c.in.prepareCipherSpec(c.wireVersion, serverCipher, serverHash)
+	c.out.prepareCipherSpec(c.wireVersion, clientCipher, clientHash)
 	return nil
 }
 
@@ -1678,78 +1682,17 @@ func (hs *clientHandshakeState) writeHash(msg []byte, seqno uint16) {
 // certificate, or none if none match. It may return a particular certificate or
 // nil on success, or an error on internal error.
 func selectClientCertificate(c *Conn, certReq *certificateRequestMsg) (*Certificate, error) {
-	// RFC 4346 on the certificateAuthorities field:
-	// A list of the distinguished names of acceptable certificate
-	// authorities. These distinguished names may specify a desired
-	// distinguished name for a root CA or for a subordinate CA; thus, this
-	// message can be used to describe both known roots and a desired
-	// authorization space. If the certificate_authorities list is empty
-	// then the client MAY send any certificate of the appropriate
-	// ClientCertificateType, unless there is some external arrangement to
-	// the contrary.
-
-	var rsaAvail, ecdsaAvail bool
-	if !certReq.hasRequestContext {
-		for _, certType := range certReq.certificateTypes {
-			switch certType {
-			case CertTypeRSASign:
-				rsaAvail = true
-			case CertTypeECDSASign:
-				ecdsaAvail = true
-			}
-		}
+	if len(c.config.Certificates) == 0 {
+		return nil, nil
 	}
 
-	// We need to search our list of client certs for one
-	// where SignatureAlgorithm is RSA and the Issuer is in
-	// certReq.certificateAuthorities
-findCert:
-	for i, chain := range c.config.Certificates {
-		if !certReq.hasRequestContext && !rsaAvail && !ecdsaAvail {
-			continue
-		}
-
-		// Ensure the private key supports one of the advertised
-		// signature algorithms.
-		if certReq.hasSignatureAlgorithm {
-			if _, err := selectSignatureAlgorithm(c.vers, chain.PrivateKey, c.config, certReq.signatureAlgorithms); err != nil {
-				continue
-			}
-		}
-
-		for j, cert := range chain.Certificate {
-			x509Cert := chain.Leaf
-			// parse the certificate if this isn't the leaf
-			// node, or if chain.Leaf was nil
-			if j != 0 || x509Cert == nil {
-				var err error
-				if x509Cert, err = x509.ParseCertificate(cert); err != nil {
-					c.sendAlert(alertInternalError)
-					return nil, errors.New("tls: failed to parse client certificate #" + strconv.Itoa(i) + ": " + err.Error())
-				}
-			}
-
-			if !certReq.hasRequestContext {
-				switch {
-				case rsaAvail && x509Cert.PublicKeyAlgorithm == x509.RSA:
-				case ecdsaAvail && x509Cert.PublicKeyAlgorithm == x509.ECDSA:
-				case ecdsaAvail && isEd25519Certificate(x509Cert):
-				default:
-					continue findCert
-				}
-			}
-
-			if expected := c.config.Bugs.ExpectCertificateReqNames; expected != nil {
-				if !eqByteSlices(expected, certReq.certificateAuthorities) {
-					return nil, fmt.Errorf("tls: CertificateRequest names differed, got %#v but expected %#v", certReq.certificateAuthorities, expected)
-				}
-			}
-
-			return &chain, nil
-		}
+	// The test is assumed to have configured the certificate it meant to
+	// send.
+	if len(c.config.Certificates) > 1 {
+		return nil, errors.New("tls: multiple certificates configured")
 	}
 
-	return nil, nil
+	return &c.config.Certificates[0], nil
 }
 
 // clientSessionCacheKey returns a key used to cache sessionTickets that could

@@ -6,9 +6,9 @@
 #define NET_SPDY_CHROMIUM_SPDY_READ_QUEUE_H_
 
 #include <cstddef>
-#include <deque>
 #include <memory>
 
+#include "base/containers/circular_deque.h"
 #include "base/macros.h"
 #include "net/base/net_export.h"
 
@@ -42,7 +42,7 @@ class NET_EXPORT_PRIVATE SpdyReadQueue {
  private:
   // Class invariant:
   // |total_size_| is the sum of GetRemainingSize() of |queue_|'s elements.
-  std::deque<std::unique_ptr<SpdyBuffer>> queue_;
+  base::circular_deque<std::unique_ptr<SpdyBuffer>> queue_;
   size_t total_size_;
 
   DISALLOW_COPY_AND_ASSIGN(SpdyReadQueue);

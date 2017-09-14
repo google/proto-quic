@@ -167,7 +167,7 @@
 // as the number of buckets recorded.
 
 // Sample usage:
-//   UMA_HISTOGRAM_CUSTOM_TIMES("Very.Long.Timing.Histogram", duration_in_ms,
+//   UMA_HISTOGRAM_CUSTOM_TIMES("Very.Long.Timing.Histogram", time_delta,
 //       base::TimeDelta::FromSeconds(1), base::TimeDelta::FromDays(1), 100);
 #define UMA_HISTOGRAM_CUSTOM_TIMES(name, sample, min, max, bucket_count)       \
     STATIC_HISTOGRAM_POINTER_BLOCK(name, AddTime(sample),                      \

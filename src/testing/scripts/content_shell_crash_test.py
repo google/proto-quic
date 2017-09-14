@@ -30,7 +30,7 @@ def main(argv):
       required=True)
   parser.add_argument(
       '--isolated-script-test-chartjson-output', type=str,
-      required=True)
+      required=False)
   parser.add_argument(
       '--isolated-script-test-perf-output', type=str,
       required=False)

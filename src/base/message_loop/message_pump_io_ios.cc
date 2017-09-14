@@ -7,7 +7,7 @@
 namespace base {
 
 MessagePumpIOSForIO::FileDescriptorWatcher::FileDescriptorWatcher(
-    const tracked_objects::Location& from_here)
+    const Location& from_here)
     : is_persistent_(false),
       fdref_(NULL),
       callback_types_(0),

@@ -4,6 +4,8 @@
 
 package org.chromium.build;
 
+import android.content.Context;
+import android.content.res.AssetManager;
 import android.content.res.Resources;
 
 /**
@@ -17,18 +19,47 @@ import android.content.res.Resources;
  * implementation is supplied to an android_apk target (via build_hooks_android_impl_deps).
  */
 public abstract class BuildHooksAndroid {
-    private static BuildHooksAndroidImpl sInstance = new BuildHooksAndroidImpl();
+    private static final BuildHooksAndroidImpl sInstance = new BuildHooksAndroidImpl();
 
-    /**
-     * Hook to provide custom resources.
-     * @param resources fallback resources to use if custom resources aren't available.
-     * @return custom resources.
-     */
-    public static Resources getResources(Resources resources) {
-        return sInstance.getResourcesImpl(resources);
+    public static Resources getResources(Context context) {
+        return sInstance.getResourcesImpl(context);
     }
 
-    protected Resources getResourcesImpl(Resources resources) {
-        return resources;
+    protected abstract Resources getResourcesImpl(Context context);
+
+    public static AssetManager getAssets(Context context) {
+        return sInstance.getAssetsImpl(context);
     }
+
+    protected abstract AssetManager getAssetsImpl(Context context);
+
+    public static Resources.Theme getTheme(Context context) {
+        return sInstance.getThemeImpl(context);
+    }
+
+    protected abstract Resources.Theme getThemeImpl(Context context);
+
+    public static void setTheme(Context context, int theme) {
+        sInstance.setThemeImpl(context, theme);
+    }
+
+    protected abstract void setThemeImpl(Context context, int theme);
+
+    public static Context createConfigurationContext(Context context) {
+        return sInstance.createConfigurationContextImpl(context);
+    }
+
+    protected abstract Context createConfigurationContextImpl(Context context);
+
+    public static boolean isEnabled() {
+        return sInstance.isEnabledImpl();
+    }
+
+    protected abstract boolean isEnabledImpl();
+
+    public static void init() {
+        sInstance.initImpl();
+    }
+
+    protected abstract void initImpl();
 }

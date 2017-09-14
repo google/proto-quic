@@ -34,15 +34,18 @@
 #include <stdint.h>
 
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 
 #include "base/at_exit.h"
 #include "base/bind.h"
 #include "base/bind_helpers.h"
 #include "base/command_line.h"
+#include "base/files/file_path.h"
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/message_loop/message_loop.h"
+#include "base/path_service.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_tokenizer.h"
@@ -70,6 +73,7 @@ const char kUsage[] =
     "\n"
     "Switches: \n"
     "  --battor-path=<path> Uses the specified BattOr path.\n"
+    "  --interactive Enables interactive power profiling."
     "\n"
     "Once in the shell, you can issue the following commands:\n"
     "\n"
@@ -81,6 +85,10 @@ const char kUsage[] =
     "  Exit\n"
     "  Help\n"
     "\n";
+
+// The command line switch used to enable interactive mode where starting and
+// stopping is easily toggled.
+const char kInteractiveSwitch[] = "interactive";
 
 void PrintSupportsExplicitClockSync() {
   std::cout << BattOrAgent::SupportsExplicitClockSync() << endl;
@@ -133,6 +141,13 @@ class BattOrAgentBin : public BattOrAgent::Listener {
 
     SetUp(path);
 
+    if (base::CommandLine::ForCurrentProcess()->HasSwitch(kInteractiveSwitch)) {
+      interactive_ = true;
+      std::cout << "Type <Enter> to toggle tracing, type Exit or Ctrl+C "
+                   "to quit, or Help for help."
+                << endl;
+    }
+
     base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE,
         base::Bind(&BattOrAgentBin::RunNextCommand, base::Unretained(this)));
@@ -178,6 +193,14 @@ class BattOrAgentBin : public BattOrAgent::Listener {
     std::string cmd;
     std::getline(std::cin, cmd);
 
+    if (interactive_) {
+      if (cmd == "") {
+        cmd = is_tracing_ ? "StopTracing" : "StartTracing";
+        std::cout << cmd << endl;
+        is_tracing_ = !is_tracing_;
+      }
+    }
+
     if (cmd == "StartTracing") {
       StartTracing();
     } else if (cmd.find("StopTracing") != std::string::npos) {
@@ -196,6 +219,9 @@ class BattOrAgentBin : public BattOrAgent::Listener {
           tokens.size() == 2 ? tokens[1] : std::string();
 
       StopTracing(trace_output_file);
+      if (interactive_) {
+        PostRunNextCommand();
+      }
     } else if (cmd == "SupportsExplicitClockSync") {
       PrintSupportsExplicitClockSync();
       PostRunNextCommand();
@@ -266,27 +292,106 @@ class BattOrAgentBin : public BattOrAgent::Listener {
         base::Bind(&BattOrAgent::StopTracing, base::Unretained(agent_.get())));
   }
 
-  void OnStopTracingComplete(const std::string& trace,
+  std::string BattOrResultsToSummary(const BattOrResults& results) {
+    const uint32_t samples_per_second = results.GetSampleRate();
+
+    // Print a summary of a BattOr trace. These summaries are intended for human
+    // consumption and are subject to change at any moment. The summary is
+    // printed when using interactive mode.
+    std::stringstream trace_summary;
+    // Display floating-point numbers without exponents, in a five-character
+    // field, with two digits of precision. ie;
+    // 12.39
+    //  8.40
+    trace_summary << std::fixed << std::setw(5) << std::setprecision(2);
+
+    // Scan through the sample data to summarize it. Report on average power and
+    // second-by-second power including min-second, median-second, and
+    // max-second.
+    double total_power = 0.0;
+    int num_seconds = 0;
+    std::vector<double> power_by_seconds;
+    const std::vector<float>& samples = results.GetPowerSamples();
+    for (size_t i = 0; i < samples.size(); i += samples_per_second) {
+      size_t loop_count = samples.size() - i;
+      if (loop_count > samples_per_second)
+        loop_count = samples_per_second;
+
+      double second_power = 0.0;
+      for (size_t j = i; j < i + loop_count; ++j) {
+        total_power += samples[i];
+        second_power += samples[i];
+      }
+
+      // Print/store results for full seconds.
+      if (loop_count == samples_per_second) {
+        // Calculate power for one second in watts.
+        second_power /= samples_per_second;
+        trace_summary << "Second " << std::setw(2) << num_seconds
+                      << " average power: " << std::setw(5) << second_power
+                      << " W" << std::endl;
+        ++num_seconds;
+        power_by_seconds.push_back(second_power);
+      }
+    }
+    // Calculate average power in watts.
+    const double average_power_W = total_power / samples.size();
+    const double duration_sec =
+        static_cast<double>(samples.size()) / samples_per_second;
+    trace_summary << "Average power over " << duration_sec
+                  << " s : " << average_power_W << " W" << std::endl;
+    std::sort(power_by_seconds.begin(), power_by_seconds.end());
+    if (power_by_seconds.size() >= 3) {
+      trace_summary << "Summary of power-by-seconds:" << std::endl
+                    << "Minimum: " << power_by_seconds[0] << std::endl
+                    << "Median:  "
+                    << power_by_seconds[power_by_seconds.size() / 2]
+                    << std::endl
+                    << "Maximum: "
+                    << power_by_seconds[power_by_seconds.size() - 1]
+                    << std::endl;
+    } else {
+      trace_summary << "Too short a trace to generate per-second summary.";
+    }
+
+    return trace_summary.str();
+  }
+
+  void OnStopTracingComplete(const BattOrResults& results,
                              BattOrError error) override {
     if (error == BATTOR_ERROR_NONE) {
+      std::string output_file = trace_output_file_;
       if (trace_output_file_.empty()) {
-        std::cout << trace;
-      } else {
-        std::ofstream trace_stream(trace_output_file_);
-        if (!trace_stream.is_open()) {
-          std::cout << "Tracing output file could not be opened." << endl;
-          exit(1);
-        }
-        trace_stream << trace;
-        trace_stream.close();
+        // Save the detailed results in case they are needed.
+        base::FilePath default_path;
+        PathService::Get(base::DIR_USER_DESKTOP, &default_path);
+        default_path = default_path.Append(FILE_PATH_LITERAL("trace_data.txt"));
+        output_file = default_path.AsUTF8Unsafe().c_str();
+        std::cout << "Saving detailed results to " << output_file << std::endl;
       }
+
+      if (interactive_) {
+        // Print a summary of the trace.
+        std::cout << BattOrResultsToSummary(results) << endl;
+      }
+
+      std::ofstream trace_stream(output_file);
+      if (!trace_stream.is_open()) {
+        std::cout << "Tracing output file \"" << output_file
+                  << "\" could not be opened." << endl;
+        exit(1);
+      }
+      trace_stream << results.ToString();
+      trace_stream.close();
       std::cout << "Done." << endl;
     } else {
       HandleError(error);
     }
 
-    ui_thread_message_loop_.task_runner()->PostTask(
-        FROM_HERE, ui_thread_run_loop_.QuitClosure());
+    if (!interactive_) {
+      ui_thread_message_loop_.task_runner()->PostTask(
+          FROM_HERE, ui_thread_run_loop_.QuitClosure());
+    }
   }
 
   void RecordClockSyncMarker(const std::string& marker) {
@@ -336,6 +441,11 @@ class BattOrAgentBin : public BattOrAgent::Listener {
   std::unique_ptr<BattOrAgent> agent_;
 
   std::string trace_output_file_;
+
+  // When true user can Start/Stop tracing by typing Enter.
+  bool interactive_ = false;
+  // Toggle to support alternating starting/stopping tracing.
+  bool is_tracing_ = false;
 };
 
 }  // namespace battor

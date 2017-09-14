@@ -32,105 +32,10 @@
 
 namespace bssl {
 
-/* kMaxKeyUpdates is the number of consecutive KeyUpdates that will be
- * processed. Without this limit an attacker could force unbounded processing
- * without being able to return application data. */
+// kMaxKeyUpdates is the number of consecutive KeyUpdates that will be
+// processed. Without this limit an attacker could force unbounded processing
+// without being able to return application data.
 static const uint8_t kMaxKeyUpdates = 32;
-
-int tls13_handshake(SSL_HANDSHAKE *hs, int *out_early_return) {
-  SSL *const ssl = hs->ssl;
-  for (;;) {
-    /* Resolve the operation the handshake was waiting on. */
-    switch (hs->wait) {
-      case ssl_hs_error:
-        OPENSSL_PUT_ERROR(SSL, SSL_R_SSL_HANDSHAKE_FAILURE);
-        return -1;
-
-      case ssl_hs_flush: {
-        int ret = ssl->method->flush_flight(ssl);
-        if (ret <= 0) {
-          return ret;
-        }
-        break;
-      }
-
-      case ssl_hs_read_message: {
-        int ret = ssl->method->read_message(ssl);
-        if (ret <= 0) {
-          return ret;
-        }
-        break;
-      }
-
-      case ssl_hs_read_change_cipher_spec: {
-        int ret = ssl->method->read_change_cipher_spec(ssl);
-        if (ret <= 0) {
-          return ret;
-        }
-        break;
-      }
-
-      case ssl_hs_read_end_of_early_data: {
-        if (ssl->s3->hs->can_early_read) {
-          /* While we are processing early data, the handshake returns early. */
-          *out_early_return = 1;
-          return 1;
-        }
-        hs->wait = ssl_hs_ok;
-        break;
-      }
-
-      case ssl_hs_x509_lookup:
-        ssl->rwstate = SSL_X509_LOOKUP;
-        hs->wait = ssl_hs_ok;
-        return -1;
-
-      case ssl_hs_channel_id_lookup:
-        ssl->rwstate = SSL_CHANNEL_ID_LOOKUP;
-        hs->wait = ssl_hs_ok;
-        return -1;
-
-      case ssl_hs_private_key_operation:
-        ssl->rwstate = SSL_PRIVATE_KEY_OPERATION;
-        hs->wait = ssl_hs_ok;
-        return -1;
-
-      case ssl_hs_pending_ticket:
-        ssl->rwstate = SSL_PENDING_TICKET;
-        hs->wait = ssl_hs_ok;
-        return -1;
-
-      case ssl_hs_certificate_verify:
-        ssl->rwstate = SSL_CERTIFICATE_VERIFY;
-        hs->wait = ssl_hs_ok;
-        return -1;
-
-      case ssl_hs_early_data_rejected:
-        ssl->rwstate = SSL_EARLY_DATA_REJECTED;
-        /* Cause |SSL_write| to start failing immediately. */
-        hs->can_early_write = 0;
-        return -1;
-
-      case ssl_hs_ok:
-        break;
-    }
-
-    /* Run the state machine again. */
-    hs->wait = hs->do_tls13_handshake(hs);
-    if (hs->wait == ssl_hs_error) {
-      /* Don't loop around to avoid a stray |SSL_R_SSL_HANDSHAKE_FAILURE| the
-       * first time around. */
-      return -1;
-    }
-    if (hs->wait == ssl_hs_ok) {
-      /* The handshake has completed. */
-      return 1;
-    }
-
-    /* Otherwise, loop to the beginning and resolve what was blocking the
-     * handshake. */
-  }
-}
 
 int tls13_get_cert_verify_signature_input(
     SSL_HANDSHAKE *hs, uint8_t **out, size_t *out_len,
@@ -151,7 +56,7 @@ int tls13_get_cert_verify_signature_input(
   const uint8_t *context;
   size_t context_len;
   if (cert_verify_context == ssl_cert_verify_server) {
-    /* Include the NUL byte. */
+    // Include the NUL byte.
     static const char kContext[] = "TLS 1.3, server CertificateVerify";
     context = (const uint8_t *)kContext;
     context_len = sizeof(kContext);
@@ -225,15 +130,15 @@ int tls13_process_certificate(SSL_HANDSHAKE *hs, const SSLMessage &msg,
         OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
         return 0;
       }
-      /* TLS 1.3 always uses certificate keys for signing thus the correct
-       * keyUsage is enforced. */
+      // TLS 1.3 always uses certificate keys for signing thus the correct
+      // keyUsage is enforced.
       if (!ssl_cert_check_digital_signature_key_usage(&certificate)) {
         ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
         return 0;
       }
 
       if (retain_sha256) {
-        /* Retain the hash of the leaf certificate if requested. */
+        // Retain the hash of the leaf certificate if requested.
         SHA256(CBS_data(&certificate), CBS_len(&certificate),
                hs->new_session->peer_sha256);
       }
@@ -248,8 +153,8 @@ int tls13_process_certificate(SSL_HANDSHAKE *hs, const SSLMessage &msg,
       return 0;
     }
 
-    /* Parse out the extensions. */
-    int have_status_request = 0, have_sct = 0;
+    // Parse out the extensions.
+    bool have_status_request = false, have_sct = false;
     CBS status_request, sct;
     const SSL_EXTENSION_TYPE ext_types[] = {
         {TLSEXT_TYPE_status_request, &have_status_request, &status_request},
@@ -264,8 +169,8 @@ int tls13_process_certificate(SSL_HANDSHAKE *hs, const SSLMessage &msg,
       return 0;
     }
 
-    /* All Certificate extensions are parsed, but only the leaf extensions are
-     * stored. */
+    // All Certificate extensions are parsed, but only the leaf extensions are
+    // stored.
     if (have_status_request) {
       if (ssl->server || !ssl->ocsp_stapling_enabled) {
         OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_EXTENSION);
@@ -284,11 +189,14 @@ int tls13_process_certificate(SSL_HANDSHAKE *hs, const SSLMessage &msg,
         return 0;
       }
 
-      if (sk_CRYPTO_BUFFER_num(certs.get()) == 1 &&
-          !CBS_stow(&ocsp_response, &hs->new_session->ocsp_response,
-                    &hs->new_session->ocsp_response_length)) {
-        ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
-        return 0;
+      if (sk_CRYPTO_BUFFER_num(certs.get()) == 1) {
+        CRYPTO_BUFFER_free(hs->new_session->ocsp_response);
+        hs->new_session->ocsp_response =
+            CRYPTO_BUFFER_new_from_CBS(&ocsp_response, ssl->ctx->pool);
+        if (hs->new_session->ocsp_response == nullptr) {
+          ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
+          return 0;
+        }
       }
     }
 
@@ -305,18 +213,20 @@ int tls13_process_certificate(SSL_HANDSHAKE *hs, const SSLMessage &msg,
         return 0;
       }
 
-      if (sk_CRYPTO_BUFFER_num(certs.get()) == 1 &&
-          !CBS_stow(
-              &sct, &hs->new_session->tlsext_signed_cert_timestamp_list,
-              &hs->new_session->tlsext_signed_cert_timestamp_list_length)) {
-        ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
-        return 0;
+      if (sk_CRYPTO_BUFFER_num(certs.get()) == 1) {
+        CRYPTO_BUFFER_free(hs->new_session->signed_cert_timestamp_list);
+        hs->new_session->signed_cert_timestamp_list =
+            CRYPTO_BUFFER_new_from_CBS(&sct, ssl->ctx->pool);
+        if (hs->new_session->signed_cert_timestamp_list == nullptr) {
+          ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
+          return 0;
+        }
       }
     }
   }
 
-  /* Store a null certificate list rather than an empty one if the peer didn't
-   * send certificates. */
+  // Store a null certificate list rather than an empty one if the peer didn't
+  // send certificates.
   if (sk_CRYPTO_BUFFER_num(certs.get()) == 0) {
     certs.reset();
   }
@@ -339,11 +249,11 @@ int tls13_process_certificate(SSL_HANDSHAKE *hs, const SSLMessage &msg,
       return 0;
     }
 
-    /* OpenSSL returns X509_V_OK when no certificates are requested. This is
-     * classed by them as a bug, but it's assumed by at least NGINX. */
+    // OpenSSL returns X509_V_OK when no certificates are requested. This is
+    // classed by them as a bug, but it's assumed by at least NGINX.
     hs->new_session->verify_result = X509_V_OK;
 
-    /* No certificate, so nothing more to do. */
+    // No certificate, so nothing more to do.
     return 1;
   }
 
@@ -437,7 +347,7 @@ int tls13_add_certificate(SSL_HANDSHAKE *hs) {
   ScopedCBB cbb;
   CBB body, certificate_list;
   if (!ssl->method->init_message(ssl, cbb.get(), &body, SSL3_MT_CERTIFICATE) ||
-      /* The request context is always empty in the handshake. */
+      // The request context is always empty in the handshake.
       !CBB_add_u8(&body, 0) ||
       !CBB_add_u24_length_prefixed(&body, &certificate_list)) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
@@ -520,7 +430,7 @@ enum ssl_private_key_result_t tls13_add_certificate_verify(SSL_HANDSHAKE *hs) {
     return ssl_private_key_failure;
   }
 
-  /* Sign the digest. */
+  // Sign the digest.
   CBB child;
   const size_t max_sig_len = EVP_PKEY_size(hs->local_pubkey.get());
   uint8_t *sig;
@@ -593,7 +503,7 @@ static int tls13_receive_key_update(SSL *ssl, const SSLMessage &msg) {
     return 0;
   }
 
-  /* Acknowledge the KeyUpdate */
+  // Acknowledge the KeyUpdate
   if (key_update_request == SSL_KEY_UPDATE_REQUESTED &&
       !ssl->s3->key_update_pending) {
     ScopedCBB cbb;
@@ -606,11 +516,11 @@ static int tls13_receive_key_update(SSL *ssl, const SSLMessage &msg) {
       return 0;
     }
 
-    /* Suppress KeyUpdate acknowledgments until this change is written to the
-     * wire. This prevents us from accumulating write obligations when read and
-     * write progress at different rates. See draft-ietf-tls-tls13-18, section
-     * 4.5.3. */
-    ssl->s3->key_update_pending = 1;
+    // Suppress KeyUpdate acknowledgments until this change is written to the
+    // wire. This prevents us from accumulating write obligations when read and
+    // write progress at different rates. See draft-ietf-tls-tls13-18, section
+    // 4.5.3.
+    ssl->s3->key_update_pending = true;
   }
 
   return 1;

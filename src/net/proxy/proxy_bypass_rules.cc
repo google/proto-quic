@@ -51,7 +51,7 @@ class HostnamePatternRule : public ProxyBypassRules::Rule {
   }
 
   std::unique_ptr<Rule> Clone() const override {
-    return base::MakeUnique<HostnamePatternRule>(
+    return std::make_unique<HostnamePatternRule>(
         optional_scheme_, hostname_pattern_, optional_port_);
   }
 
@@ -73,7 +73,7 @@ class BypassLocalRule : public ProxyBypassRules::Rule {
   std::string ToString() const override { return "<local>"; }
 
   std::unique_ptr<Rule> Clone() const override {
-    return base::MakeUnique<BypassLocalRule>();
+    return std::make_unique<BypassLocalRule>();
   }
 };
 
@@ -112,7 +112,7 @@ class BypassIPBlockRule : public ProxyBypassRules::Rule {
   std::string ToString() const override { return description_; }
 
   std::unique_ptr<Rule> Clone() const override {
-    return base::MakeUnique<BypassIPBlockRule>(
+    return std::make_unique<BypassIPBlockRule>(
         description_, optional_scheme_, ip_prefix_, prefix_length_in_bits_);
   }
 
@@ -197,13 +197,13 @@ bool ProxyBypassRules::AddRuleForHostname(const std::string& optional_scheme,
   if (hostname_pattern.empty())
     return false;
 
-  rules_.push_back(base::MakeUnique<HostnamePatternRule>(
+  rules_.push_back(std::make_unique<HostnamePatternRule>(
       optional_scheme, hostname_pattern, optional_port));
   return true;
 }
 
 void ProxyBypassRules::AddRuleToBypassLocal() {
-  rules_.push_back(base::MakeUnique<BypassLocalRule>());
+  rules_.push_back(std::make_unique<BypassLocalRule>());
 }
 
 bool ProxyBypassRules::AddRuleFromString(const std::string& raw) {
@@ -287,7 +287,7 @@ bool ProxyBypassRules::AddRuleFromStringInternal(
     if (!ParseCIDRBlock(raw, &ip_prefix, &prefix_length_in_bits))
       return false;
 
-    rules_.push_back(base::MakeUnique<BypassIPBlockRule>(
+    rules_.push_back(std::make_unique<BypassIPBlockRule>(
         raw, scheme, ip_prefix, prefix_length_in_bits));
 
     return true;

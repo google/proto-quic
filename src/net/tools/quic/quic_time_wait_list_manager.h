@@ -11,7 +11,6 @@
 
 #include <stddef.h>
 
-#include <deque>
 #include <memory>
 
 #include "base/macros.h"
@@ -90,7 +89,7 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
   // Called by the dispatcher when the underlying socket becomes writable again,
   // since we might need to send pending public reset packets which we didn't
   // send because the underlying socket was write blocked.
-  void OnCanWrite() override;
+  void OnBlockedWriterCanWrite() override;
 
   // Used to delete connection_id entries that have outlived their time wait
   // period.
@@ -185,7 +184,7 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
 
   // Pending public reset packets that need to be sent out to the client
   // when we are given a chance to write by the dispatcher.
-  std::deque<std::unique_ptr<QueuedPacket>> pending_packets_queue_;
+  QuicDeque<std::unique_ptr<QueuedPacket>> pending_packets_queue_;
 
   // Time period for which connection_ids should remain in time wait state.
   const QuicTime::Delta time_wait_period_;

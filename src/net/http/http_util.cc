@@ -738,12 +738,8 @@ std::string HttpUtil::ConvertHeadersBackToHTTPResponse(const std::string& str) {
   return disassembled_headers;
 }
 
-// TODO(jungshik): 1. If the list is 'fr-CA,fr-FR,en,de', we have to add
-// 'fr' after 'fr-CA' with the same q-value as 'fr-CA' because
-// web servers, in general, do not fall back to 'fr' and may end up picking
-// 'en' which has a lower preference than 'fr-CA' and 'fr-FR'.
-// 2. This function assumes that the input is a comma separated list
-// without any whitespace. As long as it comes from the preference and
+// TODO(jungshik): This function assumes that the input is a comma separated
+// list without any whitespace. As long as it comes from the preference and
 // a user does not manually edit the preference file, it's the case. Still,
 // we may have to make it more robust.
 std::string HttpUtil::GenerateAcceptLanguageHeader(
@@ -751,7 +747,7 @@ std::string HttpUtil::GenerateAcceptLanguageHeader(
   // We use integers for qvalue and qvalue decrement that are 10 times
   // larger than actual values to avoid a problem with comparing
   // two floating point numbers.
-  const unsigned int kQvalueDecrement10 = 2;
+  const unsigned int kQvalueDecrement10 = 1;
   unsigned int qvalue10 = 10;
   base::StringTokenizer t(raw_language_list, ",");
   std::string lang_list_with_q;

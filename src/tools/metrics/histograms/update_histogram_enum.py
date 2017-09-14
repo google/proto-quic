@@ -116,6 +116,37 @@ def ReadHistogramValues(filename, start_marker, end_marker, strip_k_prefix):
   return result
 
 
+def ReadHistogramValuesFromXML(filename, element_name,
+                               value_attribute, label_attribute):
+  """Creates a dictionary of enum values, read from an XML file.
+
+  Args:
+      filename: The unix-style path (relative to src/) of the file to open.
+      element_name: Name of elements in the given XML that would be used to
+          extract enums.
+      value_attribute: The attribute name in source XML that would be mapped to
+          |value| attributes in enums.xml.
+      label_attribute: The attribute name in source XML that would be mapped to
+          |label| attributes in enums.xml.
+
+  Returns:
+      A boolean indicating wheather the histograms.xml file would be changed.
+
+  Raises:
+      DuplicatedValue: An error when two enum labels share the same value.
+  """
+  source_xml = minidom.parse(path_util.GetInputFile(filename))
+  result = {}
+  for row in source_xml.getElementsByTagName(element_name):
+    enum_value = int(row.getAttribute(value_attribute))
+    label = row.getAttribute(label_attribute)
+    # If two enum labels have the same value
+    if enum_value in result:
+      raise DuplicatedValue(result[enum_value], label)
+    result[enum_value] = label
+  return result
+
+
 def CreateEnumItemNode(document, value, label):
   """Creates an int element to append to an enum."""
   item_node = document.createElement('int')
@@ -125,11 +156,11 @@ def CreateEnumItemNode(document, value, label):
 
 
 def UpdateHistogramDefinitions(histogram_enum_name, source_enum_values,
-                               source_enum_path, document):
+                               source_enum_path, caller_script_name, document):
   """Updates the enum node named |histogram_enum_name| based on the definition
   stored in |source_enum_values|. Existing items for which |source_enum_values|
   doesn't contain any corresponding data will be preserved. |source_enum_path|
-  will be used to insert a comment.
+  and |caller_script_name| will be used to insert a comment.
   """
   # Get a dom of <enum name=|histogram_enum_name| ...> node in |document|.
   for enum_node in document.getElementsByTagName('enum'):
@@ -142,8 +173,10 @@ def UpdateHistogramDefinitions(histogram_enum_name, source_enum_values,
   new_comments = []
 
   # Add a "Generated from (...)" comment.
-  new_comments.append(
-      document.createComment(' Generated from {0} '.format(source_enum_path)))
+  new_comments.append(document.createComment(
+    ' Generated from {0}.'.format(source_enum_path) + (
+        '\nCalled by {0}.'.format(caller_script_name) if caller_script_name
+             else '')))
 
   # Create item nodes for each of the enum values.
   for value, label in source_enum_values.iteritems():
@@ -179,7 +212,7 @@ def UpdateHistogramDefinitions(histogram_enum_name, source_enum_values,
 
 
 def _GetOldAndUpdatedXml(histogram_enum_name, source_enum_values,
-                         source_enum_path):
+                         source_enum_path, caller_script_name):
   """Reads old histogram from |histogram_enum_name| from |ENUMS_PATH|, and
   calculates new histogram from |source_enum_values| from |source_enum_path|,
   and returns both in XML format.
@@ -192,7 +225,8 @@ def _GetOldAndUpdatedXml(histogram_enum_name, source_enum_values,
 
   Log('Comparing histograms enum with new enum definition.')
   UpdateHistogramDefinitions(histogram_enum_name, source_enum_values,
-                             source_enum_path, histograms_doc)
+                             source_enum_path, caller_script_name,
+                             histograms_doc)
 
   new_xml = print_style.GetPrintStyle().PrettyPrintNode(histograms_doc)
   return (xml, new_xml)
@@ -230,7 +264,7 @@ def CheckPresubmitErrors(histogram_enum_name, update_script_name,
              duplicated_values.second_label))
 
   (xml, new_xml) = _GetOldAndUpdatedXml(histogram_enum_name, source_enum_values,
-                                        source_enum_path)
+                                        source_enum_path, None)
   if xml != new_xml:
     return ('%s enum has been updated and the UMA mapping needs to be '
             'regenerated. Please run %s in src/tools/metrics/histograms/ to '
@@ -240,14 +274,14 @@ def CheckPresubmitErrors(histogram_enum_name, update_script_name,
 
 
 def UpdateHistogramFromDict(histogram_enum_name, source_enum_values,
-                            source_enum_path):
+                            source_enum_path, caller_script_name):
   """Updates |histogram_enum_name| enum in histograms.xml file with values
   from the {value: 'key'} dictionary |source_enum_values|. A comment is added
   to histograms.xml citing that the values in |histogram_enum_name| were
-  sourced from |source_enum_path|.
+  sourced from |source_enum_path|, requested by |caller_script_name|.
   """
   (xml, new_xml) = _GetOldAndUpdatedXml(histogram_enum_name, source_enum_values,
-                                        source_enum_path)
+                                        source_enum_path, caller_script_name)
   if not diff_util.PromptUserToAcceptDiff(
       xml, new_xml, 'Is the updated version acceptable?'):
     Log('Cancelled.')
@@ -278,4 +312,30 @@ def UpdateHistogramEnum(histogram_enum_name, source_enum_path,
       start_marker, end_marker, strip_k_prefix)
 
   UpdateHistogramFromDict(histogram_enum_name, source_enum_values,
-      source_enum_path)
+      source_enum_path, None)
+
+
+def UpdateHistogramEnumFromXML(histogram_enum_name, source_enum_path,
+                               caller_script_name, element_name,
+                               value_attribute, label_attribute):
+  """Reads a .xml file and updates histograms.xml to match.
+
+  Args:
+      histogram_enum_name: The name of the XML <enum> attribute to update.
+      source_enum_path: A unix-style path, relative to src/, giving
+          the XML file from which to read the enum.
+      caller_script_name: Name of the script calling this function.
+      element_name: Name of elements in the given XML that would be used to
+          extract enums.
+      value_attribute: The attribute name in source XML that would be mapped to
+          |value| attributes in enums.xml.
+      label_attribute: The attribute name in source XML that would be mapped to
+          |label| attributes in enums.xml.
+  """
+
+  Log('Reading histogram enum definition from "{0}".'.format(source_enum_path))
+  source_enum_values = ReadHistogramValuesFromXML(
+      source_enum_path, element_name, value_attribute, label_attribute)
+
+  UpdateHistogramFromDict(histogram_enum_name, source_enum_values,
+      source_enum_path, caller_script_name)

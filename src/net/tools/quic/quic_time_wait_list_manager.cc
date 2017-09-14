@@ -134,7 +134,7 @@ QuicVersion QuicTimeWaitListManager::GetQuicVersionFromConnectionId(
   return (it->second).version;
 }
 
-void QuicTimeWaitListManager::OnCanWrite() {
+void QuicTimeWaitListManager::OnBlockedWriterCanWrite() {
   while (!pending_packets_queue_.empty()) {
     QueuedPacket* queued_packet = pending_packets_queue_.front().get();
     if (!WriteToWire(queued_packet)) {

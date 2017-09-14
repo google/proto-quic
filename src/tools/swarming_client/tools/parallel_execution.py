@@ -31,7 +31,7 @@ def task_to_name(name, dimensions, isolated_hash):
   return '%s/%s/%s' % (
       name,
       '_'.join('%s=%s' % (k, v) for k, v in sorted(dimensions.iteritems())),
-      isolated_hash)
+      isolated_hash[:8])
 
 
 def capture(cmd):
@@ -54,7 +54,7 @@ def trigger(swarming_server, isolate_server, task_name, isolated_hash, args):
       '--isolate-server', isolate_server,
       '--task-name', task_name,
       '--dump-json', jsonfile,
-      isolated_hash,
+      '-s', isolated_hash,
     ]
     returncode, out, duration = capture(cmd + args)
     with open(jsonfile) as f:
@@ -82,14 +82,15 @@ class Runner(object):
     self.progress = progress
     self.extra_trigger_args = extra_trigger_args
 
-  def trigger(self, task_name, isolated_hash, dimensions):
+  def trigger(self, task_name, isolated_hash, dimensions, env):
     args = sum((['--dimension', k, v] for k, v in dimensions.iteritems()), [])
+    args.extend(sum((['--env', k, v] for k, v in env), []))
     returncode, stdout, duration, task_id = trigger(
         self.swarming_server,
         self.isolate_server,
         task_name,
         isolated_hash,
-        self.extra_trigger_args + args)
+        args + self.extra_trigger_args)
     step_name = '%s (%3.2fs)' % (task_name, duration)
     if returncode:
       line = 'Failed to trigger %s\n%s' % (step_name, stdout)
@@ -137,8 +138,9 @@ def run_swarming_tasks_parallel(
         swarming_server, isolate_server, pool.add_task, progress,
         extra_trigger_args)
 
-    for task_name, isolated_hash, dimensions in tasks:
-      pool.add_task(0, runner.trigger, task_name, isolated_hash, dimensions)
+    for task_name, isolated_hash, dimensions, env in tasks:
+      pool.add_task(
+          0, runner.trigger, task_name, isolated_hash, dimensions, env)
 
     # Runner.collect() only return task failures.
     for failed_task in pool.iter_results():
@@ -178,6 +180,9 @@ class OptionParser(logging_utils.OptionParserWithLogging):
         '--deadline', type='int', default=6*60*60,
         help='Seconds to allow the task to be pending for a bot to run before '
             'this task request expires.')
+    self.add_option(
+        '--env', default=[], action='append', nargs=2,
+        metavar='ENV VAL', help='environment variables')
 
   def parse_args(self, *args, **kwargs):
     options, args = logging_utils.OptionParserWithLogging.parse_args(

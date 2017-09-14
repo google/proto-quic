@@ -27,6 +27,7 @@
 -CursorWindowControllerTest.DSF
 -CursorWindowControllerTest.MoveToDifferentDisplay
 -CursorWindowControllerTest.VisibilityTest
+# TODO: decide if this needs to be ported. http://crbug.com/695566.
 -DIPTest.WorkArea
 -DisplayManagerFontTest.TextSubpixelPositioningWithDsf125External
 -DisplayManagerFontTest.TextSubpixelPositioningWithDsf125Internal
@@ -103,6 +104,7 @@
 -DragDropControllerTest.ViewRemovedWhileInDragDropTest
 -DragDropControllerTest.WindowDestroyedDuringDragDrop
 -DragDropControllerTest.DragStartedAndEndedEvents
+-DragDropControllerTest.EventTarget
 -DragWindowResizerTest.CursorDeviceScaleFactor
 -DragWindowResizerTest.DragWindowController
 -DragWindowResizerTest.DragWindowControllerAcrossThreeDisplays
@@ -213,11 +215,8 @@
 -PartialScreenshotControllerTest.TouchMousePointerHoverIgnoredWithPointerEvents
 -PartialScreenshotControllerTest.TwoFingerTouch
 -PartialScreenshotControllerTest.VisibilityTest
--PointerWatcherAdapterClassicTest.MouseEvents
--PointerWatcherAdapterClassicTest.TouchEvents
--PointerWatcherdapterClassicTest.Mousevents
--PointerWatcherdapterClassicTest.Touchvents
 -ResizeShadowAndCursorTest.MaximizeRestore
+-ResizeShadowAndCursorTest.Minimize
 -ResizeShadowAndCursorTest.MouseDrag
 -ResizeShadowAndCursorTest.MouseHover
 -ResizeShadowAndCursorTest.Touch
@@ -359,3 +358,10 @@
 -TrayTilesTest.ButtonStatesAddingUser
 -TrayTilesTest.ButtonStatesLockScreen
 -TrayTilesTest.ButtonStatesSupervisedUserFlow
+
+
+# The following are specific to classic ash and don't need to be ported.
+-PointerWatcherAdapterClassicTest.MouseEvents
+-PointerWatcherAdapterClassicTest.TouchEvents
+-PointerWatcherdapterClassicTest.Mousevents
+-PointerWatcherdapterClassicTest.Touchvents

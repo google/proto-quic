@@ -658,6 +658,11 @@ TEST(GURLTest, DomainIs) {
   GURL invalid_url("google.com");
   EXPECT_FALSE(invalid_url.is_valid());
   EXPECT_FALSE(invalid_url.DomainIs("google.com"));
+
+  GURL url_with_escape_chars("https://www.,.test");
+  EXPECT_TRUE(url_with_escape_chars.is_valid());
+  EXPECT_EQ(url_with_escape_chars.host(), "www.%2C.test");
+  EXPECT_TRUE(url_with_escape_chars.DomainIs("%2C.test"));
 }
 
 TEST(GURLTest, DomainIsTerminatingDotBehavior) {

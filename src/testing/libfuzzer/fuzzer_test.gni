@@ -119,6 +119,8 @@ template("fuzzer_test") {
     test(target_name) {
       forward_variables_from(invoker,
                              [
+                               "cflags",
+                               "cflags_cc",
                                "check_includes",
                                "defines",
                                "include_dirs",

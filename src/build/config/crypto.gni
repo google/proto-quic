@@ -11,13 +11,5 @@
 # required. See the declare_args block of BUILDCONFIG.gn for advice on how
 # to set up feature flags.
 
-# True when we're using OpenSSL for representing certificates. When targeting
-# Android, the platform certificate library is used for certificate
-# verification. On NaCl, verification isn't supported. On other targets, this
-# flag also enables OpenSSL for certificate verification, but this configuration
-# is unsupported.
-use_openssl_certs = is_android || is_nacl
-
-# True if NSS is used for certificate handling. It is possible to use OpenSSL
-# for the crypto library, but NSS for the platform certificate library.
+# True if NSS is used for certificate handling.
 use_nss_certs = is_linux

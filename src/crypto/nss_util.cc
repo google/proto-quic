@@ -29,6 +29,8 @@
 #include "base/memory/ptr_util.h"
 #include "base/path_service.h"
 #include "base/strings/stringprintf.h"
+#include "base/task_scheduler/post_task.h"
+#include "base/threading/scoped_blocking_call.h"
 #include "base/threading/thread_checker.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -317,25 +319,28 @@ class NSSInitSingleton {
     std::unique_ptr<TPMModuleAndSlot> tpm_args(
         new TPMModuleAndSlot(chaps_module_));
     TPMModuleAndSlot* tpm_args_ptr = tpm_args.get();
-    if (base::WorkerPool::PostTaskAndReply(
-            FROM_HERE,
-            base::Bind(&NSSInitSingleton::InitializeTPMTokenOnWorkerThread,
+    base::PostTaskWithTraitsAndReply(
+        FROM_HERE,
+        {base::MayBlock(), base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
+        base::BindOnce(&NSSInitSingleton::InitializeTPMTokenInThreadPool,
                        system_slot_id, tpm_args_ptr),
-            base::Bind(&NSSInitSingleton::OnInitializedTPMTokenAndSystemSlot,
+        base::BindOnce(&NSSInitSingleton::OnInitializedTPMTokenAndSystemSlot,
                        base::Unretained(this),  // NSSInitSingleton is leaky
-                       callback, base::Passed(&tpm_args)),
-            true /* task_is_slow */)) {
-      initializing_tpm_token_ = true;
-    } else {
-      base::ThreadTaskRunnerHandle::Get()->PostTask(
-          FROM_HERE, base::Bind(callback, false));
-    }
+                       callback, base::Passed(&tpm_args)));
+    initializing_tpm_token_ = true;
   }
 
-  static void InitializeTPMTokenOnWorkerThread(CK_SLOT_ID token_slot_id,
-                                               TPMModuleAndSlot* tpm_args) {
-    // This tries to load the Chaps module so NSS can talk to the hardware
-    // TPM.
+  static void InitializeTPMTokenInThreadPool(CK_SLOT_ID token_slot_id,
+                                             TPMModuleAndSlot* tpm_args) {
+    // NSS functions may reenter //net via extension hooks. If the reentered
+    // code needs to synchronously wait for a task to run but the thread pool in
+    // which that task must run doesn't have enough threads to schedule it, a
+    // deadlock occurs. To prevent that, the base::ScopedBlockingCall below
+    // increments the thread pool capacity for the duration of the TPM
+    // initialization.
+    base::ScopedBlockingCall scoped_blocking_call(
+        base::BlockingType::WILL_BLOCK);
+
     if (!tpm_args->chaps_module) {
       ScopedChapsLoadFixup chaps_loader;
 
@@ -352,7 +357,7 @@ class NSSInitSingleton {
     }
     if (tpm_args->chaps_module) {
       tpm_args->tpm_slot =
-          GetTPMSlotForIdOnWorkerThread(tpm_args->chaps_module, token_slot_id);
+          GetTPMSlotForIdInThreadPool(tpm_args->chaps_module, token_slot_id);
     }
   }
 
@@ -412,7 +417,7 @@ class NSSInitSingleton {
   // Note that CK_SLOT_ID is an unsigned long, but cryptohome gives us the slot
   // id as an int. This should be safe since this is only used with chaps, which
   // we also control.
-  static crypto::ScopedPK11Slot GetTPMSlotForIdOnWorkerThread(
+  static crypto::ScopedPK11Slot GetTPMSlotForIdInThreadPool(
       SECMODModule* chaps_module,
       CK_SLOT_ID slot_id) {
     DCHECK(chaps_module);
@@ -477,14 +482,14 @@ class NSSInitSingleton {
     std::unique_ptr<TPMModuleAndSlot> tpm_args(
         new TPMModuleAndSlot(chaps_module_));
     TPMModuleAndSlot* tpm_args_ptr = tpm_args.get();
-    base::WorkerPool::PostTaskAndReply(
+    base::PostTaskWithTraitsAndReply(
         FROM_HERE,
-        base::Bind(&NSSInitSingleton::InitializeTPMTokenOnWorkerThread, slot_id,
-                   tpm_args_ptr),
-        base::Bind(&NSSInitSingleton::OnInitializedTPMForChromeOSUser,
-                   base::Unretained(this),  // NSSInitSingleton is leaky
-                   username_hash, base::Passed(&tpm_args)),
-        true /* task_is_slow */);
+        {base::MayBlock(), base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
+        base::BindOnce(&NSSInitSingleton::InitializeTPMTokenInThreadPool,
+                       slot_id, tpm_args_ptr),
+        base::BindOnce(&NSSInitSingleton::OnInitializedTPMForChromeOSUser,
+                       base::Unretained(this),  // NSSInitSingleton is leaky
+                       username_hash, base::Passed(&tpm_args)));
   }
 
   void OnInitializedTPMForChromeOSUser(

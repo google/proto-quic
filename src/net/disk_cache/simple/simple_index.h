@@ -59,9 +59,12 @@ class NET_EXPORT_PRIVATE EntryMetadata {
   uint32_t GetEntrySize() const;
   void SetEntrySize(base::StrictNumeric<uint32_t> entry_size);
 
+  uint8_t GetInMemoryData() const { return in_memory_data_; }
+  void SetInMemoryData(uint8_t val) { in_memory_data_ = val; }
+
   // Serialize the data into the provided pickle.
   void Serialize(base::Pickle* pickle) const;
-  bool Deserialize(base::PickleIterator* it);
+  bool Deserialize(base::PickleIterator* it, bool has_entry_in_memory_data);
 
   static base::TimeDelta GetLowerEpsilonForTimeComparisons() {
     return base::TimeDelta::FromSeconds(1);
@@ -80,7 +83,8 @@ class NET_EXPORT_PRIVATE EntryMetadata {
   // are originally calculated as >32-bit types, the actual necessary size for
   // each shouldn't exceed 32 bits, so we use 32-bit types here.
   uint32_t last_used_time_seconds_since_epoch_;
-  uint32_t entry_size_;  // Storage size in bytes.
+  uint32_t entry_size_256b_chunks_ : 24;  // in 256-byte blocks, rounded up.
+  uint32_t in_memory_data_ : 8;
 };
 static_assert(sizeof(EntryMetadata) == 8, "incorrect metadata size");
 
@@ -128,6 +132,9 @@ class NET_EXPORT_PRIVATE SimpleIndex
   // Update the last used time of the entry with the given key and return true
   // iff the entry exist in the index.
   bool UseIfExists(uint64_t entry_hash);
+
+  uint8_t GetEntryInMemoryData(uint64_t entry_hash) const;
+  void SetEntryInMemoryData(uint64_t entry_hash, uint8_t value);
 
   void WriteToDisk(IndexWriteToDiskReason reason);
 

@@ -4,7 +4,6 @@
 
 #include "net/socket/websocket_transport_client_socket_pool.h"
 
-#include <queue>
 #include <vector>
 
 #include "base/bind.h"

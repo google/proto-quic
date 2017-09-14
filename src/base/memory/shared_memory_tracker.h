@@ -6,6 +6,7 @@
 #define BASE_MEMORY_SHARED_MEMORY_TRACKER_H_
 
 #include <map>
+#include <string>
 
 #include "base/memory/shared_memory.h"
 #include "base/synchronization/lock.h"
@@ -14,6 +15,7 @@
 namespace base {
 
 namespace trace_event {
+class MemoryAllocatorDump;
 class MemoryAllocatorDumpGuid;
 class ProcessMemoryDump;
 }
@@ -24,11 +26,17 @@ class BASE_EXPORT SharedMemoryTracker : public trace_event::MemoryDumpProvider {
   // Returns a singleton instance.
   static SharedMemoryTracker* GetInstance();
 
-  static trace_event::MemoryAllocatorDumpGuid GetDumpIdForTracing(
-      const UnguessableToken& id);
+  static std::string GetDumpNameForTracing(const UnguessableToken& id);
 
   static trace_event::MemoryAllocatorDumpGuid GetGlobalDumpIdForTracing(
       const UnguessableToken& id);
+
+  // Gets or creates if non-existant, a memory dump for the |shared_memory|
+  // inside the given |pmd|. Also adds the necessary edges for the dump when
+  // creating the dump.
+  static const trace_event::MemoryAllocatorDump* GetOrCreateSharedMemoryDump(
+      const SharedMemory* shared_memory,
+      trace_event::ProcessMemoryDump* pmd);
 
   // Records shared memory usage on mapping.
   void IncrementMemoryUsage(const SharedMemory& shared_memory);

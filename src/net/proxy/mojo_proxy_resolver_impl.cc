@@ -55,7 +55,7 @@ void MojoProxyResolverImpl::GetProxyForUrl(
     interfaces::ProxyResolverRequestClientPtr client) {
   DVLOG(1) << "GetProxyForUrl(" << url << ")";
   std::unique_ptr<Job> job =
-      base::MakeUnique<Job>(std::move(client), this, url);
+      std::make_unique<Job>(std::move(client), this, url);
   Job* job_ptr = job.get();
   resolve_jobs_[job_ptr] = std::move(job);
   job_ptr->Start();
@@ -81,8 +81,9 @@ MojoProxyResolverImpl::Job::~Job() {}
 void MojoProxyResolverImpl::Job::Start() {
   resolver_->resolver_->GetProxyForURL(
       url_, &result_, base::Bind(&Job::GetProxyDone, base::Unretained(this)),
-      &request_, base::MakeUnique<MojoProxyResolverV8TracingBindings<
-                     interfaces::ProxyResolverRequestClient>>(client_.get()));
+      &request_,
+      std::make_unique<MojoProxyResolverV8TracingBindings<
+          interfaces::ProxyResolverRequestClient>>(client_.get()));
   client_.set_connection_error_handler(base::Bind(
       &MojoProxyResolverImpl::Job::OnConnectionError, base::Unretained(this)));
 }

@@ -58,7 +58,7 @@ MojoProxyResolverFactoryImpl::Job::Job(
                  base::Unretained(this)));
   factory_->CreateProxyResolverV8Tracing(
       pac_script,
-      base::MakeUnique<MojoProxyResolverV8TracingBindings<
+      std::make_unique<MojoProxyResolverV8TracingBindings<
           interfaces::ProxyResolverFactoryRequestClient>>(client_ptr_.get()),
       &proxy_resolver_impl_,
       base::Bind(&MojoProxyResolverFactoryImpl::Job::OnProxyResolverCreated,
@@ -75,7 +75,7 @@ void MojoProxyResolverFactoryImpl::Job::OnConnectionError() {
 
 void MojoProxyResolverFactoryImpl::Job::OnProxyResolverCreated(int error) {
   if (error == OK) {
-    mojo::MakeStrongBinding(base::MakeUnique<MojoProxyResolverImpl>(
+    mojo::MakeStrongBinding(std::make_unique<MojoProxyResolverImpl>(
                                 std::move(proxy_resolver_impl_)),
                             std::move(proxy_request_));
   }
@@ -100,7 +100,7 @@ void MojoProxyResolverFactoryImpl::CreateResolver(
   // The Job will call RemoveJob on |this| when either the create request
   // finishes or |request| or |client| encounters a connection error.
   std::unique_ptr<Job> job =
-      base::MakeUnique<Job>(this, ProxyResolverScriptData::FromUTF8(pac_script),
+      std::make_unique<Job>(this, ProxyResolverScriptData::FromUTF8(pac_script),
                             proxy_resolver_impl_factory_.get(),
                             std::move(request), std::move(client));
   Job* job_ptr = job.get();

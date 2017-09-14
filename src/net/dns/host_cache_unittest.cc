@@ -701,6 +701,8 @@ TEST(HostCacheTest, SerializeAndDeserialize) {
   EXPECT_TRUE(cache.Lookup(key3, now));
   EXPECT_EQ(3u, cache.size());
 
+  EXPECT_EQ(0u, cache.last_restore_size());
+
   // Advance to t=12, ansd serialize the cache.
   now += base::TimeDelta::FromSeconds(7);
 
@@ -719,6 +721,8 @@ TEST(HostCacheTest, SerializeAndDeserialize) {
   restored_cache.Set(key4, entry4, now, kTTL);
   EXPECT_TRUE(restored_cache.Lookup(key4, now));
   EXPECT_EQ(2u, restored_cache.size());
+
+  EXPECT_EQ(0u, restored_cache.last_restore_size());
 
   restored_cache.RestoreFromListValue(serialized_cache);
 
@@ -761,6 +765,8 @@ TEST(HostCacheTest, SerializeAndDeserialize) {
   EXPECT_TRUE(result4);
   EXPECT_EQ(1u, result4->addresses().size());
   EXPECT_EQ(address_ipv4, result4->addresses().front().address());
+
+  EXPECT_EQ(3u, restored_cache.last_restore_size());
 }
 
 TEST(HostCacheTest, PersistenceDelegate) {

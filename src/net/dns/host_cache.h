@@ -119,7 +119,7 @@ class NET_EXPORT HostCache {
     base::TimeDelta ttl_;
 
     base::TimeTicks expires_;
-    // Copied from the cache's network_changes_ when the entry is set; can0
+    // Copied from the cache's network_changes_ when the entry is set; can
     // later be compared to it to see if the entry was received on the current
     // network.
     int network_changes_;
@@ -188,6 +188,9 @@ class NET_EXPORT HostCache {
   // cache, skipping any that already have entries. Returns true on success,
   // false on failure.
   bool RestoreFromListValue(const base::ListValue& old_cache);
+  // Returns the number of entries that were restored in the last call to
+  // RestoreFromListValue().
+  size_t last_restore_size() const { return restore_size_; }
 
   // Returns the number of entries in the cache.
   size_t size() const;
@@ -235,6 +238,9 @@ class NET_EXPORT HostCache {
   size_t max_entries_;
   int network_changes_;
   EvictionCallback eviction_callback_;
+  // Number of cache entries that were restored in the last call to
+  // RestoreFromListValue(). Used in histograms.
+  size_t restore_size_;
 
   PersistenceDelegate* delegate_;
 

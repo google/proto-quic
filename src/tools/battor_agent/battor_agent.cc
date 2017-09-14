@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 #include "tools/battor_agent/battor_agent.h"
 
+#include <algorithm>
 #include <iomanip>
+#include <vector>
 
 #include "base/bind.h"
-#include "base/threading/thread_task_runner_handle.h"
+#include "base/threading/sequenced_task_runner_handle.h"
 #include "tools/battor_agent/battor_connection_impl.h"
 #include "tools/battor_agent/battor_sample_converter.h"
 
@@ -28,9 +30,6 @@ const uint16_t kCommandRetryDelaySeconds = 2;
 
 // The number of seconds allowed for a control message before timing out.
 const uint8_t kBattOrControlMessageTimeoutSeconds = 2;
-
-// The number of seconds allowed for connection to open before timing out.
-const uint8_t kBattOrConnectionTimeoutSeconds = 4;
 
 // Returns true if the specified vector of bytes decodes to a message that is an
 // ack for the specified control message type.
@@ -105,28 +104,40 @@ bool ParseSampleFrame(BattOrMessageType type,
 }
 }  // namespace
 
+BattOrResults::BattOrResults() {}
+
+BattOrResults::BattOrResults(std::string details,
+                             std::vector<float> power_samples_W,
+                             uint32_t sample_rate)
+    : details_(std::move(details)),
+      power_samples_W_(std::move(power_samples_W)),
+      sample_rate_(sample_rate) {}
+
+BattOrResults::BattOrResults(const BattOrResults&) = default;
+
+BattOrResults::~BattOrResults() {}
+
 BattOrAgent::BattOrAgent(
     const std::string& path,
     Listener* listener,
     scoped_refptr<base::SingleThreadTaskRunner> ui_thread_task_runner)
-    : connection_(new BattOrConnectionImpl(path,
-                                           this,
-                                           ui_thread_task_runner)),
+    : connection_(new BattOrConnectionImpl(path, this, ui_thread_task_runner)),
+      tick_clock_(std::make_unique<base::DefaultTickClock>()),
       listener_(listener),
       last_action_(Action::INVALID),
       command_(Command::INVALID),
       num_command_attempts_(0) {
-  // We don't care what thread the constructor is called on - we only care that
-  // all of the other method invocations happen on the same thread.
-  thread_checker_.DetachFromThread();
+  // We don't care what sequence the constructor is called on - we only care
+  // that all of the other method invocations happen on the same sequence.
+  DETACH_FROM_SEQUENCE(sequence_checker_);
 }
 
 BattOrAgent::~BattOrAgent() {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 }
 
 void BattOrAgent::StartTracing() {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
   // When tracing is restarted, all previous clock sync markers are invalid.
   clock_sync_markers_.clear();
@@ -137,14 +148,14 @@ void BattOrAgent::StartTracing() {
 }
 
 void BattOrAgent::StopTracing() {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
   command_ = Command::STOP_TRACING;
   PerformAction(Action::REQUEST_CONNECTION);
 }
 
 void BattOrAgent::RecordClockSyncMarker(const std::string& marker) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
   command_ = Command::RECORD_CLOCK_SYNC_MARKER;
   pending_clock_sync_marker_ = marker;
@@ -152,24 +163,19 @@ void BattOrAgent::RecordClockSyncMarker(const std::string& marker) {
 }
 
 void BattOrAgent::GetFirmwareGitHash() {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
   command_ = Command::GET_FIRMWARE_GIT_HASH;
   PerformAction(Action::REQUEST_CONNECTION);
 }
 
 void BattOrAgent::BeginConnect() {
-  DCHECK(thread_checker_.CalledOnValidThread());
-
-  SetActionTimeout(kBattOrConnectionTimeoutSeconds);
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
   connection_->Open();
 }
 
 void BattOrAgent::OnConnectionOpened(bool success) {
-  // Cancel timeout because the connection was opened in time.
-  timeout_callback_.Cancel();
-
   if (!success) {
     CompleteCommand(BATTOR_ERROR_CONNECTION_FAILED);
     return;
@@ -195,7 +201,7 @@ void BattOrAgent::OnConnectionOpened(bool success) {
 }
 
 void BattOrAgent::OnBytesSent(bool success) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
   if (!success) {
     CompleteCommand(BATTOR_ERROR_SEND_ERROR);
@@ -308,8 +314,9 @@ void BattOrAgent::OnMessageRead(bool success,
       base::TimeTicks min_request_samples_time =
           last_clock_sync_time_ + base::TimeDelta::FromMilliseconds(
                                       kStopTracingClockSyncDelayMilliseconds);
-      base::TimeDelta request_samples_delay = std::max(
-          min_request_samples_time - base::TimeTicks::Now(), base::TimeDelta());
+      base::TimeDelta request_samples_delay =
+          std::max(min_request_samples_time - tick_clock_->NowTicks(),
+                   base::TimeDelta());
 
       PerformDelayedAction(Action::SEND_SAMPLES_REQUEST, request_samples_delay);
       return;
@@ -366,7 +373,7 @@ void BattOrAgent::OnMessageRead(bool success,
       uint32_t sample_num;
       memcpy(&sample_num, bytes->data(), sizeof(uint32_t));
       clock_sync_markers_[sample_num] = pending_clock_sync_marker_;
-      last_clock_sync_time_ = base::TimeTicks::Now();
+      last_clock_sync_time_ = tick_clock_->NowTicks();
       CompleteCommand(BATTOR_ERROR_NONE);
       return;
 
@@ -387,7 +394,7 @@ void BattOrAgent::OnMessageRead(bool success,
 }
 
 void BattOrAgent::PerformAction(Action action) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
   last_action_ = action;
 
@@ -477,7 +484,7 @@ void BattOrAgent::PerformAction(Action action) {
 }
 
 void BattOrAgent::PerformDelayedAction(Action action, base::TimeDelta delay) {
-  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+  base::SequencedTaskRunnerHandle::Get()->PostDelayedTask(
       FROM_HERE, base::Bind(&BattOrAgent::PerformAction, AsWeakPtr(), action),
       delay);
 }
@@ -503,7 +510,7 @@ void BattOrAgent::OnActionTimeout() {
 void BattOrAgent::SendControlMessage(BattOrControlMessageType type,
                                      uint16_t param1,
                                      uint16_t param2) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
   SetActionTimeout(kBattOrControlMessageTimeoutSeconds);
 
@@ -516,6 +523,10 @@ void BattOrAgent::RetryCommand() {
     CompleteCommand(BATTOR_ERROR_TOO_MANY_COMMAND_RETRIES);
     return;
   }
+
+  // Restart the serial connection to guarantee that the connection gets flushed
+  // before retrying the command.
+  connection_->Close();
 
   // Failed to read response to message, retry current command.
   base::Callback<void()> next_command;
@@ -533,7 +544,7 @@ void BattOrAgent::RetryCommand() {
       NOTREACHED();
   }
 
-  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+  base::SequencedTaskRunnerHandle::Get()->PostDelayedTask(
       FROM_HERE, next_command,
       base::TimeDelta::FromSeconds(kCommandRetryDelaySeconds));
 }
@@ -541,26 +552,26 @@ void BattOrAgent::RetryCommand() {
 void BattOrAgent::CompleteCommand(BattOrError error) {
   switch (command_) {
     case Command::START_TRACING:
-      base::ThreadTaskRunnerHandle::Get()->PostTask(
+      base::SequencedTaskRunnerHandle::Get()->PostTask(
           FROM_HERE, base::Bind(&Listener::OnStartTracingComplete,
                                 base::Unretained(listener_), error));
       break;
     case Command::STOP_TRACING:
-      base::ThreadTaskRunnerHandle::Get()->PostTask(
+      base::SequencedTaskRunnerHandle::Get()->PostTask(
           FROM_HERE,
           base::Bind(&Listener::OnStopTracingComplete,
-                     base::Unretained(listener_), SamplesToString(), error));
+                     base::Unretained(listener_), SamplesToResults(), error));
       break;
     case Command::RECORD_CLOCK_SYNC_MARKER:
-      base::ThreadTaskRunnerHandle::Get()->PostTask(
+      base::SequencedTaskRunnerHandle::Get()->PostTask(
           FROM_HERE, base::Bind(&Listener::OnRecordClockSyncMarkerComplete,
                                 base::Unretained(listener_), error));
       break;
     case Command::GET_FIRMWARE_GIT_HASH:
-      base::ThreadTaskRunnerHandle::Get()->PostTask(
-          FROM_HERE, base::Bind(&Listener::OnGetFirmwareGitHashComplete,
-                                base::Unretained(listener_),
-                                firmware_git_hash_, error));
+      base::SequencedTaskRunnerHandle::Get()->PostTask(
+          FROM_HERE,
+          base::Bind(&Listener::OnGetFirmwareGitHashComplete,
+                     base::Unretained(listener_), firmware_git_hash_, error));
       break;
     case Command::INVALID:
       NOTREACHED();
@@ -577,9 +588,9 @@ void BattOrAgent::CompleteCommand(BattOrError error) {
   num_command_attempts_ = 0;
 }
 
-std::string BattOrAgent::SamplesToString() {
+BattOrResults BattOrAgent::SamplesToResults() {
   if (calibration_frame_.empty() || samples_.empty() || !battor_eeprom_)
-    return "";
+    return BattOrResults();
 
   BattOrSampleConverter converter(*battor_eeprom_, calibration_frame_);
 
@@ -614,13 +625,19 @@ std::string BattOrAgent::SamplesToString() {
     trace_stream << std::endl;
   }
 
-  return trace_stream.str();
+  // Convert to a vector of power in watts.
+  std::vector<float> samples(samples_.size());
+  for (size_t i = 0; i < samples_.size(); i++)
+    samples[i] = converter.ToWatts(samples_[i]);
+
+  return BattOrResults(trace_stream.str(), samples,
+                       battor_eeprom_->sd_sample_rate);
 }
 
 void BattOrAgent::SetActionTimeout(uint16_t timeout_seconds) {
   timeout_callback_.Reset(
       base::Bind(&BattOrAgent::OnActionTimeout, AsWeakPtr()));
-  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+  base::SequencedTaskRunnerHandle::Get()->PostDelayedTask(
       FROM_HERE, timeout_callback_.callback(),
       base::TimeDelta::FromSeconds(timeout_seconds));
 }

@@ -72,7 +72,8 @@ scoped_refptr<ParsedCertificate> ParseCertificateFromOSHandle(
   if (!X509Certificate::GetDEREncoded(cert_handle, &cert_bytes))
     return nullptr;
   return ParsedCertificate::Create(x509_util::CreateCryptoBuffer(cert_bytes),
-                                   {}, errors);
+                                   x509_util::DefaultParseCertificateOptions(),
+                                   errors);
 }
 
 void AddIntermediatesToIssuerSource(X509Certificate* x509_cert,

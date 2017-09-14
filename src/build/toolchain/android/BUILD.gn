@@ -64,7 +64,8 @@ template("android_gcc_toolchain") {
     ld = cxx
     readelf = _tool_prefix + "readelf"
     nm = _tool_prefix + "nm"
-    strip = "${_tool_prefix}strip"
+    strip = rebase_path("//third_party/eu-strip/bin/eu-strip", root_build_dir)
+    use_unstripped_as_runtime_outputs = true
 
     # Don't use .cr.so for loadable_modules since they are always loaded via
     # absolute path.

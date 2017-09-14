@@ -9,6 +9,7 @@
 
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "base/bind.h"
 #include "base/command_line.h"
@@ -16,6 +17,7 @@
 #include "base/files/file_util.h"
 #include "base/files/scoped_temp_dir.h"
 #include "base/macros.h"
+#include "base/memory/shared_memory.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/sys_info.h"
 #include "base/test/multiprocess_test.h"
@@ -359,15 +361,15 @@ TEST_F(SystemMetricsTest, ParseVmstat) {
 
 #if defined(OS_LINUX) || defined(OS_CHROMEOS)
 
-// Test that ProcessMetrics::GetCPUUsage() doesn't return negative values when
-// the number of threads running on the process decreases between two successive
-// calls to it.
+// Test that ProcessMetrics::GetPlatformIndependentCPUUsage() doesn't return
+// negative values when the number of threads running on the process decreases
+// between two successive calls to it.
 TEST_F(SystemMetricsTest, TestNoNegativeCpuUsage) {
   ProcessHandle handle = GetCurrentProcessHandle();
   std::unique_ptr<ProcessMetrics> metrics(
       ProcessMetrics::CreateProcessMetrics(handle));
 
-  EXPECT_GE(metrics->GetCPUUsage(), 0.0);
+  EXPECT_GE(metrics->GetPlatformIndependentCPUUsage(), 0.0);
   Thread thread1("thread1");
   Thread thread2("thread2");
   Thread thread3("thread3");
@@ -388,16 +390,16 @@ TEST_F(SystemMetricsTest, TestNoNegativeCpuUsage) {
   thread2.task_runner()->PostTask(FROM_HERE, BindOnce(&BusyWork, &vec2));
   thread3.task_runner()->PostTask(FROM_HERE, BindOnce(&BusyWork, &vec3));
 
-  EXPECT_GE(metrics->GetCPUUsage(), 0.0);
+  EXPECT_GE(metrics->GetPlatformIndependentCPUUsage(), 0.0);
 
   thread1.Stop();
-  EXPECT_GE(metrics->GetCPUUsage(), 0.0);
+  EXPECT_GE(metrics->GetPlatformIndependentCPUUsage(), 0.0);
 
   thread2.Stop();
-  EXPECT_GE(metrics->GetCPUUsage(), 0.0);
+  EXPECT_GE(metrics->GetPlatformIndependentCPUUsage(), 0.0);
 
   thread3.Stop();
-  EXPECT_GE(metrics->GetCPUUsage(), 0.0);
+  EXPECT_GE(metrics->GetPlatformIndependentCPUUsage(), 0.0);
 }
 
 #endif  // defined(OS_LINUX) || defined(OS_CHROMEOS)
@@ -600,17 +602,45 @@ TEST(ProcessMetricsTest, GetOpenFdCount) {
   const FilePath temp_path = temp_dir.GetPath();
   CommandLine child_command_line(GetMultiProcessTestChildBaseCommandLine());
   child_command_line.AppendSwitchPath(kTempDirFlag, temp_path);
-  SpawnChildResult spawn_child = SpawnMultiProcessTestChild(
+  Process child = SpawnMultiProcessTestChild(
       ChildMainString, child_command_line, LaunchOptions());
-  ASSERT_TRUE(spawn_child.process.IsValid());
+  ASSERT_TRUE(child.IsValid());
   WaitForEvent(temp_path, kSignalClosed);
 
   std::unique_ptr<ProcessMetrics> metrics(
-      ProcessMetrics::CreateProcessMetrics(spawn_child.process.Handle()));
+      ProcessMetrics::CreateProcessMetrics(child.Handle()));
   EXPECT_EQ(0, metrics->GetOpenFdCount());
-  ASSERT_TRUE(spawn_child.process.Terminate(0, true));
+  ASSERT_TRUE(child.Terminate(0, true));
 }
 #endif  // defined(OS_LINUX)
+
+#if defined(OS_ANDROID) || defined(OS_LINUX)
+TEST(ProcessMetricsTestLinux, GetPageFaultCounts) {
+  std::unique_ptr<base::ProcessMetrics> process_metrics(
+      base::ProcessMetrics::CreateProcessMetrics(
+          base::GetCurrentProcessHandle()));
+
+  PageFaultCounts counts;
+  ASSERT_TRUE(process_metrics->GetPageFaultCounts(&counts));
+  ASSERT_GT(counts.minor, 0);
+  ASSERT_GE(counts.major, 0);
+
+  {
+    // Allocate and touch memory. Touching it is required to make sure that the
+    // page fault count goes up, as memory is typically mapped lazily.
+    const size_t kMappedSize = 4 * (1 << 20);
+    SharedMemory memory;
+    ASSERT_TRUE(memory.CreateAndMapAnonymous(kMappedSize));
+    memset(memory.memory(), 42, kMappedSize);
+    memory.Unmap();
+  }
+
+  PageFaultCounts counts_after;
+  ASSERT_TRUE(process_metrics->GetPageFaultCounts(&counts_after));
+  ASSERT_GT(counts_after.minor, counts.minor);
+  ASSERT_GE(counts_after.major, counts.major);
+}
+#endif  // defined(OS_ANDROID) || defined(OS_LINUX)
 
 }  // namespace debug
 }  // namespace base

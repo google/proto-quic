@@ -44,9 +44,7 @@
 #include "base/threading/thread_restrictions.h"
 
 // LazyInstance uses its own struct initializer-list style static
-// initialization, as base's LINKER_INITIALIZED requires a constructor and on
-// some compilers (notably gcc 4.4) this still ends up needing runtime
-// initialization.
+// initialization, which does not require a constructor.
 #define LAZY_INSTANCE_INITIALIZER {0}
 
 namespace base {

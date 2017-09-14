@@ -33,10 +33,11 @@
 
 namespace bssl {
 
-SSLAEADContext::SSLAEADContext(uint16_t version_arg,
+SSLAEADContext::SSLAEADContext(uint16_t version_arg, bool is_dtls_arg,
                                const SSL_CIPHER *cipher_arg)
     : cipher_(cipher_arg),
       version_(version_arg),
+      is_dtls_(is_dtls_arg),
       variable_nonce_included_in_record_(false),
       random_variable_nonce_(false),
       omit_length_in_ad_(false),
@@ -48,8 +49,9 @@ SSLAEADContext::SSLAEADContext(uint16_t version_arg,
 
 SSLAEADContext::~SSLAEADContext() {}
 
-UniquePtr<SSLAEADContext> SSLAEADContext::CreateNullCipher() {
-  return MakeUnique<SSLAEADContext>(0 /* version */, nullptr /* cipher */);
+UniquePtr<SSLAEADContext> SSLAEADContext::CreateNullCipher(bool is_dtls) {
+  return MakeUnique<SSLAEADContext>(0 /* version */, is_dtls,
+                                    nullptr /* cipher */);
 }
 
 UniquePtr<SSLAEADContext> SSLAEADContext::Create(
@@ -57,12 +59,15 @@ UniquePtr<SSLAEADContext> SSLAEADContext::Create(
     const SSL_CIPHER *cipher, const uint8_t *enc_key, size_t enc_key_len,
     const uint8_t *mac_key, size_t mac_key_len, const uint8_t *fixed_iv,
     size_t fixed_iv_len) {
+
   const EVP_AEAD *aead;
+  uint16_t protocol_version;
   size_t expected_mac_key_len, expected_fixed_iv_len;
-  if (!ssl_cipher_get_evp_aead(&aead, &expected_mac_key_len,
-                               &expected_fixed_iv_len, cipher, version,
+  if (!ssl_protocol_version_from_wire(&protocol_version, version) ||
+      !ssl_cipher_get_evp_aead(&aead, &expected_mac_key_len,
+                               &expected_fixed_iv_len, cipher, protocol_version,
                                is_dtls) ||
-      /* Ensure the caller returned correct key sizes. */
+      // Ensure the caller returned correct key sizes.
       expected_fixed_iv_len != fixed_iv_len ||
       expected_mac_key_len != mac_key_len) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
@@ -71,8 +76,8 @@ UniquePtr<SSLAEADContext> SSLAEADContext::Create(
 
   uint8_t merged_key[EVP_AEAD_MAX_KEY_LENGTH];
   if (mac_key_len > 0) {
-    /* This is a "stateful" AEAD (for compatibility with pre-AEAD cipher
-     * suites). */
+    // This is a "stateful" AEAD (for compatibility with pre-AEAD cipher
+    // suites).
     if (mac_key_len + enc_key_len + fixed_iv_len > sizeof(merged_key)) {
       OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
       return nullptr;
@@ -87,11 +92,13 @@ UniquePtr<SSLAEADContext> SSLAEADContext::Create(
   }
 
   UniquePtr<SSLAEADContext> aead_ctx =
-      MakeUnique<SSLAEADContext>(version, cipher);
+      MakeUnique<SSLAEADContext>(version, is_dtls, cipher);
   if (!aead_ctx) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
     return nullptr;
   }
+
+  assert(aead_ctx->ProtocolVersion() == protocol_version);
 
   if (!EVP_AEAD_CTX_init_with_direction(
           aead_ctx->ctx_.get(), aead, enc_key, enc_key_len,
@@ -109,23 +116,23 @@ UniquePtr<SSLAEADContext> SSLAEADContext::Create(
     aead_ctx->fixed_nonce_len_ = fixed_iv_len;
 
     if (cipher->algorithm_enc & SSL_CHACHA20POLY1305) {
-      /* The fixed nonce into the actual nonce (the sequence number). */
+      // The fixed nonce into the actual nonce (the sequence number).
       aead_ctx->xor_fixed_nonce_ = true;
       aead_ctx->variable_nonce_len_ = 8;
     } else {
-      /* The fixed IV is prepended to the nonce. */
+      // The fixed IV is prepended to the nonce.
       assert(fixed_iv_len <= aead_ctx->variable_nonce_len_);
       aead_ctx->variable_nonce_len_ -= fixed_iv_len;
     }
 
-    /* AES-GCM uses an explicit nonce. */
+    // AES-GCM uses an explicit nonce.
     if (cipher->algorithm_enc & (SSL_AES128GCM | SSL_AES256GCM)) {
       aead_ctx->variable_nonce_included_in_record_ = true;
     }
 
-    /* The TLS 1.3 construction XORs the fixed nonce into the sequence number
-     * and omits the additional data. */
-    if (version >= TLS1_3_VERSION) {
+    // The TLS 1.3 construction XORs the fixed nonce into the sequence number
+    // and omits the additional data.
+    if (protocol_version >= TLS1_3_VERSION) {
       aead_ctx->xor_fixed_nonce_ = true;
       aead_ctx->variable_nonce_len_ = 8;
       aead_ctx->variable_nonce_included_in_record_ = false;
@@ -133,14 +140,45 @@ UniquePtr<SSLAEADContext> SSLAEADContext::Create(
       assert(fixed_iv_len >= aead_ctx->variable_nonce_len_);
     }
   } else {
-    assert(version < TLS1_3_VERSION);
+    assert(protocol_version < TLS1_3_VERSION);
     aead_ctx->variable_nonce_included_in_record_ = true;
     aead_ctx->random_variable_nonce_ = true;
     aead_ctx->omit_length_in_ad_ = true;
-    aead_ctx->omit_version_in_ad_ = (version == SSL3_VERSION);
+    aead_ctx->omit_version_in_ad_ = (protocol_version == SSL3_VERSION);
   }
 
   return aead_ctx;
+}
+
+void SSLAEADContext::SetVersionIfNullCipher(uint16_t version) {
+  if (is_null_cipher()) {
+    version_ = version;
+  }
+}
+
+uint16_t SSLAEADContext::ProtocolVersion() const {
+  uint16_t protocol_version;
+  if(!ssl_protocol_version_from_wire(&protocol_version, version_)) {
+    assert(false);
+    return 0;
+  }
+  return protocol_version;
+}
+
+uint16_t SSLAEADContext::RecordVersion() const {
+  if (version_ == 0) {
+    assert(is_null_cipher());
+    return is_dtls_ ? DTLS1_VERSION : TLS1_VERSION;
+  }
+
+  if (ProtocolVersion() <= TLS1_2_VERSION) {
+    return version_;
+  }
+
+  if (ssl_is_resumption_record_version_experiment(version_)) {
+    return TLS1_2_VERSION;
+  }
+  return TLS1_VERSION;
 }
 
 size_t SSLAEADContext::ExplicitNonceLen() const {
@@ -168,7 +206,7 @@ size_t SSLAEADContext::MaxOverhead() const {
 }
 
 size_t SSLAEADContext::GetAdditionalData(uint8_t out[13], uint8_t type,
-                                         uint16_t wire_version,
+                                         uint16_t record_version,
                                          const uint8_t seqnum[8],
                                          size_t plaintext_len) {
   if (omit_ad_) {
@@ -179,8 +217,8 @@ size_t SSLAEADContext::GetAdditionalData(uint8_t out[13], uint8_t type,
   size_t len = 8;
   out[len++] = type;
   if (!omit_version_in_ad_) {
-    out[len++] = static_cast<uint8_t>((wire_version >> 8));
-    out[len++] = static_cast<uint8_t>(wire_version);
+    out[len++] = static_cast<uint8_t>((record_version >> 8));
+    out[len++] = static_cast<uint8_t>(record_version);
   }
   if (!omit_length_in_ad_) {
     out[len++] = static_cast<uint8_t>((plaintext_len >> 8));
@@ -189,21 +227,21 @@ size_t SSLAEADContext::GetAdditionalData(uint8_t out[13], uint8_t type,
   return len;
 }
 
-bool SSLAEADContext::Open(CBS *out, uint8_t type, uint16_t wire_version,
+bool SSLAEADContext::Open(CBS *out, uint8_t type, uint16_t record_version,
                           const uint8_t seqnum[8], uint8_t *in, size_t in_len) {
   if (is_null_cipher() || FUZZER_MODE) {
-    /* Handle the initial NULL cipher. */
+    // Handle the initial NULL cipher.
     CBS_init(out, in, in_len);
     return true;
   }
 
-  /* TLS 1.2 AEADs include the length in the AD and are assumed to have fixed
-   * overhead. Otherwise the parameter is unused. */
+  // TLS 1.2 AEADs include the length in the AD and are assumed to have fixed
+  // overhead. Otherwise the parameter is unused.
   size_t plaintext_len = 0;
   if (!omit_length_in_ad_) {
     size_t overhead = MaxOverhead();
     if (in_len < overhead) {
-      /* Publicly invalid. */
+      // Publicly invalid.
       OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_PACKET_LENGTH);
       return false;
     }
@@ -211,13 +249,13 @@ bool SSLAEADContext::Open(CBS *out, uint8_t type, uint16_t wire_version,
   }
   uint8_t ad[13];
   size_t ad_len =
-      GetAdditionalData(ad, type, wire_version, seqnum, plaintext_len);
+      GetAdditionalData(ad, type, record_version, seqnum, plaintext_len);
 
-  /* Assemble the nonce. */
+  // Assemble the nonce.
   uint8_t nonce[EVP_AEAD_MAX_NONCE_LENGTH];
   size_t nonce_len = 0;
 
-  /* Prepend the fixed nonce, or left-pad with zeros if XORing. */
+  // Prepend the fixed nonce, or left-pad with zeros if XORing.
   if (xor_fixed_nonce_) {
     nonce_len = fixed_nonce_len_ - variable_nonce_len_;
     OPENSSL_memset(nonce, 0, nonce_len);
@@ -226,10 +264,10 @@ bool SSLAEADContext::Open(CBS *out, uint8_t type, uint16_t wire_version,
     nonce_len += fixed_nonce_len_;
   }
 
-  /* Add the variable nonce. */
+  // Add the variable nonce.
   if (variable_nonce_included_in_record_) {
     if (in_len < variable_nonce_len_) {
-      /* Publicly invalid. */
+      // Publicly invalid.
       OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_PACKET_LENGTH);
       return false;
     }
@@ -242,7 +280,7 @@ bool SSLAEADContext::Open(CBS *out, uint8_t type, uint16_t wire_version,
   }
   nonce_len += variable_nonce_len_;
 
-  /* XOR the fixed nonce, if necessary. */
+  // XOR the fixed nonce, if necessary.
   if (xor_fixed_nonce_) {
     assert(nonce_len == fixed_nonce_len_);
     for (size_t i = 0; i < fixed_nonce_len_; i++) {
@@ -250,7 +288,7 @@ bool SSLAEADContext::Open(CBS *out, uint8_t type, uint16_t wire_version,
     }
   }
 
-  /* Decrypt in-place. */
+  // Decrypt in-place.
   size_t len;
   if (!EVP_AEAD_CTX_open(ctx_.get(), in, &len, in_len, nonce, nonce_len, in,
                          in_len, ad, ad_len)) {
@@ -262,9 +300,10 @@ bool SSLAEADContext::Open(CBS *out, uint8_t type, uint16_t wire_version,
 
 bool SSLAEADContext::SealScatter(uint8_t *out_prefix, uint8_t *out,
                                  uint8_t *out_suffix, uint8_t type,
-                                 uint16_t wire_version, const uint8_t seqnum[8],
-                                 const uint8_t *in, size_t in_len,
-                                 const uint8_t *extra_in, size_t extra_in_len) {
+                                 uint16_t record_version,
+                                 const uint8_t seqnum[8], const uint8_t *in,
+                                 size_t in_len, const uint8_t *extra_in,
+                                 size_t extra_in_len) {
   const size_t prefix_len = ExplicitNonceLen();
   size_t suffix_len;
   if (!SuffixLen(&suffix_len, in_len, extra_in_len)) {
@@ -279,20 +318,20 @@ bool SSLAEADContext::SealScatter(uint8_t *out_prefix, uint8_t *out,
   }
 
   if (is_null_cipher() || FUZZER_MODE) {
-    /* Handle the initial NULL cipher. */
+    // Handle the initial NULL cipher.
     OPENSSL_memmove(out, in, in_len);
     OPENSSL_memmove(out_suffix, extra_in, extra_in_len);
     return true;
   }
 
   uint8_t ad[13];
-  size_t ad_len = GetAdditionalData(ad, type, wire_version, seqnum, in_len);
+  size_t ad_len = GetAdditionalData(ad, type, record_version, seqnum, in_len);
 
-  /* Assemble the nonce. */
+  // Assemble the nonce.
   uint8_t nonce[EVP_AEAD_MAX_NONCE_LENGTH];
   size_t nonce_len = 0;
 
-  /* Prepend the fixed nonce, or left-pad with zeros if XORing. */
+  // Prepend the fixed nonce, or left-pad with zeros if XORing.
   if (xor_fixed_nonce_) {
     nonce_len = fixed_nonce_len_ - variable_nonce_len_;
     OPENSSL_memset(nonce, 0, nonce_len);
@@ -301,21 +340,21 @@ bool SSLAEADContext::SealScatter(uint8_t *out_prefix, uint8_t *out,
     nonce_len += fixed_nonce_len_;
   }
 
-  /* Select the variable nonce. */
+  // Select the variable nonce.
   if (random_variable_nonce_) {
     assert(variable_nonce_included_in_record_);
     if (!RAND_bytes(nonce + nonce_len, variable_nonce_len_)) {
       return false;
     }
   } else {
-    /* When sending we use the sequence number as the variable part of the
-     * nonce. */
+    // When sending we use the sequence number as the variable part of the
+    // nonce.
     assert(variable_nonce_len_ == 8);
     OPENSSL_memcpy(nonce + nonce_len, seqnum, variable_nonce_len_);
   }
   nonce_len += variable_nonce_len_;
 
-  /* Emit the variable nonce if included in the record. */
+  // Emit the variable nonce if included in the record.
   if (variable_nonce_included_in_record_) {
     assert(!xor_fixed_nonce_);
     if (buffers_alias(in, in_len, out_prefix, variable_nonce_len_)) {
@@ -326,7 +365,7 @@ bool SSLAEADContext::SealScatter(uint8_t *out_prefix, uint8_t *out,
                    variable_nonce_len_);
   }
 
-  /* XOR the fixed nonce, if necessary. */
+  // XOR the fixed nonce, if necessary.
   if (xor_fixed_nonce_) {
     assert(nonce_len == fixed_nonce_len_);
     for (size_t i = 0; i < fixed_nonce_len_; i++) {
@@ -343,7 +382,7 @@ bool SSLAEADContext::SealScatter(uint8_t *out_prefix, uint8_t *out,
 }
 
 bool SSLAEADContext::Seal(uint8_t *out, size_t *out_len, size_t max_out_len,
-                          uint8_t type, uint16_t wire_version,
+                          uint8_t type, uint16_t record_version,
                           const uint8_t seqnum[8], const uint8_t *in,
                           size_t in_len) {
   const size_t prefix_len = ExplicitNonceLen();
@@ -363,7 +402,7 @@ bool SSLAEADContext::Seal(uint8_t *out, size_t *out_len, size_t max_out_len,
   }
 
   if (!SealScatter(out, out + prefix_len, out + prefix_len + in_len, type,
-                   wire_version, seqnum, in, in_len, 0, 0)) {
+                   record_version, seqnum, in, in_len, 0, 0)) {
     return false;
   }
   *out_len = prefix_len + in_len + suffix_len;

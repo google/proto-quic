@@ -14,6 +14,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
+#include "base/threading/scoped_blocking_call.h"
 #include "crypto/nss_crypto_module_delegate.h"
 #include "crypto/scoped_nss_types.h"
 #include "net/cert/x509_certificate.h"
@@ -155,10 +156,17 @@ class SSLPlatformKeyNSS : public ThreadedSSLPrivateKey::Delegate {
 
 scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
     const X509Certificate* certificate,
+    CERTCertificate* cert_certificate,
     crypto::CryptoModuleBlockingPasswordDelegate* password_delegate) {
+  // This function may acquire the NSS lock or reenter this code via extension
+  // hooks (such as smart card UI). To ensure threads are not starved or
+  // deadlocked, the base::ScopedBlockingCall below increments the thread pool
+  // capacity if this method takes too much time to run.
+  base::ScopedBlockingCall scoped_blocking_call(base::BlockingType::MAY_BLOCK);
+
   void* wincx = password_delegate ? password_delegate->wincx() : nullptr;
   crypto::ScopedSECKEYPrivateKey key(
-      PK11_FindKeyByAnyCert(certificate->os_cert_handle(), wincx));
+      PK11_FindKeyByAnyCert(cert_certificate, wincx));
   if (!key)
     return nullptr;
 
@@ -168,7 +176,7 @@ scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
     return nullptr;
 
   return make_scoped_refptr(new ThreadedSSLPrivateKey(
-      base::MakeUnique<SSLPlatformKeyNSS>(type, std::move(key)),
+      std::make_unique<SSLPlatformKeyNSS>(type, std::move(key)),
       GetSSLPlatformKeyTaskRunner()));
 }
 

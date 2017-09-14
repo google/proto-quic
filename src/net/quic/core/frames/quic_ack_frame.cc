@@ -32,7 +32,7 @@ PacketNumberQueue::const_reverse_iterator::const_reverse_iterator(
 PacketNumberQueue::const_reverse_iterator::~const_reverse_iterator() {}
 
 PacketNumberQueue::const_iterator::const_iterator(
-    typename std::deque<Interval<QuicPacketNumber>>::const_iterator it)
+    typename QuicDeque<Interval<QuicPacketNumber>>::const_iterator it)
     : deque_it_(it), use_deque_it_(true) {}
 
 PacketNumberQueue::const_reverse_iterator::const_reverse_iterator(
@@ -41,7 +41,7 @@ PacketNumberQueue::const_reverse_iterator::const_reverse_iterator(
     : vector_it_(it), use_deque_it_(false) {}
 
 PacketNumberQueue::const_reverse_iterator::const_reverse_iterator(
-    const typename std::deque<
+    const typename QuicDeque<
         Interval<QuicPacketNumber>>::const_reverse_iterator& it)
     : deque_it_(it), use_deque_it_(true) {}
 

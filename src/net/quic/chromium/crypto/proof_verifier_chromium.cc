@@ -557,7 +557,7 @@ QuicAsyncStatus ProofVerifierChromium::VerifyProof(
   }
   const ProofVerifyContextChromium* chromium_context =
       reinterpret_cast<const ProofVerifyContextChromium*>(verify_context);
-  std::unique_ptr<Job> job = base::MakeUnique<Job>(
+  std::unique_ptr<Job> job = std::make_unique<Job>(
       this, cert_verifier_, ct_policy_enforcer_, transport_security_state_,
       cert_transparency_verifier_, chromium_context->cert_verify_flags,
       chromium_context->net_log);
@@ -584,7 +584,7 @@ QuicAsyncStatus ProofVerifierChromium::VerifyCertChain(
   }
   const ProofVerifyContextChromium* chromium_context =
       reinterpret_cast<const ProofVerifyContextChromium*>(verify_context);
-  std::unique_ptr<Job> job = base::MakeUnique<Job>(
+  std::unique_ptr<Job> job = std::make_unique<Job>(
       this, cert_verifier_, ct_policy_enforcer_, transport_security_state_,
       cert_transparency_verifier_, chromium_context->cert_verify_flags,
       chromium_context->net_log);

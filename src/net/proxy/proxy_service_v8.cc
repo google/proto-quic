@@ -34,7 +34,7 @@ std::unique_ptr<ProxyService> CreateProxyServiceUsingV8ProxyResolver(
 
   std::unique_ptr<ProxyService> proxy_service(new ProxyService(
       std::move(proxy_config_service),
-      base::MakeUnique<ProxyResolverFactoryV8TracingWrapper>(
+      std::make_unique<ProxyResolverFactoryV8TracingWrapper>(
           host_resolver, net_log,
           base::Bind(&NetworkDelegateErrorObserver::Create, network_delegate,
                      base::ThreadTaskRunnerHandle::Get())),

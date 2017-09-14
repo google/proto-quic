@@ -15,7 +15,6 @@
 #include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/sparse_histogram.h"
-#include "base/profiler/scoped_tracker.h"
 #include "base/single_thread_task_runner.h"
 #include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
@@ -129,7 +128,7 @@ std::unique_ptr<base::Value> NetLogHttpStreamJobCallback(
     bool using_quic,
     RequestPriority priority,
     NetLogCaptureMode /* capture_mode */) {
-  auto dict = base::MakeUnique<base::DictionaryValue>();
+  auto dict = std::make_unique<base::DictionaryValue>();
   if (source.IsValid())
     source.AddToEventParameters(dict.get());
   dict->SetString("original_url", original_url->GetOrigin().spec());
@@ -145,7 +144,7 @@ std::unique_ptr<base::Value> NetLogHttpStreamJobCallback(
 std::unique_ptr<base::Value> NetLogHttpStreamProtoCallback(
     NextProto negotiated_protocol,
     NetLogCaptureMode /* capture_mode */) {
-  auto dict = base::MakeUnique<base::DictionaryValue>();
+  auto dict = std::make_unique<base::DictionaryValue>();
 
   dict->SetString("proto", NextProtoToString(negotiated_protocol));
   return std::move(dict);
@@ -315,6 +314,7 @@ void HttpStreamFactoryImpl::Job::Resume() {
 }
 
 void HttpStreamFactoryImpl::Job::Orphan() {
+  DCHECK_EQ(job_type_, ALTERNATIVE);
   net_log_.AddEvent(NetLogEventType::HTTP_STREAM_JOB_ORPHANED);
 }
 
@@ -826,9 +826,8 @@ int HttpStreamFactoryImpl::Job::DoEvaluateThrottle() {
 void HttpStreamFactoryImpl::Job::ResumeInitConnection() {
   if (init_connection_already_resumed_)
     return;
+  DCHECK_EQ(next_state_, STATE_INIT_CONNECTION);
   net_log_.AddEvent(NetLogEventType::HTTP_STREAM_JOB_RESUME_INIT_CONNECTION);
-  // TODO(xunjieli): Change this to a DCHECK once crbug.com/718576 is stable.
-  CHECK_EQ(next_state_, STATE_INIT_CONNECTION);
   init_connection_already_resumed_ = true;
   OnIOComplete(OK);
 }
@@ -843,10 +842,6 @@ int HttpStreamFactoryImpl::Job::DoInitConnection() {
 }
 
 int HttpStreamFactoryImpl::Job::DoInitConnectionImpl() {
-  // TODO(pkasting): Remove ScopedTracker below once crbug.com/462812 is fixed.
-  tracked_objects::ScopedTracker tracking_profile(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION(
-          "462812 HttpStreamFactoryImpl::Job::DoInitConnection"));
   DCHECK(!connection_->is_initialized());
 
   if (using_quic_ && !proxy_info_.is_quic() && !proxy_info_.is_direct()) {
@@ -909,7 +904,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionImpl() {
     int rv = quic_request_.Request(
         destination, quic_version_, request_info_.privacy_mode,
         ssl_config->GetCertVerifyFlags(), url, request_info_.method, net_log_,
-        io_callback_);
+        &net_error_details_, io_callback_);
     if (rv == OK) {
       using_existing_quic_session_ = true;
     } else {
@@ -1139,7 +1134,7 @@ int HttpStreamFactoryImpl::Job::SetSpdyHttpStreamOrBidirectionalStreamImpl(
   if (delegate_->for_websockets())
     return ERR_NOT_IMPLEMENTED;
   if (stream_type_ == HttpStreamRequest::BIDIRECTIONAL_STREAM) {
-    bidirectional_stream_impl_ = base::MakeUnique<BidirectionalStreamSpdyImpl>(
+    bidirectional_stream_impl_ = std::make_unique<BidirectionalStreamSpdyImpl>(
         session, net_log_.source());
     return OK;
   }
@@ -1150,16 +1145,12 @@ int HttpStreamFactoryImpl::Job::SetSpdyHttpStreamOrBidirectionalStreamImpl(
 
   bool use_relative_url =
       direct || request_info_.url.SchemeIs(url::kHttpsScheme);
-  stream_ = base::MakeUnique<SpdyHttpStream>(session, use_relative_url,
+  stream_ = std::make_unique<SpdyHttpStream>(session, use_relative_url,
                                              net_log_.source());
   return OK;
 }
 
 int HttpStreamFactoryImpl::Job::DoCreateStream() {
-  // TODO(pkasting): Remove ScopedTracker below once crbug.com/462811 is fixed.
-  tracked_objects::ScopedTracker tracking_profile(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION(
-          "462811 HttpStreamFactoryImpl::Job::DoCreateStream"));
   DCHECK(connection_->socket() || existing_spdy_session_.get() || using_quic_);
   DCHECK(!using_quic_);
 
@@ -1191,7 +1182,7 @@ int HttpStreamFactoryImpl::Job::DoCreateStream() {
           delegate_->websocket_handshake_stream_create_helper()
               ->CreateBasicStream(std::move(connection_), using_proxy);
     } else {
-      stream_ = base::MakeUnique<HttpBasicStream>(
+      stream_ = std::make_unique<HttpBasicStream>(
           std::move(connection_), using_proxy,
           session_->params().http_09_on_non_default_ports_enabled);
     }
@@ -1471,7 +1462,7 @@ HttpStreamFactoryImpl::JobFactory::CreateMainJob(
     GURL origin_url,
     bool enable_ip_based_pooling,
     NetLog* net_log) {
-  return base::MakeUnique<HttpStreamFactoryImpl::Job>(
+  return std::make_unique<HttpStreamFactoryImpl::Job>(
       delegate, job_type, session, request_info, priority, proxy_info,
       server_ssl_config, proxy_ssl_config, destination, origin_url,
       kProtoUnknown, QUIC_VERSION_UNSUPPORTED, ProxyServer(),
@@ -1494,7 +1485,7 @@ HttpStreamFactoryImpl::JobFactory::CreateAltSvcJob(
     QuicVersion quic_version,
     bool enable_ip_based_pooling,
     NetLog* net_log) {
-  return base::MakeUnique<HttpStreamFactoryImpl::Job>(
+  return std::make_unique<HttpStreamFactoryImpl::Job>(
       delegate, job_type, session, request_info, priority, proxy_info,
       server_ssl_config, proxy_ssl_config, destination, origin_url,
       alternative_protocol, quic_version, ProxyServer(),
@@ -1516,7 +1507,7 @@ HttpStreamFactoryImpl::JobFactory::CreateAltProxyJob(
     const ProxyServer& alternative_proxy_server,
     bool enable_ip_based_pooling,
     NetLog* net_log) {
-  return base::MakeUnique<HttpStreamFactoryImpl::Job>(
+  return std::make_unique<HttpStreamFactoryImpl::Job>(
       delegate, job_type, session, request_info, priority, proxy_info,
       server_ssl_config, proxy_ssl_config, destination, origin_url,
       kProtoUnknown, QUIC_VERSION_UNSUPPORTED, alternative_proxy_server,

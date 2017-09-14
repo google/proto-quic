@@ -72,8 +72,10 @@ class MockHttpStreamRequestDelegate : public HttpStreamRequest::Delegate {
       const ProxyInfo& used_proxy_info,
       std::unique_ptr<WebSocketHandshakeStreamBase> stream) override {}
 
-  MOCK_METHOD2(OnStreamFailed,
-               void(int status, const SSLConfig& used_ssl_config));
+  MOCK_METHOD3(OnStreamFailed,
+               void(int status,
+                    const NetErrorDetails& net_error_details,
+                    const SSLConfig& used_ssl_config));
 
   MOCK_METHOD3(OnCertificateError,
                void(int status,

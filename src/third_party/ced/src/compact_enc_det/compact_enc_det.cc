@@ -5654,6 +5654,8 @@ Encoding CompactEncDet::DetectEncoding(
     case ISO_2022_CN:
     case HZ_GB_2312:
     case UTF7:
+    case UTF16LE:
+    case UTF16BE:
 
     case CHINESE_EUC_DEC:
     case CHINESE_CNS:

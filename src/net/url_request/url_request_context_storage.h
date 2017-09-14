@@ -32,7 +32,6 @@ class NetworkErrorLoggingDelegate;
 class ProxyDelegate;
 class ProxyService;
 class ReportingService;
-class SdchManager;
 class SSLConfigService;
 class TransportSecurityState;
 class URLRequestContext;
@@ -81,7 +80,6 @@ class NET_EXPORT URLRequestContextStorage {
       std::unique_ptr<URLRequestThrottlerManager> throttler_manager);
   void set_http_user_agent_settings(
       std::unique_ptr<HttpUserAgentSettings> http_user_agent_settings);
-  void set_sdch_manager(std::unique_ptr<SdchManager> sdch_manager);
 
 #if BUILDFLAG(ENABLE_REPORTING)
   void set_reporting_service(
@@ -128,7 +126,6 @@ class NET_EXPORT URLRequestContextStorage {
   std::unique_ptr<HttpTransactionFactory> http_transaction_factory_;
   std::unique_ptr<URLRequestJobFactory> job_factory_;
   std::unique_ptr<URLRequestThrottlerManager> throttler_manager_;
-  std::unique_ptr<SdchManager> sdch_manager_;
 #if BUILDFLAG(ENABLE_REPORTING)
   std::unique_ptr<ReportingService> reporting_service_;
 #endif  // BUILDFLAG(ENABLE_REPORTING)

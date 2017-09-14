@@ -64,9 +64,8 @@ public class TestChildProcessConnection extends ChildProcessConnection {
 
     // We don't have a real service so we have to mock the connection status.
     @Override
-    public void start(
-            boolean useStrongBinding, ServiceCallback serviceCallback, boolean retryOnTimeout) {
-        super.start(useStrongBinding, serviceCallback, retryOnTimeout);
+    public void start(boolean useStrongBinding, ServiceCallback serviceCallback) {
+        super.start(useStrongBinding, serviceCallback);
         mConnected = true;
         mServiceCallback = serviceCallback;
     }

@@ -76,7 +76,7 @@ class ObserverListBase
   // Enumeration of which observers are notified.
   enum NotificationType {
     // Specifies that any observers added during notification are notified.
-    // This is the default type if non type is provided to the constructor.
+    // This is the default type if no type is provided to the constructor.
     NOTIFY_ALL,
 
     // Specifies that observers added while sending out notification are not

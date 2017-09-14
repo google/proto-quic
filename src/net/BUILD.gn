@@ -38,12 +38,19 @@ use_v8_in_net = !is_ios && !is_proto_quic
 enable_built_in_dns = !is_ios && !is_proto_quic
 enable_net_mojo = !is_ios && !is_proto_quic
 
+# Unix sockets are not supported on iOS, Fuchsia or NaCl.
+enable_unix_sockets = is_posix && !is_ios && !is_fuchsia && !is_nacl
+
 # True if certificates are represented with DER byte buffers. This can be true
-# in addition to use_openssl_certs or use_nss_certs, in that case byte certs
-# are used internally but OpenSSL or NSS are used for certificate verification.
+# in addition to use_nss_certs, in that case byte certs are used internally but
+# NSS is used for certificate verification.
 # TODO(mattm): crbug.com/671420: Implement and enable this for all platforms.
-use_byte_certs =
-    is_mac || is_android || is_nacl || is_ios || is_win || is_fuchsia
+use_byte_certs = is_mac || is_android || is_nacl || is_ios || is_win ||
+                 is_fuchsia || is_linux
+
+# Android and Fuchsia can't run testserver.py directly, so they use remote
+# test server.
+use_remote_test_server = is_android || is_fuchsia
 
 buildflag_header("features") {
   header = "net_features.h"
@@ -159,7 +166,7 @@ component("net") {
     "cert/asn1_util.h",
     "cert/cert_database.cc",
     "cert/cert_database.h",
-    "cert/cert_database_openssl.cc",
+    "cert/cert_database_stub.cc",
     "cert/cert_status_flags.cc",
     "cert/cert_status_flags.h",
     "cert/cert_status_flags_list.h",
@@ -199,12 +206,12 @@ component("net") {
     "cert/internal/extended_key_usage.h",
     "cert/internal/name_constraints.cc",
     "cert/internal/name_constraints.h",
+    "cert/internal/ocsp.cc",
+    "cert/internal/ocsp.h",
     "cert/internal/parse_certificate.cc",
     "cert/internal/parse_certificate.h",
     "cert/internal/parse_name.cc",
     "cert/internal/parse_name.h",
-    "cert/internal/parse_ocsp.cc",
-    "cert/internal/parse_ocsp.h",
     "cert/internal/parsed_certificate.cc",
     "cert/internal/parsed_certificate.h",
     "cert/internal/path_builder.cc",
@@ -251,8 +258,6 @@ component("net") {
     "cert/x509_certificate_net_log_param.h",
     "cert/x509_util.cc",
     "cert/x509_util.h",
-    "cert/x509_util_openssl.cc",
-    "cert/x509_util_openssl.h",
     "der/encode_values.cc",
     "der/encode_values.h",
     "der/input.cc",
@@ -388,14 +393,11 @@ component("net") {
       "android/cert_verify_result_android.cc",
       "android/cert_verify_result_android.h",
       "android/gurl_utils.cc",
-      "android/gurl_utils.h",
       "android/http_auth_negotiate_android.cc",
       "android/http_auth_negotiate_android.h",
       "android/keystore.cc",
       "android/keystore.h",
       "android/legacy_openssl.h",
-      "android/net_jni_registrar.cc",
-      "android/net_jni_registrar.h",
       "android/network_change_notifier_android.cc",
       "android/network_change_notifier_android.h",
       "android/network_change_notifier_delegate_android.cc",
@@ -602,16 +604,9 @@ component("net") {
       "cert/test_root_certs_mac.cc",
       "cert/test_root_certs_nss.cc",
       "cert/test_root_certs_win.cc",
-      "cert/x509_cert_types_mac.cc",
-      "cert/x509_cert_types_win.cc",
-      "cert/x509_certificate_ios.cc",
       "cert/x509_certificate_known_roots_win.h",
-      "cert/x509_certificate_mac.cc",
       "cert/x509_certificate_nss.cc",
-      "cert/x509_certificate_openssl.cc",
-      "cert/x509_certificate_win.cc",
       "cert/x509_util_android.cc",
-      "cert/x509_util_android.h",
       "cert/x509_util_ios.cc",
       "cert/x509_util_ios.h",
       "cert/x509_util_ios_and_mac.cc",
@@ -791,10 +786,6 @@ component("net") {
       "filter/gzip_header.h",
       "filter/gzip_source_stream.cc",
       "filter/gzip_source_stream.h",
-      "filter/sdch_policy_delegate.cc",
-      "filter/sdch_policy_delegate.h",
-      "filter/sdch_source_stream.cc",
-      "filter/sdch_source_stream.h",
       "filter/source_stream.cc",
       "filter/source_stream.h",
       "filter/source_stream_type_list.h",
@@ -1024,6 +1015,7 @@ component("net") {
       "nqe/network_quality_estimator_util.h",
       "nqe/network_quality_observation.cc",
       "nqe/network_quality_observation.h",
+      "nqe/network_quality_observation_source.cc",
       "nqe/network_quality_observation_source.h",
       "nqe/network_quality_provider.cc",
       "nqe/network_quality_provider.h",
@@ -1149,6 +1141,8 @@ component("net") {
       "quic/chromium/quic_http_stream.h",
       "quic/chromium/quic_http_utils.cc",
       "quic/chromium/quic_http_utils.h",
+      "quic/chromium/quic_proxy_client_socket.cc",
+      "quic/chromium/quic_proxy_client_socket.h",
       "quic/chromium/quic_server_info.cc",
       "quic/chromium/quic_server_info.h",
       "quic/chromium/quic_stream_factory.cc",
@@ -1242,6 +1236,8 @@ component("net") {
       "quic/core/crypto/quic_encrypter.h",
       "quic/core/crypto/quic_random.cc",
       "quic/core/crypto/quic_random.h",
+      "quic/core/crypto/quic_tls_adapter.cc",
+      "quic/core/crypto/quic_tls_adapter.h",
       "quic/core/crypto/scoped_evp_aead_ctx.cc",
       "quic/core/crypto/scoped_evp_aead_ctx.h",
       "quic/core/frames/quic_ack_frame.cc",
@@ -1399,6 +1395,8 @@ component("net") {
       "quic/platform/api/quic_logging.h",
       "quic/platform/api/quic_lru_cache.h",
       "quic/platform/api/quic_map_util.h",
+      "quic/platform/api/quic_mem_slice.h",
+      "quic/platform/api/quic_mem_slice_span.h",
       "quic/platform/api/quic_mutex.cc",
       "quic/platform/api/quic_mutex.h",
       "quic/platform/api/quic_pcc_sender.h",
@@ -1432,6 +1430,10 @@ component("net") {
       "quic/platform/impl/quic_logging_impl.h",
       "quic/platform/impl/quic_lru_cache_impl.h",
       "quic/platform/impl/quic_map_util_impl.h",
+      "quic/platform/impl/quic_mem_slice_impl.cc",
+      "quic/platform/impl/quic_mem_slice_impl.h",
+      "quic/platform/impl/quic_mem_slice_span_impl.cc",
+      "quic/platform/impl/quic_mem_slice_span_impl.h",
       "quic/platform/impl/quic_mutex_impl.cc",
       "quic/platform/impl/quic_mutex_impl.h",
       "quic/platform/impl/quic_pcc_sender_impl.h",
@@ -1460,8 +1462,6 @@ component("net") {
       "quic/quartc/quartc_stream.h",
       "quic/quartc/quartc_stream_interface.h",
       "quic/quartc/quartc_task_runner_interface.h",
-      "sdch/sdch_owner.cc",
-      "sdch/sdch_owner.h",
       "socket/client_socket_factory.cc",
       "socket/client_socket_factory.h",
       "socket/client_socket_pool.cc",
@@ -1521,10 +1521,6 @@ component("net") {
       "socket/udp_socket_posix.h",
       "socket/udp_socket_win.cc",
       "socket/udp_socket_win.h",
-      "socket/unix_domain_client_socket_posix.cc",
-      "socket/unix_domain_client_socket_posix.h",
-      "socket/unix_domain_server_socket_posix.cc",
-      "socket/unix_domain_server_socket_posix.h",
       "socket/websocket_endpoint_lock_manager.cc",
       "socket/websocket_endpoint_lock_manager.h",
       "socket/websocket_transport_client_socket_pool.cc",
@@ -1661,8 +1657,6 @@ component("net") {
       "url_request/redirect_info.h",
       "url_request/report_sender.cc",
       "url_request/report_sender.h",
-      "url_request/sdch_dictionary_fetcher.cc",
-      "url_request/sdch_dictionary_fetcher.h",
       "url_request/static_http_user_agent_settings.cc",
       "url_request/static_http_user_agent_settings.h",
       "url_request/url_fetcher.cc",
@@ -1820,41 +1814,11 @@ component("net") {
     }
 
     if (use_byte_certs) {
-      if (is_ios) {
-        sources -= [ "cert/x509_certificate_ios.cc" ]
-      }
-      if (is_mac) {
-        sources -= [
-          "cert/x509_cert_types_mac.cc",
-          "cert/x509_certificate_mac.cc",
-        ]
-      }
       if (use_nss_certs) {
         sources -= [ "cert/x509_certificate_nss.cc" ]
       }
-      if (use_openssl_certs) {
-        sources -= [ "cert/x509_certificate_openssl.cc" ]
-      }
-      if (is_win) {
-        sources -= [
-          "cert/x509_cert_types_win.cc",
-          "cert/x509_certificate_win.cc",
-        ]
-      }
     } else {
       sources -= [ "cert/x509_certificate_bytes.cc" ]
-    }
-
-    if (!use_openssl_certs) {
-      sources -= [
-        "cert/cert_database_openssl.cc",
-        "cert/x509_certificate_openssl.cc",
-      ]
-    } else {
-      if (is_android) {
-        # Android doesn't use this file even when using OpenSSL.
-        sources -= [ "cert/cert_database_openssl.cc" ]
-      }
     }
 
     if (!use_kerberos || is_android) {
@@ -1865,7 +1829,10 @@ component("net") {
     }
 
     if (!is_nacl) {
-      sources -= [ "base/network_interfaces_nacl.cc" ]
+      sources -= [
+        "base/network_interfaces_nacl.cc",
+        "cert/cert_database_stub.cc",
+      ]
     }
 
     # Use getifaddrs() on POSIX platforms, except Linux and Android.
@@ -2011,6 +1978,15 @@ component("net") {
     }
   } else {
     public_deps += [ "//native_client_sdk/src/libraries/nacl_io" ]
+  }
+
+  if (enable_unix_sockets) {
+    sources += [
+      "socket/unix_domain_client_socket_posix.cc",
+      "socket/unix_domain_client_socket_posix.h",
+      "socket/unix_domain_server_socket_posix.cc",
+      "socket/unix_domain_server_socket_posix.h",
+    ]
   }
 
   # Add back some sources that were otherwise filtered out.
@@ -2658,12 +2634,16 @@ static_library("test_support") {
     public_deps += [ "//crypto:platform" ]
   }
 
-  if (is_android) {
+  if (use_remote_test_server) {
     sources += [
       "test/spawned_test_server/remote_test_server.cc",
       "test/spawned_test_server/remote_test_server.h",
-      "test/spawned_test_server/spawner_communicator.cc",
-      "test/spawned_test_server/spawner_communicator.h",
+      "test/spawned_test_server/remote_test_server_config.cc",
+      "test/spawned_test_server/remote_test_server_config.h",
+      "test/spawned_test_server/remote_test_server_proxy.cc",
+      "test/spawned_test_server/remote_test_server_proxy.h",
+      "test/spawned_test_server/remote_test_server_spawner_request.cc",
+      "test/spawned_test_server/remote_test_server_spawner_request.h",
     ]
   }
 
@@ -3122,10 +3102,13 @@ source_set("quic_test_tools") {
     "quic/platform/api/quic_test.h",
     "quic/platform/api/quic_test_loopback.cc",
     "quic/platform/api/quic_test_loopback.h",
+    "quic/platform/api/quic_test_mem_slice_vector.h",
     "quic/platform/impl/quic_test_impl.cc",
     "quic/platform/impl/quic_test_impl.h",
     "quic/platform/impl/quic_test_loopback_impl.cc",
     "quic/platform/impl/quic_test_loopback_impl.h",
+    "quic/platform/impl/quic_test_mem_slice_vector_impl.cc",
+    "quic/platform/impl/quic_test_mem_slice_vector_impl.h",
     "quic/test_tools/crypto_test_utils.cc",
     "quic/test_tools/crypto_test_utils.h",
     "quic/test_tools/failing_proof_source.cc",
@@ -3512,6 +3495,29 @@ bundle_data("net_unittests_bundle_data") {
     "data/name_constraints_unittest/uri-permitted.pem",
     "data/name_constraints_unittest/x400address-excluded.pem",
     "data/name_constraints_unittest/x400address-permitted.pem",
+    "data/ocsp_unittest/bad_ocsp_type.pem",
+    "data/ocsp_unittest/bad_signature.pem",
+    "data/ocsp_unittest/bad_status.pem",
+    "data/ocsp_unittest/good_response.pem",
+    "data/ocsp_unittest/good_response_next_update.pem",
+    "data/ocsp_unittest/has_extension.pem",
+    "data/ocsp_unittest/has_single_extension.pem",
+    "data/ocsp_unittest/has_version.pem",
+    "data/ocsp_unittest/malformed_status.pem",
+    "data/ocsp_unittest/missing_response.pem",
+    "data/ocsp_unittest/multiple_response.pem",
+    "data/ocsp_unittest/no_response.pem",
+    "data/ocsp_unittest/ocsp_extra_certs.pem",
+    "data/ocsp_unittest/ocsp_sign_bad_indirect.pem",
+    "data/ocsp_unittest/ocsp_sign_direct.pem",
+    "data/ocsp_unittest/ocsp_sign_indirect.pem",
+    "data/ocsp_unittest/ocsp_sign_indirect_missing.pem",
+    "data/ocsp_unittest/other_response.pem",
+    "data/ocsp_unittest/responder_id.pem",
+    "data/ocsp_unittest/responder_name.pem",
+    "data/ocsp_unittest/revoke_response.pem",
+    "data/ocsp_unittest/revoke_response_reason.pem",
+    "data/ocsp_unittest/unknown_response.pem",
     "data/parse_certificate_unittest/bad_key_usage.pem",
     "data/parse_certificate_unittest/bad_policy_qualifiers.pem",
     "data/parse_certificate_unittest/bad_signature_algorithm_oid.pem",
@@ -3599,29 +3605,6 @@ bundle_data("net_unittests_bundle_data") {
     "data/parse_certificate_unittest/tbs_validity_relaxed.pem",
     "data/parse_certificate_unittest/tbs_validity_utc_time_and_generalized_time.pem",
     "data/parse_certificate_unittest/v1_explicit_version.pem",
-    "data/parse_ocsp_unittest/bad_ocsp_type.pem",
-    "data/parse_ocsp_unittest/bad_signature.pem",
-    "data/parse_ocsp_unittest/bad_status.pem",
-    "data/parse_ocsp_unittest/good_response.pem",
-    "data/parse_ocsp_unittest/good_response_next_update.pem",
-    "data/parse_ocsp_unittest/has_extension.pem",
-    "data/parse_ocsp_unittest/has_single_extension.pem",
-    "data/parse_ocsp_unittest/has_version.pem",
-    "data/parse_ocsp_unittest/malformed_status.pem",
-    "data/parse_ocsp_unittest/missing_response.pem",
-    "data/parse_ocsp_unittest/multiple_response.pem",
-    "data/parse_ocsp_unittest/no_response.pem",
-    "data/parse_ocsp_unittest/ocsp_extra_certs.pem",
-    "data/parse_ocsp_unittest/ocsp_sign_bad_indirect.pem",
-    "data/parse_ocsp_unittest/ocsp_sign_direct.pem",
-    "data/parse_ocsp_unittest/ocsp_sign_indirect.pem",
-    "data/parse_ocsp_unittest/ocsp_sign_indirect_missing.pem",
-    "data/parse_ocsp_unittest/other_response.pem",
-    "data/parse_ocsp_unittest/responder_id.pem",
-    "data/parse_ocsp_unittest/responder_name.pem",
-    "data/parse_ocsp_unittest/revoke_response.pem",
-    "data/parse_ocsp_unittest/revoke_response_reason.pem",
-    "data/parse_ocsp_unittest/unknown_response.pem",
     "data/test.html",
     "data/url_request_unittest/308-without-location-header",
     "data/url_request_unittest/308-without-location-header.mock-http-headers",
@@ -4683,9 +4666,9 @@ test("net_unittests") {
     "cert/internal/name_constraints_unittest.cc",
     "cert/internal/nist_pkits_unittest.cc",
     "cert/internal/nist_pkits_unittest.h",
+    "cert/internal/ocsp_unittest.cc",
     "cert/internal/parse_certificate_unittest.cc",
     "cert/internal/parse_name_unittest.cc",
-    "cert/internal/parse_ocsp_unittest.cc",
     "cert/internal/parsed_certificate_unittest.cc",
     "cert/internal/path_builder_pkits_unittest.cc",
     "cert/internal/path_builder_unittest.cc",
@@ -4775,8 +4758,6 @@ test("net_unittests") {
     "filter/brotli_source_stream_unittest.cc",
     "filter/filter_source_stream_unittest.cc",
     "filter/gzip_source_stream_unittest.cc",
-    "filter/sdch_policy_delegate_unittest.cc",
-    "filter/sdch_source_stream_unittest.cc",
     "ftp/ftp_auth_cache_unittest.cc",
     "ftp/ftp_ctrl_response_buffer_unittest.cc",
     "ftp/ftp_directory_listing_parser_ls_unittest.cc",
@@ -4982,6 +4963,7 @@ test("net_unittests") {
     "quic/chromium/quic_http_stream_test.cc",
     "quic/chromium/quic_http_utils_test.cc",
     "quic/chromium/quic_network_transaction_unittest.cc",
+    "quic/chromium/quic_proxy_client_socket_unittest.cc",
     "quic/chromium/quic_stream_factory_peer.cc",
     "quic/chromium/quic_stream_factory_peer.h",
     "quic/chromium/quic_stream_factory_test.cc",
@@ -5023,6 +5005,7 @@ test("net_unittests") {
     "quic/core/crypto/quic_crypto_client_config_test.cc",
     "quic/core/crypto/quic_crypto_server_config_test.cc",
     "quic/core/crypto/quic_random_test.cc",
+    "quic/core/crypto/quic_tls_adapter_test.cc",
     "quic/core/frames/quic_frames_test.cc",
     "quic/core/packet_number_indexed_queue_test.cc",
     "quic/core/quic_alarm_test.cc",
@@ -5075,6 +5058,8 @@ test("net_unittests") {
     "quic/platform/api/quic_endian_test.cc",
     "quic/platform/api/quic_hostname_utils_test.cc",
     "quic/platform/api/quic_lru_cache_test.cc",
+    "quic/platform/api/quic_mem_slice_span_test.cc",
+    "quic/platform/api/quic_mem_slice_test.cc",
     "quic/platform/api/quic_reference_counted_test.cc",
     "quic/platform/api/quic_str_cat_test.cc",
     "quic/platform/api/quic_text_utils_test.cc",
@@ -5083,7 +5068,6 @@ test("net_unittests") {
     "quic/quartc/quartc_session_test.cc",
     "quic/quartc/quartc_stream_test.cc",
     "quic/test_tools/crypto_test_utils_test.cc",
-    "sdch/sdch_owner_unittest.cc",
     "socket/client_socket_pool_base_unittest.cc",
     "socket/mock_client_socket_pool_manager.cc",
     "socket/mock_client_socket_pool_manager.h",
@@ -5103,8 +5087,6 @@ test("net_unittests") {
     "socket/transport_client_socket_pool_unittest.cc",
     "socket/transport_client_socket_unittest.cc",
     "socket/udp_socket_unittest.cc",
-    "socket/unix_domain_client_socket_posix_unittest.cc",
-    "socket/unix_domain_server_socket_posix_unittest.cc",
     "socket/websocket_endpoint_lock_manager_unittest.cc",
     "socket/websocket_transport_client_socket_pool_unittest.cc",
     "spdy/chromium/bidirectional_stream_spdy_impl_unittest.cc",
@@ -5189,7 +5171,6 @@ test("net_unittests") {
     "tools/quic/quic_simple_client_test.cc",
     "tools/tld_cleanup/tld_cleanup_util_unittest.cc",
     "url_request/report_sender_unittest.cc",
-    "url_request/sdch_dictionary_fetcher_unittest.cc",
     "url_request/url_fetcher_impl_unittest.cc",
     "url_request/url_fetcher_response_writer_unittest.cc",
     "url_request/url_request_context_builder_mojo_unittest.cc",
@@ -5358,6 +5339,15 @@ test("net_unittests") {
     ]
   }
 
+  if (use_remote_test_server) {
+    sources +=
+        [ "test/spawned_test_server/remote_test_server_proxy_unittests.cc" ]
+  }
+
+  if (is_fuchsia) {
+    use_test_server = true
+  }
+
   if (!use_nss_certs) {
     sources -= [
       "cert/internal/trust_store_nss_unittest.cc",
@@ -5516,16 +5506,17 @@ test("net_unittests") {
 
       # Needs GetAppOutput().
       "test/python_utils_unittest.cc",
-
-      # The following tests are disabled because they don't apply to
-      # iOS.
-      # OS is not "linux" or "freebsd" or "openbsd".
-      "socket/unix_domain_client_socket_posix_unittest.cc",
-      "socket/unix_domain_server_socket_posix_unittest.cc",
     ]
     net_unfiltered_sources += [ "cert/x509_util_ios_and_mac_unittest.cc" ]
 
     bundle_deps = [ ":net_unittests_bundle_data" ]
+  }
+
+  if (enable_unix_sockets) {
+    sources += [
+      "socket/unix_domain_client_socket_posix_unittest.cc",
+      "socket/unix_domain_server_socket_posix_unittest.cc",
+    ]
   }
 
   # Use getifaddrs() on POSIX platforms, except Linux and Android.

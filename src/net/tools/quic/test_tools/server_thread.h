@@ -11,6 +11,7 @@
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/simple_thread.h"
 #include "net/quic/core/quic_config.h"
+#include "net/quic/platform/api/quic_containers.h"
 #include "net/quic/platform/api/quic_mutex.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/tools/quic/quic_server.h"
@@ -77,7 +78,7 @@ class ServerThread : public base::SimpleThread {
   bool initialized_;
 
   QuicMutex scheduled_actions_lock_;
-  std::deque<std::function<void()>> scheduled_actions_
+  QuicDeque<std::function<void()>> scheduled_actions_
       GUARDED_BY(scheduled_actions_lock_);
 
   DISALLOW_COPY_AND_ASSIGN(ServerThread);

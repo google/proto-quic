@@ -170,8 +170,8 @@ bool Origin::IsSamePhysicalOriginWith(const Origin& other) const {
   return GetPhysicalOrigin().IsSameOriginWith(other.GetPhysicalOrigin());
 }
 
-bool Origin::DomainIs(base::StringPiece lower_ascii_domain) const {
-  return !unique_ && url::DomainIs(tuple_.host(), lower_ascii_domain);
+bool Origin::DomainIs(base::StringPiece canonical_domain) const {
+  return !unique_ && url::DomainIs(tuple_.host(), canonical_domain);
 }
 
 bool Origin::operator<(const Origin& other) const {

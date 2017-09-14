@@ -4,8 +4,7 @@
 
 #include "net/ftp/ftp_network_transaction.h"
 
-#include <deque>
-
+#include "base/containers/circular_deque.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
@@ -217,7 +216,7 @@ class FtpSocketDataProvider : public SocketDataProvider {
 
  private:
   // List of reads to be consumed.
-  std::deque<MockRead> reads_;
+  base::circular_deque<MockRead> reads_;
 
   // Max number of bytes we will read at a time. 0 means no limit.
   int short_read_limit_;
@@ -781,8 +780,8 @@ class FtpNetworkTransactionTest
   // the default one. Only needs to be called if a test runs multiple
   // transactions.
   void SetUpTransaction() {
-    mock_socket_factory_ = base::MakeUnique<MockClientSocketFactory>();
-    transaction_ = base::MakeUnique<FtpNetworkTransaction>(
+    mock_socket_factory_ = std::make_unique<MockClientSocketFactory>();
+    transaction_ = std::make_unique<FtpNetworkTransaction>(
         host_resolver_.get(), mock_socket_factory_.get());
   }
 
@@ -816,7 +815,7 @@ class FtpNetworkTransactionTest
     };
 
     std::unique_ptr<StaticSocketDataProvider> data_socket =
-        base::MakeUnique<StaticSocketDataProvider>(
+        std::make_unique<StaticSocketDataProvider>(
             data_reads, arraysize(data_reads), nullptr, 0);
     mock_socket_factory_->AddSocketDataProvider(data_socket.get());
     FtpRequestInfo request_info = GetRequestInfo(request);

@@ -13,6 +13,7 @@
 #include "base/files/scoped_file.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/path_service.h"
 #include "base/process/kill.h"
 #include "base/process/launch.h"
 #include "base/process/process_iterator.h"
@@ -138,6 +139,13 @@ bool LocalTestServer::LaunchPython(const base::FilePath& testserver_path) {
 
   // Launch a new testserver process.
   base::LaunchOptions options;
+
+  // Set CWD to source root.
+  if (!PathService::Get(base::DIR_SOURCE_ROOT, &options.current_directory)) {
+    LOG(ERROR) << "Failed to get DIR_SOURCE_ROOT";
+    return false;
+  }
+
   options.fds_to_remap.push_back(std::make_pair(pipefd[1], pipefd[1]));
   process_ = base::LaunchProcess(python_command, options);
   if (!process_.IsValid()) {
@@ -168,10 +176,12 @@ bool LocalTestServer::WaitToStart() {
     return false;
   }
 
-  if (!ParseServerData(server_data)) {
+  int port;
+  if (!SetAndParseServerData(server_data, &port)) {
     LOG(ERROR) << "Could not parse server_data: " << server_data;
     return false;
   }
+  SetPort(port);
 
   return true;
 }

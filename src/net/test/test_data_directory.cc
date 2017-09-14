@@ -37,11 +37,7 @@ base::FilePath GetTestCertsDirectory() {
 }
 
 base::FilePath GetTestClientCertsDirectory() {
-#if defined(OS_ANDROID)
   return base::FilePath(kNetDataRelativePath).Append(kCertificateDataSubPath);
-#else
-  return GetTestCertsDirectory();
-#endif
 }
 
 base::FilePath GetWebSocketTestDataDirectory() {

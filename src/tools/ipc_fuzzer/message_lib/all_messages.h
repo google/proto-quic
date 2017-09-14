@@ -14,8 +14,10 @@
 #undef CONTENT_COMMON_FRAME_PARAM_MACROS_H_
 #undef CONTENT_PUBLIC_COMMON_COMMON_PARAM_TRAITS_MACROS_H_
 
+#include "components/nacl/common/features.h"
+
 #include "chrome/common/all_messages.h"
-#if !defined(DISABLE_NACL)
+#if BUILDFLAG(ENABLE_NACL)
 #include "components/nacl/common/nacl_host_messages.h"
 #endif
 #include "components/guest_view/common/guest_view_message_generator.h"

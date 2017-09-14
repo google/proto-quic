@@ -119,8 +119,6 @@ class DummySpnegoAuthenticator {
                              const std::string& expected_input_token,
                              const std::string& output_token);
 
-  static bool RegisterJni(JNIEnv* env);
-
   static void EnsureTestAccountExists();
   static void RemoveTestAccounts();
 

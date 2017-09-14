@@ -112,7 +112,7 @@ std::unique_ptr<HttpStreamRequest> HttpStreamFactoryImpl::RequestStreamInternal(
     const NetLogWithSource& net_log) {
   AddJobControllerCountToHistograms();
 
-  auto job_controller = base::MakeUnique<JobController>(
+  auto job_controller = std::make_unique<JobController>(
       this, delegate, session_, job_factory_.get(), request_info,
       /* is_preconnect = */ false, enable_ip_based_pooling,
       enable_alternative_services, server_ssl_config, proxy_ssl_config);
@@ -139,7 +139,7 @@ void HttpStreamFactoryImpl::PreconnectStreams(
 
   DCHECK(!for_websockets_);
 
-  auto job_controller = base::MakeUnique<JobController>(
+  auto job_controller = std::make_unique<JobController>(
       this, nullptr, session_, job_factory_.get(), request_info,
       /* is_preconnect = */ true,
       /* enable_ip_based_pooling = */ true,
@@ -258,8 +258,6 @@ void HttpStreamFactoryImpl::AddJobControllerCountToHistograms() {
   UMA_HISTOGRAM_COUNTS_1M("Net.JobControllerSet.CountOfJobController",
                           job_controller_set_.size());
 
-  int alt_job_count = 0;
-  int main_job_count = 0;
   size_t num_controllers_with_request = 0;
   size_t num_controllers_for_preconnect = 0;
   for (const auto& job_controller : job_controller_set_) {
@@ -277,10 +275,6 @@ void HttpStreamFactoryImpl::AddJobControllerCountToHistograms() {
     // For non-preconnects.
     if (job_controller->HasPendingRequest())
       num_controllers_with_request++;
-    if (job_controller->HasPendingAltJob())
-      alt_job_count++;
-    if (job_controller->HasPendingMainJob())
-      main_job_count++;
   }
   UMA_HISTOGRAM_COUNTS_1M(
       "Net.JobControllerSet.CountOfJobController.Preconnect",
@@ -288,16 +282,10 @@ void HttpStreamFactoryImpl::AddJobControllerCountToHistograms() {
   UMA_HISTOGRAM_COUNTS_1M(
       "Net.JobControllerSet.CountOfJobController.NonPreconnect.PendingRequest",
       num_controllers_with_request);
-
   UMA_HISTOGRAM_COUNTS_1M(
       "Net.JobControllerSet.CountOfJobController.NonPreconnect.RequestGone",
       job_controller_set_.size() - num_controllers_for_preconnect -
           num_controllers_with_request);
-
-  UMA_HISTOGRAM_COUNTS_1M("Net.JobControllerSet.CountOfNonPreconnectAltJob",
-                          alt_job_count);
-  UMA_HISTOGRAM_COUNTS_1M("Net.JobControllerSet.CountOfNonPreconnectMainJob",
-                          main_job_count);
 }
 
 void HttpStreamFactoryImpl::DumpMemoryStats(

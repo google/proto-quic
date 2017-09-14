@@ -110,6 +110,7 @@ if (ios_sdk_path == "") {
   ios_sdk_build = _ios_sdk_result.sdk_build
   xcode_version = _ios_sdk_result.xcode_version
   xcode_version_int = _ios_sdk_result.xcode_version_int
+  assert(xcode_version_int >= 900, "Xcode 9 is required.")
   xcode_build = _ios_sdk_result.xcode_build
   machine_os_build = _ios_sdk_result.machine_os_build
   if (use_ios_simulator) {

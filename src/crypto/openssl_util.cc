@@ -39,7 +39,7 @@ void EnsureOpenSSLInit() {
   CRYPTO_library_init();
 }
 
-void ClearOpenSSLERRStack(const tracked_objects::Location& location) {
+void ClearOpenSSLERRStack(const base::Location& location) {
   if (DCHECK_IS_ON() && VLOG_IS_ON(1)) {
     uint32_t error_num = ERR_peek_error();
     if (error_num == 0)

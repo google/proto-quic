@@ -169,7 +169,8 @@ class NET_EXPORT_PRIVATE HttpCache::Transaction : public HttpTransaction {
       const BeforeNetworkStartCallback& callback) override;
   void SetBeforeHeadersSentCallback(
       const BeforeHeadersSentCallback& callback) override;
-  void SetRequestHeadersCallback(RequestHeadersCallback) override;
+  void SetRequestHeadersCallback(RequestHeadersCallback callback) override;
+  void SetResponseHeadersCallback(ResponseHeadersCallback callback) override;
   int ResumeNetworkStart() override;
   void GetConnectionAttempts(ConnectionAttempts* out) const override;
 
@@ -569,6 +570,7 @@ class NET_EXPORT_PRIVATE HttpCache::Transaction : public HttpTransaction {
   BeforeNetworkStartCallback before_network_start_callback_;
   BeforeHeadersSentCallback before_headers_sent_callback_;
   RequestHeadersCallback request_headers_callback_;
+  ResponseHeadersCallback response_headers_callback_;
 
   // True if the Transaction is currently processing the DoLoop.
   bool in_do_loop_;

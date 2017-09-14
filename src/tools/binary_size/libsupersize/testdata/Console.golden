@@ -2,18 +2,18 @@
 Entering interactive Python shell. Quick reference:
 
 SizeInfo: metadata, raw_symbols, section_sizes, size_path, symbols
-Symbol: FlagsString, IsBss, IsDelta, IsGeneratedByToolchain, IsGroup, address, aliases, end_address, flags, full_name, generated_source, is_anonymous, name, num_aliases, object_path, padding, padding_pss, pss, pss_without_padding, section, section_name, size, size_without_padding, source_path, template_name
+Symbol: FlagsString, IsBss, IsDelta, IsGeneratedByToolchain, IsGroup, IterLeafSymbols, address, aliases, end_address, flags, full_name, generated_source, is_anonymous, name, num_aliases, object_path, padding, padding_pss, pss, pss_without_padding, section, section_name, size, size_without_padding, source_path, template_name
 
-SymbolGroup (extends Symbol): CountUniqueSymbols, Filter, GroupedBy, GroupedByFullName, GroupedByName, GroupedByPath, GroupedBySectionName, Inverted, IterLeafSymbols, IterUniqueSymbols, SetName, Sorted, SortedByAddress, SortedByCount, SortedByName, WhereAddressInRange, WhereFullNameMatches, WhereGeneratedByToolchain, WhereHasAnyAttribution, WhereHasPath, WhereInSection, WhereIsGroup, WhereIsTemplate, WhereMatches, WhereNameMatches, WhereObjectPathMatches, WherePathMatches, WherePssBiggerThan, WhereSizeBiggerThan, WhereSourceIsGenerated, WhereSourcePathMatches, WhereTemplateNameMatches, index, is_sorted
+SymbolGroup (extends Symbol): CountUniqueSymbols, Filter, GroupedBy, GroupedByFullName, GroupedByName, GroupedByPath, GroupedBySectionName, Inverted, IterUniqueSymbols, SetName, Sorted, SortedByAddress, SortedByCount, SortedByName, WhereAddressInRange, WhereFullNameMatches, WhereGeneratedByToolchain, WhereHasAnyAttribution, WhereHasPath, WhereInSection, WhereIsGroup, WhereIsTemplate, WhereMatches, WhereNameMatches, WhereObjectPathMatches, WherePathMatches, WherePssBiggerThan, WhereSizeBiggerThan, WhereSourceIsGenerated, WhereSourcePathMatches, WhereTemplateNameMatches, index, is_sorted
 
 DeltaSizeInfo: after_metadata, before_metadata, raw_symbols, section_sizes, symbols
 DeltaSymbol (extends Symbol): after_symbol, before_symbol, diff_status
 DeltaSymbolGroup (extends SymbolGroup): CountsByDiffStatus, WhereDiffStatusIs, diff_status
 
-canned_queries: CategorizeByChromeComponent, CategorizeGenerated, TemplatesByName
+canned_queries: CategorizeByChromeComponent, CategorizeGenerated, StaticInitializers, TemplatesByName
 
-Functions: Diff(), Disassemble(), ExpandRegex(), Print(), ShowExamples()
-Variables: 
+Functions: Csv(), Diff(), Disassemble(), ExpandRegex(), Print(), ShowExamples()
+Variables:
   printed: List of objects passed to Print().
   size_info: Loaded from {redacted}
 ********************************************************************************
@@ -23,6 +23,9 @@ help(models)
 
 # Show all attributes of all symbols & per-section totals:
 Print(size_info, verbose=True)
+
+# Dump section info and all symbols in CSV format:
+Csv(size_info)
 
 # Show two levels of .text, grouped by first two subdirectories
 text_syms = size_info.symbols.WhereInSection("t")

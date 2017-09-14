@@ -60,8 +60,8 @@ class GetTargetOutputsTest : public testing::Test {
 }  // namespace
 
 TEST_F(GetTargetOutputsTest, Copy) {
-  auto action = base::MakeUnique<Target>(
-      setup_.settings(), GetLabel("//foo/", "bar"), InputFileSet{});
+  auto action =
+      base::MakeUnique<Target>(setup_.settings(), GetLabel("//foo/", "bar"));
   action->set_output_type(Target::COPY_FILES);
   action->sources().push_back(SourceFile("//file.txt"));
   action->action_values().outputs() =
@@ -76,8 +76,8 @@ TEST_F(GetTargetOutputsTest, Copy) {
 }
 
 TEST_F(GetTargetOutputsTest, Action) {
-  auto action = base::MakeUnique<Target>(
-      setup_.settings(), GetLabel("//foo/", "bar"), InputFileSet{});
+  auto action =
+      base::MakeUnique<Target>(setup_.settings(), GetLabel("//foo/", "bar"));
   action->set_output_type(Target::ACTION);
   action->action_values().outputs() = SubstitutionList::MakeForTest(
       "//output1.txt",
@@ -92,8 +92,8 @@ TEST_F(GetTargetOutputsTest, Action) {
 }
 
 TEST_F(GetTargetOutputsTest, ActionForeach) {
-  auto action = base::MakeUnique<Target>(
-      setup_.settings(), GetLabel("//foo/", "bar"), InputFileSet{});
+  auto action =
+      base::MakeUnique<Target>(setup_.settings(), GetLabel("//foo/", "bar"));
   action->set_output_type(Target::ACTION_FOREACH);
   action->sources().push_back(SourceFile("//file.txt"));
   action->action_values().outputs() = SubstitutionList::MakeForTest(

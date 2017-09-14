@@ -47,7 +47,7 @@ IntegrityLevel GetCurrentProcessIntegrityLevel() {
     return INTEGRITY_UNKNOWN;
   }
 
-  auto token_label_bytes = MakeUnique<char[]>(token_info_length);
+  auto token_label_bytes = std::make_unique<char[]>(token_info_length);
   TOKEN_MANDATORY_LABEL* token_label =
       reinterpret_cast<TOKEN_MANDATORY_LABEL*>(token_label_bytes.get());
   if (!::GetTokenInformation(scoped_process_token.Get(), TokenIntegrityLevel,

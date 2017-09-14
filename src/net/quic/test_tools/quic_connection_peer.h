@@ -96,9 +96,6 @@ class QuicConnectionPeer {
 
   static QuicPacketHeader* GetLastHeader(QuicConnection* connection);
 
-  static void SetPacketNumberOfLastSentPacket(QuicConnection* connection,
-                                              QuicPacketNumber number);
-
   static QuicConnectionStats* GetStats(QuicConnection* connection);
 
   static QuicPacketCount GetPacketsBetweenMtuProbes(QuicConnection* connection);

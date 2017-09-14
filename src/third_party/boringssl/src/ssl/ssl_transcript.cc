@@ -167,8 +167,8 @@ bool SSLTranscript::Init() {
   return true;
 }
 
-/* InitDigestWithData calls |EVP_DigestInit_ex| on |ctx| with |md| and then
- * writes the data in |buf| to it. */
+// InitDigestWithData calls |EVP_DigestInit_ex| on |ctx| with |md| and then
+// writes the data in |buf| to it.
 static bool InitDigestWithData(EVP_MD_CTX *ctx, const EVP_MD *md,
                                const BUF_MEM *buf) {
   if (!EVP_DigestInit_ex(ctx, md, NULL)) {
@@ -181,9 +181,9 @@ static bool InitDigestWithData(EVP_MD_CTX *ctx, const EVP_MD *md,
 bool SSLTranscript::InitHash(uint16_t version, const SSL_CIPHER *cipher) {
   const EVP_MD *md = ssl_get_handshake_digest(version, cipher);
 
-  /* To support SSL 3.0's Finished and CertificateVerify constructions,
-   * EVP_md5_sha1() is split into MD5 and SHA-1 halves. When SSL 3.0 is removed,
-   * we can simplify this. */
+  // To support SSL 3.0's Finished and CertificateVerify constructions,
+  // EVP_md5_sha1() is split into MD5 and SHA-1 halves. When SSL 3.0 is removed,
+  // we can simplify this.
   if (md == EVP_md5_sha1()) {
     if (!InitDigestWithData(md5_.get(), EVP_md5(), buffer_.get())) {
       return false;
@@ -210,8 +210,8 @@ const EVP_MD *SSLTranscript::Digest() const {
 }
 
 bool SSLTranscript::Update(const uint8_t *in, size_t in_len) {
-  /* Depending on the state of the handshake, either the handshake buffer may be
-   * active, the rolling hash, or both. */
+  // Depending on the state of the handshake, either the handshake buffer may be
+  // active, the rolling hash, or both.
   if (buffer_) {
     size_t new_len = buffer_->length + in_len;
     if (new_len < in_len) {
@@ -328,9 +328,9 @@ bool SSLTranscript::GetSSL3CertVerifyHash(uint8_t *out, size_t *out_len,
 }
 
 bool SSLTranscript::GetFinishedMAC(uint8_t *out, size_t *out_len,
-                                   const SSL_SESSION *session, bool from_server,
-                                   uint16_t version) {
-  if (version == SSL3_VERSION) {
+                                   const SSL_SESSION *session,
+                                   bool from_server) {
+  if (session->ssl_version == SSL3_VERSION) {
     if (Digest() != EVP_md5_sha1()) {
       OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
       return false;
@@ -351,8 +351,8 @@ bool SSLTranscript::GetFinishedMAC(uint8_t *out, size_t *out_len,
     return true;
   }
 
-  /* At this point, the handshake should have released the handshake buffer on
-   * its own. */
+  // At this point, the handshake should have released the handshake buffer on
+  // its own.
   assert(!buffer_);
 
   const char *label = TLS_MD_CLIENT_FINISH_CONST;

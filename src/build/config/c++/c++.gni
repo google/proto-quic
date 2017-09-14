@@ -15,6 +15,14 @@ declare_args() {
       (is_linux && is_clang &&
        (!is_chromeos || default_toolchain != "//build/toolchain/cros:target"))
 
+  # Use libc++ instead of stdlibc++ when using the host_cpu toolchain, even if
+  # use_custom_libcxx is false. This is useful for cross-compiles where a custom
+  # toolchain for the target_cpu has been set as the default toolchain, but
+  # use_custom_libcxx should still be true when building for the host.  The
+  # expected usage is to set use_custom_libcxx=false and
+  # use_custom_libcxx_for_host=true in the passed in buildargs.
+  use_custom_libcxx_for_host = false
+
   # ASan, MSan and TSan builds need to override operator new, operator delete,
   # and some exception handling symbols, so libc++ must be a shared library to
   # prevent duplicate symbol errors when linking.
@@ -25,6 +33,9 @@ declare_args() {
   libcpp_is_static = !is_component_build && !is_asan && !is_msan && !is_tsan &&
                      !is_ubsan && !is_ubsan_security && !is_ubsan_vptr
 }
+
+use_custom_libcxx =
+    use_custom_libcxx || (use_custom_libcxx_for_host && current_cpu == host_cpu)
 
 libcxx_prefix = "//buildtools/third_party/libc++/trunk"
 libcxxabi_prefix = "//buildtools/third_party/libc++abi/trunk"

@@ -9,8 +9,9 @@ class SystemHealthDesktopCommonExpectations(expectations.StoryExpectations):
     self.DisableStory('browse:news:hackernews',
                       [expectations.ALL_WIN, expectations.ALL_MAC],
                       'crbug.com/676336')
-    self.DisableStory('browse:search:google', [expectations.ALL_WIN],
-                      'crbug.com/673775')
+    self.DisableStory('browse:search:google',
+                      [expectations.ALL_WIN],
+                      'win:crbug.com/673775, mac:crbug.com/756027')
     self.DisableStory('browse:tools:maps', [expectations.ALL],
                       'crbug.com/712694')
     self.DisableStory('browse:tools:earth', [expectations.ALL],
@@ -21,6 +22,8 @@ class SystemHealthDesktopCommonExpectations(expectations.StoryExpectations):
                       'crbug.com/649392')
     self.DisableStory('play:media:pandora', [expectations.ALL],
                       'crbug.com/64939')
+    self.DisableStory('browse:media:tumblr',
+                      [expectations.MAC_10_11], 'crbug.com/760966')
     self.DisableStory('browse:news:cnn',
                       [expectations.ALL_MAC], 'crbug.com/728576')
 
@@ -44,6 +47,8 @@ class SystemHealthDesktopMemoryExpectations(expectations.StoryExpectations):
                       'crbug.com/649392')
     self.DisableStory('play:media:pandora', [expectations.ALL],
                       'crbug.com/64939')
+    self.DisableStory('browse:media:tumblr',
+                      [expectations.MAC_10_11], 'crbug.com/760966')
     self.DisableStory('browse:news:cnn',
                       [expectations.ALL_MAC], 'crbug.com/728576')
     self.DisableStory('browse:social:twitter_infinite_scroll',
@@ -54,18 +59,12 @@ class SystemHealthDesktopMemoryExpectations(expectations.StoryExpectations):
 
 class SystemHealthMobileCommonExpectations(expectations.StoryExpectations):
   def SetExpectations(self):
-    self.DisableStory('background:tools:gmail', [expectations.ALL_ANDROID],
-                      'crbug.com/723783')
     self.DisableStory('browse:shopping:flipkart', [expectations.ALL_ANDROID],
                       'crbug.com/708300')
     self.DisableStory('browse:news:globo', [expectations.ALL_ANDROID],
                       'crbug.com/714650')
     self.DisableStory('load:tools:gmail', [expectations.ALL_ANDROID],
                       'crbug.com/657433')
-    self.DisableStory('long_running:tools:gmail-background',
-                      [expectations.ALL_ANDROID], 'crbug.com/726301')
-    self.DisableStory('long_running:tools:gmail-foreground',
-                      [expectations.ALL_ANDROID], 'crbug.com/726301')
     self.DisableStory('browse:news:toi', [expectations.ALL_ANDROID],
                       'crbug.com/728081')
     self.DisableStory(
@@ -84,24 +83,20 @@ class SystemHealthMobileCommonExpectations(expectations.StoryExpectations):
     self.DisableStory('long_running:tools:gmail-background',
                       [expectations.ANDROID_WEBVIEW],
                       'Webview does not have tabs')
-    self.DisableStory('browse:social:pinterest_infinite_scroll',
-                      [expectations.ANDROID_WEBVIEW], 'crbug.com/728528')
+    self.DisableStory('browse:shopping:avito',
+                      [expectations.ANDROID_NEXUS6], 'crbug.com/736497')
 
 
 class SystemHealthMobileMemoryExpectations(expectations.StoryExpectations):
   def SetExpectations(self):
-    self.DisableStory('background:tools:gmail', [expectations.ALL_ANDROID],
-                      'crbug.com/723783')
+    self.DisableStory('long_running:tools:gmail-background',
+                      [expectations.ANDROID_ONE], 'crbug.com/764924')
     self.DisableStory('browse:shopping:flipkart', [expectations.ALL_ANDROID],
                       'crbug.com/708300')
     self.DisableStory('browse:news:globo', [expectations.ALL_ANDROID],
                       'crbug.com/714650')
     self.DisableStory('load:tools:gmail', [expectations.ALL_ANDROID],
                       'crbug.com/657433')
-    self.DisableStory('long_running:tools:gmail-background',
-                      [expectations.ALL_ANDROID], 'crbug.com/726301')
-    self.DisableStory('long_running:tools:gmail-foreground',
-                      [expectations.ALL_ANDROID], 'crbug.com/726301')
     self.DisableStory('browse:news:toi', [expectations.ALL_ANDROID],
                       'crbug.com/728081')
     self.DisableStory(
@@ -120,8 +115,6 @@ class SystemHealthMobileMemoryExpectations(expectations.StoryExpectations):
     self.DisableStory('long_running:tools:gmail-background',
                       [expectations.ANDROID_WEBVIEW],
                       'Webview does not have tabs')
-    self.DisableStory('browse:social:pinterest_infinite_scroll',
-                      [expectations.ANDROID_WEBVIEW], 'crbug.com/728528')
 
 
 # Should only include browse:*:* stories.
@@ -130,18 +123,23 @@ class V8BrowsingDesktopExpecations(expectations.StoryExpectations):
     self.DisableStory('browse:news:hackernews',
                       [expectations.ALL_WIN, expectations.ALL_MAC],
                       'crbug.com/676336')
-    self.DisableStory('browse:tools:maps', [expectations.ALL],
-                      'crbug.com/712694')
-    self.DisableStory('browse:tools:earth', [expectations.ALL],
-                      'crbug.com/708590')
+    self.DisableStory('browse:news:reddit', [expectations.ALL_DESKTOP],
+                      'crbug.com/759777')
     self.DisableStory('browse:news:cnn',
                       [expectations.ALL_MAC], 'crbug.com/728576')
+    self.DisableStory('browse:tools:earth', [expectations.ALL_DESKTOP],
+                      'crbug.com/708590')
+    self.DisableStory('browse:tools:maps', [expectations.ALL_DESKTOP],
+                      'crbug.com/712694')
+
 
 # Should only include browse:*:* stories.
 class V8BrowsingMobileExpecations(expectations.StoryExpectations):
   def SetExpectations(self):
     self.DisableStory('browse:shopping:flipkart', [expectations.ALL_ANDROID],
                       'crbug.com/708300')
+    self.DisableStory('browse:news:cnn', [expectations.ANDROID_NEXUS5X],
+                      'crbug.com/714650')
     self.DisableStory('browse:news:globo', [expectations.ALL_ANDROID],
                       'crbug.com/714650')
     self.DisableStory('browse:news:toi', [expectations.ALL_ANDROID],
@@ -154,10 +152,8 @@ class V8BrowsingMobileExpecations(expectations.StoryExpectations):
     self.DisableStory('browse:chrome:newtab',
                       [expectations.ANDROID_WEBVIEW],
                       'Webview does not have NTP')
-    self.DisableStory('browse:social:pinterest_infinite_scroll',
-                      [expectations.ANDROID_WEBVIEW], 'crbug.com/728528')
 
 
 class SystemHealthWebviewStartupExpectations(expectations.StoryExpectations):
   def SetExpectations(self):
-    pass # Nothing is disabled at this time.
+    pass

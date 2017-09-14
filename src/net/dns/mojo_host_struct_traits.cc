@@ -61,7 +61,7 @@ bool StructTraits<net::interfaces::HostResolverRequestInfoDataView,
   if (!data.ReadAddressFamily(&address_family))
     return false;
 
-  *out = base::MakeUnique<net::HostResolver::RequestInfo>(
+  *out = std::make_unique<net::HostResolver::RequestInfo>(
       net::HostPortPair(host.as_string(), data.port()));
   net::HostResolver::RequestInfo& request = **out;
   request.set_address_family(address_family);

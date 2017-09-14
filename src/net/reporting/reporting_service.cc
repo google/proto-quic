@@ -69,14 +69,14 @@ ReportingService::~ReportingService() {}
 std::unique_ptr<ReportingService> ReportingService::Create(
     const ReportingPolicy& policy,
     URLRequestContext* request_context) {
-  return base::MakeUnique<ReportingServiceImpl>(
+  return std::make_unique<ReportingServiceImpl>(
       ReportingContext::Create(policy, request_context));
 }
 
 // static
 std::unique_ptr<ReportingService> ReportingService::CreateForTesting(
     std::unique_ptr<ReportingContext> reporting_context) {
-  return base::MakeUnique<ReportingServiceImpl>(std::move(reporting_context));
+  return std::make_unique<ReportingServiceImpl>(std::move(reporting_context));
 }
 
 }  // namespace net

@@ -119,7 +119,7 @@ TEST_F(MemoryDumpSchedulerTest, MultipleTriggers) {
 }
 
 TEST_F(MemoryDumpSchedulerTest, StartStopQuickly) {
-  const uint32_t kPeriodMs = 1;
+  const uint32_t kPeriodMs = 3;
   const uint32_t kQuickIterations = 5;
   const uint32_t kDetailedTicks = 10;
 

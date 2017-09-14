@@ -50,6 +50,16 @@ enum NetworkQualityObservationSource {
   NETWORK_QUALITY_OBSERVATION_SOURCE_MAX,
 };
 
+namespace nqe {
+
+namespace internal {
+// Returns the string equivalent of |source|.
+const char* GetNameForObservationSource(NetworkQualityObservationSource source);
+
+}  // namespace internal
+
+}  // namespace nqe
+
 }  // namespace net
 
 #endif  // NET_NQE_NETWORK_QUALITY_OBSERVATION_SOURCE_H_

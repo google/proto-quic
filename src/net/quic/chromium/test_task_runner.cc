@@ -17,7 +17,7 @@ TestTaskRunner::TestTaskRunner(MockClock* clock) : clock_(clock) {}
 
 TestTaskRunner::~TestTaskRunner() {}
 
-bool TestTaskRunner::PostDelayedTask(const tracked_objects::Location& from_here,
+bool TestTaskRunner::PostDelayedTask(const base::Location& from_here,
                                      base::OnceClosure task,
                                      base::TimeDelta delay) {
   EXPECT_GE(delay, base::TimeDelta());

@@ -10,16 +10,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <deque>
 #include <map>
 #include <memory>
-#include <queue>
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "base/callback_forward.h"
+#include "base/containers/circular_deque.h"
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
@@ -39,7 +38,6 @@ class HistogramBase;
 namespace net {
 
 class ChannelIDService;
-class CookieMonsterDelegate;
 
 // The cookie monster is the system for storing and retrieving cookies. It has
 // an in-memory list of all cookies, and synchronizes non-session cookies to an
@@ -131,20 +129,17 @@ class NET_EXPORT CookieMonster : public CookieStore {
   // class will take care of initializing it. The backing store is NOT owned by
   // this class, but it must remain valid for the duration of the cookie
   // monster's existence. If |store| is NULL, then no backing store will be
-  // updated. If |delegate| is non-NULL, it will be notified on
-  // creation/deletion of cookies.
-  CookieMonster(PersistentCookieStore* store, CookieMonsterDelegate* delegate);
+  // updated.
+  explicit CookieMonster(PersistentCookieStore* store);
 
   // Like above, but includes a non-owning pointer |channel_id_service| for the
   // corresponding ChannelIDService used with this CookieStore. The
   // |channel_id_service| must outlive the CookieMonster.
   CookieMonster(PersistentCookieStore* store,
-                CookieMonsterDelegate* delegate,
                 ChannelIDService* channel_id_service);
 
   // Only used during unit testing.
   CookieMonster(PersistentCookieStore* store,
-                CookieMonsterDelegate* delegate,
                 base::TimeDelta last_access_threshold);
 
   ~CookieMonster() override;
@@ -226,6 +221,9 @@ class NET_EXPORT CookieMonster : public CookieStore {
       const std::string& name,
       const CookieChangedCallback& callback) override;
 
+  std::unique_ptr<CookieChangedSubscription> AddCallbackForAllChanges(
+      const CookieChangedCallback& callback) override;
+
   bool IsEphemeral() override;
 
   void SetCookieWithCreationTimeForTesting(const GURL& url,
@@ -235,7 +233,6 @@ class NET_EXPORT CookieMonster : public CookieStore {
 
  private:
   CookieMonster(PersistentCookieStore* store,
-                CookieMonsterDelegate* delegate,
                 ChannelIDService* channel_id_service,
                 base::TimeDelta last_access_threshold);
 
@@ -654,8 +651,10 @@ class NET_EXPORT CookieMonster : public CookieStore {
   void DoCookieCallbackForURL(base::OnceClosure callback, const GURL& url);
 
   // Run all cookie changed callbacks that are monitoring |cookie|.
-  // |removed| is true if the cookie was deleted.
+  // |notify_global_hooks| is true if the function should run the
+  // global hooks in addition to the per-cookie hooks.
   void RunCookieChangedCallbacks(const CanonicalCookie& cookie,
+                                 bool notify_global_hooks,
                                  CookieStore::ChangeCause cause);
 
   // Histogram variables; see CookieMonster::InitializeHistograms() in
@@ -685,11 +684,12 @@ class NET_EXPORT CookieMonster : public CookieStore {
   // Map of domain keys to their associated task queues. These tasks are blocked
   // until all cookies for the associated domain key eTLD+1 are loaded from the
   // backend store.
-  std::map<std::string, std::deque<base::OnceClosure>> tasks_pending_for_key_;
+  std::map<std::string, base::circular_deque<base::OnceClosure>>
+      tasks_pending_for_key_;
 
   // Queues tasks that are blocked until all cookies are loaded from the backend
   // store.
-  std::deque<base::OnceClosure> tasks_pending_;
+  base::circular_deque<base::OnceClosure> tasks_pending_;
 
   // Once a global cookie task has been seen, all per-key tasks must be put in
   // |tasks_pending_| instead of |tasks_pending_for_key_| to ensure a reasonable
@@ -725,7 +725,6 @@ class NET_EXPORT CookieMonster : public CookieStore {
 
   std::vector<std::string> cookieable_schemes_;
 
-  scoped_refptr<CookieMonsterDelegate> delegate_;
   ChannelIDService* channel_id_service_;
 
   base::Time last_statistic_record_time_;
@@ -736,35 +735,13 @@ class NET_EXPORT CookieMonster : public CookieStore {
       std::map<std::pair<GURL, std::string>,
                std::unique_ptr<CookieChangedCallbackList>>;
   CookieChangedHookMap hook_map_;
+  std::unique_ptr<CookieChangedCallbackList> global_hook_map_;
 
   base::ThreadChecker thread_checker_;
 
   base::WeakPtrFactory<CookieMonster> weak_ptr_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(CookieMonster);
-};
-
-class NET_EXPORT CookieMonsterDelegate
-    : public base::RefCountedThreadSafe<CookieMonsterDelegate> {
- public:
-  // Will be called when a cookie is added or removed. The function is passed
-  // the respective |cookie| which was added to or removed from the cookies.
-  // If |removed| is true, the cookie was deleted, and |cause| will be set
-  // to the reason for its removal. If |removed| is false, the cookie was
-  // added, and |cause| will be set to ChangeCause::EXPLICIT.
-  //
-  // As a special case, note that updating a cookie's properties is implemented
-  // as a two step process: the cookie to be updated is first removed entirely,
-  // generating a notification with cause ChangeCause::OVERWRITE.  Afterwards,
-  // a new cookie is written with the updated values, generating a notification
-  // with cause ChangeCause::EXPLICIT.
-  virtual void OnCookieChanged(const CanonicalCookie& cookie,
-                               bool removed,
-                               CookieStore::ChangeCause cause) = 0;
-
- protected:
-  friend class base::RefCountedThreadSafe<CookieMonsterDelegate>;
-  virtual ~CookieMonsterDelegate() {}
 };
 
 typedef base::RefCountedThreadSafe<CookieMonster::PersistentCookieStore>

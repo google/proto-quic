@@ -307,7 +307,7 @@ class MockPartitionStatsDumper : public PartitionStatsDumper {
 };
 
 // Any number of bytes that can be allocated with no trouble.
-const size_t kEasyAllocSize = 1024 * 1024;
+const size_t kEasyAllocSize = (1024 * 1024) & ~(kPageAllocationGranularity - 1);
 
 // Generate many random addresses to get a very large fraction of the platform
 // address space. This gives us an allocation size that is very likely to fail
@@ -332,15 +332,13 @@ size_t GetHugeMemoryAmount() {
 // can make a new reservation.
 TEST(PageAllocatorTest, AllocFailure) {
   // We can make a reservation.
-  EXPECT_TRUE(
-      base::ReserveAddressSpace(kEasyAllocSize, kPageAllocationGranularity));
+  EXPECT_TRUE(base::ReserveAddressSpace(kEasyAllocSize));
 
   // We can't make another reservation until we trigger an allocation failure.
-  EXPECT_FALSE(
-      base::ReserveAddressSpace(kEasyAllocSize, kPageAllocationGranularity));
+  EXPECT_FALSE(base::ReserveAddressSpace(kEasyAllocSize));
 
   size_t size = GetHugeMemoryAmount();
-  // Skip the test for sanitizers and platforms with ASLR turned
+  // Skip the test for sanitizers and platforms with ASLR turned off.
   if (size == 0)
     return;
 
@@ -349,32 +347,28 @@ TEST(PageAllocatorTest, AllocFailure) {
   if (result == nullptr) {
     // We triggered allocation failure. Our reservation should have been
     // released, and we should be able to make a new reservation.
-    EXPECT_TRUE(
-        base::ReserveAddressSpace(kEasyAllocSize, kPageAllocationGranularity));
+    EXPECT_TRUE(base::ReserveAddressSpace(kEasyAllocSize));
     base::ReleaseReservation();
     return;
   }
   // We couldn't fail. Make sure reservation is still there.
-  EXPECT_FALSE(
-      base::ReserveAddressSpace(kEasyAllocSize, kPageAllocationGranularity));
+  EXPECT_FALSE(base::ReserveAddressSpace(kEasyAllocSize));
 }
 
 // Test that reserving address space can fail.
 TEST(PageAllocatorTest, ReserveAddressSpace) {
   size_t size = GetHugeMemoryAmount();
-  // Skip the test for sanitizers and platforms with ASLR turned
+  // Skip the test for sanitizers and platforms with ASLR turned off.
   if (size == 0)
     return;
 
-  bool success = base::ReserveAddressSpace(size, kPageAllocationGranularity);
+  bool success = base::ReserveAddressSpace(size);
   if (!success) {
-    EXPECT_TRUE(
-        base::ReserveAddressSpace(kEasyAllocSize, kPageAllocationGranularity));
+    EXPECT_TRUE(base::ReserveAddressSpace(kEasyAllocSize));
     return;
   }
   // We couldn't fail. Make sure reservation is still there.
-  EXPECT_FALSE(
-      base::ReserveAddressSpace(kEasyAllocSize, kPageAllocationGranularity));
+  EXPECT_FALSE(base::ReserveAddressSpace(kEasyAllocSize));
 }
 
 // Check that the most basic of allocate / free pairs work.
@@ -1193,13 +1187,15 @@ TEST_F(PartitionAllocTest, MappingCollision) {
   // with the goal of tripping up alignment of the next mapping.
   map1 = AllocPages(pageBase - kPageAllocationGranularity,
                     kPageAllocationGranularity, kPageAllocationGranularity,
-                    PageAccessible);
+                    PageReadWrite);
   EXPECT_TRUE(map1);
   map2 = AllocPages(pageBase + kSuperPageSize, kPageAllocationGranularity,
-                    kPageAllocationGranularity, PageAccessible);
+                    kPageAllocationGranularity, PageReadWrite);
   EXPECT_TRUE(map2);
-  SetSystemPagesInaccessible(map1, kPageAllocationGranularity);
-  SetSystemPagesInaccessible(map2, kPageAllocationGranularity);
+  EXPECT_TRUE(
+      SetSystemPagesAccess(map1, kPageAllocationGranularity, PageInaccessible));
+  EXPECT_TRUE(
+      SetSystemPagesAccess(map2, kPageAllocationGranularity, PageInaccessible));
 
   PartitionPage* pageInThirdSuperPage = GetFullPage(kTestAllocSize);
   FreePages(map1, kPageAllocationGranularity);

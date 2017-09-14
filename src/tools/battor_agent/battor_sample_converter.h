@@ -33,6 +33,9 @@ class BattOrSampleConverter {
   BattOrSample ToSample(const RawBattOrSample& sample,
                         size_t sample_number) const;
 
+  // Converts a raw sample to watts.
+  float ToWatts(const RawBattOrSample& sample) const;
+
   // Returns the lowest magnitude sample that the BattOr can collect.
   BattOrSample MinSample() const;
 

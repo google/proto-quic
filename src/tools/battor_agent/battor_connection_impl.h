@@ -6,14 +6,17 @@
 #define TOOLS_BATTOR_AGENT_BATTOR_CONNECTION_IMPL_H_
 
 #include <fstream>
+#include <memory>
 #include <vector>
 
 #include "base/callback_forward.h"
+#include "base/cancelable_callback.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
 #include "base/single_thread_task_runner.h"
-#include "device/serial/serial.mojom.h"
+#include "base/time/tick_clock.h"
+#include "services/device/public/interfaces/serial.mojom.h"
 #include "tools/battor_agent/battor_connection.h"
 #include "tools/battor_agent/battor_error.h"
 #include "tools/battor_agent/battor_protocol_types.h"
@@ -45,7 +48,6 @@ class BattOrConnectionImpl
                  size_t bytes_to_send) override;
   void ReadMessage(BattOrMessageType type) override;
   void CancelReadMessage() override;
-  void Flush() override;
 
  protected:
   // Overridden by the test to use a fake serial connection.
@@ -54,20 +56,34 @@ class BattOrConnectionImpl
   // IO handler capable of reading and writing from the serial connection.
   scoped_refptr<device::SerialIoHandler> io_handler_;
 
+  std::unique_ptr<base::TickClock> tick_clock_;
+
  private:
   void OnOpened(bool success);
 
   // Reads the specified number of additional bytes and adds them to the pending
   // read buffer.
-  void BeginReadBytes(size_t bytes_to_read);
+  void BeginReadBytesForMessage(size_t bytes_to_read);
 
   // Internal callback for when bytes are read. This method may trigger
   // additional reads if any newly read bytes are escape bytes.
-  void OnBytesRead(int bytes_read, device::mojom::SerialReceiveError error);
+  void OnBytesReadForMessage(int bytes_read,
+                             device::mojom::SerialReceiveError error);
 
-  void EndReadBytes(bool success,
-                    BattOrMessageType type,
-                    std::unique_ptr<std::vector<char>> data);
+  void EndReadBytesForMessage(bool success,
+                              BattOrMessageType type,
+                              std::unique_ptr<std::vector<char>> data);
+
+  // Flushes the serial connection to the BattOr, reading and throwing away
+  // bytes from the serial connection until the connection is quiet for a
+  // sufficiently long time. This also discards any trailing bytes from past
+  // successful reads.
+  void Flush();
+
+  void BeginReadBytesForFlush();
+  void OnBytesReadForFlush(int bytes_read,
+                           device::mojom::SerialReceiveError error);
+  void SetTimeout(base::TimeDelta timeout);
 
   // Pulls off the next complete message from already_read_buffer_, returning
   // its type and contents through out parameters and any error that occurred
@@ -102,6 +118,13 @@ class BattOrConnectionImpl
 
   // The total number of bytes that we're expecting to send.
   size_t pending_write_length_;
+
+  // The start of the period over which no bytes must be read from the serial
+  // connection in order for Flush() to be considered complete.
+  base::TimeTicks flush_quiet_period_start_;
+
+  // The timeout for the current action.
+  base::CancelableClosure timeout_callback_;
 
   // Threads needed for serial communication.
   scoped_refptr<base::SingleThreadTaskRunner> ui_thread_task_runner_;

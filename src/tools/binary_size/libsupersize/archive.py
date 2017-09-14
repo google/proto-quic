@@ -678,7 +678,9 @@ def Run(args, parser):
     if not os.path.exists(map_path):
       map_path += '.gz'
     if not os.path.exists(map_path):
-      parser.error('Could not find .map(.gz)? file. Use --map-file.')
+      parser.error('Could not find .map(.gz)? file. Ensure you have built with '
+                   'is_official_build=true, or use --map-file to point me a '
+                   'linker map file.')
 
   tool_prefix = lazy_paths.VerifyToolPrefix()
   output_directory = None

@@ -230,7 +230,12 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "integrity": "high"
+            }
+          ]
         },
         "test": "installer_util_unittests"
       },
@@ -363,7 +368,12 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "integrity": "high"
+            }
+          ]
         },
         "test": "sbox_integration_tests"
       },
@@ -393,7 +403,12 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "integrity": "high"
+            }
+          ]
         },
         "test": "setup_unittests"
       },
@@ -789,7 +804,12 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "integrity": "high"
+            }
+          ]
         },
         "test": "installer_util_unittests"
       },
@@ -915,7 +935,12 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "integrity": "high"
+            }
+          ]
         },
         "test": "sbox_integration_tests"
       },
@@ -932,6 +957,9 @@
         "test": "sbox_validation_tests"
       },
       {
+        "args": [
+          "--test-launcher-filter-file=../../testing/buildbot/filters/win10.services_unittests.filter"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -939,7 +967,12 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "integrity": "high"
+            }
+          ]
         },
         "test": "setup_unittests"
       },
@@ -1011,19 +1044,7 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "viz_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
         "test": "wm_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "zucchini_unittests"
       }
     ]
   },
@@ -1050,7 +1071,12 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "integrity": "high"
+            }
+          ]
         },
         "test": "sbox_integration_tests"
       },
@@ -1317,7 +1343,12 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "integrity": "high"
+            }
+          ]
         },
         "test": "installer_util_unittests"
       },
@@ -1450,7 +1481,12 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "integrity": "high"
+            }
+          ]
         },
         "test": "sbox_integration_tests"
       },
@@ -1480,7 +1516,12 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "integrity": "high"
+            }
+          ]
         },
         "test": "setup_unittests"
       },
@@ -1600,6 +1641,19 @@
           "can_use_on_swarming_builders": true,
           "shards": 2
         }
+      },
+      {
+        "isolate_name": "webkit_python_tests",
+        "name": "webkit_python_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        }
+      }
+    ],
+    "scripts": [
+      {
+        "name": "webkit_lint",
+        "script": "webkit_lint.py"
       }
     ]
   },
@@ -1805,7 +1859,12 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "integrity": "high"
+            }
+          ]
         },
         "test": "installer_util_unittests"
       },
@@ -1926,7 +1985,12 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "integrity": "high"
+            }
+          ]
         },
         "test": "sbox_integration_tests"
       },
@@ -1950,7 +2014,12 @@
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "integrity": "high"
+            }
+          ]
         },
         "test": "setup_unittests"
       },

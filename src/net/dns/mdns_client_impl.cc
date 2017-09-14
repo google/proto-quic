@@ -5,7 +5,6 @@
 #include "net/dns/mdns_client_impl.h"
 
 #include <algorithm>
-#include <queue>
 #include <utility>
 
 #include "base/bind.h"
@@ -49,8 +48,8 @@ void MDnsSocketFactoryImpl::CreateSockets(
   for (size_t i = 0; i < interfaces.size(); ++i) {
     DCHECK(interfaces[i].second == ADDRESS_FAMILY_IPV4 ||
            interfaces[i].second == ADDRESS_FAMILY_IPV6);
-    std::unique_ptr<DatagramServerSocket> socket(
-        CreateAndBindMDnsSocket(interfaces[i].second, interfaces[i].first));
+    std::unique_ptr<DatagramServerSocket> socket(CreateAndBindMDnsSocket(
+        interfaces[i].second, interfaces[i].first, nullptr));
     if (socket)
       sockets->push_back(std::move(socket));
   }
@@ -351,7 +350,7 @@ void MDnsClientImpl::Core::AddListener(
       listeners_[key];
 
   if (!observer_list)
-    observer_list = base::MakeUnique<base::ObserverList<MDnsListenerImpl>>();
+    observer_list = std::make_unique<base::ObserverList<MDnsListenerImpl>>();
 
   observer_list->AddObserver(listener);
 }

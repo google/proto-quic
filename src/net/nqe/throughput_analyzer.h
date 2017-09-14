@@ -77,12 +77,6 @@ class NET_EXPORT_PRIVATE ThroughputAnalyzer {
   // quality estimation.
   void SetUseLocalHostRequestsForTesting(bool use_localhost_requests);
 
-  // |use_smaller_responses_for_tests| should only be true when testing, and
-  // allows the responses smaller than |kMinTransferSizeInBits| or shorter than
-  // |kMinRequestDurationMicroseconds| to be used for network quality
-  // estimation.
-  void SetUseSmallResponsesForTesting(bool use_small_responses);
-
   // Returns true if throughput is currently tracked by a throughput
   // observation window.
   bool IsCurrentlyTrackingThroughput() const;
@@ -170,11 +164,6 @@ class NET_EXPORT_PRIVATE ThroughputAnalyzer {
   // Determines if the requests to local host can be used in estimating the
   // network quality. Set to true only for tests.
   bool use_localhost_requests_for_tests_;
-
-  // Determines if the responses smaller than |kMinTransferSizeInBits|
-  // or shorter than |kMinTransferSizeInBits| can be used in estimating the
-  // network quality. Set to true only for tests.
-  bool use_small_responses_for_tests_;
 
   base::ThreadChecker thread_checker_;
 

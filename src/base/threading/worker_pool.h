@@ -9,12 +9,9 @@
 #include "base/callback.h"
 #include "base/memory/ref_counted.h"
 
-namespace tracked_objects {
-class Location;
-}  // namespace tracked_objects
-
 namespace base {
 
+class Location;
 class TaskRunner;
 
 // This is a facility that runs tasks that don't require a specific thread or
@@ -31,14 +28,14 @@ class BASE_EXPORT WorkerPool {
   // should be used for tasks that will take a long time to execute.  Returns
   // false if |task| could not be posted to a worker thread.  Regardless of
   // return value, ownership of |task| is transferred to the worker pool.
-  static bool PostTask(const tracked_objects::Location& from_here,
+  static bool PostTask(const Location& from_here,
                        OnceClosure task,
                        bool task_is_slow);
 
   // Just like TaskRunner::PostTaskAndReply, except the destination
   // for |task| is a worker thread and you can specify |task_is_slow| just
   // like you can for PostTask above.
-  static bool PostTaskAndReply(const tracked_objects::Location& from_here,
+  static bool PostTaskAndReply(const Location& from_here,
                                OnceClosure task,
                                OnceClosure reply,
                                bool task_is_slow);

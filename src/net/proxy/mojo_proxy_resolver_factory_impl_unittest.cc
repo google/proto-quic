@@ -99,7 +99,7 @@ class MojoProxyResolverFactoryImplTest
  public:
   void SetUp() override {
     mock_factory_ = new TestProxyResolverFactory(&waiter_);
-    mojo::MakeStrongBinding(base::MakeUnique<MojoProxyResolverFactoryImpl>(
+    mojo::MakeStrongBinding(std::make_unique<MojoProxyResolverFactoryImpl>(
                                 base::WrapUnique(mock_factory_)),
                             mojo::MakeRequest(&factory_));
   }

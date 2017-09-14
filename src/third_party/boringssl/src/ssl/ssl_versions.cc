@@ -36,12 +36,14 @@ int ssl_protocol_version_from_wire(uint16_t *out, uint16_t version) {
 
     case TLS1_3_DRAFT_VERSION:
     case TLS1_3_EXPERIMENT_VERSION:
+    case TLS1_3_EXPERIMENT2_VERSION:
+    case TLS1_3_EXPERIMENT3_VERSION:
     case TLS1_3_RECORD_TYPE_EXPERIMENT_VERSION:
       *out = TLS1_3_VERSION;
       return 1;
 
     case DTLS1_VERSION:
-      /* DTLS 1.0 is analogous to TLS 1.1, not TLS 1.0. */
+      // DTLS 1.0 is analogous to TLS 1.1, not TLS 1.0.
       *out = TLS1_1_VERSION;
       return 1;
 
@@ -54,10 +56,12 @@ int ssl_protocol_version_from_wire(uint16_t *out, uint16_t version) {
   }
 }
 
-/* The follow arrays are the supported versions for TLS and DTLS, in order of
- * decreasing preference. */
+// The follow arrays are the supported versions for TLS and DTLS, in order of
+// decreasing preference.
 
 static const uint16_t kTLSVersions[] = {
+    TLS1_3_EXPERIMENT3_VERSION,
+    TLS1_3_EXPERIMENT2_VERSION,
     TLS1_3_EXPERIMENT_VERSION,
     TLS1_3_RECORD_TYPE_EXPERIMENT_VERSION,
     TLS1_3_DRAFT_VERSION,
@@ -98,11 +102,13 @@ static int method_supports_version(const SSL_PROTOCOL_METHOD *method,
 
 static int set_version_bound(const SSL_PROTOCOL_METHOD *method, uint16_t *out,
                              uint16_t version) {
-  /* The public API uses wire versions, except we use |TLS1_3_VERSION|
-   * everywhere to refer to any draft TLS 1.3 versions. In this direction, we
-   * map it to some representative TLS 1.3 draft version. */
+  // The public API uses wire versions, except we use |TLS1_3_VERSION|
+  // everywhere to refer to any draft TLS 1.3 versions. In this direction, we
+  // map it to some representative TLS 1.3 draft version.
   if (version == TLS1_3_DRAFT_VERSION ||
       version == TLS1_3_EXPERIMENT_VERSION ||
+      version == TLS1_3_EXPERIMENT2_VERSION ||
+      version == TLS1_3_EXPERIMENT3_VERSION ||
       version == TLS1_3_RECORD_TYPE_EXPERIMENT_VERSION) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_UNKNOWN_SSL_VERSION);
     return 0;
@@ -122,9 +128,9 @@ static int set_version_bound(const SSL_PROTOCOL_METHOD *method, uint16_t *out,
 
 static int set_min_version(const SSL_PROTOCOL_METHOD *method, uint16_t *out,
                            uint16_t version) {
-  /* Zero is interpreted as the default minimum version. */
+  // Zero is interpreted as the default minimum version.
   if (version == 0) {
-    /* SSL 3.0 is disabled by default and TLS 1.0 does not exist in DTLS. */
+    // SSL 3.0 is disabled by default and TLS 1.0 does not exist in DTLS.
     *out = method->is_dtls ? TLS1_1_VERSION : TLS1_VERSION;
     return 1;
   }
@@ -134,7 +140,7 @@ static int set_min_version(const SSL_PROTOCOL_METHOD *method, uint16_t *out,
 
 static int set_max_version(const SSL_PROTOCOL_METHOD *method, uint16_t *out,
                            uint16_t version) {
-  /* Zero is interpreted as the default maximum version. */
+  // Zero is interpreted as the default maximum version.
   if (version == 0) {
     *out = TLS1_2_VERSION;
     return 1;
@@ -156,8 +162,8 @@ const struct {
 
 int ssl_get_version_range(const SSL *ssl, uint16_t *out_min_version,
                           uint16_t *out_max_version) {
-  /* For historical reasons, |SSL_OP_NO_DTLSv1| aliases |SSL_OP_NO_TLSv1|, but
-   * DTLS 1.0 should be mapped to TLS 1.1. */
+  // For historical reasons, |SSL_OP_NO_DTLSv1| aliases |SSL_OP_NO_TLSv1|, but
+  // DTLS 1.0 should be mapped to TLS 1.1.
   uint32_t options = ssl->options;
   if (SSL_is_dtls(ssl)) {
     options &= ~SSL_OP_NO_TLSv1_1;
@@ -169,19 +175,19 @@ int ssl_get_version_range(const SSL *ssl, uint16_t *out_min_version,
   uint16_t min_version = ssl->conf_min_version;
   uint16_t max_version = ssl->conf_max_version;
 
-  /* OpenSSL's API for controlling versions entails blacklisting individual
-   * protocols. This has two problems. First, on the client, the protocol can
-   * only express a contiguous range of versions. Second, a library consumer
-   * trying to set a maximum version cannot disable protocol versions that get
-   * added in a future version of the library.
-   *
-   * To account for both of these, OpenSSL interprets the client-side bitmask
-   * as a min/max range by picking the lowest contiguous non-empty range of
-   * enabled protocols. Note that this means it is impossible to set a maximum
-   * version of the higest supported TLS version in a future-proof way. */
+  // OpenSSL's API for controlling versions entails blacklisting individual
+  // protocols. This has two problems. First, on the client, the protocol can
+  // only express a contiguous range of versions. Second, a library consumer
+  // trying to set a maximum version cannot disable protocol versions that get
+  // added in a future version of the library.
+  //
+  // To account for both of these, OpenSSL interprets the client-side bitmask
+  // as a min/max range by picking the lowest contiguous non-empty range of
+  // enabled protocols. Note that this means it is impossible to set a maximum
+  // version of the higest supported TLS version in a future-proof way.
   int any_enabled = 0;
   for (size_t i = 0; i < OPENSSL_ARRAY_SIZE(kProtocolVersions); i++) {
-    /* Only look at the versions already enabled. */
+    // Only look at the versions already enabled.
     if (min_version > kProtocolVersions[i].version) {
       continue;
     }
@@ -190,7 +196,7 @@ int ssl_get_version_range(const SSL *ssl, uint16_t *out_min_version,
     }
 
     if (!(options & kProtocolVersions[i].flag)) {
-      /* The minimum version is the first enabled version. */
+      // The minimum version is the first enabled version.
       if (!any_enabled) {
         any_enabled = 1;
         min_version = kProtocolVersions[i].version;
@@ -198,8 +204,8 @@ int ssl_get_version_range(const SSL *ssl, uint16_t *out_min_version,
       continue;
     }
 
-    /* If there is a disabled version after the first enabled one, all versions
-     * after it are implicitly disabled. */
+    // If there is a disabled version after the first enabled one, all versions
+    // after it are implicitly disabled.
     if (any_enabled) {
       max_version = kProtocolVersions[i-1].version;
       break;
@@ -217,7 +223,7 @@ int ssl_get_version_range(const SSL *ssl, uint16_t *out_min_version,
 }
 
 static uint16_t ssl_version(const SSL *ssl) {
-  /* In early data, we report the predicted version. */
+  // In early data, we report the predicted version.
   if (SSL_in_early_data(ssl) && !ssl->server) {
     return ssl->s3->hs->early_session->ssl_version;
   }
@@ -226,9 +232,11 @@ static uint16_t ssl_version(const SSL *ssl) {
 
 static const char *ssl_version_to_string(uint16_t version) {
   switch (version) {
-    /* Report TLS 1.3 draft version as TLS 1.3 in the public API. */
+    // Report TLS 1.3 draft version as TLS 1.3 in the public API.
     case TLS1_3_DRAFT_VERSION:
     case TLS1_3_EXPERIMENT_VERSION:
+    case TLS1_3_EXPERIMENT2_VERSION:
+    case TLS1_3_EXPERIMENT3_VERSION:
     case TLS1_3_RECORD_TYPE_EXPERIMENT_VERSION:
       return "TLSv1.3";
 
@@ -259,7 +267,7 @@ uint16_t ssl3_protocol_version(const SSL *ssl) {
   assert(ssl->s3->have_version);
   uint16_t version;
   if (!ssl_protocol_version_from_wire(&version, ssl->version)) {
-    /* |ssl->version| will always be set to a valid version. */
+    // |ssl->version| will always be set to a valid version.
     assert(0);
     return 0;
   }
@@ -269,12 +277,14 @@ uint16_t ssl3_protocol_version(const SSL *ssl) {
 
 int ssl_supports_version(SSL_HANDSHAKE *hs, uint16_t version) {
   SSL *const ssl = hs->ssl;
-  /* As a client, only allow the configured TLS 1.3 variant. As a server,
-   * support all TLS 1.3 variants as long as tls13_variant is set to a
-   * non-default value. */
+  // As a client, only allow the configured TLS 1.3 variant. As a server,
+  // support all TLS 1.3 variants as long as tls13_variant is set to a
+  // non-default value.
   if (ssl->server) {
     if (ssl->tls13_variant == tls13_default &&
         (version == TLS1_3_EXPERIMENT_VERSION ||
+         version == TLS1_3_EXPERIMENT2_VERSION ||
+         version == TLS1_3_EXPERIMENT3_VERSION ||
          version == TLS1_3_RECORD_TYPE_EXPERIMENT_VERSION)) {
       return 0;
     }
@@ -282,6 +292,10 @@ int ssl_supports_version(SSL_HANDSHAKE *hs, uint16_t version) {
     if ((ssl->tls13_variant != tls13_experiment &&
          ssl->tls13_variant != tls13_no_session_id_experiment &&
          version == TLS1_3_EXPERIMENT_VERSION) ||
+        (ssl->tls13_variant != tls13_experiment2 &&
+         version == TLS1_3_EXPERIMENT2_VERSION) ||
+        (ssl->tls13_variant != tls13_experiment3 &&
+         version == TLS1_3_EXPERIMENT3_VERSION) ||
         (ssl->tls13_variant != tls13_record_type_experiment &&
          version == TLS1_3_RECORD_TYPE_EXPERIMENT_VERSION) ||
         (ssl->tls13_variant != tls13_default &&
@@ -341,6 +355,27 @@ int ssl_negotiate_version(SSL_HANDSHAKE *hs, uint8_t *out_alert,
   return 0;
 }
 
+bool ssl_is_resumption_experiment(uint16_t version) {
+  return version == TLS1_3_EXPERIMENT_VERSION ||
+         version == TLS1_3_EXPERIMENT2_VERSION ||
+         version == TLS1_3_EXPERIMENT3_VERSION;
+}
+
+bool ssl_is_resumption_variant(enum tls13_variant_t variant) {
+  return variant == tls13_experiment || variant == tls13_experiment2 ||
+         variant == tls13_experiment3;
+}
+
+bool ssl_is_resumption_client_ccs_experiment(uint16_t version) {
+  return version == TLS1_3_EXPERIMENT_VERSION ||
+         version == TLS1_3_EXPERIMENT2_VERSION;
+}
+
+bool ssl_is_resumption_record_version_experiment(uint16_t version) {
+  return version == TLS1_3_EXPERIMENT2_VERSION ||
+         version == TLS1_3_EXPERIMENT3_VERSION;
+}
+
 }  // namespace bssl
 
 using namespace bssl;
@@ -363,8 +398,11 @@ int SSL_set_max_proto_version(SSL *ssl, uint16_t version) {
 
 int SSL_version(const SSL *ssl) {
   uint16_t ret = ssl_version(ssl);
-  /* Report TLS 1.3 draft version as TLS 1.3 in the public API. */
-  if (ret == TLS1_3_DRAFT_VERSION || ret == TLS1_3_EXPERIMENT_VERSION ||
+  // Report TLS 1.3 draft version as TLS 1.3 in the public API.
+  if (ret == TLS1_3_DRAFT_VERSION ||
+      ret == TLS1_3_EXPERIMENT_VERSION ||
+      ret == TLS1_3_EXPERIMENT2_VERSION ||
+      ret == TLS1_3_EXPERIMENT3_VERSION ||
       ret == TLS1_3_RECORD_TYPE_EXPERIMENT_VERSION) {
     return TLS1_3_VERSION;
   }

@@ -1052,7 +1052,7 @@ TEST_F(WebSocketStreamCreateTest, NoResponse) {
 }
 
 TEST_F(WebSocketStreamCreateTest, SelfSignedCertificateFailure) {
-  ssl_data_.push_back(base::MakeUnique<SSLSocketDataProvider>(
+  ssl_data_.push_back(std::make_unique<SSLSocketDataProvider>(
       ASYNC, ERR_CERT_AUTHORITY_INVALID));
   ssl_data_[0]->cert =
       ImportCertFromFile(GetTestCertsDirectory(), "unittest.selfsigned.der");

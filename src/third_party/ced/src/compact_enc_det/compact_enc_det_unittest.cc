@@ -4828,17 +4828,27 @@ TEST_F(CompactEncDetTest, EasyTests) {
   TestUTF8UTF8(kTeststr63, UTF8, "UTF8UTF8");
 
   // Unicode and other embedded NUL bytes
-  EXPECT_EQ(UTF16LE,
+  Encoding encoding_UTF16LE;
+  Encoding encoding_UTF16BE;
+#if defined(HTML5_MODE)
+    encoding_UTF16LE = ASCII_7BIT;
+    encoding_UTF16BE = ASCII_7BIT;
+#else
+    encoding_UTF16LE = UTF16LE;
+    encoding_UTF16BE = UTF16BE;
+#endif
+
+  EXPECT_EQ(encoding_UTF16LE,
             TestCompactEncDet(kTeststr57, sizeof(kTeststr57), "UTF16LE"));
-  EXPECT_EQ(UTF16LE,
+  EXPECT_EQ(encoding_UTF16LE,
             TestCompactEncDet(kUTF16LEChomsky,
                               sizeof(kUTF16LEChomsky),
                               "UTF16LE"));
-  EXPECT_EQ(UTF16LE,
+  EXPECT_EQ(encoding_UTF16LE,
             TestCompactEncDet(kUTF16LEFltrs,
                               sizeof(kUTF16LEFltrs),
                               "UTF16LE"));
-  EXPECT_EQ(UTF16BE,
+  EXPECT_EQ(encoding_UTF16BE,
             TestCompactEncDet(kTeststr58, sizeof(kTeststr58), "UTF16BE"));
   EXPECT_EQ(UTF32LE,
             TestCompactEncDet(kTeststr59, sizeof(kTeststr59), "UTF32LE"));

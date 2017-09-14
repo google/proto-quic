@@ -171,6 +171,21 @@ class FakeProofSource : public ProofSource {
     callback->Run(success_, chain, proof, nullptr /* details */);
   }
 
+  QuicReferenceCountedPointer<Chain> GetCertChain(
+      const QuicSocketAddress& server_address,
+      const string& hostname) override {
+    return QuicReferenceCountedPointer<Chain>();
+  }
+
+  void ComputeTlsSignature(
+      const QuicSocketAddress& server_address,
+      const string& hostname,
+      uint16_t signature_algorithm,
+      QuicStringPiece in,
+      std::unique_ptr<SignatureCallback> callback) override {
+    callback->Run(true, "Signature");
+  }
+
  private:
   // Whether or not obtaining proof source succeeds.
   bool success_;

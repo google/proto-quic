@@ -83,7 +83,7 @@ class OneShotTimerTesterBase {
     }
   }
 
-  std::unique_ptr<OneShotTimer> timer_ = MakeUnique<OneShotTimer>();
+  std::unique_ptr<OneShotTimer> timer_ = std::make_unique<OneShotTimer>();
 
  private:
   WaitableEvent* const did_run_;

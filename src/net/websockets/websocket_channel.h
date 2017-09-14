@@ -8,12 +8,12 @@
 #include <stdint.h>
 
 #include <memory>
-#include <queue>
 #include <string>
 #include <vector>
 
 #include "base/callback.h"
 #include "base/compiler_specific.h"  // for WARN_UNUSED_RESULT
+#include "base/containers/queue.h"
 #include "base/i18n/streaming_utf8_validator.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
@@ -154,43 +154,7 @@ class NET_EXPORT WebSocketChannel {
 
  private:
   class HandshakeNotificationSender;
-
-  // The Windows implementation of std::queue requires that this declaration be
-  // visible in the header.
-  class PendingReceivedFrame {
-   public:
-    PendingReceivedFrame(bool final,
-                         WebSocketFrameHeader::OpCode opcode,
-                         scoped_refptr<IOBuffer> data,
-                         uint64_t offset,
-                         uint64_t size);
-    PendingReceivedFrame(const PendingReceivedFrame& other);
-    ~PendingReceivedFrame();
-
-    bool final() const { return final_; }
-    WebSocketFrameHeader::OpCode opcode() const { return opcode_; }
-    // ResetOpcode() to Continuation.
-    void ResetOpcode();
-    const scoped_refptr<IOBuffer>& data() const { return data_; }
-    uint64_t offset() const { return offset_; }
-    uint64_t size() const { return size_; }
-    // Increase |offset_| by |bytes|.
-    void DidConsume(uint64_t bytes);
-
-    // This object needs to be copyable and assignable, since it will be placed
-    // in a std::queue. The compiler-generated copy constructor and assignment
-    // operator will do the right thing.
-
-   private:
-    bool final_;
-    WebSocketFrameHeader::OpCode opcode_;
-    scoped_refptr<IOBuffer> data_;
-    // Where to start reading from data_. Everything prior to offset_ has
-    // already been sent to the browser.
-    uint64_t offset_;
-    // The size of data_.
-    uint64_t size_;
-  };
+  class PendingReceivedFrame;
 
   // The object passes through a linear progression of states from
   // FRESHLY_CONSTRUCTED to CLOSED, except that the SEND_CLOSED and RECV_CLOSED
@@ -390,7 +354,7 @@ class NET_EXPORT WebSocketChannel {
 
   // Frames that have been read but not yet forwarded to the renderer due to
   // lack of quota.
-  std::queue<PendingReceivedFrame> pending_received_frames_;
+  base::queue<PendingReceivedFrame> pending_received_frames_;
 
   // Handle to an in-progress WebSocketStream creation request. Only non-NULL
   // during the connection process.

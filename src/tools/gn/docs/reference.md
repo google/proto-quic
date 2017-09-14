@@ -215,7 +215,7 @@
   tries really hard to always write something to the output JSON and convey
   errors that way rather than via return codes.
 ```
-### <a name="args"></a>**gn args <out_dir> [\--list] [\--short] [\--args]**
+### <a name="args"></a>**gn args <out_dir> [\--list] [\--short] [\--args] [\--overrides-only]**
 
 ```
   See also "gn help buildargs" for a more high-level overview of how
@@ -240,7 +240,7 @@
       Note: you can edit the build args manually by editing the file "args.gn"
       in the build directory and then running "gn gen <out_dir>".
 
-  gn args <out_dir> --list[=<exact_arg>] [--short]
+  gn args <out_dir> --list[=<exact_arg>] [--short] [--overrides-only]
       Lists all build arguments available in the current configuration, or, if
       an exact_arg is specified for the list flag, just that one build
       argument.
@@ -251,6 +251,10 @@
 
       If --short is specified, only the names and current values will be
       printed.
+
+      If --overrides-only is specified, only the names and current values of
+      arguments that have been overridden (i.e. non-default arguments) will
+      be printed. Overrides come from the <out_dir>/args.gn file and //.gn
 ```
 
 #### **Examples**
@@ -262,6 +266,9 @@
   gn args out/Debug --list --short
     Prints all arguments with their default values for the out/Debug
     build.
+
+  gn args out/Debug --list --short --overrides-only
+    Prints overridden arguments for the out/Debug build.
 
   gn args out/Debug --list=target_cpu
     Prints information about the "target_cpu" argument for the "
@@ -6090,13 +6097,6 @@
   itself).
 ```
 
-#### **Shared libraries**
-
-```
-  The results of shared_library targets are runtime dependencies, unless the
-  targets are depended upon only through action/action_foreach.
-```
-
 #### **Multiple outputs**
 
 ```
@@ -6242,3 +6242,4 @@
     *   [-v: Verbose logging.](#-v)
     *   [--version: Prints the GN version number and exits.](#--version)
 ```
+

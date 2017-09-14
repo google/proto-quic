@@ -9,7 +9,7 @@ declare_args() {
   use_goma = false
 
   # Set the default value based on the platform.
-  if (is_win) {
+  if (host_os == "win") {
     # Absolute directory containing the gomacc.exe binary.
     goma_dir = "C:\goma\goma-win64"
   } else {

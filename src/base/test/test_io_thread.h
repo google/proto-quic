@@ -38,8 +38,7 @@ class TestIOThread {
   void Stop();
 
   // Post |task| to the IO thread.
-  void PostTask(const tracked_objects::Location& from_here,
-                const base::Closure& task);
+  void PostTask(const Location& from_here, const base::Closure& task);
 
   base::MessageLoopForIO* message_loop() {
     return static_cast<base::MessageLoopForIO*>(io_thread_.message_loop());

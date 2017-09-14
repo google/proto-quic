@@ -331,6 +331,18 @@ def main():
 
   MaybeUpload(args, pdir, platform)
 
+  # Zip up llvm-code-coverage for code coverage.
+  code_coverage_dir = 'llvm-code-coverage-' + stamp
+  shutil.rmtree(code_coverage_dir, ignore_errors=True)
+  os.makedirs(os.path.join(code_coverage_dir, 'bin'))
+  for filename in ['llvm-cov', 'llvm-profdata']:
+    shutil.copy(os.path.join(LLVM_RELEASE_DIR, 'bin', filename + exe_ext),
+                os.path.join(code_coverage_dir, 'bin'))
+  with tarfile.open(code_coverage_dir + '.tgz', 'w:gz') as tar:
+    tar.add(os.path.join(code_coverage_dir, 'bin'), arcname='bin',
+            filter=PrintTarProgress)
+  MaybeUpload(args, code_coverage_dir, platform)
+
   # Zip up llvm-objdump for sanitizer coverage.
   objdumpdir = 'llvmobjdump-' + stamp
   shutil.rmtree(objdumpdir, ignore_errors=True)

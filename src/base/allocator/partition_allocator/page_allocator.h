@@ -34,78 +34,100 @@ static const size_t kSystemPageOffsetMask = kSystemPageSize - 1;
 static const size_t kSystemPageBaseMask = ~kSystemPageOffsetMask;
 
 enum PageAccessibilityConfiguration {
-  PageAccessible,
   PageInaccessible,
+  PageReadWrite,
+  PageReadExecute,
+  PageReadWriteExecute,
 };
 
 // Allocate one or more pages.
-// The requested address is just a hint; the actual address returned may
-// differ. The returned address will be aligned at least to align bytes.
-// len is in bytes, and must be a multiple of kPageAllocationGranularity.
-// align is in bytes, and must be a power-of-two multiple of
-// kPageAllocationGranularity.
-// If addr is null, then a suitable and randomized address will be chosen
+//
+// The requested |address| is just a hint; the actual address returned may
+// differ. The returned address will be aligned at least to |align| bytes.
+// |length| is in bytes, and must be a multiple of |kPageAllocationGranularity|.
+// |align| is in bytes, and must be a power-of-two multiple of
+// |kPageAllocationGranularity|.
+//
+// If |address| is null, then a suitable and randomized address will be chosen
 // automatically.
-// PageAccessibilityConfiguration controls the permission of the
-// allocated pages.
+//
+// |page_accessibility| controls the permission of the allocated pages.
+//
 // This call will return null if the allocation cannot be satisfied.
 BASE_EXPORT void* AllocPages(void* address,
-                             size_t len,
+                             size_t length,
                              size_t align,
-                             PageAccessibilityConfiguration);
+                             PageAccessibilityConfiguration page_accessibility,
+                             bool commit = true);
 
-// Free one or more pages.
-// addr and len must match a previous call to allocPages().
+// Free one or more pages starting at |address| and continuing for |length|
+// bytes.
+//
+// |address| and |length| must match a previous call to |AllocPages|. Therefore,
+// |address| must be aligned to |kPageAllocationGranularity| bytes, and |length|
+// must be a multiple of |kPageAllocationGranularity|.
 BASE_EXPORT void FreePages(void* address, size_t length);
 
-// Mark one or more system pages as being inaccessible.
-// Subsequently accessing any address in the range will fault, and the
-// addresses will not be re-used by future allocations.
-// len must be a multiple of kSystemPageSize bytes.
-BASE_EXPORT void SetSystemPagesInaccessible(void* address, size_t length);
+// Mark one or more system pages, starting at |address| with the given
+// |page_accessibility|. |length| must be a multiple of |kSystemPageSize| bytes.
+//
+// Returns true if the permission change succeeded. In most cases you must
+// |CHECK| the result.
+BASE_EXPORT WARN_UNUSED_RESULT bool SetSystemPagesAccess(
+    void* address,
+    size_t length,
+    PageAccessibilityConfiguration page_accessibility);
 
-// Mark one or more system pages as being accessible.
-// The pages will be readable and writeable.
-// len must be a multiple of kSystemPageSize bytes.
-// The result bool value indicates whether the permission
-// change succeeded or not. You must check the result
-// (in most cases you need to CHECK that it is true).
-BASE_EXPORT WARN_UNUSED_RESULT bool SetSystemPagesAccessible(void* address,
-                                                             size_t length);
-
-// Decommit one or more system pages. Decommitted means that the physical memory
-// is released to the system, but the virtual address space remains reserved.
-// System pages are re-committed by calling recommitSystemPages(). Touching
-// a decommitted page _may_ fault.
+// Decommit one or more system pages starting at |address| and continuing for
+// |length| bytes. |length| must be a multiple of |kSystemPageSize|.
+//
+// Decommitted means that the physical memory is released to the system, but the
+// virtual address space remains reserved. System pages are re-committed by
+// calling |RecommitSystemPages|. Touching a decommitted page _may_ fault.
+//
 // Clients should not make any assumptions about the contents of decommitted
 // system pages, before or after they write to the page. The only guarantee
 // provided is that the contents of the system page will be deterministic again
 // after recommitting and writing to it. In particlar note that system pages are
-// not guaranteed to be zero-filled upon re-commit. len must be a multiple of
-// kSystemPageSize bytes.
+// not guaranteed to be zero-filled upon re-commit.
 BASE_EXPORT void DecommitSystemPages(void* address, size_t length);
 
-// Recommit one or more system pages. Decommitted system pages must be
-// recommitted before they are read are written again.
-// Note that this operation may be a no-op on some platforms.
-// len must be a multiple of kSystemPageSize bytes.
-BASE_EXPORT void RecommitSystemPages(void* address, size_t length);
+// Recommit one or more system pages, starting at |address| and continuing for
+// |length| bytes with the given |page_accessibility|. |length| must be a
+// multiple of |kSystemPageSize|.
+//
+// Decommitted system pages must be recommitted with their original permissions
+// before they are used again. Note that this operation may be a no-op on some
+// platforms.
+//
+// Returns true if the recommit change succeeded. In most cases you must |CHECK|
+// the result.
+BASE_EXPORT WARN_UNUSED_RESULT bool RecommitSystemPages(
+    void* address,
+    size_t length,
+    PageAccessibilityConfiguration page_accessibility);
 
-// Discard one or more system pages. Discarding is a hint to the system that
-// the page is no longer required. The hint may:
-// - Do nothing.
-// - Discard the page immediately, freeing up physical pages.
-// - Discard the page at some time in the future in response to memory pressure.
-// Only committed pages should be discarded. Discarding a page does not
-// decommit it, and it is valid to discard an already-discarded page.
-// A read or write to a discarded page will not fault.
-// Reading from a discarded page may return the original page content, or a
-// page full of zeroes.
+// Discard one or more system pages starting at |address| and continuing for
+// |length| bytes. |length| must be a multiple of |kSystemPageSize|.
+//
+// Discarding is a hint to the system that the page is no longer required. The
+// hint may:
+//   - Do nothing.
+//   - Discard the page immediately, freeing up physical pages.
+//   - Discard the page at some time in the future in response to memory
+//   pressure.
+//
+// Only committed pages should be discarded. Discarding a page does not decommit
+// it, and it is valid to discard an already-discarded page. A read or write to
+// a discarded page will not fault.
+//
+// Reading from a discarded page may return the original page content, or a page
+// full of zeroes.
+//
 // Writing to a discarded page is the only guaranteed way to tell the system
 // that the page is required again. Once written to, the content of the page is
 // guaranteed stable once more. After being written to, the page content may be
 // based on the original page content, or a page of zeroes.
-// len must be a multiple of kSystemPageSize bytes.
 BASE_EXPORT void DiscardSystemPages(void* address, size_t length);
 
 ALWAYS_INLINE uintptr_t RoundUpToSystemPage(uintptr_t address) {
@@ -116,17 +138,18 @@ ALWAYS_INLINE uintptr_t RoundDownToSystemPage(uintptr_t address) {
   return address & kSystemPageBaseMask;
 }
 
-// Reserves address space equal to 'size' bytes, at the given alignment. This
-// can be used to make it more likely that large allocations will succeed.
-// Returns true if the reservation succeeded, false if the reservation failed
-// or a reservation was already made.
-BASE_EXPORT bool ReserveAddressSpace(size_t size, size_t alignment);
+// Reserves (at least) |size| bytes of address space, aligned to
+// |kPageAllocationGranularity|. This can be called early on to make it more
+// likely that large allocations will succeed. Returns true if the reservation
+// succeeded, false if the reservation failed or a reservation was already made.
+BASE_EXPORT bool ReserveAddressSpace(size_t size);
 
-// Releases any reserved address space. AllocPages calls this automatically on
+// Releases any reserved address space. |AllocPages| calls this automatically on
 // an allocation failure. External allocators may also call this on failure.
 BASE_EXPORT void ReleaseReservation();
 
-// Returns errno (or GetLastError code) when mmap (or VirtualAlloc) fails.
+// Returns |errno| (POSIX) or the result of |GetLastError| (Windows) when |mmap|
+// (POSIX) or |VirtualAlloc| (Windows) fails.
 BASE_EXPORT uint32_t GetAllocPageErrorCode();
 
 }  // namespace base

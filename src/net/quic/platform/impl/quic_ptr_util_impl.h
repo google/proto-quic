@@ -10,7 +10,7 @@ namespace net {
 
 template <typename T, typename... Args>
 std::unique_ptr<T> QuicMakeUniqueImpl(Args&&... args) {
-  return base::MakeUnique<T>(std::forward<Args>(args)...);
+  return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
 template <typename T>

@@ -45,13 +45,10 @@
 
 #include "base/memory/ref_counted.h"
 #include "base/strings/string16.h"
+#include "net/cert/scoped_nss_types.h"
 
 typedef struct CERTCertificateStr CERTCertificate;
 typedef struct PK11SlotInfoStr PK11SlotInfo;
-namespace net {
-class X509Certificate;
-typedef std::vector<scoped_refptr<X509Certificate> > CertificateList;
-}  // namespace net
 
 namespace mozilla_security_manager {
 
@@ -67,13 +64,13 @@ int nsPKCS12Blob_Import(PK11SlotInfo* slot,
                         size_t pkcs12_len,
                         const base::string16& password,
                         bool is_extractable,
-                        net::CertificateList* imported_certs);
+                        net::ScopedCERTCertificateList* imported_certs);
 
 // Export the given certificates into a PKCS#12 blob, storing into output.
 // Returns the number of certificates exported.
 // TODO(mattm): provide better error return status?
 int nsPKCS12Blob_Export(std::string* output,
-                        const net::CertificateList& certs,
+                        const net::ScopedCERTCertificateList& certs,
                         const base::string16& password);
 
 }  // namespace mozilla_security_manager

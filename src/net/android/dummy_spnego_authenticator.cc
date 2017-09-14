@@ -190,10 +190,6 @@ void DummySpnegoAuthenticator::ExpectSecurityContext(
       base::android::AttachCurrentThread(), reinterpret_cast<intptr_t>(this));
 }
 
-bool DummySpnegoAuthenticator::RegisterJni(JNIEnv* env) {
-  return RegisterNativesImpl(env);
-}
-
 long DummySpnegoAuthenticator::GetNextQuery(
     JNIEnv* /*env*/,
     const JavaParamRef<jobject>& /* obj */) {

@@ -67,7 +67,7 @@ std::unique_ptr<disk_cache::BackendImpl> CreateExistingEntryCache(
   net::TestCompletionCallback cb;
 
   std::unique_ptr<disk_cache::BackendImpl> cache(
-      base::MakeUnique<disk_cache::BackendImpl>(cache_path,
+      std::make_unique<disk_cache::BackendImpl>(cache_path,
                                                 /* cleanup_tracker = */ nullptr,
                                                 /* cache_thread = */ nullptr,
                                                 /* net_log = */ nullptr));
@@ -108,6 +108,10 @@ class DiskCacheBackendTest : public DiskCacheTestWithCache {
   // Computes the expected size of entry metadata, i.e. the total size without
   // the actual data stored. This depends only on the entry's |key| size.
   int GetEntryMetadataSize(std::string key);
+
+  // The Simple Backend only tracks the approximate sizes of entries. This
+  // rounds the exact size appropriately.
+  int GetRoundedSize(int exact_size);
 
   // Actual tests:
   void BackendBasics();
@@ -322,6 +326,13 @@ int DiskCacheBackendTest::GetEntryMetadataSize(std::string key) {
           sizeof(disk_cache::SimpleFileEOF) + key.size());
 }
 
+int DiskCacheBackendTest::GetRoundedSize(int exact_size) {
+  if (!simple_cache_mode_)
+    return exact_size;
+
+  return (exact_size + 255) & 0xFFFFFF00;
+}
+
 void DiskCacheBackendTest::BackendBasics() {
   InitCache();
   disk_cache::Entry *entry1 = NULL, *entry2 = NULL;
@@ -461,9 +472,6 @@ TEST_F(DiskCacheTest, CreateBackend) {
 
   {
     ASSERT_TRUE(CleanupCacheDir());
-    base::Thread cache_thread("CacheThread");
-    ASSERT_TRUE(cache_thread.StartWithOptions(
-        base::Thread::Options(base::MessageLoop::TYPE_IO, 0)));
 
     // Test the private factory method(s).
     std::unique_ptr<disk_cache::Backend> cache;
@@ -473,31 +481,15 @@ TEST_F(DiskCacheTest, CreateBackend) {
 
     // Now test the public API.
     int rv = disk_cache::CreateCacheBackend(net::DISK_CACHE,
-                                            net::CACHE_BACKEND_DEFAULT,
-                                            cache_path_,
-                                            0,
-                                            false,
-                                            cache_thread.task_runner(),
-                                            NULL,
-                                            &cache,
-                                            cb.callback());
-    ASSERT_THAT(cb.GetResult(rv), IsOk());
-    ASSERT_TRUE(cache.get());
-    cache.reset();
-
-    // Variant without the explicit thread, too!
-    rv = disk_cache::CreateCacheBackend(net::DISK_CACHE,
                                         net::CACHE_BACKEND_DEFAULT, cache_path_,
                                         0, false, NULL, &cache, cb.callback());
     ASSERT_THAT(cb.GetResult(rv), IsOk());
     ASSERT_TRUE(cache.get());
     cache.reset();
 
-    rv = disk_cache::CreateCacheBackend(net::MEMORY_CACHE,
-                                        net::CACHE_BACKEND_DEFAULT,
-                                        base::FilePath(), 0,
-                                        false, NULL, NULL, &cache,
-                                        cb.callback());
+    rv = disk_cache::CreateCacheBackend(
+        net::MEMORY_CACHE, net::CACHE_BACKEND_DEFAULT, base::FilePath(), 0,
+        false, NULL, &cache, cb.callback());
     ASSERT_THAT(cb.GetResult(rv), IsOk());
     ASSERT_TRUE(cache.get());
     cache.reset();
@@ -536,11 +528,11 @@ TEST_F(DiskCacheTest, CreateBackendDouble) {
   std::unique_ptr<disk_cache::Backend> cache, cache2;
 
   int rv = disk_cache::CreateCacheBackend(
-      net::DISK_CACHE, net::CACHE_BACKEND_DEFAULT, cache_path_, 0, false,
+      net::APP_CACHE, net::CACHE_BACKEND_DEFAULT, cache_path_, 0, false,
       nullptr, &cache, cb.callback());
 
   int rv2 = disk_cache::CreateCacheBackend(
-      net::DISK_CACHE, net::CACHE_BACKEND_DEFAULT, cache_path_, 0, false,
+      net::APP_CACHE, net::CACHE_BACKEND_DEFAULT, cache_path_, 0, false,
       nullptr, &cache2, cb2.callback());
 
   EXPECT_THAT(cb.GetResult(rv), IsOk());
@@ -573,12 +565,12 @@ TEST_F(DiskCacheBackendTest, CreateBackendDoubleOpenEntry) {
   std::unique_ptr<disk_cache::Backend> cache, cache2;
 
   int rv = disk_cache::CreateCacheBackend(
-      net::DISK_CACHE, net::CACHE_BACKEND_SIMPLE, cache_path_, 0, false,
-      nullptr, &cache, cb.callback());
+      net::APP_CACHE, net::CACHE_BACKEND_SIMPLE, cache_path_, 0, false, nullptr,
+      &cache, cb.callback());
 
   int rv2 = disk_cache::CreateCacheBackend(
-      net::DISK_CACHE, net::CACHE_BACKEND_SIMPLE, cache_path_, 0, false,
-      nullptr, &cache2, cb2.callback());
+      net::APP_CACHE, net::CACHE_BACKEND_SIMPLE, cache_path_, 0, false, nullptr,
+      &cache2, cb2.callback());
 
   EXPECT_THAT(cb.GetResult(rv), IsOk());
   ASSERT_TRUE(cache.get());
@@ -620,8 +612,8 @@ TEST_F(DiskCacheBackendTest, CreateBackendPostCleanup) {
   std::unique_ptr<disk_cache::Backend> cache;
 
   int rv = disk_cache::CreateCacheBackend(
-      net::DISK_CACHE, net::CACHE_BACKEND_SIMPLE, cache_path_, 0, false,
-      nullptr, &cache, run_loop.QuitClosure(), cb.callback());
+      net::APP_CACHE, net::CACHE_BACKEND_SIMPLE, cache_path_, 0, false, nullptr,
+      &cache, run_loop.QuitClosure(), cb.callback());
   EXPECT_THAT(cb.GetResult(rv), IsOk());
   ASSERT_TRUE(cache.get());
 
@@ -654,7 +646,7 @@ TEST_F(DiskCacheBackendTest, CreateBackend_MissingFile) {
 
   bool prev = base::ThreadRestrictions::SetIOAllowed(false);
   std::unique_ptr<disk_cache::BackendImpl> cache(
-      base::MakeUnique<disk_cache::BackendImpl>(cache_path_, nullptr, nullptr,
+      std::make_unique<disk_cache::BackendImpl>(cache_path_, nullptr, nullptr,
                                                 nullptr));
   int rv = cache->Init(cb.callback());
   EXPECT_THAT(cb.GetResult(rv), IsError(net::ERR_FAILED));
@@ -818,7 +810,7 @@ TEST_F(DiskCacheBackendTest, MultipleInstancesWithPendingFileIO) {
   std::unique_ptr<disk_cache::Backend> extra_cache;
   int rv = disk_cache::CreateCacheBackend(
       net::DISK_CACHE, net::CACHE_BACKEND_DEFAULT, store.GetPath(), 0, false,
-      base::ThreadTaskRunnerHandle::Get(), NULL, &extra_cache, cb.callback());
+      /* net_log = */ nullptr, &extra_cache, cb.callback());
   ASSERT_THAT(cb.GetResult(rv), IsOk());
   ASSERT_TRUE(extra_cache.get() != NULL);
 
@@ -835,6 +827,7 @@ TEST_F(DiskCacheBackendTest, MultipleInstancesWithPendingFileIO) {
   if (rv == net::ERR_IO_PENDING)
     EXPECT_FALSE(cb.have_result());
 
+  disk_cache::FlushCacheThreadForTesting();
   base::RunLoop().RunUntilIdle();
 
   // Wait for the actual operation to complete, or we'll keep a file handle that
@@ -2009,6 +2002,7 @@ void DiskCacheBackendTest::BackendCalculateSizeOfAllEntries() {
   CreateSetOfRandomEntries(&key_pool);
 
   int count = 0;
+  int total_size = 0;
   for (std::string key : key_pool) {
     std::string data(count, ' ');
     scoped_refptr<net::StringIOBuffer> buffer = new net::StringIOBuffer(data);
@@ -2020,15 +2014,12 @@ void DiskCacheBackendTest::BackendCalculateSizeOfAllEntries() {
     ASSERT_EQ(count, WriteData(entry, count % 2, 0, buffer.get(), count, true));
     entry->Close();
 
+    total_size += GetRoundedSize(count + GetEntryMetadataSize(key));
     ++count;
   }
 
-  // The resulting size should be (0 + 1 + ... + count - 1) plus keys.
   int result = CalculateSizeOfAllEntries();
-  int total_metadata_size = 0;
-  for (std::string key : key_pool)
-    total_metadata_size += GetEntryMetadataSize(key);
-  EXPECT_EQ((count - 1) * count / 2 + total_metadata_size, result);
+  EXPECT_EQ(total_size, result);
 
   // Add another entry and test if the size is updated. Then remove it and test
   // if the size is back to original value.
@@ -2045,7 +2036,9 @@ void DiskCacheBackendTest::BackendCalculateSizeOfAllEntries() {
     entry->Close();
 
     int new_result = CalculateSizeOfAllEntries();
-    EXPECT_EQ(result + last_entry_size + GetEntryMetadataSize(key), new_result);
+    EXPECT_EQ(
+        result + GetRoundedSize(last_entry_size + GetEntryMetadataSize(key)),
+        new_result);
 
     DoomEntry(key);
     new_result = CalculateSizeOfAllEntries();
@@ -2099,9 +2092,9 @@ void DiskCacheBackendTest::BackendCalculateSizeOfEntriesBetween() {
   AddDelay();
   Time end = Time::Now();
 
-  int size_1 = GetEntryMetadataSize("first");
-  int size_2 = GetEntryMetadataSize("second");
-  int size_3 = GetEntryMetadataSize("third_entry");
+  int size_1 = GetRoundedSize(GetEntryMetadataSize("first"));
+  int size_2 = GetRoundedSize(GetEntryMetadataSize("second"));
+  int size_3 = GetRoundedSize(GetEntryMetadataSize("third_entry"));
 
   ASSERT_EQ(3, cache_->GetEntryCount());
   ASSERT_EQ(CalculateSizeOfAllEntries(),
@@ -2299,7 +2292,7 @@ TEST_F(DiskCacheTest, WrongVersion) {
   net::TestCompletionCallback cb;
 
   std::unique_ptr<disk_cache::BackendImpl> cache(
-      base::MakeUnique<disk_cache::BackendImpl>(cache_path_, nullptr, nullptr,
+      std::make_unique<disk_cache::BackendImpl>(cache_path_, nullptr, nullptr,
                                                 nullptr));
   int rv = cache->Init(cb.callback());
   ASSERT_THAT(cb.GetResult(rv), IsError(net::ERR_FAILED));
@@ -2319,7 +2312,7 @@ TEST_F(DiskCacheTest, SimpleCacheControlJoin) {
   // Instantiate the SimpleCacheTrial, forcing this run into the
   // ExperimentControl group.
   base::FieldTrialList field_trial_list(
-      base::MakeUnique<base::MockEntropyProvider>());
+      std::make_unique<base::MockEntropyProvider>());
   base::FieldTrialList::CreateFieldTrial("SimpleCacheTrial",
                                          "ExperimentControl");
   net::TestCompletionCallback cb;
@@ -2343,7 +2336,7 @@ TEST_F(DiskCacheTest, SimpleCacheControlRestart) {
   // Instantiate the SimpleCacheTrial, forcing this run into the
   // ExperimentControl group.
   base::FieldTrialList field_trial_list(
-      base::MakeUnique<base::MockEntropyProvider>());
+      std::make_unique<base::MockEntropyProvider>());
   base::FieldTrialList::CreateFieldTrial("SimpleCacheTrial",
                                          "ExperimentControl");
 
@@ -2376,7 +2369,7 @@ TEST_F(DiskCacheTest, SimpleCacheControlLeave) {
     // Instantiate the SimpleCacheTrial, forcing this run into the
     // ExperimentControl group.
     base::FieldTrialList field_trial_list(
-        base::MakeUnique<base::MockEntropyProvider>());
+        std::make_unique<base::MockEntropyProvider>());
     base::FieldTrialList::CreateFieldTrial("SimpleCacheTrial",
                                            "ExperimentControl");
 
@@ -2388,14 +2381,14 @@ TEST_F(DiskCacheTest, SimpleCacheControlLeave) {
   // Instantiate the SimpleCacheTrial, forcing this run into the
   // ExperimentNo group.
   base::FieldTrialList field_trial_list(
-      base::MakeUnique<base::MockEntropyProvider>());
+      std::make_unique<base::MockEntropyProvider>());
   base::FieldTrialList::CreateFieldTrial("SimpleCacheTrial", "ExperimentNo");
   net::TestCompletionCallback cb;
 
   const int kRestartCount = 5;
   for (int i = 0; i < kRestartCount; ++i) {
     std::unique_ptr<disk_cache::BackendImpl> cache(
-        base::MakeUnique<disk_cache::BackendImpl>(cache_path_, nullptr, nullptr,
+        std::make_unique<disk_cache::BackendImpl>(cache_path_, nullptr, nullptr,
                                                   nullptr));
     int rv = cache->Init(cb.callback());
     ASSERT_THAT(cb.GetResult(rv), IsOk());
@@ -3349,7 +3342,7 @@ TEST_F(DiskCacheTest, Backend_UsageStatsTimer) {
   ASSERT_TRUE(CleanupCacheDir());
   // Want to use our thread since we call SyncInit ourselves.
   std::unique_ptr<disk_cache::BackendImpl> cache(
-      base::MakeUnique<disk_cache::BackendImpl>(
+      std::make_unique<disk_cache::BackendImpl>(
           cache_path_, nullptr, base::ThreadTaskRunnerHandle::Get(), nullptr));
   ASSERT_TRUE(NULL != cache.get());
   cache->SetUnitTestMode();
@@ -3365,7 +3358,7 @@ TEST_F(DiskCacheBackendTest, TimerNotCreated) {
 
   // Want to use our thread since we call SyncInit ourselves.
   std::unique_ptr<disk_cache::BackendImpl> cache(
-      base::MakeUnique<disk_cache::BackendImpl>(
+      std::make_unique<disk_cache::BackendImpl>(
           cache_path_, nullptr, base::ThreadTaskRunnerHandle::Get(), nullptr));
   ASSERT_TRUE(NULL != cache.get());
   cache->SetUnitTestMode();

@@ -23,8 +23,8 @@ BuildSettings CreateBuildSettingsForTest() {
 TestWithScope::TestWithScope()
     : build_settings_(CreateBuildSettingsForTest()),
       settings_(&build_settings_, std::string()),
-      toolchain_(&settings_, Label(SourceDir("//toolchain/"), "default"), {}),
-      scope_(&settings_, {}),
+      toolchain_(&settings_, Label(SourceDir("//toolchain/"), "default")),
+      scope_(&settings_),
       scope_progammatic_provider_(&scope_, true) {
   build_settings_.set_print_callback(
       base::Bind(&TestWithScope::AppendPrintOutput, base::Unretained(this)));
@@ -214,7 +214,7 @@ TestParseInput::~TestParseInput() {
 TestTarget::TestTarget(const TestWithScope& setup,
                        const std::string& label_string,
                        Target::OutputType type)
-    : Target(setup.settings(), setup.ParseLabel(label_string), {}) {
+    : Target(setup.settings(), setup.ParseLabel(label_string)) {
   visibility().SetPublic();
   set_output_type(type);
   SetToolchain(setup.toolchain());

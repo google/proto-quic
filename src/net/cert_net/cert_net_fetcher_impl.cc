@@ -803,7 +803,7 @@ class CertNetFetcherImpl : public CertNetFetcher {
       request_core->SignalImmediateError();
     }
 
-    return base::MakeUnique<CertNetFetcherRequestImpl>(std::move(request_core));
+    return std::make_unique<CertNetFetcherRequestImpl>(std::move(request_core));
   }
 
  private:

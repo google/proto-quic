@@ -9,7 +9,6 @@
 #include "base/logging.h"
 #include "net/base/network_delegate.h"
 #include "net/base/proxy_delegate.h"
-#include "net/base/sdch_manager.h"
 #include "net/cert/cert_verifier.h"
 #include "net/cert/ct_policy_enforcer.h"
 #include "net/cert/ct_verifier.h"
@@ -149,12 +148,6 @@ void URLRequestContextStorage::set_http_user_agent_settings(
     std::unique_ptr<HttpUserAgentSettings> http_user_agent_settings) {
   context_->set_http_user_agent_settings(http_user_agent_settings.get());
   http_user_agent_settings_ = std::move(http_user_agent_settings);
-}
-
-void URLRequestContextStorage::set_sdch_manager(
-    std::unique_ptr<SdchManager> sdch_manager) {
-  context_->set_sdch_manager(sdch_manager.get());
-  sdch_manager_ = std::move(sdch_manager);
 }
 
 #if BUILDFLAG(ENABLE_REPORTING)

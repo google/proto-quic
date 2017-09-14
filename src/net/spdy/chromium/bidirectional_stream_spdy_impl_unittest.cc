@@ -68,7 +68,7 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
   TestDelegateBase(base::WeakPtr<SpdySession> session,
                    IOBuffer* read_buf,
                    int read_buf_len)
-      : stream_(base::MakeUnique<BidirectionalStreamSpdyImpl>(session,
+      : stream_(std::make_unique<BidirectionalStreamSpdyImpl>(session,
                                                               NetLogSource())),
         read_buf_(read_buf),
         read_buf_len_(read_buf_len),
@@ -134,7 +134,7 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
              const NetLogWithSource& net_log) {
     stream_->Start(request, net_log,
                    /*send_request_headers_automatically=*/false, this,
-                   base::MakeUnique<base::Timer>(false, false));
+                   std::make_unique<base::Timer>(false, false));
     not_expect_callback_ = false;
   }
 
@@ -153,7 +153,7 @@ class TestDelegateBase : public BidirectionalStreamImpl::Delegate {
   // Sets whether the delegate should wait until the completion of the stream.
   void SetRunUntilCompletion(bool run_until_completion) {
     run_until_completion_ = run_until_completion;
-    loop_ = base::MakeUnique<base::RunLoop>();
+    loop_ = std::make_unique<base::RunLoop>();
   }
 
   // Wait until the stream reaches completion.
@@ -257,7 +257,7 @@ class BidirectionalStreamSpdyImplTest : public testing::TestWithParam<bool> {
                    size_t writes_count) {
     ASSERT_TRUE(ssl_data_.cert.get());
     session_deps_.socket_factory->AddSSLSocketDataProvider(&ssl_data_);
-    sequenced_data_ = base::MakeUnique<SequencedSocketData>(
+    sequenced_data_ = std::make_unique<SequencedSocketData>(
         reads, reads_count, writes, writes_count);
     session_deps_.socket_factory->AddSocketDataProvider(sequenced_data_.get());
     session_deps_.net_log = net_log_.bound().net_log();
@@ -304,7 +304,7 @@ TEST_F(BidirectionalStreamSpdyImplTest, SimplePostRequest) {
                                        base::SizeTToString(kBodyDataSize));
 
   scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
-  auto delegate = base::MakeUnique<TestDelegateBase>(
+  auto delegate = std::make_unique<TestDelegateBase>(
       session_, read_buffer.get(), kReadBufferSize);
   delegate->SetRunUntilCompletion(true);
   delegate->Start(&request_info, net_log_.bound());
@@ -357,9 +357,9 @@ TEST_F(BidirectionalStreamSpdyImplTest, LoadTimingTwoRequests) {
 
   scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
   scoped_refptr<IOBuffer> read_buffer2(new IOBuffer(kReadBufferSize));
-  auto delegate = base::MakeUnique<TestDelegateBase>(
+  auto delegate = std::make_unique<TestDelegateBase>(
       session_, read_buffer.get(), kReadBufferSize);
-  auto delegate2 = base::MakeUnique<TestDelegateBase>(
+  auto delegate2 = std::make_unique<TestDelegateBase>(
       session_, read_buffer2.get(), kReadBufferSize);
   delegate->SetRunUntilCompletion(true);
   delegate2->SetRunUntilCompletion(true);
@@ -404,7 +404,7 @@ TEST_F(BidirectionalStreamSpdyImplTest, SendDataAfterStreamFailed) {
                                        base::SizeTToString(kBodyDataSize * 3));
 
   scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
-  auto delegate = base::MakeUnique<TestDelegateBase>(
+  auto delegate = std::make_unique<TestDelegateBase>(
       session_, read_buffer.get(), kReadBufferSize);
   delegate->SetRunUntilCompletion(true);
   delegate->Start(&request_info, net_log_.bound());
@@ -456,7 +456,7 @@ TEST_P(BidirectionalStreamSpdyImplTest, RstWithNoErrorBeforeSendIsComplete) {
                                        base::SizeTToString(kBodyDataSize * 3));
 
   scoped_refptr<IOBuffer> read_buffer(new IOBuffer(kReadBufferSize));
-  auto delegate = base::MakeUnique<TestDelegateBase>(
+  auto delegate = std::make_unique<TestDelegateBase>(
       session_, read_buffer.get(), kReadBufferSize);
   delegate->SetRunUntilCompletion(true);
   delegate->Start(&request_info, net_log_.bound());

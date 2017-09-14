@@ -40,12 +40,12 @@ class CancelableTaskTrackerTest : public testing::Test {
   MessageLoop message_loop_;
 };
 
-void AddFailureAt(const tracked_objects::Location& location) {
+void AddFailureAt(const Location& location) {
   ADD_FAILURE_AT(location.file_name(), location.line_number());
 }
 
 // Returns a closure that fails if run.
-Closure MakeExpectedNotRunClosure(const tracked_objects::Location& location) {
+Closure MakeExpectedNotRunClosure(const Location& location) {
   return Bind(&AddFailureAt, location);
 }
 
@@ -55,7 +55,7 @@ Closure MakeExpectedNotRunClosure(const tracked_objects::Location& location) {
 // before destruction.
 class RunChecker {
  public:
-  explicit RunChecker(const tracked_objects::Location& location)
+  explicit RunChecker(const Location& location)
       : location_(location), called_(false) {}
 
   ~RunChecker() {
@@ -67,12 +67,12 @@ class RunChecker {
   void Run() { called_ = true; }
 
  private:
-  tracked_objects::Location location_;
+  Location location_;
   bool called_;
 };
 
 // Returns a closure that fails on destruction if it hasn't been run.
-Closure MakeExpectedRunClosure(const tracked_objects::Location& location) {
+Closure MakeExpectedRunClosure(const Location& location) {
   return Bind(&RunChecker::Run, Owned(new RunChecker(location)));
 }
 

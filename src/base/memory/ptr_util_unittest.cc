@@ -38,22 +38,22 @@ TEST(PtrUtilTest, WrapUnique) {
 }
 
 TEST(PtrUtilTest, MakeUniqueScalar) {
-  auto s = MakeUnique<std::string>();
+  auto s = std::make_unique<std::string>();
   EXPECT_EQ("", *s);
 
-  auto s2 = MakeUnique<std::string>("test");
+  auto s2 = std::make_unique<std::string>("test");
   EXPECT_EQ("test", *s2);
 }
 
 TEST(PtrUtilTest, MakeUniqueScalarWithMoveOnlyType) {
   using MoveOnly = std::unique_ptr<std::string>;
-  auto p = MakeUnique<MoveOnly>(MakeUnique<std::string>("test"));
+  auto p = std::make_unique<MoveOnly>(std::make_unique<std::string>("test"));
   EXPECT_EQ("test", **p);
 }
 
 TEST(PtrUtilTest, MakeUniqueArray) {
   EXPECT_EQ(0u, DeleteCounter::count());
-  auto a = MakeUnique<DeleteCounter[]>(5);
+  auto a = std::make_unique<DeleteCounter[]>(5);
   EXPECT_EQ(5u, DeleteCounter::count());
   a.reset();
   EXPECT_EQ(0u, DeleteCounter::count());
@@ -62,8 +62,8 @@ TEST(PtrUtilTest, MakeUniqueArray) {
 #if 0
 // TODO(dcheng): Move this into a nocompile test.
 TEST(PtrUtilTest, MakeUniqueArrayWithKnownBounds) {
-  auto a = MakeUnique<DeleteCounter[1]>();
-  auto b = MakeUnique<DeleteCounter[1]>(1);
+  auto a = std::make_unique<DeleteCounter[1]>();
+  auto b = std::make_unique<DeleteCounter[1]>(1);
 }
 #endif
 

@@ -105,7 +105,7 @@ message NetworkTrafficAnnotation {
 
     enum Destination {
       // Do not use this value. It's just a placeholder for default value.
-      UNSEPCIFIED = 0;
+      UNSPECIFIED = 0;
       // A website the user visits or interacts with. The distinction from a
       // google owned service can be difficult when the user navigates to
       // google.com or searches with the omnibar. Therefore follow the following
@@ -134,7 +134,7 @@ message NetworkTrafficAnnotation {
   message TrafficPolicy {
     enum CookiesAllowed {
       // Do not use this value. It's just a placeholder for default value.
-      UNSEPCIFIED = 0;
+      UNSPECIFIED = 0;
       // Cookies are never used.
       NO = 1;
       // Cookies/channel IDs/... can be sent or saved (use if at least one is

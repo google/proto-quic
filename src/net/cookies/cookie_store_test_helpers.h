@@ -97,6 +97,9 @@ class DelayedCookieMonster : public CookieStore {
       const std::string& name,
       const CookieChangedCallback& callback) override;
 
+  std::unique_ptr<CookieStore::CookieChangedSubscription>
+  AddCallbackForAllChanges(const CookieChangedCallback& callback) override;
+
   bool IsEphemeral() override;
 
  private:

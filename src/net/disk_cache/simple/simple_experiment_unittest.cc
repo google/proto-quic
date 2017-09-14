@@ -25,8 +25,8 @@ namespace disk_cache {
 class SimpleExperimentTest : public testing::Test {
  protected:
   void SetUp() override {
-    field_trial_list_ = base::MakeUnique<base::FieldTrialList>(
-        base::MakeUnique<base::MockEntropyProvider>());
+    field_trial_list_ = std::make_unique<base::FieldTrialList>(
+        std::make_unique<base::MockEntropyProvider>());
   }
   void ConfigureSizeFieldTrial(bool enabled, base::Optional<uint32_t> param) {
     const std::string kTrialName = "SimpleSizeTrial";

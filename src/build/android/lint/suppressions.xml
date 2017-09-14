@@ -110,8 +110,8 @@ Still reading?
     <ignore regexp="chrome/android/java/res/drawable-xxhdpi"/>
     <ignore regexp="chrome/android/java/res/drawable-xxxhdpi"/>
     <ignore regexp="chromecast/internal"/>
-    <ignore regexp="components/web_contents_delegate_android/android/java/res/drawable-xxhdpi"/>
-    <ignore regexp="components/web_contents_delegate_android/android/java/res/drawable-xxxhdpi"/>
+    <ignore regexp="components/web_contents_delegate_android/java/res/drawable-xxhdpi"/>
+    <ignore regexp="components/web_contents_delegate_android/java/res/drawable-xxxhdpi"/>
     <ignore regexp="content/public/android/java/res/drawable-xxhdpi"/>
     <ignore regexp="content/public/android/java/res/drawable-xxxhdpi"/>
     <ignore regexp="ui/android/java/res/drawable-xxhdpi"/>
@@ -190,12 +190,15 @@ Still reading?
   <issue id="MissingVersion">
     <ignore path="AndroidManifest.xml"/>
   </issue>
-  <!-- TODO(crbug.com/739746): Remove once platform-tools is updated. -->
-  <issue id="NewApi" severity="ignore"/>
   <issue id="NewApi">
-    <ignore regexp="Attribute `paddingStart` referenced here can result in a crash on some specific devices older than API 17"/>
+    <!-- AutoCloseable has been available since API 15, just hidden. -->
+    <ignore regexp="Class requires API level 19.*java.lang.AutoCloseable"/>
     <!-- We support try-with-resources via desugar. -->
     <ignore regexp="Try-with-resources requires API level 19"/>
+    <ignore regexp="Call requires API level 19.*`java.lang.Throwable#addSuppressed`"/>
+    <!-- We support default methods via desugar. -->
+    <ignore regexp="Default method requires API level 24"/>
+    <ignore regexp="Attribute `paddingStart` referenced here can result in a crash on some specific devices older than API 17"/>
     <ignore regexp="chrome/android/java/res/values-v17/styles.xml"/>
     <ignore regexp="chromecast/internal"/>
     <ignore regexp="com/android/tv"/>
@@ -300,42 +303,26 @@ Still reading?
   </issue>
   <!-- Our generated enums are allowed to have the same values. -->
   <issue id="UniqueConstants" severity="ignore"/>
-  <!-- Please add rationale to each UnusedResources suppression. -->
+  <!-- Do not add new suppressions without very good rationale. -->
   <issue id="UnusedResources">
-    <!-- These 3 raw resources are accessed by URL in various places -->
+    <!-- 3 raw resources are accessed by URL in various places -->
     <ignore regexp="PRODUCT_DIR/gen/remoting/android/.*/res/raw/credits.html"/>
     <ignore regexp="PRODUCT_DIR/gen/remoting/android/.*/res/raw/credits_css.css"/>
     <ignore regexp="PRODUCT_DIR/gen/remoting/android/.*/res/raw/credits_js.js"/>
-    <!-- The 2 dimens override support library's res, will be changing soon -->
-    <ignore regexp="design_bottom_navigation_text_size"/>
-    <ignore regexp="design_bottom_navigation_active_text_size"/>
-    <!-- This 1 string is used in CronetSmokeTestCase dynamically -->
+    <!-- 2 dimens override support library's res, will be changing soon -->
+    <ignore regexp="R.dimen.design_bottom_navigation_text_size"/>
+    <ignore regexp="R.dimen.design_bottom_navigation_active_text_size"/>
+    <!-- 1 string test only, used in CronetSmokeTestCase dynamically -->
     <ignore regexp="R.string.TestSupportImplClass"/>
-    <!-- TODO(iuliah@google.com): Remove suppression when wired up -->
-    <ignore regexp="chrome/android/java/res/layout/signin_promo_view.xml"/>
-    <ignore regexp="R.dimen.signin_promo_account_image_size"/>
-    <ignore regexp="R.dimen.signin_promo_cold_state_image_size"/>
-    <!-- Used by Android's policies system, pulled from app directly -->
+    <!-- 1 string used by Android's policies system, pulled from app directly -->
     <ignore regexp="restriction_values.xml"/>
-    <!-- TODO(wnwen): Clean up the suppressions below this comment -->
-    <ignore regexp="android_ui_strings.xml"/>
-    <ignore regexp="android_webview/java/res/drawable-hdpi/ic_play_circle_outline_black_48dp.png"/>
+    <!-- 3 resources test only, used in webview tests dynamically -->
+    <ignore regexp="android_webview/tools/automated_ui_tests/java/res/layout/"/>
     <ignore regexp="android_webview/test/shell/res/raw/resource_file.html"/>
     <ignore regexp="android_webview/test/shell/res/raw/resource_icon.png"/>
-    <ignore regexp="android_webview/tools/automated_ui_tests/java/res/"/>
-    <ignore regexp="chromecast/browser/android/apk/res/values/strings.xml"/>
-    <ignore regexp="chromecast/internal"/>
-    <ignore regexp="android_webview/locale_paks.resources.zip/*"/>
-    <ignore regexp="android_webview/strings_grd.resources.zip/values/android_webview_strings.xml"/>
-    <ignore regexp="components/strings/components_strings_grd.resources.zip/values.*/components_strings.xml"/>
-    <ignore regexp="remoting/resources/strings_java.resources.zip/values/remoting_strings.xml"/>
-    <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_backspace.png"/>
-    <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_cardboard.png"/>
-    <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_voice_input.png"/>
-    <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_zoom_in.png"/>
-    <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_zoom_out.png"/>
-    <ignore regexp="remoting/android/java/res/layout/navigation_list_item.xml"/>
-    <ignore regexp="remoting/android/java/res/values-v17/styles.xml"/>
+    <!-- 2 resources used by android webview glue layer, could be refactored -->
+    <ignore regexp="android_webview/java/res/drawable-hdpi/ic_play_circle_outline_black_48dp.png"/>
+    <ignore regexp="R.string.private_browsing_warning"/>
   </issue>
   <issue id="UseCompoundDrawables">
     <!-- Upscaling 24dp to 48dp doesn't work as expected with a TextView compound drawable. -->
@@ -361,6 +348,12 @@ Still reading?
   <issue id="VisibleForTests" severity="Error">
     <ignore regexp="chrome/android/javatests"/>
     <ignore regexp="/test/"/>
+    <!-- TODO(crbug.com/757124): Remove all these specific Feedback files after underlying issue is resolved -->
+    <!-- Underlying issue is that Android FeedbackOptions.Builder using @VisibleForTesting without 'otherwise='. -->
+    <ignore regexp="clank/java/src/com/google/android/apps/chrome/feedback/FeedbackUtil.java"/>
+    <ignore regexp="clank/java/src/com/google/android/apps/chrome/feedback/PlayServicesFeedbackReporter.java"/>
+    <ignore regexp="clank/java/src/com/google/android/apps/chrome/help/FeedbackCategoryChooserActivity.java"/>
+    <ignore regexp="clank/java/src/com/google/android/apps/chrome/help/HelpAndFeedbackInternal.java"/>
   </issue>
   <issue id="WrongCall" severity="ignore"/>
   <issue id="WrongConstant">

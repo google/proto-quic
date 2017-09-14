@@ -736,22 +736,30 @@ int UDPSocketPosix::InternalRecvFrom(IOBuffer* buf,
                                      int buf_len,
                                      IPEndPoint* address) {
   int bytes_transferred;
-  int flags = 0;
+
+  struct iovec iov = {};
+  iov.iov_base = buf->data();
+  iov.iov_len = buf_len;
+
+  struct msghdr msg = {};
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
 
   SockaddrStorage storage;
+  msg.msg_name = storage.addr;
+  msg.msg_namelen = storage.addr_len;
 
-  bytes_transferred =
-      HANDLE_EINTR(recvfrom(socket_,
-                            buf->data(),
-                            buf_len,
-                            flags,
-                            storage.addr,
-                            &storage.addr_len));
+  bytes_transferred = HANDLE_EINTR(recvmsg(socket_, &msg, 0));
+  storage.addr_len = msg.msg_namelen;
   int result;
   if (bytes_transferred >= 0) {
-    result = bytes_transferred;
-    if (address && !address->FromSockAddr(storage.addr, storage.addr_len))
-      result = ERR_ADDRESS_INVALID;
+    if (msg.msg_flags & MSG_TRUNC) {
+      result = ERR_MSG_TOO_BIG;
+    } else {
+      result = bytes_transferred;
+      if (address && !address->FromSockAddr(storage.addr, storage.addr_len))
+        result = ERR_ADDRESS_INVALID;
+    }
   } else {
     result = MapSystemError(errno);
   }

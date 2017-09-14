@@ -262,14 +262,17 @@ def main():
   parser.add_argument(
       '--tool-args', nargs='*',
       help='optional arguments passed to the tool')
+  parser.add_argument(
+      '--tool-path', nargs='?',
+      help='optional path to the tool directory')
   args = parser.parse_args(argv)
 
-  os.environ['PATH'] = '%s%s%s' % (
-      os.path.abspath(os.path.join(
+  if args.tool_path:
+    tool_path = os.path.abspath(args.tool_path)
+  else:
+    tool_path = os.path.abspath(os.path.join(
           os.path.dirname(__file__),
-          '../../../third_party/llvm-build/Release+Asserts/bin')),
-      os.pathsep,
-      os.environ['PATH'])
+          '../../../third_party/llvm-build/Release+Asserts/bin'))
 
   if args.generate_compdb:
     with open(os.path.join(args.p, 'compile_commands.json'), 'w') as f:
@@ -298,7 +301,8 @@ def main():
     print 'Shard %d-of-%d will process %d entries out of %d' % (
         shard_number, shard_count, len(source_filenames), total_length)
 
-  dispatcher = _CompilerDispatcher(args.tool, args.tool_args,
+  dispatcher = _CompilerDispatcher(os.path.join(tool_path, args.tool),
+                                   args.tool_args,
                                    args.p,
                                    source_filenames)
   dispatcher.Run()

@@ -337,11 +337,12 @@ bool SimpleIndexFile::IndexMetadata::CheckIndexMetadata() {
     return false;
   }
 
-  static_assert(kSimpleVersion == 7, "index metadata reader out of date");
+  static_assert(kSimpleVersion == 8, "index metadata reader out of date");
   // No |reason_| is saved in the version 6 file format.
   if (version_ == 6)
     return reason_ == SimpleIndex::INDEX_WRITE_REASON_MAX;
-  return version_ == 7 && reason_ < SimpleIndex::INDEX_WRITE_REASON_MAX;
+  return (version_ == 7 || version_ == 8) &&
+         reason_ < SimpleIndex::INDEX_WRITE_REASON_MAX;
 }
 
 SimpleIndexFile::SimpleIndexFile(
@@ -482,7 +483,7 @@ void SimpleIndexFile::SyncLoadFromDisk(const base::FilePath& index_filename,
 
   // Make sure to preallocate in one chunk, so we don't induce fragmentation
   // reallocating a growing buffer.
-  auto buffer = base::MakeUnique<char[]>(file_length);
+  auto buffer = std::make_unique<char[]>(file_length);
 
   int read = file.Read(0, buffer.get(), file_length);
   if (read < file_length) {
@@ -555,7 +556,8 @@ void SimpleIndexFile::Deserialize(const char* data, int data_len,
     uint64_t hash_key;
     EntryMetadata entry_metadata;
     if (!pickle_it.ReadUInt64(&hash_key) ||
-        !entry_metadata.Deserialize(&pickle_it)) {
+        !entry_metadata.Deserialize(
+            &pickle_it, index_metadata.has_entry_in_memory_data())) {
       LOG(WARNING) << "Invalid EntryMetadata in Simple Index file.";
       entries->clear();
       return;

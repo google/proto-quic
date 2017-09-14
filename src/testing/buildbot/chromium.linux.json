@@ -6,7 +6,8 @@
   },
   "Android Builder": {
     "additional_compile_targets": [
-      "cronet_test_instrumentation_apk"
+      "cronet_test_instrumentation_apk",
+      "monochrome_static_initializers"
     ]
   },
   "Android Clang Builder (dbg)": {
@@ -3507,6 +3508,26 @@
       }
     ]
   },
+  "Fuchsia Compile": {
+    "additional_compile_targets": [
+      "base_unittests",
+      "content_unittests",
+      "crypto_unittests",
+      "gl_unittests",
+      "headless_shell",
+      "ipc_tests",
+      "media_unittests",
+      "mojo_common_unittests",
+      "mojo_js_unittests",
+      "mojo_public_bindings_unittests",
+      "mojo_public_system_unittests",
+      "mojo_system_unittests",
+      "net_unittests",
+      "skia_unittests",
+      "service_manager_unittests",
+      "ui_base_unittests"
+    ]
+  },
   "Linux Builder": {
     "additional_compile_targets": [
       "all"
@@ -3584,8 +3605,7 @@
           "can_use_on_swarming_builders": true,
           "shards": 5
         },
-        "test": "browser_tests",
-        "upload_to_flake_predictor": true
+        "test": "browser_tests"
       },
       {
         "args": [
@@ -4180,16 +4200,7 @@
         "isolate_name": "webkit_layout_tests_exparchive",
         "merge": {
           "args": [
-            "--verbose",
-            "--results-json-override-with-build-property",
-            "build_number",
-            "buildnumber",
-            "--results-json-override-with-build-property",
-            "builder_name",
-            "buildername",
-            "--results-json-override-with-build-property",
-            "chromium_revision",
-            "got_revision_cp"
+            "--verbose"
           ],
           "script": "//third_party/WebKit/Tools/Scripts/merge-layout-test-results"
         },
@@ -4204,12 +4215,23 @@
           ],
           "shards": 6
         }
+      },
+      {
+        "isolate_name": "webkit_python_tests",
+        "name": "webkit_python_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        }
       }
     ],
     "scripts": [
       {
         "name": "checkdeps",
         "script": "checkdeps.py"
+      },
+      {
+        "name": "webkit_lint",
+        "script": "webkit_lint.py"
       },
       {
         "name": "checkperms",

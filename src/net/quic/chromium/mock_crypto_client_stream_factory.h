@@ -5,9 +5,9 @@
 #ifndef NET_QUIC_CHROMIUM_MOCK_CRYPTO_CLIENT_STREAM_FACTORY_H_
 #define NET_QUIC_CHROMIUM_MOCK_CRYPTO_CLIENT_STREAM_FACTORY_H_
 
-#include <queue>
 #include <string>
 
+#include "base/containers/queue.h"
 #include "base/macros.h"
 #include "net/quic/chromium/crypto/proof_verifier_chromium.h"
 #include "net/quic/chromium/quic_crypto_client_stream_factory.h"
@@ -48,7 +48,7 @@ class MockCryptoClientStreamFactory : public QuicCryptoClientStreamFactory {
  private:
   MockCryptoClientStream::HandshakeMode handshake_mode_;
   MockCryptoClientStream* last_stream_;
-  std::queue<const ProofVerifyDetailsChromium*> proof_verify_details_queue_;
+  base::queue<const ProofVerifyDetailsChromium*> proof_verify_details_queue_;
   std::unique_ptr<QuicConfig> config_;
 
   DISALLOW_COPY_AND_ASSIGN(MockCryptoClientStreamFactory);

@@ -5,7 +5,6 @@
 #ifndef NET_QUIC_TEST_TOOLS_SIMULATOR_LINK_H_
 #define NET_QUIC_TEST_TOOLS_SIMULATOR_LINK_H_
 
-#include <queue>
 #include <utility>
 
 #include "net/quic/core/crypto/quic_random.h"
@@ -42,6 +41,7 @@ class OneWayLink : public Actor, public ConstrainedPortInterface {
     QuicTime dequeue_time;
 
     QueuedPacket(std::unique_ptr<Packet> packet, QuicTime dequeue_time);
+    QueuedPacket(QueuedPacket&& other);
     ~QueuedPacket();
   };
 
@@ -54,7 +54,7 @@ class OneWayLink : public Actor, public ConstrainedPortInterface {
   QuicTime::Delta GetRandomDelay(QuicTime::Delta transfer_time);
 
   UnconstrainedPortInterface* sink_;
-  std::queue<QueuedPacket> packets_in_transit_;
+  QuicQueue<QueuedPacket> packets_in_transit_;
 
   const QuicBandwidth bandwidth_;
   const QuicTime::Delta propagation_delay_;

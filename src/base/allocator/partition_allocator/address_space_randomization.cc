@@ -87,11 +87,12 @@ static struct ranctx s_ranctx;
 // Calculates a random preferred mapping address. In calculating an address, we
 // balance good ASLR against not fragmenting the address space too badly.
 void* GetRandomPageBase() {
-  uintptr_t random;
-  random = static_cast<uintptr_t>(ranval(&s_ranctx));
+  uintptr_t random = static_cast<uintptr_t>(ranval(&s_ranctx));
+
 #if defined(ARCH_CPU_X86_64)
   random <<= 32UL;
   random |= static_cast<uintptr_t>(ranval(&s_ranctx));
+
 // This address mask gives a low likelihood of address space collisions. We
 // handle the situation gracefully if there is a collision.
 #if defined(OS_WIN)
@@ -113,12 +114,14 @@ void* GetRandomPageBase() {
 #else
   // Linux and OS X support the full 47-bit user space of x64 processors.
   random &= 0x3fffffffffffUL;
-#endif
+#endif  // defined(OS_WIN)
+
 #elif defined(ARCH_CPU_ARM64)
   // ARM64 on Linux has 39-bit user space.
   random &= 0x3fffffffffUL;
   random += 0x1000000000UL;
 #else  // !defined(ARCH_CPU_X86_64) && !defined(ARCH_CPU_ARM64)
+
 #if defined(OS_WIN)
   // On win32 host systems the randomization plus huge alignment causes
   // excessive fragmentation. Plus most of these systems lack ASLR, so the
@@ -129,12 +132,30 @@ void* GetRandomPageBase() {
     isWow64 = FALSE;
   if (!isWow64)
     return nullptr;
+#elif defined(OS_MACOSX)
+  // macOS as of 10.12.5 does not clean up entries in page map levels 3/4
+  // [PDP/PML4] created from mmap or mach_vm_allocate, even after the region is
+  // destroyed. Using a virtual address space that is too large causes a leak of
+  // about 1 wired [can never be paged out] page per call to mmap(). The page is
+  // only reclaimed when the process is killed. Confine the hint to a 39-bit
+  // section of the virtual address space.
+  //
+  // This implementation adapted from
+  // https://chromium-review.googlesource.com/c/v8/v8/+/557958. The difference
+  // is that here we clamp to 39 bits, not 32.
+  //
+  // TODO(crbug.com/738925): Remove this limitation if/when the macOS behavior
+  // changes.
+  random &= 0x3fffffffffUL;
+  random += 0x1000000000UL;
 #endif  // defined(OS_WIN)
+
   // This is a good range on Windows, Linux and Mac.
   // Allocates in the 0.5-1.5GB region.
   random &= 0x3fffffff;
   random += 0x20000000;
 #endif  // defined(ARCH_CPU_X86_64)
+
   random &= kPageAllocationGranularityBaseMask;
   return reinterpret_cast<void*>(random);
 }

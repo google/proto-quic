@@ -56,7 +56,7 @@ class QUIC_EXPORT_PRIVATE QuicServerConfigProtobuf {
   void set_config(QuicStringPiece config) { config.CopyToString(&config_); }
 
   QuicServerConfigProtobuf::PrivateKey* add_key() {
-    keys_.push_back(base::MakeUnique<PrivateKey>());
+    keys_.push_back(std::make_unique<PrivateKey>());
     return keys_.back().get();
   }
 

@@ -17,7 +17,8 @@ def CheckChange(input_api, output_api):
         and input_api.os_path.dirname(p) == input_api.PresubmitLocalPath()):
       cwd = input_api.os_path.dirname(p)
       exit_code = input_api.subprocess.call(
-          ['python', 'pretty_print.py', '--presubmit'], cwd=cwd)
+          [input_api.python_executable, 'pretty_print.py', '--presubmit'],
+          cwd=cwd)
       if exit_code != 0:
         return [output_api.PresubmitError(
             'rappor.xml is not formatted correctly; run %s/pretty_print.py '

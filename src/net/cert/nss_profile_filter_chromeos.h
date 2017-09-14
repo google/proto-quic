@@ -10,10 +10,9 @@
 #include "base/memory/ref_counted.h"
 #include "crypto/scoped_nss_types.h"
 #include "net/base/net_export.h"
+#include "net/cert/scoped_nss_types.h"
 
 namespace net {
-
-class X509Certificate;
 
 // On ChromeOS each user has separate NSS databases, which are loaded
 // simultaneously when multiple users are logged in at the same time. NSS
@@ -43,11 +42,12 @@ class NET_EXPORT NSSProfileFilterChromeOS {
   bool IsModuleAllowed(PK11SlotInfo* slot) const;
   bool IsCertAllowed(CERTCertificate* cert) const;
 
+  // TODO(mattm): remove these predicates and use labmdas instead.
   class CertNotAllowedForProfilePredicate {
    public:
     explicit CertNotAllowedForProfilePredicate(
         const NSSProfileFilterChromeOS& filter);
-    bool operator()(const scoped_refptr<X509Certificate>& cert) const;
+    bool operator()(const ScopedCERTCertificate& cert) const;
 
    private:
     const NSSProfileFilterChromeOS& filter_;

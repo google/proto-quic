@@ -7,7 +7,6 @@
 #include "base/bind.h"
 #include "base/bind_helpers.h"
 #include "base/memory/ptr_util.h"
-#include "base/profiler/scoped_tracker.h"
 #include "base/strings/string_util.h"
 #include "base/values.h"
 #include "net/base/auth.h"
@@ -100,7 +99,7 @@ const HttpResponseInfo* HttpProxyClientSocket::GetConnectResponseInfo() const {
 
 std::unique_ptr<HttpStream>
 HttpProxyClientSocket::CreateConnectResponseStream() {
-  return base::MakeUnique<ProxyConnectRedirectHttpStream>(
+  return std::make_unique<ProxyConnectRedirectHttpStream>(
       redirect_has_load_timing_info_ ? &redirect_load_timing_info_ : nullptr);
 }
 

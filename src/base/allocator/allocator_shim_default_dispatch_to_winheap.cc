@@ -62,15 +62,25 @@ size_t DefaultWinHeapGetSizeEstimateImpl(const AllocatorDispatch*,
 
 }  // namespace
 
-const AllocatorDispatch AllocatorDispatch::default_dispatch = {
-    &DefaultWinHeapMallocImpl,
-    &DefaultWinHeapCallocImpl,
-    &DefaultWinHeapMemalignImpl,
-    &DefaultWinHeapReallocImpl,
-    &DefaultWinHeapFreeImpl,
-    &DefaultWinHeapGetSizeEstimateImpl,
-    nullptr, /* batch_malloc_function */
-    nullptr, /* batch_free_function */
-    nullptr, /* free_definite_size_function */
-    nullptr, /* next */
+#if defined(_MSC_VER) && _MSC_VER < 1911
+// VC++ 2015 (and maybe VC++ 2017 RTW) can't handle constexpr on static const
+// member variables.
+const
+#else
+// Guarantee that default_dispatch is compile-time initialized to avoid using
+// it before initialization (allocations before main in release builds with
+// optimizations disabled).
+constexpr
+#endif
+    AllocatorDispatch AllocatorDispatch::default_dispatch = {
+        &DefaultWinHeapMallocImpl,
+        &DefaultWinHeapCallocImpl,
+        &DefaultWinHeapMemalignImpl,
+        &DefaultWinHeapReallocImpl,
+        &DefaultWinHeapFreeImpl,
+        &DefaultWinHeapGetSizeEstimateImpl,
+        nullptr, /* batch_malloc_function */
+        nullptr, /* batch_free_function */
+        nullptr, /* free_definite_size_function */
+        nullptr, /* next */
 };

@@ -57,7 +57,7 @@ class ReportingNetworkChangeObserverImpl
 // static
 std::unique_ptr<ReportingNetworkChangeObserver>
 ReportingNetworkChangeObserver::Create(ReportingContext* context) {
-  return base::MakeUnique<ReportingNetworkChangeObserverImpl>(context);
+  return std::make_unique<ReportingNetworkChangeObserverImpl>(context);
 }
 
 ReportingNetworkChangeObserver::~ReportingNetworkChangeObserver() {}

@@ -35,6 +35,7 @@
 #include "net/quic/core/quic_client_promised_info.h"
 #include "net/quic/core/quic_packet_writer.h"
 #include "net/quic/platform/api/quic_flags.h"
+#include "net/quic/platform/impl/quic_test_impl.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_client_promised_info_peer.h"
 #include "net/quic/test_tools/quic_stream_peer.h"
@@ -174,6 +175,7 @@ class QuicChromiumClientSessionTest
     return test::GetNthServerInitiatedStreamId(GetParam(), n);
   }
 
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
   QuicCryptoClientConfig crypto_config_;
   TestNetLog net_log_;
   BoundTestNetLog bound_test_net_log_;
@@ -1126,6 +1128,7 @@ TEST_P(QuicChromiumClientSessionTest, ConnectionPooledWithMatchingPin) {
 }
 
 TEST_P(QuicChromiumClientSessionTest, MigrateToSocket) {
+  FLAGS_quic_reloadable_flag_quic_use_stream_notifier2 = false;
   MockRead old_reads[] = {MockRead(SYNCHRONOUS, ERR_IO_PENDING, 0)};
   std::unique_ptr<QuicEncryptedPacket> settings_packet(
       client_maker_.MakeInitialSettingsPacket(1, nullptr));
@@ -1183,6 +1186,11 @@ TEST_P(QuicChromiumClientSessionTest, MigrateToSocket) {
   struct iovec iov[1];
   iov[0].iov_base = data;
   iov[0].iov_len = 4;
+  if (session_->save_data_before_consumption()) {
+    QuicStreamPeer::SendBuffer(stream).SaveStreamData(
+        QuicIOVector(iov, arraysize(iov), 4), 0, 4);
+    QuicStreamPeer::SetStreamBytesWritten(4, stream);
+  }
   session_->WritevData(stream, stream->id(),
                        QuicIOVector(iov, arraysize(iov), 4), 0, NO_FIN,
                        nullptr);

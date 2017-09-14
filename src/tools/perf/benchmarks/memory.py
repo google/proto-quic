@@ -78,13 +78,11 @@ class _MemoryInfra(perf_benchmark.PerfBenchmark):
     SetExtraBrowserOptionsForMemoryMeasurement(options)
 
 
-@benchmark.Enabled('mac')
-@benchmark.Enabled('win')
-@benchmark.Disabled('android')
 @benchmark.Owner(emails=['erikchen@chromium.org'])
 class MemoryBenchmarkTrivialSitesDesktop(_MemoryInfra):
   """Measure memory usage on trivial sites."""
   options = {'pageset_repeat': 5}
+  SUPPORTED_PLATFORMS = [story.expectations.ALL_DESKTOP]
 
   def CreateStorySet(self, options):
     return page_sets.TrivialSitesStorySet(wait_in_seconds=0,
@@ -93,9 +91,10 @@ class MemoryBenchmarkTrivialSitesDesktop(_MemoryInfra):
   def SetExtraBrowserOptions(self, options):
     super(MemoryBenchmarkTrivialSitesDesktop, self).SetExtraBrowserOptions(
           options)
-    options.AppendExtraBrowserArgs([
-      '--enable-heap-profiling=native',
-    ])
+    # Heap profiling is disabled because of crbug.com/757847.
+    #options.AppendExtraBrowserArgs([
+    #  '--enable-heap-profiling=native',
+    #])
 
   @classmethod
   def Name(cls):
@@ -108,11 +107,10 @@ class MemoryBenchmarkTrivialSitesDesktop(_MemoryInfra):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing disabled.
+        pass
     return StoryExpectations()
 
 
-@benchmark.Enabled('android')  # catapult:#3176
 @benchmark.Owner(emails=['perezju@chromium.org'])
 class MemoryBenchmarkTop10Mobile(_MemoryInfra):
   """Measure foreground/background memory on top 10 mobile page set.
@@ -122,6 +120,7 @@ class MemoryBenchmarkTop10Mobile(_MemoryInfra):
   """
   page_set = page_sets.MemoryTop10Mobile
   options = {'pageset_repeat': 5}
+  SUPPORTED_PLATFORMS = [story.expectations.ALL_MOBILE]
 
   @classmethod
   def Name(cls):
@@ -134,7 +133,7 @@ class MemoryBenchmarkTop10Mobile(_MemoryInfra):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing disabled.
+        pass
     return StoryExpectations()
 
 
@@ -181,37 +180,33 @@ class MemoryLongRunningIdleGmail(_MemoryV8Benchmark):
   def Name(cls):
     return 'memory.long_running_idle_gmail_tbmv2'
 
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    return (cls.IsSvelte(possible_browser) or  # http://crbug.com/611167
-            # http://crbug.com/671650
-            ((possible_browser.browser_type == 'reference' and
-              possible_browser.platform.GetDeviceTypeName() == 'Nexus 5')))
-
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing disabled.
+        self.DisableBenchmark(
+            [story.expectations.ANDROID_SVELTE],
+            'Requires a lot of memory: crbug.com/611167')
     return StoryExpectations()
 
 
-@benchmark.Enabled('has tabs')  # http://crbug.com/612210
 @benchmark.Owner(emails=['ulan@chromium.org'])
 class MemoryLongRunningIdleGmailBackground(_MemoryV8Benchmark):
   """Use (recorded) real world web sites and measure memory consumption
   of long running idle Gmail page """
   page_set = page_sets.LongRunningIdleGmailBackgroundPageSet
+  SUPPORTED_PLATFORMS = [
+      story.expectations.ANDROID_NOT_WEBVIEW, # Requires tabs.
+      story.expectations.ALL_DESKTOP
+  ]
 
   @classmethod
   def Name(cls):
     return 'memory.long_running_idle_gmail_background_tbmv2'
 
-  @classmethod
-  def ShouldDisable(cls, possible_browser):  # http://crbug.com/616530
-    return cls.IsSvelte(possible_browser)
-
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # Nothing disabled.
+        self.DisableBenchmark(
+            [story.expectations.ANDROID_SVELTE],
+            'Requires a lot of memory: crbug.com/616530')
     return StoryExpectations()

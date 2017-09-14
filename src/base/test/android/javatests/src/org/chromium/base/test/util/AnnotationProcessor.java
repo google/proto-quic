@@ -4,6 +4,8 @@
 
 package org.chromium.base.test.util;
 
+import android.support.annotation.Nullable;
+
 import org.junit.rules.ExternalResource;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -11,8 +13,9 @@ import org.junit.runners.model.Statement;
 import java.lang.annotation.Annotation;
 
 /**
- * Test rule that is activated when a test has a specific annotation. It allows to run some code
- * before the test (and the {@link org.junit.Before}) runs, and guarantees to also run code after.
+ * Test rule that is activated when a test or its class has a specific annotation.
+ * It allows to run some code before the test (and the {@link org.junit.Before}) runs,
+ * and guarantees to also run code after.
  *
  * Usage:
  *
@@ -38,7 +41,12 @@ import java.lang.annotation.Annotation;
 public abstract class AnnotationProcessor<T extends Annotation> extends ExternalResource {
     private final Class<T> mAnnotationClass;
     private Description mTestDescription;
-    private T mAnnotation;
+
+    @Nullable
+    private T mClassAnnotation;
+
+    @Nullable
+    private T mTestAnnotation;
 
     public AnnotationProcessor(Class<T> annotationClass) {
         mAnnotationClass = annotationClass;
@@ -47,8 +55,10 @@ public abstract class AnnotationProcessor<T extends Annotation> extends External
     @Override
     public Statement apply(Statement base, Description description) {
         mTestDescription = description;
-        mAnnotation = getAnnotation(description);
-        if (mAnnotation == null) return base;
+        mClassAnnotation = description.getTestClass().getAnnotation(mAnnotationClass);
+        mTestAnnotation = description.getAnnotation(mAnnotationClass);
+
+        if (mClassAnnotation == null && mTestAnnotation == null) return base;
 
         // Return the wrapped statement to execute before() and after().
         return super.apply(base, description);
@@ -59,16 +69,15 @@ public abstract class AnnotationProcessor<T extends Annotation> extends External
         return mTestDescription;
     }
 
-    /** @return the annotation that caused the test to be processed. */
-    protected T getAnnotation() {
-        return mAnnotation;
+    /** @return the annotation on the test class. */
+    @Nullable
+    protected T getClassAnnotation() {
+        return mClassAnnotation;
     }
 
-    private T getAnnotation(Description description) {
-        T annotation = description.getAnnotation(mAnnotationClass);
-        if (annotation != null) return annotation;
-
-        annotation = description.getTestClass().getAnnotation(mAnnotationClass);
-        return annotation;
+    /** @return the annotation on the test method. */
+    @Nullable
+    protected T getTestAnnotation() {
+        return mTestAnnotation;
     }
 }

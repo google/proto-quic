@@ -86,10 +86,10 @@ CreateAuthHandlerRegistryFactory(const HttpAuthPreferences& prefs,
     HttpAuthHandlerNegotiate::Factory* negotiate_factory =
         new HttpAuthHandlerNegotiate::Factory();
 #if defined(OS_WIN)
-    negotiate_factory->set_library(base::MakeUnique<SSPILibraryDefault>());
+    negotiate_factory->set_library(std::make_unique<SSPILibraryDefault>());
 #elif defined(OS_POSIX) && !defined(OS_ANDROID)
     negotiate_factory->set_library(
-        base::MakeUnique<GSSAPISharedLibrary>(prefs.GssapiLibraryName()));
+        std::make_unique<GSSAPISharedLibrary>(prefs.GssapiLibraryName()));
 #endif  // defined(OS_POSIX) && !defined(OS_ANDROID)
     negotiate_factory->set_host_resolver(host_resolver);
     registry_factory->RegisterSchemeFactory(kNegotiateAuthScheme,

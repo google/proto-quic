@@ -11,13 +11,16 @@ on all the swarming bots corresponding to the --dimension filters specified, or
 all the bots if no filter is specified.
 """
 
-__version__ = '0.1'
+__version__ = '0.2'
 
+import json
 import os
-import tempfile
 import shutil
+import string
 import subprocess
 import sys
+import tempfile
+import threading
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(
     __file__.decode(sys.getfilesystemencoding()))))
@@ -26,23 +29,36 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(
 import parallel_execution
 
 from third_party import colorama
+from third_party.chromium import natsort
 from third_party.depot_tools import fix_encoding
 from utils import file_path
 from utils import tools
 
 
-def get_bot_list(swarming_server, dimensions, dead_only):
-  """Returns a list of swarming bots."""
+def get_bot_list(swarming_server, dimensions):
+  """Returns a list of swarming bots: health, quarantined, dead."""
+  q = '&'.join(
+      'dimensions=%s:%s' % (k, v) for k, v in sorted(dimensions.iteritems()))
   cmd = [
-    sys.executable, 'swarming.py', 'bots',
+    sys.executable, 'swarming.py', 'query',
     '--swarming', swarming_server,
-    '--bare',
+    '--limit', '0',
+    'bots/list?' + q,
   ]
-  for k, v in sorted(dimensions.iteritems()):
-    cmd.extend(('--dimension', k, v))
-  if dead_only:
-    cmd.append('--dead-only')
-  return subprocess.check_output(cmd, cwd=ROOT_DIR).splitlines()
+  healthy = []
+  quarantined = []
+  dead = []
+  results = json.loads(subprocess.check_output(cmd, cwd=ROOT_DIR))
+  if not results.get('items'):
+    return (), (), ()
+  for b in results['items']:
+    if b['is_dead']:
+      dead.append(b['bot_id'])
+    elif b['quarantined']:
+      quarantined.append(b['bot_id'])
+    else:
+      healthy.append(b['bot_id'])
+  return natsort.natsorted(healthy), quarantined, dead
 
 
 def archive(isolate_server, script):
@@ -72,9 +88,56 @@ def archive(isolate_server, script):
     file_path.rmtree(tempdir)
 
 
+def batched_subprocess(cmd, sem):
+    def run(cmd, sem):
+      subprocess.call(cmd, cwd=ROOT_DIR)
+      sem.release()
+    sem.acquire()
+    thread = threading.Thread(target=run, args=(cmd, sem))
+    thread.start()
+    return thread
+
+
+def run_batches(
+    swarming_server, isolate_server, dimensions, env, priority, deadline,
+    batches, repeat, isolated_hash, name, bots, args):
+  """Runs the task |batches| at a time.
+
+  This will be mainly bound by task scheduling latency, especially if the bots
+  are busy and the priority is low.
+  """
+  sem = threading.Semaphore(batches)
+  threads = []
+  for i in xrange(repeat):
+    for bot in bots:
+      suffix = '/%d' % i if repeat > 1 else ''
+      task_name = parallel_execution.task_to_name(
+            name, {'id': bot}, isolated_hash) + suffix
+      cmd = [
+        sys.executable, 'swarming.py', 'run',
+        '--swarming', swarming_server,
+        '--isolate-server', isolate_server,
+        '--priority', priority,
+        '--deadline', deadline,
+        '--dimension', 'id', bot,
+        '--task-name', task_name,
+        '-s', isolated_hash,
+      ]
+      for k, v in sorted(dimensions.iteritems()):
+        cmd.extend(('-d', k, v))
+      for k, v in env:
+        cmd.extend(('--env', k, v))
+      if args:
+        cmd.append('--')
+        cmd.extend(args)
+      threads.append(batched_subprocess(cmd, sem))
+  for t in threads:
+     t.join()
+
+
 def run_serial(
-    swarming_server, isolate_server, priority, deadline, repeat, isolated_hash,
-    name, bots):
+    swarming_server, isolate_server, dimensions, env, priority, deadline,
+    repeat, isolated_hash, name, bots, args):
   """Runs the task one at a time.
 
   This will be mainly bound by task scheduling latency, especially if the bots
@@ -94,27 +157,33 @@ def run_serial(
         '--deadline', deadline,
         '--dimension', 'id', bot,
         '--task-name', task_name,
-        isolated_hash,
+        '-s', isolated_hash,
       ]
+      for k, v in sorted(dimensions.iteritems()):
+        cmd.extend(('-d', k, v))
+      for k, v in env:
+        cmd.extend(('--env', k, v))
+      if args:
+        cmd.append('--')
+        cmd.extend(args)
       r = subprocess.call(cmd, cwd=ROOT_DIR)
       result = max(r, result)
   return result
 
 
 def run_parallel(
-    swarming_server, isolate_server, priority, deadline, repeat, isolated_hash,
-    name, bots):
+    swarming_server, isolate_server, dimensions, env, priority, deadline,
+    repeat, isolated_hash, name, bots, args):
   tasks = []
   for i in xrange(repeat):
     suffix = '/%d' % i if repeat > 1 else ''
-    tasks.extend(
-        (
-          parallel_execution.task_to_name(
-              name, {'id': bot}, isolated_hash) + suffix,
-          isolated_hash,
-          {'id': bot},
-        ) for bot in bots)
+    for bot in bots:
+      d = {'id': bot}
+      tname = parallel_execution.task_to_name(name, d, isolated_hash) + suffix
+      d.update(dimensions)
+      tasks.append((tname, isolated_hash, d, env))
   extra_args = ['--priority', priority, '--deadline', deadline]
+  extra_args.extend(args)
   print('Using priority %s' % priority)
   for failed_task in parallel_execution.run_swarming_tasks_parallel(
       swarming_server, isolate_server, extra_args, tasks):
@@ -125,18 +194,26 @@ def run_parallel(
 
 def main():
   parser = parallel_execution.OptionParser(
-      usage='%prog [options] script.py', version=__version__)
+      usage='%prog [options] (script.py|isolated hash) '
+            '-- [script.py arguments]',
+      version=__version__)
   parser.add_option(
       '--serial', action='store_true',
       help='Runs the task serially, to be used when debugging problems since '
            'it\'s slow')
   parser.add_option(
+      '--batches', type='int', default=0,
+      help='Runs a task in parallel |batches| at a time.')
+  parser.add_option(
       '--repeat', type='int', default=1,
       help='Runs the task multiple time on each bot, meant to be used as a '
            'load test')
+  parser.add_option(
+      '--name',
+      help='Name to use when providing an isolated hash')
   options, args = parser.parse_args()
 
-  if len(args) != 1:
+  if len(args) < 1:
     parser.error(
         'Must pass one python script to run. Use --help for more details')
 
@@ -146,42 +223,83 @@ def main():
         'so the task completes as fast as possible, or an high number so the\n'
         'task only runs when the bot is idle.')
 
-  # 1. Query the bots list.
-  bots = get_bot_list(options.swarming, options.dimensions, False)
+  # 1. Archive the script to run.
+  if not os.path.exists(args[0]):
+    if not options.name:
+      parser.error(
+          'Please provide --name when using an isolated hash.')
+    if len(args[0]) not in (40, 64):
+      parser.error(
+          'Hash wrong length %d (%r)' % (len(args.hash), args[0]))
+    for i, c in enumerate(args[0]):
+      if c not in string.hexdigits:
+        parser.error(
+            'Hash character invalid\n'
+            ' %s\n' % args[0] +
+            ' '+'-'*i+'^\n'
+            )
+
+    isolated_hash = args[0]
+    name = options.name
+  else:
+    isolated_hash = archive(options.isolate_server, args[0])
+    name = os.path.basename(args[0])
+
+  print('Running %s' % isolated_hash)
+
+  # 2. Query the bots list.
+  bots, quarantined_bots, dead_bots = get_bot_list(
+      options.swarming, options.dimensions)
   print('Found %d bots to process' % len(bots))
+  if quarantined_bots:
+    print('Warning: found %d quarantined bots' % len(quarantined_bots))
+  if dead_bots:
+    print('Warning: found %d dead bots' % len(dead_bots))
   if not bots:
     return 1
 
-  dead_bots = get_bot_list(options.swarming, options.dimensions, True)
-  if dead_bots:
-    print('Warning: found %d dead bots' % len(dead_bots))
-
-  # 2. Archive the script to run.
-  isolated_hash = archive(options.isolate_server, args[0])
-  print('Running %s' % isolated_hash)
-
   # 3. Trigger the tasks.
-  name = os.path.basename(args[0])
+  if options.batches > 0:
+    return run_batches(
+        options.swarming,
+        options.isolate_server,
+        options.dimensions,
+        options.env,
+        str(options.priority),
+        str(options.deadline),
+        options.batches,
+        options.repeat,
+        isolated_hash,
+        name,
+        bots,
+        args[1:])
+
   if options.serial:
     return run_serial(
         options.swarming,
         options.isolate_server,
+        options.dimensions,
+        options.env,
         str(options.priority),
         str(options.deadline),
         options.repeat,
         isolated_hash,
         name,
-        bots)
+        bots,
+        args[1:])
 
   return run_parallel(
       options.swarming,
       options.isolate_server,
+      options.dimensions,
+      options.env,
       str(options.priority),
       str(options.deadline),
       options.repeat,
       isolated_hash,
       name,
-      bots)
+      bots,
+      args[1:])
 
 
 if __name__ == '__main__':

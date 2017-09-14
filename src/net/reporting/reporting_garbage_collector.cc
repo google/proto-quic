@@ -25,7 +25,7 @@ class ReportingGarbageCollectorImpl : public ReportingGarbageCollector,
                                       public ReportingObserver {
  public:
   ReportingGarbageCollectorImpl(ReportingContext* context)
-      : context_(context), timer_(base::MakeUnique<base::OneShotTimer>()) {
+      : context_(context), timer_(std::make_unique<base::OneShotTimer>()) {
     context_->AddObserver(this);
   }
 
@@ -84,7 +84,7 @@ class ReportingGarbageCollectorImpl : public ReportingGarbageCollector,
 // static
 std::unique_ptr<ReportingGarbageCollector> ReportingGarbageCollector::Create(
     ReportingContext* context) {
-  return base::MakeUnique<ReportingGarbageCollectorImpl>(context);
+  return std::make_unique<ReportingGarbageCollectorImpl>(context);
 }
 
 ReportingGarbageCollector::~ReportingGarbageCollector() {}

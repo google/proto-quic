@@ -123,29 +123,6 @@ class MockPersistentCookieStore : public CookieMonster::PersistentCookieStore {
   DISALLOW_COPY_AND_ASSIGN(MockPersistentCookieStore);
 };
 
-// Mock for CookieMonsterDelegate
-class MockCookieMonsterDelegate : public CookieMonsterDelegate {
- public:
-  typedef std::pair<CanonicalCookie, bool> CookieNotification;
-
-  MockCookieMonsterDelegate();
-
-  const std::vector<CookieNotification>& changes() const { return changes_; }
-
-  void reset() { changes_.clear(); }
-
-  void OnCookieChanged(const CanonicalCookie& cookie,
-                       bool removed,
-                       CookieStore::ChangeCause cause) override;
-
- private:
-  ~MockCookieMonsterDelegate() override;
-
-  std::vector<CookieNotification> changes_;
-
-  DISALLOW_COPY_AND_ASSIGN(MockCookieMonsterDelegate);
-};
-
 // Helper to build a single CanonicalCookie.
 std::unique_ptr<CanonicalCookie> BuildCanonicalCookie(
     const GURL& url,

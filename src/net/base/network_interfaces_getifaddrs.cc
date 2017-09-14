@@ -225,7 +225,7 @@ bool GetNetworkList(NetworkInterfaceList* networks, int policy) {
   std::unique_ptr<internal::IPAttributesGetter> ip_attributes_getter;
 
 #if defined(OS_MACOSX) && !defined(OS_IOS)
-  ip_attributes_getter = base::MakeUnique<internal::IPAttributesGetterMac>();
+  ip_attributes_getter = std::make_unique<internal::IPAttributesGetterMac>();
 #endif
 
   bool result = internal::IfaddrsToNetworkInterfaceList(

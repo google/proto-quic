@@ -21,6 +21,10 @@ class SingleThreadTaskRunner;
 // Note: RunLoop() will not work in the scope of a
 // ScopedMockTimeMessageLoopTaskRunner, the underlying TestMockTimeTaskRunner's
 // methods must be used instead to pump tasks.
+//
+// DEPRECATED: Use a TestMockTimeTaskRunner::Type::kBoundToThread instead of a
+// MessageLoop + ScopedMockTimeMessageLoopTaskRunner.
+// TODO(gab): Remove usage of this API and delete it.
 class ScopedMockTimeMessageLoopTaskRunner {
  public:
   ScopedMockTimeMessageLoopTaskRunner();

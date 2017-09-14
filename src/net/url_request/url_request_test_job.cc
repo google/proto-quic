@@ -138,7 +138,7 @@ std::string URLRequestTestJob::test_error_headers() {
 // static
 std::unique_ptr<URLRequestJobFactory::ProtocolHandler>
 URLRequestTestJob::CreateProtocolHandler() {
-  return base::MakeUnique<TestJobProtocolHandler>();
+  return std::make_unique<TestJobProtocolHandler>();
 }
 
 URLRequestTestJob::URLRequestTestJob(URLRequest* request,

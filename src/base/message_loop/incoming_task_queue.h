@@ -7,11 +7,12 @@
 
 #include "base/base_export.h"
 #include "base/callback.h"
+#include "base/debug/task_annotator.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/pending_task.h"
+#include "base/sequence_checker.h"
 #include "base/synchronization/lock.h"
-#include "base/synchronization/read_write_lock.h"
 #include "base/time/time.h"
 
 namespace base {
@@ -35,14 +36,10 @@ class BASE_EXPORT IncomingTaskQueue
   // Returns true if the task was successfully added to the queue, otherwise
   // returns false. In all cases, the ownership of |task| is transferred to the
   // called method.
-  bool AddToIncomingQueue(const tracked_objects::Location& from_here,
+  bool AddToIncomingQueue(const Location& from_here,
                           OnceClosure task,
                           TimeDelta delay,
                           bool nestable);
-
-  // Returns true if the queue contains tasks that require higher than default
-  // timer resolution. Currently only needed for Windows.
-  bool HasHighResolutionTasks();
 
   // Returns true if the message loop is "idle". Provided for testing.
   bool IsIdleForTesting();
@@ -59,6 +56,9 @@ class BASE_EXPORT IncomingTaskQueue
   // scheduling work.
   void StartScheduling();
 
+  // Runs |pending_task|.
+  void RunTask(PendingTask* pending_task);
+
  private:
   friend class RefCountedThreadSafe<IncomingTaskQueue>;
   virtual ~IncomingTaskQueue();
@@ -69,8 +69,14 @@ class BASE_EXPORT IncomingTaskQueue
   // does not retain |pending_task->task| beyond this function call.
   bool PostPendingTask(PendingTask* pending_task);
 
+  // Does the real work of posting a pending task. Returns true if the caller
+  // should call ScheduleWork() on the message loop.
+  bool PostPendingTaskLockRequired(PendingTask* pending_task);
+
   // Wakes up the message loop and schedules work.
   void ScheduleWork();
+
+  debug::TaskAnnotator task_annotator_;
 
   // Number of tasks that require high resolution timing. This value is kept
   // so that ReloadWorkQueue() completes in constant time.
@@ -80,9 +86,9 @@ class BASE_EXPORT IncomingTaskQueue
   // |message_loop_|.
   base::Lock incoming_queue_lock_;
 
-  // Lock that protects |message_loop_| to prevent it from being deleted while a
-  // task is being posted.
-  base::subtle::ReadWriteLock message_loop_lock_;
+  // Lock that protects |message_loop_| to prevent it from being deleted while
+  // a request is made to schedule work.
+  base::Lock message_loop_lock_;
 
   // An incoming queue of tasks that are acquired under a mutex for processing
   // on this instance's thread. These tasks have not yet been been pushed to
@@ -91,6 +97,9 @@ class BASE_EXPORT IncomingTaskQueue
 
   // Points to the message loop that owns |this|.
   MessageLoop* message_loop_;
+
+  // True if new tasks should be accepted.
+  bool accept_new_tasks_ = true;
 
   // The next sequence number to use for delayed tasks.
   int next_sequence_num_;
@@ -105,6 +114,9 @@ class BASE_EXPORT IncomingTaskQueue
 
   // False until StartScheduling() is called.
   bool is_ready_for_scheduling_;
+
+  // Checks calls made only on the MessageLoop thread.
+  SEQUENCE_CHECKER(sequence_checker_);
 
   DISALLOW_COPY_AND_ASSIGN(IncomingTaskQueue);
 };

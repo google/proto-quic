@@ -13,11 +13,17 @@ default_test_file = ../../base/logging_unittest.cc
 rule cxx
   command = $cxx -Ia -Itag-$tag $in -o $out
 
+rule cxx_i
+  command = $cxx -I a -I tag-$tag $in -o $out
+
 rule cxx_sysroot_abs
   command = $cxx -Ia --sysroot=/usr/lib/sysroot-image -isysroot /mac.sdk $in -o $out
 
 rule cxx_sysroot_rel
   command = $cxx -Ia --sysroot=../../build/sysroot-image -isysroot ../../build/mac.sdk $in -o $out
+
+rule cxx_isystem
+  command = $cxx -Ib -isystema -isystem ../../build/c -isystem /usr/lib/include $in -o $out
 
 rule link
   command = $link $in $out
@@ -56,3 +62,9 @@ build obj/seven.o: cxx_sysroot_rel ../../seven.cc
 build obj/eight.o: cxx ../../eight.m
 
 build obj/nine.o: cxx ../../nine.mm
+
+build obj/ten.o: cxx_isystem ../../ten.cc
+
+build obj/eleven.o: cxx_i ../../eleven.cc
+  tag = eleven
+

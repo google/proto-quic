@@ -59,14 +59,6 @@ std::unique_ptr<ProcessMetrics> ProcessMetrics::CreateCurrentProcessMetrics() {
 #endif  // !defined(OS_MACOSX) || defined(OS_IOS)
 }
 
-double ProcessMetrics::GetPlatformIndependentCPUUsage() {
-#if defined(OS_WIN)
-  return GetCPUUsage() * processor_count_;
-#else
-  return GetCPUUsage();
-#endif
-}
-
 #if defined(OS_MACOSX) || defined(OS_LINUX) || defined(OS_AIX)
 int ProcessMetrics::CalculateIdleWakeupsPerSecond(
     uint64_t absolute_idle_wakeups) {

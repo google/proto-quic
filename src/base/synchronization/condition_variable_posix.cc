@@ -9,6 +9,7 @@
 #include <sys/time.h>
 
 #include "base/synchronization/lock.h"
+#include "base/threading/scoped_blocking_call.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
@@ -63,6 +64,7 @@ ConditionVariable::~ConditionVariable() {
 
 void ConditionVariable::Wait() {
   base::ThreadRestrictions::AssertWaitAllowed();
+  ScopedBlockingCall scoped_blocking_call(BlockingType::MAY_BLOCK);
 #if DCHECK_IS_ON()
   user_lock_->CheckHeldAndUnmark();
 #endif
@@ -75,6 +77,7 @@ void ConditionVariable::Wait() {
 
 void ConditionVariable::TimedWait(const TimeDelta& max_time) {
   base::ThreadRestrictions::AssertWaitAllowed();
+  ScopedBlockingCall scoped_blocking_call(BlockingType::MAY_BLOCK);
   int64_t usecs = max_time.InMicroseconds();
   struct timespec relative_time;
   relative_time.tv_sec = usecs / Time::kMicrosecondsPerSecond;

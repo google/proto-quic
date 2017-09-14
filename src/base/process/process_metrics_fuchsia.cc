@@ -19,7 +19,7 @@ std::unique_ptr<ProcessMetrics> ProcessMetrics::CreateProcessMetrics(
   return nullptr;
 }
 
-double ProcessMetrics::GetCPUUsage() {
+double ProcessMetrics::GetPlatformIndependentCPUUsage() {
   NOTIMPLEMENTED();  // TODO(fuchsia): https://crbug.com/706592.
   return 0.0;
 }
@@ -37,6 +37,11 @@ size_t ProcessMetrics::GetWorkingSetSize() const {
 size_t ProcessMetrics::GetPeakWorkingSetSize() const {
   NOTIMPLEMENTED();  // TODO(fuchsia): https://crbug.com/706592.
   return 0;
+}
+
+bool GetSystemMemoryInfo(SystemMemoryInfoKB* meminfo) {
+  NOTIMPLEMENTED();  // TODO(fuchsia): https://crbug.com/706592.
+  return false;
 }
 
 }  // namespace base

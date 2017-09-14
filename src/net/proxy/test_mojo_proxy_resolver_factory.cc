@@ -25,7 +25,7 @@ TestMojoProxyResolverFactory::CreateResolver(
 }
 
 TestMojoProxyResolverFactory::TestMojoProxyResolverFactory() {
-  mojo::MakeStrongBinding(base::MakeUnique<MojoProxyResolverFactoryImpl>(),
+  mojo::MakeStrongBinding(std::make_unique<MojoProxyResolverFactoryImpl>(),
                           mojo::MakeRequest(&factory_));
 }
 

@@ -381,7 +381,7 @@ File File::Duplicate() const {
 
   SCOPED_FILE_TRACE("Duplicate");
 
-  PlatformFile other_fd = dup(GetPlatformFile());
+  PlatformFile other_fd = HANDLE_EINTR(dup(GetPlatformFile()));
   if (other_fd == -1)
     return File(OSErrorToFileError(errno));
 

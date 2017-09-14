@@ -12,8 +12,11 @@
 #endif
 
 #include "base/memory/ptr_util.h"
+#include "build/build_config.h"
+#include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/internal/trust_store_collection.h"
 #include "net/cert/internal/trust_store_in_memory.h"
+#include "net/cert/test_root_certs.h"
 
 #if defined(USE_NSS_CERTS)
 #include "crypto/nss_util.h"
@@ -97,7 +100,7 @@ class SystemTrustStoreNSS : public BaseSystemTrustStore {
 }  // namespace
 
 std::unique_ptr<SystemTrustStore> CreateSslSystemTrustStore() {
-  return base::MakeUnique<SystemTrustStoreNSS>();
+  return std::make_unique<SystemTrustStoreNSS>();
 }
 
 #elif defined(OS_MACOSX) && !defined(OS_IOS)
@@ -130,8 +133,31 @@ class SystemTrustStoreMac : public BaseSystemTrustStore {
 };
 
 std::unique_ptr<SystemTrustStore> CreateSslSystemTrustStore() {
-  return base::MakeUnique<SystemTrustStoreMac>();
+  return std::make_unique<SystemTrustStoreMac>();
 }
+
+#elif defined(OS_FUCHSIA)
+
+class SystemTrustStoreFuchsia : public BaseSystemTrustStore {
+ public:
+  SystemTrustStoreFuchsia() {
+    if (TestRootCerts::HasInstance()) {
+      trust_store_.AddTrustStore(
+          TestRootCerts::GetInstance()->test_trust_store());
+    }
+  }
+
+  bool UsesSystemTrustStore() const override { return false; }
+
+  bool IsKnownRoot(const ParsedCertificate* trust_anchor) const override {
+    return false;
+  }
+};
+
+std::unique_ptr<SystemTrustStore> CreateSslSystemTrustStore() {
+  return base::MakeUnique<SystemTrustStoreFuchsia>();
+}
+
 #else
 
 class DummySystemTrustStore : public BaseSystemTrustStore {
@@ -144,8 +170,9 @@ class DummySystemTrustStore : public BaseSystemTrustStore {
 };
 
 std::unique_ptr<SystemTrustStore> CreateSslSystemTrustStore() {
-  return base::MakeUnique<DummySystemTrustStore>();
+  return std::make_unique<DummySystemTrustStore>();
 }
+
 #endif
 
 }  // namespace net

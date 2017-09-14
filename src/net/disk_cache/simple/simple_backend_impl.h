@@ -60,7 +60,7 @@ class NET_EXPORT_PRIVATE SimpleBackendImpl : public Backend,
       scoped_refptr<BackendCleanupTracker> cleanup_tracker,
       int max_bytes,
       net::CacheType cache_type,
-      const scoped_refptr<base::SingleThreadTaskRunner>& cache_thread,
+      const scoped_refptr<base::SequencedTaskRunner>& cache_runner,
       net::NetLog* net_log);
 
   ~SimpleBackendImpl() override;
@@ -122,6 +122,8 @@ class NET_EXPORT_PRIVATE SimpleBackendImpl : public Backend,
   size_t DumpMemoryStats(
       base::trace_event::ProcessMemoryDump* pmd,
       const std::string& parent_absolute_name) const override;
+  uint8_t GetEntryInMemoryData(const std::string& key) override;
+  void SetEntryInMemoryData(const std::string& key, uint8_t data) override;
 
  private:
   class SimpleIterator;

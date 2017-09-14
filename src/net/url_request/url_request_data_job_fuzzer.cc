@@ -32,7 +32,7 @@ class URLRequestDataJobFuzzerHarness : public net::URLRequest::Delegate {
   URLRequestDataJobFuzzerHarness()
       : task_runner_(base::ThreadTaskRunnerHandle::Get()), context_(true) {
     job_factory_.SetProtocolHandler(
-        "data", base::MakeUnique<net::DataProtocolHandler>());
+        "data", std::make_unique<net::DataProtocolHandler>());
     context_.set_job_factory(&job_factory_);
     context_.Init();
   }

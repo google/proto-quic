@@ -7,17 +7,7 @@
 #include "base/test/test_suite.h"
 #include "build/build_config.h"
 
-#if defined(OS_ANDROID)
-#include "base/android/jni_android.h"
-#include "base/test/android/test_system_message_handler_link_android.h"
-#endif  // defined(OS_ANDROID)
-
 int main(int argc, char** argv) {
-#if defined(OS_ANDROID)
-  base::android::TestSystemMessageHandlerLink::RegisterJNI(
-      base::android::AttachCurrentThread());
-#endif  // defined(OS_ANDROID)
-
   base::TestSuite test_suite(argc, argv);
   return base::LaunchUnitTests(
       argc, argv,

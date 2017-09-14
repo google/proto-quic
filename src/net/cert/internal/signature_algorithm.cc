@@ -682,7 +682,7 @@ std::unique_ptr<SignatureAlgorithm> SignatureAlgorithm::CreateRsaPss(
     uint32_t salt_length) {
   return base::WrapUnique(new SignatureAlgorithm(
       SignatureAlgorithmId::RsaPss, digest,
-      base::MakeUnique<RsaPssParameters>(mgf1_hash, salt_length)));
+      std::make_unique<RsaPssParameters>(mgf1_hash, salt_length)));
 }
 
 const RsaPssParameters* SignatureAlgorithm::ParamsForRsaPss() const {

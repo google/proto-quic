@@ -44,7 +44,7 @@ class ReportingServiceTest : public ::testing::Test {
 
 TEST_F(ReportingServiceTest, QueueReport) {
   service()->QueueReport(kUrl_, kGroup_, kType_,
-                         base::MakeUnique<base::DictionaryValue>());
+                         std::make_unique<base::DictionaryValue>());
 
   std::vector<const ReportingReport*> reports;
   context()->cache()->GetReports(&reports);

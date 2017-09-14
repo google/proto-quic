@@ -7,10 +7,10 @@ assert(is_fuchsia)
 template("generate_runner_script") {
   # This runtime_deps file is used at runtime and thus cannot go in
   # target_gen_dir.
-  _target_dir_name = get_label_info(":$target_name", "dir")
-  _runtime_deps_file =
-      "$root_out_dir/gen.runtime/$_target_dir_name/$target_name.runtime_deps"
-  _runtime_deps_target = "${target_name}__write_deps"
+  _target_dir_name = get_label_info(invoker.exe_target, "dir")
+  _target_shortname = get_label_info(invoker.exe_target, "name")
+  _runtime_deps_file = "$root_out_dir/gen.runtime/$_target_dir_name/$_target_shortname.runtime_deps"
+  _runtime_deps_target = "${_target_shortname}__write_deps"
   group(_runtime_deps_target) {
     forward_variables_from(invoker,
                            [
@@ -45,11 +45,18 @@ template("generate_runner_script") {
     data = []
     runner_args = []
 
-    generated_script = "$root_build_dir/bin/run_${target}"
+    generated_script = "$root_build_dir/bin/run_${_target_shortname}"
     outputs = [
       generated_script,
     ]
-    data += [ generated_script ]
+    data += [
+      generated_script,
+      "//build/fuchsia/exe_runner.py",
+      "//build/fuchsia/test_runner.py",
+      "//build/fuchsia/runner_common.py",
+      "//build/util/lib/",
+      "//third_party/fuchsia-sdk/",
+    ]
 
     runner_args += [
       "--runner-script",
@@ -58,7 +65,10 @@ template("generate_runner_script") {
       rebase_path(root_build_dir, root_build_dir),
     ]
 
-    deps += [ ":$_runtime_deps_target" ]
+    deps += [
+      ":$_runtime_deps_target",
+      "//testing/buildbot/filters:fuchsia_filters",
+    ]
     data += [ _runtime_deps_file ]
     runner_args += [
       "--runtime-deps-path",
@@ -74,7 +84,7 @@ template("generate_runner_script") {
       "--script-output-path",
       rebase_path(generated_script, root_build_dir),
       "--exe-name",
-      target,
+      _target_shortname,
     ]
 
     if (defined(invoker.use_test_server) && invoker.use_test_server) {
@@ -91,19 +101,29 @@ template("test_runner_script") {
   generate_runner_script(target_name) {
     testonly = true
     runner_script = "test_runner.py"
-    target = invoker.test_name
+    exe_target = invoker.test_name
     forward_variables_from(invoker, "*")
   }
 }
 
 # This template is used to generate a runner script for arbitrary executables
-# into the build dir for Fuchsia. The template should be instantiated alongside
-# an "executable" target, and referenced from the executable via its "deps"
-# attribute.
+# into the build dir for Fuchsia. The template should reference an "executable"
+# target using the "exe_target" attribute.
+#
+# Example usage:
+#
+#   executable("foo") {
+#     sources = [ "foo_main.cc" ]
+#   }
+#   fuchsia_executable_runner("foo_fuchsia") {
+#     exe_target = ":foo"
+#   }
 template("fuchsia_executable_runner") {
   generate_runner_script(target_name) {
+    forward_variables_from(invoker, [ "exe_target" ])
     runner_script = "exe_runner.py"
-    target = invoker.exe_name
-    forward_variables_from(invoker, "*")
+    data_deps = [
+      exe_target,
+    ]
   }
 }

@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2017 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -58,7 +58,7 @@ chrome.metricsPrivate.getFieldTrial = function(name, callback) {};
  * Returns variation parameters for the named trial if available, or undefined
  * otherwise.
  * @param {string} name
- * @param {function(Object):void} callback
+ * @param {function((Object|undefined)):void} callback
  * @see https://developer.chrome.com/extensions/metricsPrivate#method-getVariationParams
  */
 chrome.metricsPrivate.getVariationParams = function(name, callback) {};
@@ -128,6 +128,15 @@ chrome.metricsPrivate.recordMediumTime = function(metricName, value) {};
  * @see https://developer.chrome.com/extensions/metricsPrivate#method-recordLongTime
  */
 chrome.metricsPrivate.recordLongTime = function(metricName, value) {};
+
+/**
+ * Increments the count associated with the hash of |value| in the sparse
+ * histogram defined by the |metricName|.
+ * @param {string} metricName
+ * @param {string} value
+ * @see https://developer.chrome.com/extensions/metricsPrivate#method-recordSparseHashable
+ */
+chrome.metricsPrivate.recordSparseHashable = function(metricName, value) {};
 
 /**
  * Increments the count associated with |value| in the sparse histogram defined

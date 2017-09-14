@@ -164,3 +164,37 @@ def PrintPerfResult(measurement, trace, values, units,
     print output
     sys.stdout.flush()
   return output
+
+
+def ReportPerfResult(chart_data, graph_title, trace_title, value, units,
+                     improvement_direction='down', important=True):
+  """Outputs test results in correct format.
+
+  If chart_data is None, it outputs data in old format. If chart_data is a
+  dictionary, formats in chartjson format. If any other format defaults to
+  old format.
+
+  Args:
+    chart_data: A dictionary corresponding to perf results in the chartjson
+        format.
+    graph_title: A string containing the name of the chart to add the result
+        to.
+    trace_title: A string containing the name of the trace within the chart
+        to add the result to.
+    value: The value of the result being reported.
+    units: The units of the value being reported.
+    improvement_direction: A string denoting whether higher or lower is
+        better for the result. Either 'up' or 'down'.
+    important: A boolean denoting whether the result is important or not.
+  """
+  if chart_data and isinstance(chart_data, dict):
+    chart_data['charts'].setdefault(graph_title, {})
+    chart_data['charts'][graph_title][trace_title] = {
+        'type': 'scalar',
+        'value': value,
+        'units': units,
+        'improvement_direction': improvement_direction,
+        'important': important
+    }
+  else:
+    PrintPerfResult(graph_title, trace_title, [value], units)

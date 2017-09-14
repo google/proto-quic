@@ -29,6 +29,7 @@
 //   Flat sets currently don't support allocators.
 
 #include <forward_list>
+#include <functional>
 #include <iterator>
 #include <list>
 #include <string>
@@ -974,7 +975,7 @@ TEST(FlatTree, ErasePosition) {
   {
     using T = TemplateConstructor;
 
-    flat_tree<T, T, GetKeyFromValueIdentity<T>, base::less> cont;
+    flat_tree<T, T, GetKeyFromValueIdentity<T>, std::less<>> cont;
     T v(0);
 
     auto it = cont.find(v);

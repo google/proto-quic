@@ -834,7 +834,7 @@ def main():
 
   logging.warning('Project created!')
   logging.warning('Generated projects work with %s',
-                  'Android Studio 3.0 Canary 9' if args.canary
+                  'Android Studio 3.0 Beta 2' if args.canary
                       else 'Android Studio 2.3')
   logging.warning('For more tips: https://chromium.googlesource.com/chromium'
                   '/src.git/+/master/docs/android_studio.md')

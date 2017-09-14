@@ -151,7 +151,7 @@ void SetUpOnNetworkThread(std::unique_ptr<net::URLRequestContext>* context,
   //
   // TODO(akalin): Remove this once http://crbug.com/146421 is fixed.
   url_request_context_builder.set_proxy_config_service(
-      base::MakeUnique<net::ProxyConfigServiceFixed>(net::ProxyConfig()));
+      std::make_unique<net::ProxyConfigServiceFixed>(net::ProxyConfig()));
 #endif
   *context = url_request_context_builder.Build();
 

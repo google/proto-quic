@@ -97,7 +97,7 @@ void ProxyConfigServiceWin::StartWatchingRegistryForChanges() {
 bool ProxyConfigServiceWin::AddKeyToWatchList(HKEY rootkey,
                                               const wchar_t* subkey) {
   std::unique_ptr<base::win::RegKey> key =
-      base::MakeUnique<base::win::RegKey>();
+      std::make_unique<base::win::RegKey>();
   if (key->Create(rootkey, subkey, KEY_NOTIFY) != ERROR_SUCCESS)
     return false;
 

@@ -59,7 +59,7 @@ void ReportSender::Send(const GURL& report_uri,
       report_uri, DEFAULT_PRIORITY, this, traffic_annotation_);
   url_request->SetUserData(
       &kUserDataKey,
-      base::MakeUnique<CallbackInfo>(success_callback, error_callback));
+      std::make_unique<CallbackInfo>(success_callback, error_callback));
 
   url_request->SetLoadFlags(
       LOAD_BYPASS_CACHE | LOAD_DISABLE_CACHE | LOAD_DO_NOT_SEND_AUTH_DATA |

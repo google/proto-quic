@@ -709,11 +709,19 @@ TEST(HttpUtilTest, SpecForRequestForUrlWithFtpScheme) {
 }
 
 TEST(HttpUtilTest, GenerateAcceptLanguageHeader) {
-  EXPECT_EQ(std::string("en-US,fr;q=0.8,de;q=0.6"),
-            HttpUtil::GenerateAcceptLanguageHeader("en-US,fr,de"));
-  EXPECT_EQ(std::string("en-US,fr;q=0.8,de;q=0.6,ko;q=0.4,zh-CN;q=0.2,"
-                        "ja;q=0.2"),
-            HttpUtil::GenerateAcceptLanguageHeader("en-US,fr,de,ko,zh-CN,ja"));
+  std::string header = HttpUtil::GenerateAcceptLanguageHeader("");
+  EXPECT_TRUE(header.empty());
+
+  header = HttpUtil::GenerateAcceptLanguageHeader("es");
+  EXPECT_EQ(std::string("es"), header);
+
+  header = HttpUtil::GenerateAcceptLanguageHeader("en-US,fr,de");
+  EXPECT_EQ(std::string("en-US,fr;q=0.9,de;q=0.8"), header);
+
+  header = HttpUtil::GenerateAcceptLanguageHeader("en-US,fr,de,ko,zh-CN,ja");
+  EXPECT_EQ(
+      std::string("en-US,fr;q=0.9,de;q=0.8,ko;q=0.7,zh-CN;q=0.6,ja;q=0.5"),
+      header);
 }
 
 // HttpResponseHeadersTest.GetMimeType also tests ParseContentType.

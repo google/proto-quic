@@ -102,16 +102,16 @@ class RequestContext : public URLRequestContext {
     session_context.proxy_service = proxy_service();
     session_context.ssl_config_service = ssl_config_service();
     session_context.http_server_properties = http_server_properties();
-    storage_.set_http_network_session(base::MakeUnique<HttpNetworkSession>(
+    storage_.set_http_network_session(std::make_unique<HttpNetworkSession>(
         HttpNetworkSession::Params(), session_context));
-    storage_.set_http_transaction_factory(base::MakeUnique<HttpCache>(
+    storage_.set_http_transaction_factory(std::make_unique<HttpCache>(
         storage_.http_network_session(), HttpCache::DefaultBackend::InMemory(0),
         false));
     std::unique_ptr<URLRequestJobFactoryImpl> job_factory =
-        base::MakeUnique<URLRequestJobFactoryImpl>();
+        std::make_unique<URLRequestJobFactoryImpl>();
 #if !BUILDFLAG(DISABLE_FILE_SUPPORT)
     job_factory->SetProtocolHandler("file",
-                                    base::MakeUnique<FileProtocolHandler>(
+                                    std::make_unique<FileProtocolHandler>(
                                         base::ThreadTaskRunnerHandle::Get()));
 #endif
     storage_.set_job_factory(std::move(job_factory));
@@ -526,7 +526,7 @@ TEST_F(ProxyScriptFetcherImplTest, Priority) {
   base::string16 text;
   for (int i = 0; i < num_requests; i++) {
     std::unique_ptr<ProxyScriptFetcherImpl> pac_fetcher =
-        base::MakeUnique<ProxyScriptFetcherImpl>(&context_);
+        std::make_unique<ProxyScriptFetcherImpl>(&context_);
     GURL url(test_server_.GetURL("/hung"));
     // Fine to use the same string and callback for all of these, as they should
     // all hang.

@@ -28,8 +28,4 @@ DecodeStatus HpackVarintDecoder::ResumeForTest(DecodeBuffer* db) {
   return Resume(db);
 }
 
-std::ostream& operator<<(std::ostream& out, const HpackVarintDecoder& v) {
-  return out << v.DebugString();
-}
-
 }  // namespace net

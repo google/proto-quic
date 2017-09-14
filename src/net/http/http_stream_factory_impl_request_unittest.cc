@@ -28,7 +28,7 @@ class HttpStreamFactoryImplRequestTest : public ::testing::Test {};
 TEST_F(HttpStreamFactoryImplRequestTest, SetPriority) {
   SequencedSocketData data(nullptr, 0, nullptr, 0);
   data.set_connect_data(MockConnect(ASYNC, OK));
-  auto ssl_data = base::MakeUnique<SSLSocketDataProvider>(ASYNC, OK);
+  auto ssl_data = std::make_unique<SSLSocketDataProvider>(ASYNC, OK);
   SpdySessionDependencies session_deps(ProxyService::CreateDirect());
   session_deps.socket_factory->AddSocketDataProvider(&data);
   session_deps.socket_factory->AddSSLSocketDataProvider(ssl_data.get());
@@ -41,7 +41,7 @@ TEST_F(HttpStreamFactoryImplRequestTest, SetPriority) {
   TestJobFactory job_factory;
   HttpRequestInfo request_info;
   request_info.url = GURL("http://www.example.com/");
-  auto job_controller = base::MakeUnique<HttpStreamFactoryImpl::JobController>(
+  auto job_controller = std::make_unique<HttpStreamFactoryImpl::JobController>(
       factory, &request_delegate, session.get(), &job_factory, request_info,
       /* is_preconnect = */ false,
       /* enable_ip_based_pooling = */ true,
@@ -60,7 +60,7 @@ TEST_F(HttpStreamFactoryImplRequestTest, SetPriority) {
   request->SetPriority(MEDIUM);
   EXPECT_EQ(MEDIUM, job_controller_raw_ptr->main_job()->priority());
 
-  EXPECT_CALL(request_delegate, OnStreamFailed(_, _)).Times(1);
+  EXPECT_CALL(request_delegate, OnStreamFailed(_, _, _)).Times(1);
   job_controller_raw_ptr->OnStreamFailed(job_factory.main_job(), ERR_FAILED,
                                          SSLConfig());
 

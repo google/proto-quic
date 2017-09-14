@@ -565,7 +565,7 @@ class HostResolverImplTest : public testing::Test {
   // not start until released by |proc_->SignalXXX|.
   Request* CreateRequest(const HostResolver::RequestInfo& info,
                          RequestPriority priority) {
-    requests_.push_back(base::MakeUnique<Request>(
+    requests_.push_back(std::make_unique<Request>(
         info, priority, requests_.size(), resolver_.get(), handler_.get()));
     return requests_.back().get();
   }
@@ -1636,6 +1636,11 @@ class HostResolverImplDnsTest : public HostResolverImplTest {
                IPAddress(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127, 0, 53, 53),
                false);
     CreateResolver();
+  }
+
+  void TearDown() override {
+    HostResolverImplTest::TearDown();
+    ChangeDnsConfig(DnsConfig());
   }
 
   // HostResolverImplTest implementation:

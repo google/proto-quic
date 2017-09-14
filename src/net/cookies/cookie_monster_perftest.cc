@@ -139,7 +139,7 @@ TEST(ParsedCookieTest, TestParseBigCookies) {
 }
 
 TEST_F(CookieMonsterTest, TestAddCookiesOnSingleHost) {
-  std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr, nullptr));
+  std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr));
   std::vector<std::string> cookies;
   for (int i = 0; i < kNumCookies; i++) {
     cookies.push_back(base::StringPrintf("a%03d=b", i));
@@ -172,7 +172,7 @@ TEST_F(CookieMonsterTest, TestAddCookiesOnSingleHost) {
 }
 
 TEST_F(CookieMonsterTest, TestAddCookieOnManyHosts) {
-  std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr, nullptr));
+  std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr));
   std::string cookie(kCookieLine);
   std::vector<GURL> gurls;  // just wanna have ffffuunnn
   for (int i = 0; i < kNumCookies; ++i) {
@@ -205,7 +205,7 @@ TEST_F(CookieMonsterTest, TestAddCookieOnManyHosts) {
 }
 
 TEST_F(CookieMonsterTest, TestDomainTree) {
-  std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr, nullptr));
+  std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr));
   GetCookiesCallback getCookiesCallback;
   SetCookieCallback setCookieCallback;
   const char domain_cookie_format_tree[] = "a=b; domain=%s";
@@ -260,7 +260,7 @@ TEST_F(CookieMonsterTest, TestDomainTree) {
 }
 
 TEST_F(CookieMonsterTest, TestDomainLine) {
-  std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr, nullptr));
+  std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr));
   SetCookieCallback setCookieCallback;
   GetCookiesCallback getCookiesCallback;
   std::vector<std::string> domain_list;
@@ -321,7 +321,7 @@ TEST_F(CookieMonsterTest, TestImport) {
 
   store->SetLoadExpectation(true, std::move(initial_cookies));
 
-  std::unique_ptr<CookieMonster> cm(new CookieMonster(store.get(), nullptr));
+  std::unique_ptr<CookieMonster> cm(new CookieMonster(store.get()));
 
   // Import will happen on first access.
   GURL gurl("www.foo.com");
@@ -335,7 +335,7 @@ TEST_F(CookieMonsterTest, TestImport) {
 }
 
 TEST_F(CookieMonsterTest, TestGetKey) {
-  std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr, nullptr));
+  std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr));
   base::PerfTimeLogger timer("Cookie_monster_get_key");
   for (int i = 0; i < kNumCookies; i++)
     cm->GetKey("www.foo.com");

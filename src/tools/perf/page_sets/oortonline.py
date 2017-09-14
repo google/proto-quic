@@ -26,7 +26,6 @@ class OortOnlinePage(page_module.Page):
             webgl_supported_shared_state.WebGLSupportedSharedState),
         make_javascript_deterministic=False,
         name='http://oortonline.gl/#run')
-    self.archive_data_file = 'data/oortonline.json'
     self.script_to_evaluate_on_commit = STARTUP_SCRIPT
 
   @property

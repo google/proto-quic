@@ -173,16 +173,16 @@ URL_EXPORT bool GetStandardSchemeType(const char* spec,
 
 // Hosts  ----------------------------------------------------------------------
 
-// Returns true if the |canonicalized_host| matches or is in the same domain as
-// the given |lower_ascii_domain| string. For example, if the canonicalized
-// hostname is "www.google.com", this will return true for "com", "google.com",
-// and "www.google.com" domains.
+// Returns true if the |canonical_host| matches or is in the same domain as the
+// given |canonical_domain| string. For example, if the canonicalized hostname
+// is "www.google.com", this will return true for "com", "google.com", and
+// "www.google.com" domains.
 //
 // If either of the input StringPieces is empty, the return value is false. The
-// input domain should be a lower-case ASCII string in order to match the
-// canonicalized host.
-URL_EXPORT bool DomainIs(base::StringPiece canonicalized_host,
-                         base::StringPiece lower_ascii_domain);
+// input domain should match host canonicalization rules. i.e. it should be
+// lowercase except for escape chars.
+URL_EXPORT bool DomainIs(base::StringPiece canonical_host,
+                         base::StringPiece canonical_domain);
 
 // Returns true if the hostname is an IP address. Note: this function isn't very
 // cheap, as it must re-parse the host to verify.

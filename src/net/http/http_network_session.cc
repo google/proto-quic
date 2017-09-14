@@ -14,7 +14,6 @@
 #include "base/logging.h"
 #include "base/memory/memory_coordinator_client_registry.h"
 #include "base/memory/ptr_util.h"
-#include "base/profiler/scoped_tracker.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
@@ -311,17 +310,17 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
   dict->Set("sessions", quic_stream_factory_.QuicStreamFactoryInfoToValue());
   dict->SetBoolean("quic_enabled", IsQuicEnabled());
 
-  auto connection_options(base::MakeUnique<base::ListValue>());
+  auto connection_options(std::make_unique<base::ListValue>());
   for (const auto& option : params_.quic_connection_options)
     connection_options->AppendString(QuicTagToString(option));
   dict->Set("connection_options", std::move(connection_options));
 
-  auto supported_versions(base::MakeUnique<base::ListValue>());
+  auto supported_versions(std::make_unique<base::ListValue>());
   for (const auto& version : params_.quic_supported_versions)
     supported_versions->AppendString(QuicVersionToString(version));
   dict->Set("supported_versions", std::move(supported_versions));
 
-  auto origins_to_force_quic_on(base::MakeUnique<base::ListValue>());
+  auto origins_to_force_quic_on(std::make_unique<base::ListValue>());
   for (const auto& origin : params_.origins_to_force_quic_on)
     origins_to_force_quic_on->AppendString(origin.ToString());
   dict->Set("origins_to_force_quic_on", std::move(origins_to_force_quic_on));

@@ -80,21 +80,14 @@ base::ScopedCFTypeRef<SecCertificateRef> CreateSecCertificateFromBytes(
 
 base::ScopedCFTypeRef<SecCertificateRef>
 CreateSecCertificateFromX509Certificate(const X509Certificate* cert) {
-#if BUILDFLAG(USE_BYTE_CERTS)
   return CreateSecCertificateFromBytes(
       CRYPTO_BUFFER_data(cert->os_cert_handle()),
       CRYPTO_BUFFER_len(cert->os_cert_handle()));
-#else
-  return base::ScopedCFTypeRef<SecCertificateRef>(
-      reinterpret_cast<SecCertificateRef>(
-          const_cast<void*>(CFRetain(cert->os_cert_handle()))));
-#endif
 }
 
 scoped_refptr<X509Certificate> CreateX509CertificateFromSecCertificate(
     SecCertificateRef sec_cert,
     const std::vector<SecCertificateRef>& sec_chain) {
-#if BUILDFLAG(USE_BYTE_CERTS)
   CSSM_DATA der_data;
   if (!sec_cert || SecCertificateGetData(sec_cert, &der_data) != noErr)
     return nullptr;
@@ -121,9 +114,6 @@ scoped_refptr<X509Certificate> CreateX509CertificateFromSecCertificate(
   scoped_refptr<X509Certificate> result(
       X509Certificate::CreateFromHandle(cert_handle.get(), intermediates_raw));
   return result;
-#else
-  return X509Certificate::CreateFromHandle(sec_cert, sec_chain);
-#endif
 }
 
 bool IsSelfSigned(SecCertificateRef cert_handle) {

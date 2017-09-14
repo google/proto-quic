@@ -218,10 +218,9 @@ class NET_EXPORT URLRequestContext
   }
 
   // May return nullptr.
-  SdchManager* sdch_manager() const { return sdch_manager_; }
-  void set_sdch_manager(SdchManager* sdch_manager) {
-    sdch_manager_ = sdch_manager;
-  }
+  // TODO(xunjieli): Remove this when SdchManager is removed. crbug.com/762686
+  SdchManager* sdch_manager() const { return nullptr; }
+  void set_sdch_manager(SdchManager* sdch_manager) { NOTREACHED(); }
 
   // Gets the URLRequest objects that hold a reference to this
   // URLRequestContext.
@@ -237,6 +236,10 @@ class NET_EXPORT URLRequestContext
   // additionally call AssertNoURLRequests() within their own destructor,
   // prior to implicit destruction of subclass-owned state.
   void AssertNoURLRequests() const;
+
+  // CHECKs that the passed URLRequest is present on this context.
+  // Added for http://crbug.com/754704; remove when that bug is resolved.
+  void AssertURLRequestPresent(const URLRequest* request) const;
 
   // Get the underlying |HttpUserAgentSettings| implementation that provides
   // the HTTP Accept-Language and User-Agent header values.
@@ -325,7 +328,6 @@ class NET_EXPORT URLRequestContext
   const URLRequestJobFactory* job_factory_;
   URLRequestThrottlerManager* throttler_manager_;
   URLRequestBackoffManager* backoff_manager_;
-  SdchManager* sdch_manager_;
   NetworkQualityEstimator* network_quality_estimator_;
   ReportingService* reporting_service_;
   NetworkErrorLoggingDelegate* network_error_logging_delegate_;

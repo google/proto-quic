@@ -21,9 +21,9 @@ DhcpProxyScriptFetcherFactory::~DhcpProxyScriptFetcherFactory() {}
 std::unique_ptr<DhcpProxyScriptFetcher> DhcpProxyScriptFetcherFactory::Create(
     URLRequestContext* context) {
 #if defined(OS_WIN)
-  return base::MakeUnique<DhcpProxyScriptFetcherWin>(context);
+  return std::make_unique<DhcpProxyScriptFetcherWin>(context);
 #else
-  return base::MakeUnique<DoNothingDhcpProxyScriptFetcher>();
+  return std::make_unique<DoNothingDhcpProxyScriptFetcher>();
 #endif
 }
 

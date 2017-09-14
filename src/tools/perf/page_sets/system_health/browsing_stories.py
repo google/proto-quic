@@ -2,6 +2,7 @@
 # Copyright 2016 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+import logging
 
 from page_sets.system_health import platforms
 from page_sets.system_health import story_tags
@@ -32,8 +33,9 @@ class _BrowsingStory(system_health_story.SystemHealthStory):
       action_runner.WaitForNavigate()
 
   def _NavigateToItem(self, action_runner, index):
-    item_selector = 'document.querySelectorAll("%s")[%d]' % (
-        self.ITEM_SELECTOR, index)
+    item_selector = js_template.Render(
+        'document.querySelectorAll({{ selector }})[{{ index }}]',
+        selector=self.ITEM_SELECTOR, index=index)
     # Only scrolls if element is not currently in viewport.
     action_runner.WaitForElement(element_function=item_selector)
     action_runner.ScrollPageToElement(
@@ -138,7 +140,7 @@ class FacebookDesktopStory(_ArticleBrowsingStory):
 class InstagramMobileStory(_ArticleBrowsingStory):
   NAME = 'browse:social:instagram'
   URL = 'https://www.instagram.com/badgalriri/'
-  ITEM_SELECTOR = '[class=\\"_8mlbc _vbtk2 _t5r8b\\"]'
+  ITEM_SELECTOR = '[class="_8mlbc _vbtk2 _t5r8b"]'
   ITEMS_TO_VISIT = 8
 
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
@@ -261,7 +263,7 @@ class GoogleDesktopStory(_ArticleBrowsingStory):
   NAME = 'browse:search:google'
   URL = 'https://www.google.com/search?q=flower'
   _SEARCH_BOX_SELECTOR = 'input[aria-label="Search"]'
-  _SEARCH_PAGE_2_SELECTOR = 'a[aria-label=\'Page 2\']'
+  _SEARCH_PAGE_2_SELECTOR = 'a[aria-label="Page 2"]'
   SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
 
   def _DidLoadDocument(self, action_runner):
@@ -311,7 +313,7 @@ class GoogleIndiaDesktopStory(_ArticleBrowsingStory):
   URL = 'https://www.google.co.in/search?q=%E0%A4%AB%E0%A5%82%E0%A4%B2'
   _SEARCH_BOX_SELECTOR = 'input[aria-label="Search"]'
   _SEARCH_BUTTON_SELECTOR = 'button[aria-label="Google Search"]'
-  _SEARCH_PAGE_2_SELECTOR = 'a[aria-label=\'Page 2\']'
+  _SEARCH_PAGE_2_SELECTOR = 'a[aria-label="Page 2"]'
   SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
   TAGS = [story_tags.INTERNATIONAL]
 
@@ -326,9 +328,8 @@ class GoogleIndiaDesktopStory(_ArticleBrowsingStory):
     # TODO(nednguyen): replace this with input text gesture to make it more
     # realistic.
     action_runner.ExecuteJavaScript(
-        js_template.Render(
-            'document.querySelector({{ selector }}).value += "वितरण";',
-            selector=self._SEARCH_BOX_SELECTOR))
+        'document.querySelector({{ selector }}).value += "वितरण";',
+        selector=self._SEARCH_BOX_SELECTOR)
     action_runner.Wait(2)
     action_runner.ClickElement(selector=self._SEARCH_BUTTON_SELECTOR)
 
@@ -515,7 +516,7 @@ class BrowseFlipKartMobileStory(_ArticleBrowsingStory):
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
   TAGS = [story_tags.EMERGING_MARKET]
 
-  ITEM_SELECTOR = '[style=\\"background-image: none;\\"]'
+  ITEM_SELECTOR = '[style="background-image: none;"]'
   BACK_SELECTOR = '._3NH1qf'
   ITEMS_TO_VISIT = 4
   IS_SINGLE_PAGE_APP = True
@@ -674,16 +675,22 @@ class GoogleMapsStory(_BrowsingStory):
   SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
   TAGS = [story_tags.JAVASCRIPT_HEAVY]
 
+  def CanRunOnBrowser(self, browser_info, _):
+    if not browser_info.HasWebGLSupport():
+      logging.warning('Browser does not support webgl, skipping test')
+      return False
+    return True
+
   def _DidLoadDocument(self, action_runner):
     # Click on the search box.
     action_runner.WaitForElement(selector=self._MAPS_SEARCH_BOX_SELECTOR)
+    action_runner.WaitForElement(selector=self._MAPS_ZOOM_IN_SELECTOR)
     action_runner.ClickElement(selector=self._MAPS_SEARCH_BOX_SELECTOR)
 
     # Submit search query.
     action_runner.EnterText('restaurants near me')
     action_runner.PressKey('Return')
     action_runner.WaitForElement(selector=self._RESTAURANTS_LOADED)
-    action_runner.WaitForElement(selector=self._MAPS_ZOOM_IN_SELECTOR)
     action_runner.Wait(1)
 
     # ZoomIn two times.
@@ -748,6 +755,12 @@ class GoogleEarthStory(_BrowsingStory):
   _MAPS_SEARCH_BOX_SELECTOR = 'input[aria-label="Search Google Maps"]'
   SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
   TAGS = [story_tags.JAVASCRIPT_HEAVY]
+
+  def CanRunOnBrowser(self, browser_info, _):
+    if not browser_info.HasWebGLSupport():
+      logging.warning('Browser does not support webgl, skipping test')
+      return False
+    return True
 
   def _DidLoadDocument(self, action_runner):
     # Zommin three times.

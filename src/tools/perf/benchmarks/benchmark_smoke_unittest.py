@@ -22,7 +22,6 @@ from telemetry.testing import progress_reporter
 from py_utils import discover
 
 from benchmarks import battor
-from benchmarks import image_decoding
 from benchmarks import indexeddb_perf
 from benchmarks import jetstream
 from benchmarks import kraken
@@ -45,8 +44,8 @@ def SmokeTestGenerator(benchmark, num_pages=1):
   # failing or flaky benchmark would disable a much wider swath of coverage
   # than is usally intended. Instead, if a particular benchmark is failing,
   # disable it in tools/perf/benchmarks/*.
-  @benchmark_module.Disabled('chromeos')  # crbug.com/351114
-  @benchmark_module.Disabled('android')  # crbug.com/641934
+  @decorators.Disabled('chromeos')  # crbug.com/351114
+  @decorators.Disabled('android')  # crbug.com/641934
   def BenchmarkSmokeTest(self):
     # Only measure a single page so that this test cycles reasonably quickly.
     benchmark.options['pageset_repeat'] = 1
@@ -89,7 +88,6 @@ def SmokeTestGenerator(benchmark, num_pages=1):
 
 # The list of benchmark modules to be excluded from our smoke tests.
 _BLACK_LIST_TEST_MODULES = {
-    image_decoding,  # Always fails on Mac10.9 Tests builder.
     indexeddb_perf,  # Always fails on Win7 & Android Tests builder.
     octane,  # Often fails & take long time to timeout on cq bot.
     rasterize_and_record_micro,  # Always fails on cq bot.
@@ -104,6 +102,7 @@ _BLACK_LIST_TEST_MODULES = {
 _BLACK_LIST_TEST_NAMES = [
    'memory.long_running_idle_gmail_background_tbmv2',
    'tab_switching.typical_25',
+   'oortonline_tbmv2',
 ]
 
 

@@ -32,13 +32,10 @@ namespace content {
 class BrowserMainLoopTest_CreateThreadsInSingleProcess_Test;
 }  // namespace content
 
-namespace tracked_objects {
-class Location;
-}
-
 namespace base {
 
 class HistogramBase;
+class Location;
 
 // Interface for a task scheduler and static methods to manage the instance used
 // by the post_task.h API.
@@ -80,11 +77,10 @@ class BASE_EXPORT TaskScheduler {
 
   // Posts |task| with a |delay| and specific |traits|. |delay| can be zero.
   // For one off tasks that don't require a TaskRunner.
-  virtual void PostDelayedTaskWithTraits(
-      const tracked_objects::Location& from_here,
-      const TaskTraits& traits,
-      OnceClosure task,
-      TimeDelta delay) = 0;
+  virtual void PostDelayedTaskWithTraits(const Location& from_here,
+                                         const TaskTraits& traits,
+                                         OnceClosure task,
+                                         TimeDelta delay) = 0;
 
   // Returns a TaskRunner whose PostTask invocations result in scheduling tasks
   // using |traits|. Tasks may run in any order and in parallel.
@@ -201,15 +197,16 @@ class BASE_EXPORT TaskScheduler {
   friend class gin::V8Platform;
   friend class content::BrowserMainLoopTest_CreateThreadsInSingleProcess_Test;
 
-  // Returns the maximum number of non-single-threaded tasks posted with
-  // |traits| that can run concurrently in this TaskScheduler.
+  // Returns the maximum number of non-single-threaded non-blocked tasks posted
+  // with |traits| that can run concurrently in this TaskScheduler.
   //
   // Do not use this method. To process n items, post n tasks that each process
-  // 1 item rather than GetMaxConcurrentTasksWithTraitsDeprecated() tasks that
-  // each process n/GetMaxConcurrentTasksWithTraitsDeprecated() items.
+  // 1 item rather than GetMaxConcurrentNonBlockedTasksWithTraitsDeprecated()
+  // tasks that each process
+  // n/GetMaxConcurrentNonBlockedTasksWithTraitsDeprecated() items.
   //
   // TODO(fdoray): Remove this method. https://crbug.com/687264
-  virtual int GetMaxConcurrentTasksWithTraitsDeprecated(
+  virtual int GetMaxConcurrentNonBlockedTasksWithTraitsDeprecated(
       const TaskTraits& traits) const = 0;
 };
 

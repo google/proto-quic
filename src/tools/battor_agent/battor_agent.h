@@ -6,17 +6,42 @@
 #define TOOLS_BATTOR_AGENT_BATTOR_AGENT_H_
 
 #include <map>
+#include <vector>
 
 #include "base/cancelable_callback.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
+#include "base/sequence_checker.h"
 #include "base/single_thread_task_runner.h"
-#include "base/threading/thread_checker.h"
+#include "base/time/default_tick_clock.h"
 #include "tools/battor_agent/battor_connection.h"
 #include "tools/battor_agent/battor_error.h"
 
 namespace battor {
+
+// A BattOrResults object contains the results of BattOr tracing, including a
+// summary and sample data in watts.
+class BattOrResults {
+ public:
+  BattOrResults();
+  BattOrResults(std::string details,
+                std::vector<float> power_samples_W,
+                uint32_t sample_rate);
+  BattOrResults(const BattOrResults&);
+  ~BattOrResults();
+
+  // Get a detailed textual representation of the data recorded.
+  const std::string& ToString() const { return details_; }
+  // Returns a vector of power samples (in watts).
+  const std::vector<float>& GetPowerSamples() const { return power_samples_W_; }
+  uint32_t GetSampleRate() const { return sample_rate_; }
+
+ private:
+  std::string details_;
+  std::vector<float> power_samples_W_;
+  uint32_t sample_rate_ = 0;
+};
 
 // A BattOrAgent is a class used to asynchronously communicate with a BattOr for
 // the purpose of collecting power samples. A BattOr is an external USB device
@@ -41,7 +66,7 @@ class BattOrAgent : public BattOrConnection::Listener,
   class Listener {
    public:
     virtual void OnStartTracingComplete(BattOrError error) = 0;
-    virtual void OnStopTracingComplete(const std::string& trace,
+    virtual void OnStopTracingComplete(const BattOrResults& trace,
                                        BattOrError error) = 0;
     virtual void OnRecordClockSyncMarkerComplete(BattOrError error) = 0;
     virtual void OnGetFirmwareGitHashComplete(const std::string& version,
@@ -75,6 +100,9 @@ class BattOrAgent : public BattOrConnection::Listener,
   // protocol primitives. This is protected so that it can be replaced with a
   // fake in testing.
   std::unique_ptr<BattOrConnection> connection_;
+
+  // A source of TimeTicks. Protected so that it can be faked in testing.
+  std::unique_ptr<base::TickClock> tick_clock_;
 
   // Timeout for when an action isn't completed within the allotted time. This
   // is virtual and protected so that timeouts can be disabled in testing. The
@@ -141,7 +169,7 @@ class BattOrAgent : public BattOrConnection::Listener,
   void CompleteCommand(BattOrError error);
 
   // Returns a formatted version of samples_ with timestamps and real units.
-  std::string SamplesToString();
+  BattOrResults SamplesToResults();
 
   // Sets and restarts the action timeout timer.
   void SetActionTimeout(uint16_t timeout_seconds);
@@ -168,9 +196,6 @@ class BattOrAgent : public BattOrConnection::Listener,
   // The time at which the last clock sync marker was recorded.
   base::TimeTicks last_clock_sync_time_;
 
-  // Checker to make sure that this is only ever called on the IO thread.
-  base::ThreadChecker thread_checker_;
-
   // The BattOr's EEPROM (which is required for calibration).
   std::unique_ptr<BattOrEEPROM> battor_eeprom_;
 
@@ -192,6 +217,8 @@ class BattOrAgent : public BattOrConnection::Listener,
 
   // The git hash of the BattOr firmware.
   std::string firmware_git_hash_;
+
+  SEQUENCE_CHECKER(sequence_checker_);
 
   DISALLOW_COPY_AND_ASSIGN(BattOrAgent);
 };

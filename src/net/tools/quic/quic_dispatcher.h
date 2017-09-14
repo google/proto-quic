@@ -38,7 +38,6 @@ class QuicCryptoServerConfig;
 
 class QuicDispatcher : public QuicTimeWaitListManager::Visitor,
                        public ProcessPacketInterface,
-                       public QuicBlockedWriterInterface,
                        public QuicFramerVisitorInterface,
                        public QuicBufferedPacketStore::VisitorInterface {
  public:
@@ -64,7 +63,7 @@ class QuicDispatcher : public QuicTimeWaitListManager::Visitor,
                      const QuicReceivedPacket& packet) override;
 
   // Called when the socket becomes writable to allow queued writes to happen.
-  void OnCanWrite() override;
+  virtual void OnCanWrite();
 
   // Returns true if there's anything in the blocked writer list.
   virtual bool HasPendingWrites() const;
@@ -286,6 +285,9 @@ class QuicDispatcher : public QuicTimeWaitListManager::Visitor,
                               bool session_closed_statelessly);
 
   void StopAcceptingNewConnections();
+
+  // Return true if the blocked writer should be added to blocked list.
+  virtual bool ShouldAddToBlockedList();
 
  private:
   friend class test::QuicDispatcherPeer;

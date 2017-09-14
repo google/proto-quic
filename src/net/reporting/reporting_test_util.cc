@@ -100,7 +100,7 @@ TestReportingUploader::~TestReportingUploader() {}
 void TestReportingUploader::StartUpload(const GURL& url,
                                         const std::string& json,
                                         const Callback& callback) {
-  pending_uploads_.push_back(base::MakeUnique<PendingUploadImpl>(
+  pending_uploads_.push_back(std::make_unique<PendingUploadImpl>(
       url, json, callback, base::Bind(&ErasePendingUpload, &pending_uploads_)));
 }
 
@@ -128,10 +128,10 @@ bool TestReportingDelegate::CanUseClient(const url::Origin& origin,
 
 TestReportingContext::TestReportingContext(const ReportingPolicy& policy)
     : ReportingContext(policy,
-                       base::MakeUnique<base::SimpleTestClock>(),
-                       base::MakeUnique<base::SimpleTestTickClock>(),
-                       base::MakeUnique<TestReportingUploader>(),
-                       base::MakeUnique<TestReportingDelegate>()),
+                       std::make_unique<base::SimpleTestClock>(),
+                       std::make_unique<base::SimpleTestTickClock>(),
+                       std::make_unique<TestReportingUploader>(),
+                       std::make_unique<TestReportingDelegate>()),
       delivery_timer_(new base::MockTimer(/* retain_user_task= */ false,
                                           /* is_repeating= */ false)),
       garbage_collection_timer_(
@@ -170,7 +170,7 @@ void ReportingTestBase::SimulateRestart(base::TimeDelta delta,
 void ReportingTestBase::CreateContext(const ReportingPolicy& policy,
                                       base::Time now,
                                       base::TimeTicks now_ticks) {
-  context_ = base::MakeUnique<TestReportingContext>(policy);
+  context_ = std::make_unique<TestReportingContext>(policy);
   clock()->SetNow(now);
   tick_clock()->SetNowTicks(now_ticks);
 }

@@ -83,7 +83,7 @@ TEST_F(ReportingCacheTest, Reports) {
   EXPECT_TRUE(reports.empty());
 
   cache()->AddReport(kUrl1_, kGroup1_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(), kNow_, 0);
+                     std::make_unique<base::DictionaryValue>(), kNow_, 0);
   EXPECT_EQ(1, observer()->cache_update_count());
 
   cache()->GetReports(&reports);
@@ -117,9 +117,9 @@ TEST_F(ReportingCacheTest, Reports) {
 
 TEST_F(ReportingCacheTest, RemoveAllReports) {
   cache()->AddReport(kUrl1_, kGroup1_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(), kNow_, 0);
+                     std::make_unique<base::DictionaryValue>(), kNow_, 0);
   cache()->AddReport(kUrl1_, kGroup1_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(), kNow_, 0);
+                     std::make_unique<base::DictionaryValue>(), kNow_, 0);
   EXPECT_EQ(2, observer()->cache_update_count());
 
   std::vector<const ReportingReport*> reports;
@@ -135,7 +135,7 @@ TEST_F(ReportingCacheTest, RemoveAllReports) {
 
 TEST_F(ReportingCacheTest, RemovePendingReports) {
   cache()->AddReport(kUrl1_, kGroup1_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(), kNow_, 0);
+                     std::make_unique<base::DictionaryValue>(), kNow_, 0);
   EXPECT_EQ(1, observer()->cache_update_count());
 
   std::vector<const ReportingReport*> reports;
@@ -166,7 +166,7 @@ TEST_F(ReportingCacheTest, RemovePendingReports) {
 
 TEST_F(ReportingCacheTest, RemoveAllPendingReports) {
   cache()->AddReport(kUrl1_, kGroup1_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(), kNow_, 0);
+                     std::make_unique<base::DictionaryValue>(), kNow_, 0);
   EXPECT_EQ(1, observer()->cache_update_count());
 
   std::vector<const ReportingReport*> reports;
@@ -430,7 +430,7 @@ TEST_F(ReportingCacheTest, EvictOldestReport) {
   // Enqueue the maximum number of reports, spaced apart in time.
   for (size_t i = 0; i < max_report_count; ++i) {
     cache()->AddReport(kUrl1_, kGroup1_, kType_,
-                       base::MakeUnique<base::DictionaryValue>(),
+                       std::make_unique<base::DictionaryValue>(),
                        tick_clock()->NowTicks(), 0);
     tick_clock()->Advance(base::TimeDelta::FromMinutes(1));
   }
@@ -438,7 +438,7 @@ TEST_F(ReportingCacheTest, EvictOldestReport) {
 
   // Add one more report to force the cache to evict one.
   cache()->AddReport(kUrl1_, kGroup1_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(), kNow_, 0);
+                     std::make_unique<base::DictionaryValue>(), kNow_, 0);
 
   // Make sure the cache evicted a report to make room for the new one, and make
   // sure the report evicted was the earliest-queued one.
@@ -458,7 +458,7 @@ TEST_F(ReportingCacheTest, DontEvictPendingReports) {
   // Enqueue the maximum number of reports, spaced apart in time.
   for (size_t i = 0; i < max_report_count; ++i) {
     cache()->AddReport(kUrl1_, kGroup1_, kType_,
-                       base::MakeUnique<base::DictionaryValue>(),
+                       std::make_unique<base::DictionaryValue>(),
                        tick_clock()->NowTicks(), 0);
     tick_clock()->Advance(base::TimeDelta::FromMinutes(1));
   }
@@ -472,7 +472,7 @@ TEST_F(ReportingCacheTest, DontEvictPendingReports) {
   // Add one more report to force the cache to evict one. Since the cache has
   // only pending reports, it will be forced to evict the *new* report!
   cache()->AddReport(kUrl1_, kGroup1_, kType_,
-                     base::MakeUnique<base::DictionaryValue>(), kNow_, 0);
+                     std::make_unique<base::DictionaryValue>(), kNow_, 0);
 
   // Make sure the cache evicted a report, and make sure the report evicted was
   // the new, non-pending one.

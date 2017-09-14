@@ -54,6 +54,11 @@ class BASE_EXPORT HeapProfilerSerializationState
     return heap_profiler_breakdown_threshold_bytes_;
   }
 
+  bool is_initialized() const {
+    return stack_frame_deduplicator_ && type_name_deduplicator_ &&
+           heap_profiler_breakdown_threshold_bytes_;
+  }
+
  private:
   friend class RefCountedThreadSafe<HeapProfilerSerializationState>;
   ~HeapProfilerSerializationState();

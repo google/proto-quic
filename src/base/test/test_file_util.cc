@@ -20,9 +20,4 @@ bool EvictFileFromSystemCacheWithRetry(const FilePath& path) {
   return false;
 }
 
-// Declared in base/files/file_path.h.
-void PrintTo(const FilePath& path, std::ostream* out) {
-  *out << path.value();
-}
-
 }  // namespace base

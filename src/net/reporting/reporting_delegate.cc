@@ -56,7 +56,7 @@ class ReportingDelegateImpl : public ReportingDelegate {
 // static
 std::unique_ptr<ReportingDelegate> ReportingDelegate::Create(
     URLRequestContext* request_context) {
-  return base::MakeUnique<ReportingDelegateImpl>(request_context);
+  return std::make_unique<ReportingDelegateImpl>(request_context);
 }
 
 ReportingDelegate::~ReportingDelegate() {}

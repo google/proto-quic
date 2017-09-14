@@ -13,7 +13,6 @@
 #include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/power_monitor/power_monitor.h"
-#include "base/profiler/scoped_tracker.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
@@ -27,7 +26,6 @@
 #include "net/base/load_states.h"
 #include "net/base/net_errors.h"
 #include "net/base/network_delegate.h"
-#include "net/http/http_response_headers.h"
 #include "net/log/net_log.h"
 #include "net/log/net_log_capture_mode.h"
 #include "net/log/net_log_event_type.h"
@@ -382,10 +380,6 @@ void URLRequestJob::GetConnectionAttempts(ConnectionAttempts* out) const {
   out->clear();
 }
 
-void URLRequestJob::SetRequestHeadersCallback(RequestHeadersCallback callback) {
-  request_headers_callback_ = std::move(callback);
-}
-
 // static
 GURL URLRequestJob::ComputeReferrerForPolicy(URLRequest::ReferrerPolicy policy,
                                              const GURL& original_referrer,
@@ -574,11 +568,6 @@ void URLRequestJob::ReadRawDataComplete(int result) {
   DCHECK(request_->status().is_io_pending());
   DCHECK_NE(ERR_IO_PENDING, result);
 
-  // TODO(cbentzel): Remove ScopedTracker below once crbug.com/475755 is fixed.
-  tracked_objects::ScopedTracker tracking_profile(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION(
-          "475755 URLRequestJob::RawReadCompleted"));
-
   // The headers should be complete before reads complete
   DCHECK(has_handled_response_);
 
@@ -689,7 +678,7 @@ void URLRequestJob::DoneReadingRedirectResponse() {
 }
 
 std::unique_ptr<SourceStream> URLRequestJob::SetUpSourceStream() {
-  return base::MakeUnique<URLRequestJobSourceStream>(this);
+  return std::make_unique<URLRequestJobSourceStream>(this);
 }
 
 void URLRequestJob::DestroySourceStream() {

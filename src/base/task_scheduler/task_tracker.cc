@@ -329,8 +329,8 @@ void TaskTracker::PerformRunTask(std::unique_ptr<Task> task,
     // to the trace event generated above. This is not possible however until
     // http://crbug.com/652692 is resolved.
     TRACE_EVENT1("task_scheduler", "TaskTracker::RunTask", "task_info",
-                 MakeUnique<TaskTracingInfo>(task->traits, execution_mode,
-                                             sequence_token));
+                 std::make_unique<TaskTracingInfo>(task->traits, execution_mode,
+                                                   sequence_token));
 
     debug::TaskAnnotator().RunTask(kQueueFunctionName, task.get());
   }

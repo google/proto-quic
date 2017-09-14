@@ -12,47 +12,33 @@ enum class RepeatMode { Once, Repeating };
 
 }  // namespace internal
 
-template <typename Signature,
-          internal::CopyMode copy_mode = internal::CopyMode::Copyable,
-          internal::RepeatMode repeat_mode = internal::RepeatMode::Repeating>
-class Callback;
+template <typename Signature>
+class OnceCallback;
 
 template <typename Signature>
-using OnceCallback = Callback<Signature,
-                              internal::CopyMode::MoveOnly,
-                              internal::RepeatMode::Once>;
-template <typename Signature>
-using RepeatingCallback = Callback<Signature,
-                                   internal::CopyMode::Copyable,
-                                   internal::RepeatMode::Repeating>;
+class RepeatingCallback;
 
-using Closure = Callback<void()>;
+template <typename Signature>
+using Callback = RepeatingCallback<Signature>;
+
 using OnceClosure = OnceCallback<void()>;
 using RepeatingClosure = RepeatingCallback<void()>;
-
-namespace internal {
-
-template <typename From, typename To>
-struct IsCallbackConvertible : std::false_type {};
+using Closure = Callback<void()>;
 
 template <typename Signature>
-struct IsCallbackConvertible<RepeatingCallback<Signature>,
-                             OnceCallback<Signature>> : std::true_type {};
-
-}  // namespace internal
-
-template <typename Signature, internal::CopyMode, internal::RepeatMode>
-class Callback {
+class OnceCallback {
  public:
-  Callback() {}
-  Callback(const Callback&) {}
-  Callback(Callback&&) {}
+  OnceCallback() {}
+  OnceCallback(OnceCallback&&) {}
+  OnceCallback(RepeatingCallback<Signature> other) {}
+};
 
-  template <typename OtherCallback,
-            typename = typename std::enable_if<
-                internal::IsCallbackConvertible<OtherCallback,
-                                                Callback>::value>::type>
-  Callback(OtherCallback other) {}
+template <typename Signature>
+class RepeatingCallback {
+ public:
+  RepeatingCallback() {}
+  RepeatingCallback(const RepeatingCallback&) {}
+  RepeatingCallback(RepeatingCallback&&) {}
 };
 
 template <typename Functor, typename... Args>

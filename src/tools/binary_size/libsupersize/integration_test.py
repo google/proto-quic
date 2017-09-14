@@ -181,6 +181,19 @@ class IntegrationTest(unittest.TestCase):
       return ret
 
   @_CompareWithGolden()
+  def test_Csv(self):
+    with tempfile.NamedTemporaryFile(suffix='.size') as size_file, \
+         tempfile.NamedTemporaryFile(suffix='.txt') as output_file:
+      file_format.SaveSizeInfo(self._CloneSizeInfo(), size_file.name)
+      query = [
+          'Csv(size_info, to_file=%r)' % output_file.name,
+      ]
+      ret = _RunApp('console', [size_file.name, '--query', '; '.join(query)])
+      with open(output_file.name) as f:
+        ret.extend(l.rstrip() for l in f)
+      return ret
+
+  @_CompareWithGolden()
   def test_Diff_NullDiff(self):
     with tempfile.NamedTemporaryFile(suffix='.size') as temp_file:
       file_format.SaveSizeInfo(self._CloneSizeInfo(), temp_file.name)

@@ -93,7 +93,7 @@ class URLRequestQuicPerfTest : public ::testing::Test {
     base::trace_event::InitializeMemoryDumpManagerForInProcessTesting(
         /*is_coordinator_process=*/false);
     memory_dump_manager_->set_dumper_registrations_ignored_for_testing(false);
-    context_ = base::MakeUnique<TestURLRequestContext>(true);
+    context_ = std::make_unique<TestURLRequestContext>(true);
     memory_dump_manager_->set_dumper_registrations_ignored_for_testing(true);
     StartTcpServer();
     StartQuicServer();
@@ -160,7 +160,7 @@ class URLRequestQuicPerfTest : public ::testing::Test {
   }
 
   void StartTcpServer() {
-    tcp_server_ = base::MakeUnique<EmbeddedTestServer>(
+    tcp_server_ = std::make_unique<EmbeddedTestServer>(
         net::EmbeddedTestServer::TYPE_HTTPS);
     tcp_server_->RegisterRequestHandler(base::Bind(&HandleRequest));
     ASSERT_TRUE(tcp_server_->Start()) << "HTTP/1.1 server fails to start";
@@ -241,10 +241,9 @@ TEST_F(URLRequestQuicPerfTest, TestGetRequest) {
   auto on_memory_dump_done =
       [](base::Closure quit_closure, const URLRequestContext* context,
          bool success, uint64_t dump_guid,
-         const base::trace_event::ProcessMemoryDumpsMap& dumps) {
+         std::unique_ptr<base::trace_event::ProcessMemoryDump> pmd) {
         ASSERT_TRUE(success);
-        ASSERT_EQ(1u, dumps.size());
-        const auto& allocator_dumps = dumps.begin()->second->allocator_dumps();
+        const auto& allocator_dumps = pmd->allocator_dumps();
 
         auto it = allocator_dumps.find(
             base::StringPrintf("net/url_request_context/unknown/0x%" PRIxPTR,

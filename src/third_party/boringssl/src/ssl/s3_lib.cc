@@ -165,8 +165,10 @@
 namespace bssl {
 
 int ssl3_new(SSL *ssl) {
-  UniquePtr<SSLAEADContext> aead_read_ctx = SSLAEADContext::CreateNullCipher();
-  UniquePtr<SSLAEADContext> aead_write_ctx = SSLAEADContext::CreateNullCipher();
+  UniquePtr<SSLAEADContext> aead_read_ctx =
+      SSLAEADContext::CreateNullCipher(SSL_is_dtls(ssl));
+  UniquePtr<SSLAEADContext> aead_write_ctx =
+      SSLAEADContext::CreateNullCipher(SSL_is_dtls(ssl));
   if (!aead_read_ctx || !aead_write_ctx) {
     return 0;
   }
@@ -187,11 +189,11 @@ int ssl3_new(SSL *ssl) {
   s3->aead_write_ctx = aead_write_ctx.release();
   ssl->s3 = s3;
 
-  /* Set the version to the highest supported version.
-   *
-   * TODO(davidben): Move this field into |s3|, have it store the normalized
-   * protocol version, and implement this pre-negotiation quirk in |SSL_version|
-   * at the API boundary rather than in internal state. */
+  // Set the version to the highest supported version.
+  //
+  // TODO(davidben): Move this field into |s3|, have it store the normalized
+  // protocol version, and implement this pre-negotiation quirk in |SSL_version|
+  // at the API boundary rather than in internal state.
   ssl->version = TLS1_2_VERSION;
   return 1;
 }
@@ -208,6 +210,7 @@ void ssl3_free(SSL *ssl) {
   ssl_handshake_free(ssl->s3->hs);
   OPENSSL_free(ssl->s3->next_proto_negotiated);
   OPENSSL_free(ssl->s3->alpn_selected);
+  OPENSSL_free(ssl->s3->hostname);
   Delete(ssl->s3->aead_read_ctx);
   Delete(ssl->s3->aead_write_ctx);
   BUF_MEM_free(ssl->s3->pending_flight);

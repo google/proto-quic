@@ -12,7 +12,7 @@
 #include "base/compiler_specific.h"
 #include "base/lazy_instance.h"
 #include "base/memory/singleton.h"
-#include "base/profiler/scoped_tracker.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/rand_util.h"
 #include "base/stl_util.h"
 #include "base/strings/utf_string_conversions.h"
@@ -27,7 +27,6 @@
 #include "net/base/network_change_notifier.h"
 #include "net/base/network_delegate.h"
 #include "net/base/upload_data_stream.h"
-#include "net/http/http_response_headers.h"
 #include "net/http/http_util.h"
 #include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
@@ -175,6 +174,13 @@ void URLRequest::Delegate::OnResponseStarted(URLRequest* request) {
 
 URLRequest::~URLRequest() {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
+
+  // Log the redirect count during destruction, to ensure that it is only
+  // recorded at the end of following all redirect chains.
+  UMA_HISTOGRAM_EXACT_LINEAR("Net.RedirectChainLength",
+                             kMaxRedirects - redirect_limit_,
+                             kMaxRedirects + 1);
+
   Cancel();
 
   if (network_delegate_) {
@@ -508,10 +514,6 @@ void URLRequest::Start() {
   if (!status_.is_success())
     return;
 
-  // TODO(pkasting): Remove ScopedTracker below once crbug.com/456327 is fixed.
-  tracked_objects::ScopedTracker tracking_profile(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION("456327 URLRequest::Start"));
-
   // Some values can be NULL, but the job factory must not be.
   DCHECK(context_->job_factory());
 
@@ -527,10 +529,6 @@ void URLRequest::Start() {
   load_timing_info_.request_start = base::TimeTicks::Now();
 
   if (network_delegate_) {
-    // TODO(mmenke): Remove ScopedTracker below once crbug.com/456327 is fixed.
-    tracked_objects::ScopedTracker tracking_profile25(
-        FROM_HERE_WITH_EXPLICIT_FUNCTION("456327 URLRequest::Start 2.5"));
-
     OnCallToDelegate();
     int error = network_delegate_->NotifyBeforeURLRequest(
         this, before_request_callback_, &delegate_redirect_url_);
@@ -540,10 +538,6 @@ void URLRequest::Start() {
       BeforeRequestComplete(error);
     return;
   }
-
-  // TODO(mmenke): Remove ScopedTracker below once crbug.com/456327 is fixed.
-  tracked_objects::ScopedTracker tracking_profile2(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION("456327 URLRequest::Start 2"));
 
   StartJob(URLRequestJobManager::GetInstance()->CreateJob(
       this, network_delegate_));
@@ -622,10 +616,6 @@ void URLRequest::BeforeRequestComplete(int error) {
 }
 
 void URLRequest::StartJob(URLRequestJob* job) {
-  // TODO(mmenke): Remove ScopedTracker below once crbug.com/456327 is fixed.
-  tracked_objects::ScopedTracker tracking_profile(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION("456327 URLRequest::StartJob"));
-
   DCHECK(!is_pending_);
   DCHECK(!job_.get());
 
@@ -638,6 +628,7 @@ void URLRequest::StartJob(URLRequestJob* job) {
   job_->SetExtraRequestHeaders(extra_request_headers_);
   job_->SetPriority(priority_);
   job_->SetRequestHeadersCallback(request_headers_callback_);
+  job_->SetResponseHeadersCallback(response_headers_callback_);
 
   if (upload_data_stream_.get())
     job_->SetUpload(upload_data_stream_.get());
@@ -942,6 +933,13 @@ void URLRequest::Redirect(const RedirectInfo& redirect_info) {
 
   if (redirect_info.new_method != method_) {
     // TODO(davidben): This logic still needs to be replicated at the consumers.
+    if (method_ == "POST") {
+      // If being switched from POST, must remove Origin header.
+      // TODO(jww): This is Origin header removal is probably layering violation
+      // and should be refactored into //content. See https://crbug.com/471397.
+      // See also: https://crbug.com/760487
+      extra_request_headers_.RemoveHeader(HttpRequestHeaders::kOrigin);
+    }
     // The inclusion of a multipart Content-Type header can cause problems with
     // some
     // servers:
@@ -1203,6 +1201,12 @@ void URLRequest::SetRequestHeadersCallback(RequestHeadersCallback callback) {
   DCHECK(!job_.get());
   DCHECK(request_headers_callback_.is_null());
   request_headers_callback_ = std::move(callback);
+}
+
+void URLRequest::SetResponseHeadersCallback(ResponseHeadersCallback callback) {
+  DCHECK(!job_.get());
+  DCHECK(response_headers_callback_.is_null());
+  response_headers_callback_ = std::move(callback);
 }
 
 void URLRequest::set_status(URLRequestStatus status) {

@@ -62,7 +62,7 @@ std::unique_ptr<MemBackendImpl> MemBackendImpl::CreateBackend(
     int max_bytes,
     net::NetLog* net_log) {
   std::unique_ptr<MemBackendImpl> cache(
-      base::MakeUnique<MemBackendImpl>(net_log));
+      std::make_unique<MemBackendImpl>(net_log));
   cache->SetMaxSize(max_bytes);
   if (cache->Init())
     return cache;
@@ -255,7 +255,7 @@ class MemBackendImpl::MemIterator final : public Backend::Iterator {
       return net::ERR_FAILED;
 
     if (!backend_keys_) {
-      backend_keys_ = base::MakeUnique<Strings>(backend_->entries_.size());
+      backend_keys_ = std::make_unique<Strings>(backend_->entries_.size());
       for (const auto& iter : backend_->entries_)
         backend_keys_->push_back(iter.first);
       current_ = backend_keys_->begin();

@@ -101,6 +101,7 @@ class NET_EXPORT_PRIVATE QuicChromiumPacketWriter : public QuicPacketWriter {
   // Whether a write is currently in flight.
   bool write_blocked_;
 
+  CompletionCallback write_callback_;
   base::WeakPtrFactory<QuicChromiumPacketWriter> weak_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicChromiumPacketWriter);

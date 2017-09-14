@@ -39,28 +39,9 @@ class LocalTestServer : public BaseTestServer {
 
   ~LocalTestServer() override;
 
-  // Start the test server and block until it's ready. Returns true on success.
-  bool Start() WARN_UNUSED_RESULT;
-
-  // Start the test server without blocking. Use this if you need multiple test
-  // servers (such as WebSockets and HTTP, or HTTP and HTTPS). You must call
-  // BlockUntilStarted on all servers your test requires before executing the
-  // test. For example:
-  //
-  //   // Start the servers in parallel.
-  //   ASSERT_TRUE(http_server.StartInBackground());
-  //   ASSERT_TRUE(websocket_server.StartInBackground());
-  //   // Wait for both servers to be ready.
-  //   ASSERT_TRUE(http_server.BlockUntilStarted());
-  //   ASSERT_TRUE(websocket_server.BlockUntilStarted());
-  //   RunMyTest();
-  //
-  // Returns true on success.
-  bool StartInBackground() WARN_UNUSED_RESULT;
-
-  // Block until ths test server is ready. Returns true on success. See
-  // StartInBackground() documentation for more information.
-  bool BlockUntilStarted() WARN_UNUSED_RESULT;
+  // BaseTestServer overrides.
+  bool StartInBackground() override WARN_UNUSED_RESULT;
+  bool BlockUntilStarted() override WARN_UNUSED_RESULT;
 
   // Stop the server started by Start().
   bool Stop();

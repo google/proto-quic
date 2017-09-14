@@ -17,6 +17,7 @@ from pylib.base import test_instance
 from pylib.constants import host_paths
 from pylib.instrumentation import test_result
 from pylib.instrumentation import instrumentation_parser
+from pylib.symbols import deobfuscator
 from pylib.symbols import stack_symbolizer
 from pylib.utils import dexdump
 from pylib.utils import instrumentation_tracing
@@ -101,7 +102,8 @@ def ParseAmInstrumentRawOutput(raw_output):
 
 
 def GenerateTestResults(
-    result_code, result_bundle, statuses, start_ms, duration_ms):
+    result_code, result_bundle, statuses, start_ms, duration_ms, device_abi,
+    symbolizer):
   """Generate test results from |statuses|.
 
   Args:
@@ -114,6 +116,8 @@ def GenerateTestResults(
       |_ParseAmInstrumentRawOutput|.
     start_ms: The start time of the test in milliseconds.
     duration_ms: The duration of the test in milliseconds.
+    device_abi: The device_abi, which is needed for symbolization.
+    symbolizer: The symbolizer used to symbolize stack.
 
   Returns:
     A list containing an instance of InstrumentationTestResult for each test
@@ -145,14 +149,23 @@ def GenerateTestResults(
           current_result.SetType(base_test_result.ResultType.PASS)
       elif status_code == instrumentation_parser.STATUS_CODE_SKIP:
         current_result.SetType(base_test_result.ResultType.SKIP)
+      elif status_code == instrumentation_parser.STATUS_CODE_ASSUMPTION_FAILURE:
+        current_result.SetType(base_test_result.ResultType.SKIP)
       else:
         if status_code not in (instrumentation_parser.STATUS_CODE_ERROR,
                                instrumentation_parser.STATUS_CODE_FAILURE):
           logging.error('Unrecognized status code %d. Handling as an error.',
                         status_code)
         current_result.SetType(base_test_result.ResultType.FAIL)
-        if 'stack' in bundle:
-          current_result.SetLog(bundle['stack'])
+    if 'stack' in bundle:
+      if symbolizer and device_abi:
+        current_result.SetLog(
+            '%s\n%s' % (
+              bundle['stack'],
+              '\n'.join(symbolizer.ExtractAndResolveNativeStackTraces(
+                  bundle['stack'], device_abi))))
+      else:
+        current_result.SetLog(bundle['stack'])
 
   if current_result:
     if current_result.GetType() == base_test_result.ResultType.UNKNOWN:
@@ -485,8 +498,8 @@ class InstrumentationTestInstance(test_instance.TestInstance):
 
     self._store_tombstones = False
     self._symbolizer = None
-    self._initializeTombstonesAttributes(args)
-
+    self._enable_java_deobfuscation = False
+    self._deobfuscator = None
     self._gs_results_bucket = None
     self._should_save_logcat = None
     self._initializeLogAttributes(args)
@@ -666,13 +679,13 @@ class InstrumentationTestInstance(test_instance.TestInstance):
   def _initializeTestCoverageAttributes(self, args):
     self._coverage_directory = args.coverage_dir
 
-  def _initializeTombstonesAttributes(self, args):
+  def _initializeLogAttributes(self, args):
+    self._enable_java_deobfuscation = args.enable_java_deobfuscation
     self._store_tombstones = args.store_tombstones
     self._symbolizer = stack_symbolizer.Symbolizer(
         self.apk_under_test.path if self.apk_under_test else None,
         args.enable_relocation_packing)
 
-  def _initializeLogAttributes(self, args):
     self._gs_results_bucket = args.gs_results_bucket
     self._should_save_logcat = bool(args.json_results_file)
 
@@ -815,6 +828,9 @@ class InstrumentationTestInstance(test_instance.TestInstance):
   def SetUp(self):
     self._data_deps.extend(
         self._data_deps_delegate(self._runtime_deps_path))
+    if self._enable_java_deobfuscation:
+      self._deobfuscator = deobfuscator.DeobfuscatorPool(
+          self.test_apk.path + '.mapping')
 
   def GetDataDependencies(self):
     return self._data_deps
@@ -825,6 +841,11 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     else:
       raw_tests = GetAllTestsFromApk(self.test_apk.path)
     return self.ProcessRawTests(raw_tests)
+
+  def MaybeDeobfuscateLines(self, lines):
+    if not self._deobfuscator:
+      return lines
+    return self._deobfuscator.TransformLines(lines)
 
   def ProcessRawTests(self, raw_tests):
     inflated_tests = self._ParameterizeTestsWithFlags(
@@ -895,10 +916,14 @@ class InstrumentationTestInstance(test_instance.TestInstance):
 
   @staticmethod
   def GenerateTestResults(
-      result_code, result_bundle, statuses, start_ms, duration_ms):
+      result_code, result_bundle, statuses, start_ms, duration_ms,
+      device_abi, symbolizer):
     return GenerateTestResults(result_code, result_bundle, statuses,
-                               start_ms, duration_ms)
+                               start_ms, duration_ms, device_abi, symbolizer)
 
   #override
   def TearDown(self):
     self.symbolizer.CleanUp()
+    if self._deobfuscator:
+      self._deobfuscator.Close()
+      self._deobfuscator = None

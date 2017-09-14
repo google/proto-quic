@@ -23,6 +23,7 @@ class RSAPrivateKey;
 
 namespace net {
 
+struct ParseCertificateOptions;
 class X509Certificate;
 
 namespace x509_util {
@@ -107,6 +108,9 @@ NET_EXPORT bssl::UniquePtr<CRYPTO_BUFFER> CreateCryptoBuffer(
 // least one element.
 scoped_refptr<X509Certificate> CreateX509CertificateFromBuffers(
     STACK_OF(CRYPTO_BUFFER) * buffers);
+
+// Returns the default ParseCertificateOptions for the net stack.
+ParseCertificateOptions DefaultParseCertificateOptions();
 
 } // namespace x509_util
 

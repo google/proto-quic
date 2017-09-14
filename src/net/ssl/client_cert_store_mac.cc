@@ -308,10 +308,10 @@ ClientCertIdentityList GetClientCertsOnBackgroundThread(
         CFEqual(preferred_sec_identity, sec_identity.get())) {
       // Only one certificate should match.
       DCHECK(!preferred_identity.get());
-      preferred_identity = base::MakeUnique<ClientCertIdentityMac>(
+      preferred_identity = std::make_unique<ClientCertIdentityMac>(
           std::move(cert), std::move(sec_identity));
     } else {
-      regular_identities.push_back(base::MakeUnique<ClientCertIdentityMac>(
+      regular_identities.push_back(std::make_unique<ClientCertIdentityMac>(
           std::move(cert), std::move(sec_identity)));
     }
   }

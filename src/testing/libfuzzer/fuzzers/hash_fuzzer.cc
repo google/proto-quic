@@ -9,6 +9,6 @@
 
 // Entry point for LibFuzzer.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  base::Hash(reinterpret_cast<const char*>(data), size);
+  base::Hash(data, size);
   return 0;
 }

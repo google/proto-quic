@@ -42,7 +42,7 @@ TestNetworkQualityEstimator::TestNetworkQualityEstimator(
                                   true,
                                   true,
                                   false,
-                                  base::MakeUnique<BoundTestNetLog>()) {}
+                                  std::make_unique<BoundTestNetLog>()) {}
 
 TestNetworkQualityEstimator::TestNetworkQualityEstimator(
     std::unique_ptr<net::ExternalEstimateProvider> external_estimate_provider,
@@ -69,7 +69,7 @@ TestNetworkQualityEstimator::TestNetworkQualityEstimator(
     std::unique_ptr<BoundTestNetLog> net_log)
     : NetworkQualityEstimator(
           std::move(external_estimate_provider),
-          base::MakeUnique<NetworkQualityEstimatorParams>(variation_params),
+          std::make_unique<NetworkQualityEstimatorParams>(variation_params),
           net_log->bound().net_log()),
 
       current_network_type_(NetworkChangeNotifier::CONNECTION_UNKNOWN),
@@ -90,7 +90,7 @@ TestNetworkQualityEstimator::TestNetworkQualityEstimator(
 TestNetworkQualityEstimator::TestNetworkQualityEstimator(
     std::unique_ptr<NetworkQualityEstimatorParams> params)
     : TestNetworkQualityEstimator(std::move(params),
-                                  base::MakeUnique<BoundTestNetLog>()) {}
+                                  std::make_unique<BoundTestNetLog>()) {}
 
 TestNetworkQualityEstimator::TestNetworkQualityEstimator(
     std::unique_ptr<NetworkQualityEstimatorParams> params,

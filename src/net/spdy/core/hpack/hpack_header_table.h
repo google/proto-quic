@@ -54,10 +54,12 @@ class SPDY_EXPORT_PRIVATE HpackHeaderTable {
 
   // HpackHeaderTable takes advantage of the deque property that references
   // remain valid, so long as insertions & deletions are at the head & tail.
-  // If this changes (eg we start to drop entries from the middle of the table),
-  // this needs to be a std::list, in which case |*_index_| can be trivially
-  // extended to map to list iterators.
-  typedef std::deque<HpackEntry> EntryTable;
+  // This precludes the use of base::circular_deque.
+  //
+  // If this changes (we want to change to circular_deque or we start to drop
+  // entries from the middle of the table), this should to be a std::list, in
+  // which case |*_index_| can be trivially extended to map to list iterators.
+  using EntryTable = std::deque<HpackEntry>;
 
   struct SPDY_EXPORT_PRIVATE EntryHasher {
     size_t operator()(const HpackEntry* entry) const;

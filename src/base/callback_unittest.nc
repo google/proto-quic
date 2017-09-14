@@ -15,7 +15,7 @@ class Parent {
 class Child : Parent {
 };
 
-#if defined(NCTEST_EQUALS_REQUIRES_SAMETYPE)  // [r"fatal error: no viable conversion from 'Callback<int \(\), \[2 \* \.\.\.\]>' to 'const Callback<void \(\), \[2 \* \.\.\.\]>'"]
+#if defined(NCTEST_EQUALS_REQUIRES_SAMETYPE)  // [r"fatal error: no viable conversion from 'RepeatingCallback<int \(\)>' to 'const RepeatingCallback<void \(\)>'"]
 
 // Attempting to call comparison function on two callbacks of different type.
 //

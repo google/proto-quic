@@ -672,28 +672,27 @@ bool FindAndCompareScheme(const base::char16* str,
   return DoFindAndCompareScheme(str, str_len, compare, found_scheme);
 }
 
-bool DomainIs(base::StringPiece canonicalized_host,
-              base::StringPiece lower_ascii_domain) {
-  if (canonicalized_host.empty() || lower_ascii_domain.empty())
+bool DomainIs(base::StringPiece canonical_host,
+              base::StringPiece canonical_domain) {
+  if (canonical_host.empty() || canonical_domain.empty())
     return false;
 
   // If the host name ends with a dot but the input domain doesn't, then we
   // ignore the dot in the host name.
-  size_t host_len = canonicalized_host.length();
-  if (canonicalized_host.back() == '.' && lower_ascii_domain.back() != '.')
+  size_t host_len = canonical_host.length();
+  if (canonical_host.back() == '.' && canonical_domain.back() != '.')
     --host_len;
 
-  if (host_len < lower_ascii_domain.length())
+  if (host_len < canonical_domain.length())
     return false;
 
   // |host_first_pos| is the start of the compared part of the host name, not
   // start of the whole host name.
   const char* host_first_pos =
-      canonicalized_host.data() + host_len - lower_ascii_domain.length();
+      canonical_host.data() + host_len - canonical_domain.length();
 
-  if (!base::LowerCaseEqualsASCII(
-          base::StringPiece(host_first_pos, lower_ascii_domain.length()),
-          lower_ascii_domain)) {
+  if (base::StringPiece(host_first_pos, canonical_domain.length()) !=
+      canonical_domain) {
     return false;
   }
 
@@ -701,7 +700,7 @@ bool DomainIs(base::StringPiece canonicalized_host,
   // if the host name is longer than the input domain name, then the character
   // immediately before the compared part should be a dot. For example,
   // www.google.com has domain "google.com", but www.iamnotgoogle.com does not.
-  if (lower_ascii_domain[0] != '.' && host_len > lower_ascii_domain.length() &&
+  if (canonical_domain[0] != '.' && host_len > canonical_domain.length() &&
       *(host_first_pos - 1) != '.') {
     return false;
   }

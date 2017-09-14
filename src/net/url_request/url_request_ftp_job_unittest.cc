@@ -87,7 +87,7 @@ class FtpTestURLRequestContext : public TestURLRequestContext {
     set_network_delegate(network_delegate);
     std::unique_ptr<FtpProtocolHandler> ftp_protocol_handler(
         FtpProtocolHandler::CreateForTesting(
-            base::MakeUnique<MockFtpTransactionFactory>()));
+            std::make_unique<MockFtpTransactionFactory>()));
     auth_cache_ = ftp_protocol_handler->ftp_auth_cache_.get();
     std::unique_ptr<URLRequestJobFactoryImpl> job_factory =
         base::WrapUnique(new URLRequestJobFactoryImpl);
@@ -255,7 +255,7 @@ class URLRequestFtpJobTest : public testing::Test {
  public:
   URLRequestFtpJobTest()
       : request_context_(&socket_factory_,
-                         base::MakeUnique<ProxyService>(
+                         std::make_unique<ProxyService>(
                              base::WrapUnique(new SimpleProxyConfigService),
                              nullptr,
                              nullptr),
@@ -269,7 +269,7 @@ class URLRequestFtpJobTest : public testing::Test {
   void AddSocket(MockRead* reads, size_t reads_size,
                  MockWrite* writes, size_t writes_size) {
     std::unique_ptr<SequencedSocketData> socket_data(
-        base::MakeUnique<SequencedSocketData>(reads, reads_size, writes,
+        std::make_unique<SequencedSocketData>(reads, reads_size, writes,
                                               writes_size));
     socket_data->set_connect_data(MockConnect(SYNCHRONOUS, OK));
     socket_factory_.AddSocketDataProvider(socket_data.get());

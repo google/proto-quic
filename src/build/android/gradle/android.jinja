@@ -97,6 +97,9 @@ afterEvaluate {
         return (it.name.equals('generateDebugSources')  // causes unwanted AndroidManifest.java
                 || it.name.equals('generateReleaseSources')
                 || it.name.endsWith('BuildConfig')  // causes unwanted BuildConfig.java
+{% if canary %}
+                || it.name.equals('preDebugAndroidTestBuild')
+{% endif %}
 {% if not use_gradle_process_resources %}
                 || it.name.endsWith('Assets')
                 || it.name.endsWith('Resources')

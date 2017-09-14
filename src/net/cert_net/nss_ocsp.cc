@@ -83,7 +83,7 @@ class OCSPIOLoop {
   }
 
   // Called from worker thread.
-  void PostTaskToIOLoop(const tracked_objects::Location& from_here,
+  void PostTaskToIOLoop(const base::Location& from_here,
                         const base::Closure& task);
 
   void AddRequest(OCSPRequestSession* request);
@@ -540,8 +540,8 @@ void OCSPIOLoop::Shutdown() {
   pthread_mutex_unlock(&g_request_context_lock);
 }
 
-void OCSPIOLoop::PostTaskToIOLoop(
-    const tracked_objects::Location& from_here, const base::Closure& task) {
+void OCSPIOLoop::PostTaskToIOLoop(const base::Location& from_here,
+                                  const base::Closure& task) {
   base::AutoLock autolock(lock_);
   if (io_loop_)
     io_loop_->task_runner()->PostTask(from_here, task);

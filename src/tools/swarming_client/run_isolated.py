@@ -1058,6 +1058,9 @@ def parse_args(args):
 def main(args):
   (parser, options, args) = parse_args(args)
 
+  if not file_path.enable_symlink():
+    logging.error('Symlink support is not enabled')
+
   isolate_cache = isolateserver.process_cache_options(options, trim=False)
   named_cache_manager = named_cache.process_named_cache_options(parser, options)
   if options.clean:
@@ -1081,7 +1084,7 @@ def main(args):
   auth.process_auth_options(parser, options)
 
   isolateserver.process_isolate_server_options(
-    parser, options, True, False)
+      parser, options, True, False)
   if not options.isolate_server:
     if options.isolated:
       parser.error('--isolated requires --isolate-server')
@@ -1178,6 +1181,4 @@ if __name__ == '__main__':
   subprocess42.inhibit_os_error_reporting()
   # Ensure that we are always running with the correct encoding.
   fix_encoding.fix_encoding()
-  file_path.enable_symlink()
-
   sys.exit(main(sys.argv[1:]))

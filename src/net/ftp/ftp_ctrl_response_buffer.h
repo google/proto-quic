@@ -5,10 +5,10 @@
 #ifndef NET_FTP_FTP_CTRL_RESPONSE_BUFFER_H_
 #define NET_FTP_FTP_CTRL_RESPONSE_BUFFER_H_
 
-#include <queue>
 #include <string>
 #include <vector>
 
+#include "base/containers/queue.h"
 #include "base/macros.h"
 #include "net/base/net_export.h"
 #include "net/log/net_log_with_source.h"
@@ -76,7 +76,7 @@ class NET_EXPORT_PRIVATE FtpCtrlResponseBuffer {
   // We keep not-yet-parsed data in a string buffer.
   std::string buffer_;
 
-  std::queue<ParsedLine> lines_;
+  base::queue<ParsedLine> lines_;
 
   // True if we are in the middle of parsing a multi-line response.
   bool multiline_;
@@ -90,7 +90,7 @@ class NET_EXPORT_PRIVATE FtpCtrlResponseBuffer {
   FtpCtrlResponse response_buf_;
 
   // As we read full responses (possibly multiline), we add them to the queue.
-  std::queue<FtpCtrlResponse> responses_;
+  base::queue<FtpCtrlResponse> responses_;
 
   NetLogWithSource net_log_;
 

@@ -7,10 +7,10 @@
 
 #include <stddef.h>
 
-#include <deque>
 #include <memory>
 #include <vector>
 
+#include "base/containers/circular_deque.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "net/base/net_export.h"
@@ -67,7 +67,7 @@ class NET_EXPORT_PRIVATE WebSocketDeflater {
 
   std::unique_ptr<z_stream_s> stream_;
   ContextTakeOverMode mode_;
-  std::deque<char> buffer_;
+  base::circular_deque<char> buffer_;
   std::vector<char> fixed_buffer_;
   // true if bytes were added after last Finish().
   bool are_bytes_added_;

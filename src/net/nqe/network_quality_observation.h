@@ -10,6 +10,7 @@
 #include "base/optional.h"
 #include "base/time/time.h"
 #include "net/base/net_export.h"
+#include "net/nqe/network_quality_estimator_util.h"
 #include "net/nqe/network_quality_observation_source.h"
 
 namespace net {
@@ -28,6 +29,12 @@ struct NET_EXPORT_PRIVATE Observation {
               const base::Optional<int32_t>& signal_strength,
               NetworkQualityObservationSource source);
 
+  Observation(int32_t value,
+              base::TimeTicks timestamp,
+              const base::Optional<int32_t>& signal_strength,
+              NetworkQualityObservationSource source,
+              const base::Optional<IPHash>& host);
+
   Observation(const Observation& other);
 
   ~Observation();
@@ -43,6 +50,9 @@ struct NET_EXPORT_PRIVATE Observation {
 
   // The source of the observation.
   const NetworkQualityObservationSource source;
+
+  // A unique identifier for the remote host which was used for the measurement.
+  const base::Optional<IPHash> host;
 };
 
 }  // namespace internal

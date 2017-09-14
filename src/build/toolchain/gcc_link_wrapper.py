@@ -64,7 +64,7 @@ def main():
   # Finally, strip the linked executable (if desired).
   if args.strip:
     result = subprocess.call(CommandToRun([
-        args.strip, '--strip-unneeded', '-o', args.output, args.unstripped_file
+        args.strip, '-o', args.output, args.unstripped_file
         ]))
 
   return result

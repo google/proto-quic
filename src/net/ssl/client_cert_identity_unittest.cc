@@ -28,7 +28,7 @@ TEST(ClientCertIdentitySorter, SortClientCertificates) {
       base::Time::UnixEpoch(), base::Time::UnixEpoch(), &der_cert));
   cert = X509Certificate::CreateFromBytes(der_cert.data(), der_cert.size());
   ASSERT_TRUE(cert);
-  certs.push_back(base::MakeUnique<FakeClientCertIdentity>(cert, nullptr));
+  certs.push_back(std::make_unique<FakeClientCertIdentity>(cert, nullptr));
 
   const base::Time now = base::Time::Now();
 
@@ -38,7 +38,7 @@ TEST(ClientCertIdentitySorter, SortClientCertificates) {
       &der_cert));
   cert = X509Certificate::CreateFromBytes(der_cert.data(), der_cert.size());
   ASSERT_TRUE(cert);
-  certs.push_back(base::MakeUnique<FakeClientCertIdentity>(cert, nullptr));
+  certs.push_back(std::make_unique<FakeClientCertIdentity>(cert, nullptr));
 
   ASSERT_TRUE(x509_util::CreateSelfSignedCert(
       key.get(), x509_util::DIGEST_SHA1, "CN=older cert", 3,
@@ -46,7 +46,7 @@ TEST(ClientCertIdentitySorter, SortClientCertificates) {
       &der_cert));
   cert = X509Certificate::CreateFromBytes(der_cert.data(), der_cert.size());
   ASSERT_TRUE(cert);
-  certs.push_back(base::MakeUnique<FakeClientCertIdentity>(cert, nullptr));
+  certs.push_back(std::make_unique<FakeClientCertIdentity>(cert, nullptr));
 
   ASSERT_TRUE(x509_util::CreateSelfSignedCert(
       key.get(), x509_util::DIGEST_SHA1, "CN=newer cert", 2,
@@ -54,7 +54,7 @@ TEST(ClientCertIdentitySorter, SortClientCertificates) {
       &der_cert));
   cert = X509Certificate::CreateFromBytes(der_cert.data(), der_cert.size());
   ASSERT_TRUE(cert);
-  certs.push_back(base::MakeUnique<FakeClientCertIdentity>(cert, nullptr));
+  certs.push_back(std::make_unique<FakeClientCertIdentity>(cert, nullptr));
 
   std::sort(certs.begin(), certs.end(), ClientCertIdentitySorter());
 

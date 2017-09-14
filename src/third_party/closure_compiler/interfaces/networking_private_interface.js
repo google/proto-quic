@@ -132,6 +132,9 @@ NetworkingPrivate.prototype = {
    * list returned by $(ref:getVisibleNetworks). This is only a request: the
    * network subsystem can choose to ignore it.  If the list is updated, then
    * the $(ref:onNetworkListChanged) event will be fired.
+   * @param {!chrome.networkingPrivate.NetworkType=} networkType If provided,
+   *     requests a scan specific to the type.     For Cellular a mobile network
+   *     scan will be requested if supported.
    * @see https://developer.chrome.com/extensions/networkingPrivate#method-requestNetworkScan
    */
   requestNetworkScan: assertNotReached,
@@ -214,6 +217,18 @@ NetworkingPrivate.prototype = {
   setCellularSimState: assertNotReached,
 
   /**
+   * Selects which Cellular Mobile Network to use. |networkId| must be the
+   * NetworkId property of a member of Cellular.FoundNetworks from the network
+   * properties for the specified Cellular network.
+   * @param {string} networkGuid The GUID of the cellular network to select the
+   *     network     for. If empty, the default cellular device will be used.
+   * @param {string} networkId The networkId to select.
+   * @param {function():void=} callback Called when the operation has completed.
+   * @see https://developer.chrome.com/extensions/networkingPrivate#method-selectCellularMobileNetwork
+   */
+  selectCellularMobileNetwork: assertNotReached,
+
+  /**
    * Gets the global policy properties. These properties are not expected to
    * change during a session.
    * @param {function(!chrome.networkingPrivate.GlobalPolicy):void} callback
@@ -262,7 +277,7 @@ NetworkingPrivate.prototype.onDeviceStateListChanged;
 NetworkingPrivate.prototype.onPortalDetectionCompleted;
 
 /**
- * Fired when any certificate list has changed..
+ * Fired when any certificate list has changed.
  * @type {!ChromeEvent}
  * @see https://developer.chrome.com/extensions/networkingPrivate#event-onCertificateListsChanged
  */

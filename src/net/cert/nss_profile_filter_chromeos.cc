@@ -144,8 +144,8 @@ NSSProfileFilterChromeOS::CertNotAllowedForProfilePredicate::
     : filter_(filter) {}
 
 bool NSSProfileFilterChromeOS::CertNotAllowedForProfilePredicate::operator()(
-    const scoped_refptr<X509Certificate>& cert) const {
-  return !filter_.IsCertAllowed(cert->os_cert_handle());
+    const ScopedCERTCertificate& cert) const {
+  return !filter_.IsCertAllowed(cert.get());
 }
 
 NSSProfileFilterChromeOS::ModuleNotAllowedForProfilePredicate::

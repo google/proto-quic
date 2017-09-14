@@ -261,7 +261,7 @@ int FtpNetworkTransaction::Start(const FtpRequestInfo* request_info,
   net_log_ = net_log;
   request_ = request_info;
 
-  ctrl_response_buffer_ = base::MakeUnique<FtpCtrlResponseBuffer>(net_log_);
+  ctrl_response_buffer_ = std::make_unique<FtpCtrlResponseBuffer>(net_log_);
 
   if (request_->url.has_username()) {
     base::string16 username;
@@ -347,7 +347,7 @@ void FtpNetworkTransaction::ResetStateForRestart() {
   user_callback_.Reset();
   response_ = FtpResponseInfo();
   read_ctrl_buf_ = new IOBuffer(kCtrlBufLen);
-  ctrl_response_buffer_ = base::MakeUnique<FtpCtrlResponseBuffer>(net_log_);
+  ctrl_response_buffer_ = std::make_unique<FtpCtrlResponseBuffer>(net_log_);
   read_data_buf_ = nullptr;
   read_data_buf_len_ = 0;
   if (write_buf_.get())

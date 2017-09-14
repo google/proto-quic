@@ -55,11 +55,7 @@ EmbeddedTestServer::EmbeddedTestServer(Type type)
 
   if (!is_using_ssl_)
     return;
-  base::ThreadRestrictions::ScopedAllowIO allow_io_for_importing_test_cert;
-  TestRootCerts* root_certs = TestRootCerts::GetInstance();
-  bool added_root_certs = root_certs->AddFromFile(GetRootCertPemPath());
-  DCHECK(added_root_certs)
-      << "Failed to install root cert from EmbeddedTestServer";
+  RegisterTestCerts();
 }
 
 EmbeddedTestServer::~EmbeddedTestServer() {
@@ -75,6 +71,14 @@ EmbeddedTestServer::~EmbeddedTestServer() {
 
     io_thread_.reset();
   }
+}
+
+void EmbeddedTestServer::RegisterTestCerts() {
+  base::ThreadRestrictions::ScopedAllowIO allow_io_for_importing_test_cert;
+  TestRootCerts* root_certs = TestRootCerts::GetInstance();
+  bool added_root_certs = root_certs->AddFromFile(GetRootCertPemPath());
+  DCHECK(added_root_certs)
+      << "Failed to install root cert from EmbeddedTestServer";
 }
 
 void EmbeddedTestServer::SetConnectionListener(
@@ -278,10 +282,6 @@ std::string EmbeddedTestServer::GetCertificateName() const {
       return "localhost_cert.pem";
     case CERT_EXPIRED:
       return "expired_cert.pem";
-    case CERT_CHAIN_WRONG_ROOT:
-      return "redundant-server-chain.pem";
-    case CERT_BAD_VALIDITY:
-      return "bad_validity.pem";
   }
 
   return "ok_cert.pem";
@@ -392,7 +392,7 @@ void EmbeddedTestServer::HandleAcceptResult(
     socket = DoSSLUpgrade(std::move(socket));
 
   std::unique_ptr<HttpConnection> http_connection_ptr =
-      base::MakeUnique<HttpConnection>(
+      std::make_unique<HttpConnection>(
           std::move(socket), base::Bind(&EmbeddedTestServer::HandleRequest,
                                         base::Unretained(this)));
   HttpConnection* http_connection = http_connection_ptr.get();

@@ -17,9 +17,6 @@ class QuicCryptoServerConfigPeer {
   explicit QuicCryptoServerConfigPeer(QuicCryptoServerConfig* server_config)
       : server_config_(server_config) {}
 
-  // Returns the proof source.
-  ProofSource* GetProofSource();
-
   // Returns the primary config.
   QuicReferenceCountedPointer<QuicCryptoServerConfig::Config>
   GetPrimaryConfig();
@@ -56,9 +53,6 @@ class QuicCryptoServerConfigPeer {
       QuicStringPiece token,
       const QuicIpAddress& ip,
       QuicWallTime now);
-
-  // Returns a new server nonce.
-  std::string NewServerNonce(QuicRandom* rand, QuicWallTime now) const;
 
   // CheckConfigs compares the state of the Configs in |server_config_| to the
   // description given as arguments.

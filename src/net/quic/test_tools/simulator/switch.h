@@ -5,6 +5,8 @@
 #ifndef NET_QUIC_TEST_TOOLS_SIMULATOR_SWITCH_H_
 #define NET_QUIC_TEST_TOOLS_SIMULATOR_SWITCH_H_
 
+#include <deque>
+
 #include "net/quic/platform/api/quic_containers.h"
 #include "net/quic/test_tools/simulator/queue.h"
 
@@ -77,6 +79,8 @@ class Switch {
   void DispatchPacket(SwitchPortNumber port_number,
                       std::unique_ptr<Packet> packet);
 
+  // This can not be a QuicDeque since pointers into this are
+  // assumed to be stable.
   std::deque<Port> ports_;
   QuicUnorderedMap<std::string, Port*> switching_table_;
 

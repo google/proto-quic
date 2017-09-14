@@ -187,18 +187,11 @@ ClientCertIdentityList GetClientCertsImpl(HCERTSTORE cert_store,
       intermediates.pop_back();
     }
 
-    // TODO(mattm): The following comment is only true when not using
-    // USE_BYTE_CERTS. Remove it once the non-byte-certs code is also removed.
-    // TODO(svaldez): cert currently wraps cert_context2 which may be backed
-    // by a smartcard with threading difficulties. Instead, create a fresh
-    // X509Certificate with CreateFromBytes and route cert_context2 into the
-    // SSLPrivateKey. Probably changing CertificateList to be a
-    // pair<X509Certificate, SSLPrivateKeyCallback>.
     scoped_refptr<X509Certificate> cert =
         x509_util::CreateX509CertificateFromCertContexts(cert_context2,
                                                          intermediates);
     if (cert) {
-      selected_identities.push_back(base::MakeUnique<ClientCertIdentityWin>(
+      selected_identities.push_back(std::make_unique<ClientCertIdentityWin>(
           std::move(cert),
           cert_context2,     // Takes ownership of |cert_context2|.
           current_thread));  // The key must be acquired on the same thread, as
@@ -237,7 +230,6 @@ void ClientCertStoreWin::GetClientCerts(
     return;
   }
 
-#if BUILDFLAG(USE_BYTE_CERTS)
   if (base::PostTaskAndReplyWithResult(
           GetSSLPlatformKeyTaskRunner().get(), FROM_HERE,
           // Caller is responsible for keeping the |request| alive
@@ -250,11 +242,6 @@ void ClientCertStoreWin::GetClientCerts(
 
   // If the task could not be posted, behave as if there were no certificates.
   callback.Run(ClientCertIdentityList());
-#else
-  // When using PCERT_CONTEXT based X509Certificate, must do this on the same
-  // thread.
-  callback.Run(GetClientCertsWithMyCertStore(request));
-#endif
 }
 
 // static

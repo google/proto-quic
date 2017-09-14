@@ -32,6 +32,7 @@
 #include "net/quic/core/quic_types.h"
 #include "net/quic/core/stream_notifier_interface.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_mem_slice_span.h"
 #include "net/quic/platform/api/quic_reference_counted.h"
 #include "net/quic/platform/api/quic_string_piece.h"
 
@@ -224,6 +225,10 @@ class QUIC_EXPORT_PRIVATE QuicStream : public StreamNotifierInterface {
       int iov_count,
       bool fin,
       QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
+
+  // Same as WritevData except data is provided in reference counted memory so
+  // that data copy is avoided.
+  QuicConsumedData WriteMemSlices(QuicMemSliceSpan span, bool fin);
 
   // Allows override of the session level writev, for the force HOL
   // blocking experiment.

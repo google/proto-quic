@@ -6,19 +6,30 @@
 
 #include "base/location.h"
 #include "base/logging.h"
+#include "net/cert/internal/cert_errors.h"
+#include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/x509_certificate.h"
+#include "third_party/boringssl/src/include/openssl/pool.h"
 
 namespace net {
 
 bool TestRootCerts::Add(X509Certificate* certificate) {
-  // TODO(fuchsia): Implement this.
-  NOTIMPLEMENTED();
-  return false;
+  CertErrors errors;
+  auto parsed = ParsedCertificate::Create(
+      bssl::UniquePtr<CRYPTO_BUFFER>(
+          X509Certificate::DupOSCertHandle(certificate->os_cert_handle())),
+      ParseCertificateOptions(), &errors);
+  if (!parsed) {
+    LOG(ERROR) << "Failed to parse DER certificate: " << errors.ToDebugString();
+    return false;
+  }
+  test_trust_store_.AddTrustAnchor(parsed);
+  empty_ = false;
+  return true;
 }
 
 void TestRootCerts::Clear() {
-  // TODO(fuchsia): Implement this.
-  NOTIMPLEMENTED();
+  test_trust_store_.Clear();
   empty_ = true;
 }
 

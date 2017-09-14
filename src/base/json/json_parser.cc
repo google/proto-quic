@@ -397,7 +397,7 @@ std::unique_ptr<Value> JSONParser::ConsumeDictionary() {
     }
   }
 
-  return MakeUnique<Value>(
+  return std::make_unique<Value>(
       Value::DictStorage(std::move(dict_storage), KEEP_LAST_OF_DUPES));
 }
 
@@ -449,7 +449,7 @@ std::unique_ptr<Value> JSONParser::ConsumeString() {
   if (!ConsumeStringRaw(&string))
     return nullptr;
 
-  return base::MakeUnique<Value>(string.DestructiveAsString());
+  return std::make_unique<Value>(string.DestructiveAsString());
 }
 
 bool JSONParser::ConsumeStringRaw(StringBuilder* out) {
@@ -766,12 +766,12 @@ std::unique_ptr<Value> JSONParser::ConsumeNumber() {
 
   int num_int;
   if (StringToInt(num_string, &num_int))
-    return base::MakeUnique<Value>(num_int);
+    return std::make_unique<Value>(num_int);
 
   double num_double;
   if (StringToDouble(num_string.as_string(), &num_double) &&
       std::isfinite(num_double)) {
-    return base::MakeUnique<Value>(num_double);
+    return std::make_unique<Value>(num_double);
   }
 
   return nullptr;
@@ -812,7 +812,7 @@ std::unique_ptr<Value> JSONParser::ConsumeLiteral() {
         return nullptr;
       }
       NextNChars(kTrueLen - 1);
-      return base::MakeUnique<Value>(true);
+      return std::make_unique<Value>(true);
     }
     case 'f': {
       const char kFalseLiteral[] = "false";
@@ -823,7 +823,7 @@ std::unique_ptr<Value> JSONParser::ConsumeLiteral() {
         return nullptr;
       }
       NextNChars(kFalseLen - 1);
-      return base::MakeUnique<Value>(false);
+      return std::make_unique<Value>(false);
     }
     case 'n': {
       const char kNullLiteral[] = "null";
@@ -834,7 +834,7 @@ std::unique_ptr<Value> JSONParser::ConsumeLiteral() {
         return nullptr;
       }
       NextNChars(kNullLen - 1);
-      return MakeUnique<Value>();
+      return std::make_unique<Value>();
     }
     default:
       ReportError(JSONReader::JSON_UNEXPECTED_TOKEN, 1);

@@ -18,18 +18,6 @@
 
 namespace net {
 
-struct NET_EXPORT SHA1HashValue {
-  unsigned char data[20];
-};
-
-inline bool operator==(const SHA1HashValue& lhs, const SHA1HashValue& rhs) {
-  return memcmp(lhs.data, rhs.data, sizeof(lhs.data)) == 0;
-}
-
-inline bool operator!=(const SHA1HashValue& lhs, const SHA1HashValue& rhs) {
-  return !(lhs == rhs);
-}
-
 struct NET_EXPORT SHA256HashValue {
   unsigned char data[32];
 };
@@ -54,7 +42,7 @@ class NET_EXPORT HashValue {
 
   // Serializes/Deserializes hashes in the form of
   // <hash-name>"/"<base64-hash-value>
-  // (eg: "sha1/...")
+  // (eg: "sha256/...")
   // This format may be persisted to permanent storage, so
   // care should be taken before changing the serialization.
   //
@@ -79,7 +67,6 @@ class NET_EXPORT HashValue {
 
  private:
   union {
-    SHA1HashValue sha1;
     SHA256HashValue sha256;
   } fingerprint;
 };
@@ -94,14 +81,6 @@ inline bool operator!=(const HashValue& lhs, const HashValue& rhs) {
 
 typedef std::vector<HashValue> HashValueVector;
 
-
-class SHA1HashValueLessThan {
- public:
-  bool operator()(const SHA1HashValue& lhs,
-                  const SHA1HashValue& rhs) const {
-    return memcmp(lhs.data, rhs.data, sizeof(lhs.data)) < 0;
-  }
-};
 
 class SHA256HashValueLessThan {
  public:

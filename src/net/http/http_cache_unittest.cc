@@ -753,7 +753,7 @@ TEST(HttpCache, SimpleGETNoDiskCache) {
 
 TEST(HttpCache, SimpleGETNoDiskCache2) {
   // This will initialize a cache object with NULL backend.
-  auto factory = base::MakeUnique<MockBlockingBackendFactory>();
+  auto factory = std::make_unique<MockBlockingBackendFactory>();
   factory->set_fail(true);
   factory->FinishCreation();  // We'll complete synchronously.
   MockHttpCache cache(std::move(factory));
@@ -814,7 +814,7 @@ TEST(HttpCache, SimpleGETWithDiskFailures2) {
 
   MockHttpRequest request(kSimpleGET_Transaction);
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
 
@@ -861,7 +861,7 @@ TEST(HttpCache, SimpleGETWithDiskFailures3) {
   MockHttpRequest request(kSimpleGET_Transaction);
 
   // Now fail to read from the cache.
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
 
@@ -1363,7 +1363,7 @@ TEST(HttpCache, SimpleGET_ManyReaders) {
   const int kNumTransactions = 5;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -1431,7 +1431,7 @@ TEST(HttpCache, RangeGET_ParallelValidationNoMatch) {
   const int kNumTransactions = 5;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -1497,7 +1497,7 @@ TEST(HttpCache, RangeGET_ParallelValidationNoMatchDoomEntry) {
   scoped_refptr<MockDiskEntry> first_entry;
   scoped_refptr<MockDiskEntry> second_entry;
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -1583,7 +1583,7 @@ TEST(HttpCache, RangeGET_ParallelValidationNoMatchDoomEntry1) {
 
   scoped_refptr<MockDiskEntry> first_entry;
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -1666,7 +1666,7 @@ TEST(HttpCache, RangeGET_ParallelValidationDifferentRanges) {
   const int kNumTransactions = 2;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
   }
 
   // Let 1st transaction complete headers phase for ranges 40-49.
@@ -1765,7 +1765,7 @@ TEST(HttpCache, RangeGET_ParallelValidationCacheLockTimeout) {
   const int kNumTransactions = 2;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
   }
 
   // Let 1st transaction complete headers phase for ranges 40-49.
@@ -1850,7 +1850,7 @@ TEST(HttpCache, RangeGET_ParallelValidationOverlappingRanges) {
   const int kNumTransactions = 2;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
   }
 
   // Let 1st transaction complete headers phase for ranges 40-49.
@@ -1950,7 +1950,7 @@ TEST(HttpCache, RangeGET_ParallelValidationRestartDoneHeaders) {
   const int kNumTransactions = 2;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
   }
 
   // Let 1st transaction complete headers phase for ranges 40-59.
@@ -2043,7 +2043,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationNoMatch) {
   std::vector<std::unique_ptr<Context>> context_list;
   const int kNumTransactions = 5;
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
     c->result = cache.CreateTransaction(&c->trans);
     ASSERT_THAT(c->result, IsOk());
@@ -2098,7 +2098,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationNoMatch1) {
   std::vector<std::unique_ptr<Context>> context_list;
   const int kNumTransactions = 5;
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
     c->result = cache.CreateTransaction(&c->trans);
     ASSERT_THAT(c->result, IsOk());
@@ -2166,7 +2166,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationDelete) {
   const int kNumTransactions = 2;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
 
     MockHttpRequest* this_request = &request;
@@ -2227,7 +2227,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationCancelValidated) {
   const int kNumTransactions = 2;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -2277,7 +2277,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationValidatedTimeout) {
   const int kNumTransactions = 2;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
 
     if (i == 1)
@@ -2328,7 +2328,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationCancelReader) {
   std::vector<std::unique_ptr<Context>> context_list;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -2369,7 +2369,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationCancelReader) {
   kNumTransactions = 6;
 
   for (int i = 4; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -2426,7 +2426,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationCancelWriter) {
   std::vector<std::unique_ptr<Context>> context_list;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -2499,7 +2499,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationCancelWriterTruncateEntry) {
   std::vector<std::unique_ptr<Context>> context_list;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -2564,7 +2564,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationStopCaching) {
   std::vector<std::unique_ptr<Context>> context_list;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -2632,7 +2632,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationCancelHeaders) {
   std::vector<std::unique_ptr<Context>> context_list;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -2682,7 +2682,7 @@ TEST(HttpCache, SimpleGET_ParallelValidationFailWrite) {
   std::vector<std::unique_ptr<Context>> context_list;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     auto& c = context_list[i];
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -2762,7 +2762,7 @@ TEST(HttpCache, SimpleGET_RacingReaders) {
   const int kNumTransactions = 5;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     Context* c = context_list[i].get();
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -2842,7 +2842,7 @@ TEST(HttpCache, SimpleGET_DoomWithPending) {
   const int kNumTransactions = 4;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     Context* c = context_list[i].get();
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -2893,7 +2893,7 @@ TEST(HttpCache, FastNoStoreGET_DoneWithPending) {
   const int kNumTransactions = 3;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     Context* c = context_list[i].get();
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -2941,7 +2941,7 @@ TEST(HttpCache, SimpleGET_ManyWriters_CancelFirst) {
   const int kNumTransactions = 2;
 
   for (int i = 0; i < kNumTransactions; ++i) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     Context* c = context_list[i].get();
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -2998,7 +2998,7 @@ TEST(HttpCache, SimpleGET_ManyWriters_CancelCreate) {
   const int kNumTransactions = 5;
 
   for (int i = 0; i < kNumTransactions; i++) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     Context* c = context_list[i].get();
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -3044,7 +3044,7 @@ TEST(HttpCache, SimpleGET_CancelCreate) {
 
   MockHttpRequest request(kSimpleGET_Transaction);
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
 
   c->result = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(c->result, IsOk());
@@ -3073,7 +3073,7 @@ TEST(HttpCache, SimpleGET_ManyWriters_BypassCache) {
   const int kNumTransactions = 5;
 
   for (int i = 0; i < kNumTransactions; i++) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     Context* c = context_list[i].get();
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -3189,8 +3189,8 @@ TEST(HttpCache, SimpleGET_AbandonedCacheRead) {
 // Tests that we can delete the HttpCache and deal with queued transactions
 // ("waiting for the backend" as opposed to Active or Doomed entries).
 TEST(HttpCache, SimpleGET_ManyWriters_DeleteCache) {
-  auto cache = base::MakeUnique<MockHttpCache>(
-      base::MakeUnique<MockBackendNoCbFactory>());
+  auto cache = std::make_unique<MockHttpCache>(
+      std::make_unique<MockBackendNoCbFactory>());
 
   MockHttpRequest request(kSimpleGET_Transaction);
 
@@ -3198,7 +3198,7 @@ TEST(HttpCache, SimpleGET_ManyWriters_DeleteCache) {
   const int kNumTransactions = 5;
 
   for (int i = 0; i < kNumTransactions; i++) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     Context* c = context_list[i].get();
 
     c->result = cache->CreateTransaction(&c->trans);
@@ -3231,7 +3231,7 @@ TEST(HttpCache, SimpleGET_WaitForBackend) {
   const int kNumTransactions = 3;
 
   for (int i = 0; i < kNumTransactions; i++) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     Context* c = context_list[i].get();
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -3277,7 +3277,7 @@ TEST(HttpCache, SimpleGET_WaitForBackend_CancelCreate) {
   const int kNumTransactions = 3;
 
   for (int i = 0; i < kNumTransactions; i++) {
-    context_list.push_back(base::MakeUnique<Context>());
+    context_list.push_back(std::make_unique<Context>());
     Context* c = context_list[i].get();
 
     c->result = cache.CreateTransaction(&c->trans);
@@ -3317,11 +3317,11 @@ TEST(HttpCache, SimpleGET_WaitForBackend_CancelCreate) {
 // Tests that we can delete the cache while creating the backend.
 TEST(HttpCache, DeleteCacheWaitingForBackend) {
   MockBlockingBackendFactory* factory = new MockBlockingBackendFactory();
-  auto cache = base::MakeUnique<MockHttpCache>(base::WrapUnique(factory));
+  auto cache = std::make_unique<MockHttpCache>(base::WrapUnique(factory));
 
   MockHttpRequest request(kSimpleGET_Transaction);
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
   c->result = cache->CreateTransaction(&c->trans);
   ASSERT_THAT(c->result, IsOk());
 
@@ -3359,7 +3359,7 @@ TEST(HttpCache, DeleteCacheWaitingForBackend2) {
   // Now let's queue a regular transaction
   MockHttpRequest request(kSimpleGET_Transaction);
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
   c->result = cache->CreateTransaction(&c->trans);
   ASSERT_THAT(c->result, IsOk());
 
@@ -4364,7 +4364,7 @@ TEST(HttpCache, SimplePOST_LoadOnlyFromCache_Hit) {
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
   element_readers.push_back(
-      base::MakeUnique<UploadBytesElementReader>("hello", 5));
+      std::make_unique<UploadBytesElementReader>("hello", 5));
   ElementsUploadDataStream upload_data_stream(std::move(element_readers),
                                               kUploadId);
   MockHttpRequest request(transaction);
@@ -4397,7 +4397,7 @@ TEST(HttpCache, SimplePOST_WithRanges) {
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
   element_readers.push_back(
-      base::MakeUnique<UploadBytesElementReader>("hello", 5));
+      std::make_unique<UploadBytesElementReader>("hello", 5));
   ElementsUploadDataStream upload_data_stream(std::move(element_readers),
                                               kUploadId);
 
@@ -4418,7 +4418,7 @@ TEST(HttpCache, SimplePOST_SeparateCache) {
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
   element_readers.push_back(
-      base::MakeUnique<UploadBytesElementReader>("hello", 5));
+      std::make_unique<UploadBytesElementReader>("hello", 5));
   ElementsUploadDataStream upload_data_stream(std::move(element_readers), 1);
 
   MockTransaction transaction(kSimplePOST_Transaction);
@@ -4458,7 +4458,7 @@ TEST(HttpCache, SimplePOST_Invalidate_205) {
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
   element_readers.push_back(
-      base::MakeUnique<UploadBytesElementReader>("hello", 5));
+      std::make_unique<UploadBytesElementReader>("hello", 5));
   ElementsUploadDataStream upload_data_stream(std::move(element_readers), 1);
 
   transaction.method = "POST";
@@ -4498,7 +4498,7 @@ TEST(HttpCache, SimplePOST_NoUploadId_Invalidate_205) {
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
   element_readers.push_back(
-      base::MakeUnique<UploadBytesElementReader>("hello", 5));
+      std::make_unique<UploadBytesElementReader>("hello", 5));
   ElementsUploadDataStream upload_data_stream(std::move(element_readers), 0);
 
   transaction.method = "POST";
@@ -4523,14 +4523,14 @@ TEST(HttpCache, SimplePOST_NoUploadId_Invalidate_205) {
 // Tests that processing a POST before creating the backend doesn't crash.
 TEST(HttpCache, SimplePOST_NoUploadId_NoBackend) {
   // This will initialize a cache object with NULL backend.
-  auto factory = base::MakeUnique<MockBlockingBackendFactory>();
+  auto factory = std::make_unique<MockBlockingBackendFactory>();
   factory->set_fail(true);
   factory->FinishCreation();
   MockHttpCache cache(std::move(factory));
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
   element_readers.push_back(
-      base::MakeUnique<UploadBytesElementReader>("hello", 5));
+      std::make_unique<UploadBytesElementReader>("hello", 5));
   ElementsUploadDataStream upload_data_stream(std::move(element_readers), 0);
 
   MockTransaction transaction(kSimplePOST_Transaction);
@@ -4560,7 +4560,7 @@ TEST(HttpCache, SimplePOST_DontInvalidate_100) {
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
   element_readers.push_back(
-      base::MakeUnique<UploadBytesElementReader>("hello", 5));
+      std::make_unique<UploadBytesElementReader>("hello", 5));
   ElementsUploadDataStream upload_data_stream(std::move(element_readers), 1);
 
   transaction.method = "POST";
@@ -4872,7 +4872,7 @@ TEST(HttpCache, SimplePUT_Miss) {
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
   element_readers.push_back(
-      base::MakeUnique<UploadBytesElementReader>("hello", 5));
+      std::make_unique<UploadBytesElementReader>("hello", 5));
   ElementsUploadDataStream upload_data_stream(std::move(element_readers), 0);
 
   MockHttpRequest request(transaction);
@@ -4902,7 +4902,7 @@ TEST(HttpCache, SimplePUT_Invalidate) {
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
   element_readers.push_back(
-      base::MakeUnique<UploadBytesElementReader>("hello", 5));
+      std::make_unique<UploadBytesElementReader>("hello", 5));
   ElementsUploadDataStream upload_data_stream(std::move(element_readers), 0);
 
   transaction.method = "PUT";
@@ -4939,7 +4939,7 @@ TEST(HttpCache, SimplePUT_Invalidate_305) {
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
   element_readers.push_back(
-      base::MakeUnique<UploadBytesElementReader>("hello", 5));
+      std::make_unique<UploadBytesElementReader>("hello", 5));
   ElementsUploadDataStream upload_data_stream(std::move(element_readers), 0);
 
   transaction.method = "PUT";
@@ -4978,7 +4978,7 @@ TEST(HttpCache, SimplePUT_DontInvalidate_404) {
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
   element_readers.push_back(
-      base::MakeUnique<UploadBytesElementReader>("hello", 5));
+      std::make_unique<UploadBytesElementReader>("hello", 5));
   ElementsUploadDataStream upload_data_stream(std::move(element_readers), 0);
 
   transaction.method = "PUT";
@@ -5009,7 +5009,7 @@ TEST(HttpCache, SimpleDELETE_Miss) {
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
   element_readers.push_back(
-      base::MakeUnique<UploadBytesElementReader>("hello", 5));
+      std::make_unique<UploadBytesElementReader>("hello", 5));
   ElementsUploadDataStream upload_data_stream(std::move(element_readers), 0);
 
   MockHttpRequest request(transaction);
@@ -5039,7 +5039,7 @@ TEST(HttpCache, SimpleDELETE_Invalidate) {
 
   std::vector<std::unique_ptr<UploadElementReader>> element_readers;
   element_readers.push_back(
-      base::MakeUnique<UploadBytesElementReader>("hello", 5));
+      std::make_unique<UploadBytesElementReader>("hello", 5));
   ElementsUploadDataStream upload_data_stream(std::move(element_readers), 0);
 
   transaction.method = "DELETE";
@@ -6596,7 +6596,7 @@ TEST(HttpCache, MAYBE_RangeGET_Cancel) {
 
   MockHttpRequest request(kRangeGET_TransactionOK);
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
 
@@ -6641,7 +6641,7 @@ TEST(HttpCache, MAYBE_RangeGET_Cancel2) {
   MockHttpRequest request(kRangeGET_TransactionOK);
   request.load_flags |= LOAD_VALIDATE_CACHE;
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
 
@@ -6686,7 +6686,7 @@ TEST(HttpCache, RangeGET_Cancel3) {
   MockHttpRequest request(kRangeGET_TransactionOK);
   request.load_flags |= LOAD_VALIDATE_CACHE;
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
 
@@ -6713,7 +6713,7 @@ TEST(HttpCache, RangeGET_Cancel3) {
   // message loop. This means that a new transaction will just reuse the same
   // active entry (no open or create).
 
-  c = base::MakeUnique<Context>();
+  c = std::make_unique<Context>();
   rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
 
@@ -6867,7 +6867,7 @@ TEST(HttpCache, RangeGET_LargeValues) {
 // Tests that we don't crash with a range request if the disk cache was not
 // initialized properly.
 TEST(HttpCache, RangeGET_NoDiskCache) {
-  auto factory = base::MakeUnique<MockBlockingBackendFactory>();
+  auto factory = std::make_unique<MockBlockingBackendFactory>();
   factory->set_fail(true);
   factory->FinishCreation();  // We'll complete synchronously.
   MockHttpCache cache(std::move(factory));
@@ -7065,7 +7065,7 @@ TEST(HttpCache, DoomOnDestruction) {
 
   MockHttpRequest request(kSimpleGET_Transaction);
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
 
@@ -7095,7 +7095,7 @@ TEST(HttpCache, DoomOnDestruction2) {
 
   MockHttpRequest request(kSimpleGET_Transaction);
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
 
@@ -7138,7 +7138,7 @@ TEST(HttpCache, DoomOnDestruction3) {
   AddMockTransaction(&transaction);
   MockHttpRequest request(transaction);
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
 
@@ -7180,7 +7180,7 @@ TEST(HttpCache, SetTruncatedFlag) {
       "Etag: \"foopy\"\n";
   MockHttpRequest request(transaction);
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
 
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
@@ -7234,7 +7234,7 @@ TEST(HttpCache, DontSetTruncatedFlagForGarbledResponseCode) {
   transaction.status = "HTTP/1.1 2";
   MockHttpRequest request(transaction);
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
 
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
@@ -7288,7 +7288,7 @@ TEST(HttpCache, DontSetTruncatedFlag) {
       "Etag: \"foopy\"\n";
   MockHttpRequest request(transaction);
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
 
@@ -7314,7 +7314,7 @@ TEST(HttpCache, RangeGET_DontTruncate) {
   ScopedMockTransaction transaction(kRangeGET_TransactionOK);
   transaction.request_headers = "Range: bytes = 0-19\r\n" EXTRA_HEADER;
 
-  auto request = base::MakeUnique<MockHttpRequest>(transaction);
+  auto request = std::make_unique<MockHttpRequest>(transaction);
   std::unique_ptr<HttpTransaction> trans;
 
   int rv = cache.http_cache()->CreateTransaction(DEFAULT_PRIORITY, &trans);
@@ -7341,7 +7341,7 @@ TEST(HttpCache, RangeGET_DontTruncate2) {
   ScopedMockTransaction transaction(kRangeGET_TransactionOK);
   transaction.request_headers = "Range: bytes = 30-49\r\n" EXTRA_HEADER;
 
-  auto request = base::MakeUnique<MockHttpRequest>(transaction);
+  auto request = std::make_unique<MockHttpRequest>(transaction);
   std::unique_ptr<HttpTransaction> trans;
 
   int rv = cache.http_cache()->CreateTransaction(DEFAULT_PRIORITY, &trans);
@@ -7463,7 +7463,7 @@ TEST(HttpCache, GET_IncompleteResource_Cancel) {
   AddMockTransaction(&transaction);
 
   MockHttpRequest request(transaction);
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
 
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
@@ -7472,7 +7472,7 @@ TEST(HttpCache, GET_IncompleteResource_Cancel) {
   // before the first one gets the response from the server and dooms the entry,
   // otherwise it will just create a new entry without being queued to the first
   // request.
-  auto pending = base::MakeUnique<Context>();
+  auto pending = std::make_unique<Context>();
   ASSERT_THAT(cache.CreateTransaction(&pending->trans), IsOk());
 
   rv = c->trans->Start(&request, c->callback.callback(), NetLogWithSource());
@@ -7556,7 +7556,7 @@ TEST(HttpCache, GET_IncompleteResource3) {
   transaction.request_headers = EXTRA_HEADER;
   transaction.data = kFullRangeData;
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
 
@@ -7591,7 +7591,7 @@ TEST(HttpCache, GET_IncompleteResourceWithAuth) {
   transaction.data = kFullRangeData;
   RangeTransactionServer handler;
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
 
@@ -7642,7 +7642,7 @@ TEST(HttpCache, TransactionRetryLimit) {
       "Range: bytes = 0-79\r\n"
       "X-Require-Mock-Auth-Alt: dummy\r\n" EXTRA_HEADER;
 
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
 
@@ -7701,7 +7701,7 @@ TEST(HttpCache, GET_CancelIncompleteResource) {
   transaction.request_headers = EXTRA_HEADER;
 
   MockHttpRequest request(transaction);
-  auto c = base::MakeUnique<Context>();
+  auto c = std::make_unique<Context>();
   int rv = cache.CreateTransaction(&c->trans);
   ASSERT_THAT(rv, IsOk());
 
@@ -8047,7 +8047,7 @@ TEST(HttpCache, SimpleGET_SSLError) {
 
 // Ensure that we don't crash by if left-behind transactions.
 TEST(HttpCache, OutlivedTransactions) {
-  auto cache = base::MakeUnique<MockHttpCache>();
+  auto cache = std::make_unique<MockHttpCache>();
 
   std::unique_ptr<HttpTransaction> trans;
   EXPECT_THAT(cache->CreateTransaction(&trans), IsOk());
@@ -9317,7 +9317,7 @@ TEST(HttpCache, NoStoreResponseShouldNotBlockFollowingRequests) {
   mock_transaction.response_headers = "Cache-Control: no-store\n";
   MockHttpRequest request(mock_transaction);
 
-  auto first = base::MakeUnique<Context>();
+  auto first = std::make_unique<Context>();
   first->result = cache.CreateTransaction(&first->trans);
   ASSERT_THAT(first->result, IsOk());
   EXPECT_EQ(LOAD_STATE_IDLE, first->trans->GetLoadState());
@@ -9333,7 +9333,7 @@ TEST(HttpCache, NoStoreResponseShouldNotBlockFollowingRequests) {
   // Here we have read the response header but not read the response body yet.
 
   // Let us create the second (read) transaction.
-  auto second = base::MakeUnique<Context>();
+  auto second = std::make_unique<Context>();
   second->result = cache.CreateTransaction(&second->trans);
   ASSERT_THAT(second->result, IsOk());
   EXPECT_EQ(LOAD_STATE_IDLE, second->trans->GetLoadState());
@@ -9572,7 +9572,7 @@ TEST_P(HttpCacheMemoryDumpTest, DumpMemoryStats) {
 
   base::trace_event::MemoryDumpArgs dump_args = {GetParam()};
   auto process_memory_dump =
-      base::MakeUnique<base::trace_event::ProcessMemoryDump>(nullptr,
+      std::make_unique<base::trace_event::ProcessMemoryDump>(nullptr,
                                                              dump_args);
   base::trace_event::MemoryAllocatorDump* parent_dump =
       process_memory_dump->CreateAllocatorDump(

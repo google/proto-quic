@@ -7,11 +7,11 @@
 
 #include <stddef.h>
 
-#include <deque>
 #include <memory>
 #include <utility>
 #include <vector>
 
+#include "base/containers/circular_deque.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "net/base/net_export.h"
@@ -113,7 +113,7 @@ class NET_EXPORT_PRIVATE WebSocketInflater {
     const size_t capacity_;
     size_t head_of_first_buffer_;
     size_t tail_of_last_buffer_;
-    std::deque<scoped_refptr<IOBufferWithSize> > buffers_;
+    base::circular_deque<scoped_refptr<IOBufferWithSize>> buffers_;
   };
 
   int InflateWithFlush(const char* next_in, size_t avail_in);

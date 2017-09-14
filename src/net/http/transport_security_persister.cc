@@ -30,7 +30,7 @@ namespace {
 
 std::unique_ptr<base::ListValue> SPKIHashesToListValue(
     const HashValueVector& hashes) {
-  auto pins = base::MakeUnique<base::ListValue>();
+  auto pins = std::make_unique<base::ListValue>();
   for (size_t i = 0; i != hashes.size(); i++)
     pins->AppendString(hashes[i].ToString());
   return pins;

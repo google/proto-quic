@@ -520,7 +520,7 @@ class SandboxSymbolizeHelper {
         if (strcmp((it->first).c_str(), file_path) == 0) {
           // POSIX.1-2004 requires an implementation to guarantee that dup()
           // is async-signal-safe.
-          fd = dup(it->second);
+          fd = HANDLE_EINTR(dup(it->second));
           break;
         }
       }

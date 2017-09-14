@@ -26,7 +26,7 @@ SpdyString ElideGoAwayDebugDataForNetLog(NetLogCaptureMode capture_mode,
 std::unique_ptr<base::ListValue> ElideSpdyHeaderBlockForNetLog(
     const SpdyHeaderBlock& headers,
     NetLogCaptureMode capture_mode) {
-  auto headers_list = base::MakeUnique<base::ListValue>();
+  auto headers_list = std::make_unique<base::ListValue>();
   for (SpdyHeaderBlock::const_iterator it = headers.begin();
        it != headers.end(); ++it) {
     headers_list->AppendString(

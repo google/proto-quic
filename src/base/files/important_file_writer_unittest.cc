@@ -133,7 +133,7 @@ TEST_F(ImportantFileWriterTest, Basic) {
   ImportantFileWriter writer(file_, ThreadTaskRunnerHandle::Get());
   EXPECT_FALSE(PathExists(writer.path()));
   EXPECT_EQ(NOT_CALLED, write_callback_observer_.GetAndResetObservationState());
-  writer.WriteNow(MakeUnique<std::string>("foo"));
+  writer.WriteNow(std::make_unique<std::string>("foo"));
   RunLoop().RunUntilIdle();
 
   EXPECT_EQ(NOT_CALLED, write_callback_observer_.GetAndResetObservationState());
@@ -148,7 +148,7 @@ TEST_F(ImportantFileWriterTest, WriteWithObserver) {
 
   // Confirm that the observer is invoked.
   write_callback_observer_.ObserveNextWriteCallbacks(&writer);
-  writer.WriteNow(MakeUnique<std::string>("foo"));
+  writer.WriteNow(std::make_unique<std::string>("foo"));
   RunLoop().RunUntilIdle();
 
   EXPECT_EQ(CALLED_WITH_SUCCESS,
@@ -159,7 +159,7 @@ TEST_F(ImportantFileWriterTest, WriteWithObserver) {
   // Confirm that re-installing the observer works for another write.
   EXPECT_EQ(NOT_CALLED, write_callback_observer_.GetAndResetObservationState());
   write_callback_observer_.ObserveNextWriteCallbacks(&writer);
-  writer.WriteNow(MakeUnique<std::string>("bar"));
+  writer.WriteNow(std::make_unique<std::string>("bar"));
   RunLoop().RunUntilIdle();
 
   EXPECT_EQ(CALLED_WITH_SUCCESS,
@@ -170,7 +170,7 @@ TEST_F(ImportantFileWriterTest, WriteWithObserver) {
   // Confirm that writing again without re-installing the observer doesn't
   // result in a notification.
   EXPECT_EQ(NOT_CALLED, write_callback_observer_.GetAndResetObservationState());
-  writer.WriteNow(MakeUnique<std::string>("baz"));
+  writer.WriteNow(std::make_unique<std::string>("baz"));
   RunLoop().RunUntilIdle();
 
   EXPECT_EQ(NOT_CALLED, write_callback_observer_.GetAndResetObservationState());
@@ -186,7 +186,7 @@ TEST_F(ImportantFileWriterTest, FailedWriteWithObserver) {
   EXPECT_FALSE(PathExists(writer.path()));
   EXPECT_EQ(NOT_CALLED, write_callback_observer_.GetAndResetObservationState());
   write_callback_observer_.ObserveNextWriteCallbacks(&writer);
-  writer.WriteNow(MakeUnique<std::string>("foo"));
+  writer.WriteNow(std::make_unique<std::string>("foo"));
   RunLoop().RunUntilIdle();
 
   // Confirm that the write observer was invoked with its boolean parameter set
@@ -212,7 +212,7 @@ TEST_F(ImportantFileWriterTest, CallbackRunsOnWriterThread) {
                                 base::Unretained(&wait_helper)));
 
   write_callback_observer_.ObserveNextWriteCallbacks(&writer);
-  writer.WriteNow(MakeUnique<std::string>("foo"));
+  writer.WriteNow(std::make_unique<std::string>("foo"));
   RunLoop().RunUntilIdle();
 
   // Expect the callback to not have been executed before the
@@ -301,7 +301,7 @@ TEST_F(ImportantFileWriterTest, ScheduleWrite_WriteNow) {
   DataSerializer serializer("foo");
   writer.ScheduleWrite(&serializer);
   EXPECT_TRUE(writer.HasPendingWrite());
-  writer.WriteNow(MakeUnique<std::string>("bar"));
+  writer.WriteNow(std::make_unique<std::string>("bar"));
   EXPECT_FALSE(writer.HasPendingWrite());
   EXPECT_FALSE(timer.IsRunning());
 

@@ -24,7 +24,7 @@ bool operator != (const StackFrame& lhs, const StackFrame& rhs) {
   return !(lhs.value == rhs.value);
 }
 
-Backtrace::Backtrace(): frame_count(0) {}
+Backtrace::Backtrace() = default;
 
 bool operator==(const Backtrace& lhs, const Backtrace& rhs) {
   if (lhs.frame_count != rhs.frame_count) return false;
@@ -67,9 +67,7 @@ size_t hash<Backtrace>::operator()(const Backtrace& backtrace) const {
   for (size_t i = 0; i != backtrace.frame_count; ++i) {
     values[i] = backtrace.frames[i].value;
   }
-  return base::SuperFastHash(
-      reinterpret_cast<const char*>(values),
-      static_cast<int>(backtrace.frame_count * sizeof(*values)));
+  return base::PersistentHash(values, backtrace.frame_count * sizeof(*values));
 }
 
 size_t hash<AllocationContext>::operator()(const AllocationContext& ctx) const {

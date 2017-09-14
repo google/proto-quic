@@ -160,7 +160,7 @@ int HttpServer::HandleAcceptResult(int rv) {
   }
 
   std::unique_ptr<HttpConnection> connection_ptr =
-      base::MakeUnique<HttpConnection>(++last_id_, std::move(accepted_socket_));
+      std::make_unique<HttpConnection>(++last_id_, std::move(accepted_socket_));
   HttpConnection* connection = connection_ptr.get();
   id_to_connection_[connection->id()] = std::move(connection_ptr);
   delegate_->OnConnect(connection->id());
@@ -245,7 +245,7 @@ int HttpServer::HandleReadResult(HttpConnection* connection, int rv) {
     connection->socket()->GetPeerAddress(&request.peer);
 
     if (request.HasHeaderValue("connection", "upgrade")) {
-      connection->SetWebSocket(base::MakeUnique<WebSocket>(this, connection));
+      connection->SetWebSocket(std::make_unique<WebSocket>(this, connection));
       read_buf->DidConsume(pos);
       delegate_->OnWebSocketRequest(connection->id(), request);
       if (HasClosedConnection(connection))

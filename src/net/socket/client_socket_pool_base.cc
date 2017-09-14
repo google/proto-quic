@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "base/compiler_specific.h"
+#include "base/debug/alias.h"
 #include "base/format_macros.h"
 #include "base/location.h"
 #include "base/logging.h"
@@ -86,6 +87,7 @@ ConnectJob::ConnectJob(const std::string& group_name,
                        Delegate* delegate,
                        const NetLogWithSource& net_log)
     : group_name_(group_name),
+      group_name_copy_(group_name),
       timeout_duration_(timeout_duration),
       priority_(priority),
       respect_limits_(respect_limits),
@@ -99,6 +101,7 @@ ConnectJob::ConnectJob(const std::string& group_name,
 }
 
 ConnectJob::~ConnectJob() {
+  CheckGroupName();
   net_log().EndEvent(NetLogEventType::SOCKET_POOL_CONNECT_JOB);
 }
 
@@ -107,6 +110,7 @@ std::unique_ptr<StreamSocket> ConnectJob::PassSocket() {
 }
 
 int ConnectJob::Connect() {
+  CheckGroupName();
   if (!timeout_duration_.is_zero())
     timer_.Start(FROM_HERE, timeout_duration_, this, &ConnectJob::OnTimeout);
 
@@ -124,6 +128,23 @@ int ConnectJob::Connect() {
   return rv;
 }
 
+void ConnectJob::CheckGroupName() const {
+  if (group_name_ != group_name_copy_)
+    LogGroupNameAndCrash();
+}
+
+void ConnectJob::LogGroupNameAndCrash() const {
+  char group_name[128];
+  char group_name_copy[128];
+  base::strlcpy(group_name, group_name_.c_str(), arraysize(group_name));
+  base::strlcpy(group_name_copy, group_name_copy_.c_str(),
+                arraysize(group_name_copy));
+  base::debug::Alias(group_name);
+  base::debug::Alias(group_name_copy);
+  CHECK(false) << "Memory corruption: " << group_name_
+               << " != " << group_name_copy_;
+}
+
 void ConnectJob::SetSocket(std::unique_ptr<StreamSocket> socket) {
   if (socket) {
     net_log().AddEvent(NetLogEventType::CONNECT_JOB_SET_SOCKET,
@@ -133,6 +154,8 @@ void ConnectJob::SetSocket(std::unique_ptr<StreamSocket> socket) {
 }
 
 void ConnectJob::NotifyDelegateOfCompletion(int rv) {
+  CheckGroupName();
+
   TRACE_EVENT0(kNetTracingCategory, "ConnectJob::NotifyDelegateOfCompletion");
   // The delegate will own |this|.
   Delegate* delegate = delegate_;
@@ -670,7 +693,7 @@ LoadState ClientSocketPoolBaseHelper::GetLoadState(
 std::unique_ptr<base::DictionaryValue>
 ClientSocketPoolBaseHelper::GetInfoAsValue(const std::string& name,
                                            const std::string& type) const {
-  auto dict = base::MakeUnique<base::DictionaryValue>();
+  auto dict = std::make_unique<base::DictionaryValue>();
   dict->SetString("name", name);
   dict->SetString("type", type);
   dict->SetInteger("handed_out_socket_count", handed_out_socket_count_);
@@ -683,11 +706,11 @@ ClientSocketPoolBaseHelper::GetInfoAsValue(const std::string& name,
   if (group_map_.empty())
     return dict;
 
-  auto all_groups_dict = base::MakeUnique<base::DictionaryValue>();
+  auto all_groups_dict = std::make_unique<base::DictionaryValue>();
   for (GroupMap::const_iterator it = group_map_.begin();
        it != group_map_.end(); it++) {
     const Group* group = it->second;
-    auto group_dict = base::MakeUnique<base::DictionaryValue>();
+    auto group_dict = std::make_unique<base::DictionaryValue>();
 
     group_dict->SetInteger("pending_request_count",
                            group->pending_request_count());
@@ -699,7 +722,7 @@ ClientSocketPoolBaseHelper::GetInfoAsValue(const std::string& name,
 
     group_dict->SetInteger("active_socket_count", group->active_socket_count());
 
-    auto idle_socket_list = base::MakeUnique<base::ListValue>();
+    auto idle_socket_list = std::make_unique<base::ListValue>();
     std::list<IdleSocket>::const_iterator idle_socket;
     for (idle_socket = group->idle_sockets().begin();
          idle_socket != group->idle_sockets().end();
@@ -709,7 +732,7 @@ ClientSocketPoolBaseHelper::GetInfoAsValue(const std::string& name,
     }
     group_dict->Set("idle_sockets", std::move(idle_socket_list));
 
-    auto connect_jobs_list = base::MakeUnique<base::ListValue>();
+    auto connect_jobs_list = std::make_unique<base::ListValue>();
     for (auto job = group->jobs().begin(); job != group->jobs().end(); job++) {
       int source_id = (*job)->net_log().source().id;
       connect_jobs_list->AppendInteger(source_id);

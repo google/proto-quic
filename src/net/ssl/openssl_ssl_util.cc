@@ -152,7 +152,7 @@ bssl::UniquePtr<CRYPTO_BUFFER> OSCertHandleToBuffer(
 
 }  // namespace
 
-void OpenSSLPutNetError(const tracked_objects::Location& location, int err) {
+void OpenSSLPutNetError(const base::Location& location, int err) {
   // Net error codes are negative. Encode them as positive numbers.
   err = -err;
   if (err < 0 || err > 0xfff) {

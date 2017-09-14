@@ -211,6 +211,7 @@ class DnsConfigServicePosixTest : public testing::Test {
   void OnConfigChanged(const DnsConfig& config) {
     EXPECT_TRUE(config.IsValid());
     seen_config_ = true;
+    real_config_ = config;
     run_loop_->QuitWhenIdle();
   }
 
@@ -253,15 +254,15 @@ class DnsConfigServicePosixTest : public testing::Test {
     // ASSERT_TRUE(hosts.GetInfo(&hosts_info));
     // ASSERT_TRUE(base::TouchFile(temp_file_, hosts_info.last_modified,
     //                            hosts_info.last_accessed));
+
+    creation_time_ = base::Time::Now();
+    service_.reset(new DnsConfigServicePosix());
+    MockHostsFilePath(temp_file_.value().c_str());
   }
 
   void TearDown() override { ASSERT_TRUE(base::DeleteFile(temp_file_, false)); }
 
   void StartWatching() {
-    creation_time_ = base::Time::Now();
-    service_.reset(new DnsConfigServicePosix());
-    MockHostsFilePath(temp_file_.value().c_str());
-    MockDNSConfig("8.8.8.8");
     seen_config_ = false;
     service_->WatchConfig(base::Bind(
         &DnsConfigServicePosixTest::OnConfigChanged, base::Unretained(this)));
@@ -270,7 +271,7 @@ class DnsConfigServicePosixTest : public testing::Test {
 
   void ExpectChange() {
     EXPECT_FALSE(seen_config_);
-    run_loop_ = base::MakeUnique<base::RunLoop>();
+    run_loop_ = std::make_unique<base::RunLoop>();
     run_loop_->Run();
     EXPECT_TRUE(seen_config_);
     seen_config_ = false;
@@ -281,11 +282,13 @@ class DnsConfigServicePosixTest : public testing::Test {
   base::FilePath temp_file_;
   std::unique_ptr<DnsConfigServicePosix> service_;
   DnsConfig test_config_;
+  DnsConfig real_config_;
   std::unique_ptr<base::RunLoop> run_loop_;
 };
 
 TEST_F(DnsConfigServicePosixTest, SeenChangeSinceNetworkChange) {
   // Verify SeenChangeSince() returns false if no changes
+  MockDNSConfig("8.8.8.8");
   StartWatching();
   EXPECT_FALSE(service_->SeenChangeSince(creation_time_));
   // Verify SeenChangeSince() returns true if network change
@@ -293,6 +296,25 @@ TEST_F(DnsConfigServicePosixTest, SeenChangeSinceNetworkChange) {
   service_->OnNetworkChanged(NetworkChangeNotifier::CONNECTION_WIFI);
   EXPECT_TRUE(service_->SeenChangeSince(creation_time_));
   ExpectChange();
+}
+
+// Regression test for https://crbug.com/704662.
+TEST_F(DnsConfigServicePosixTest, ChangeConfigMultipleTimes) {
+  service_->WatchConfig(base::Bind(&DnsConfigServicePosixTest::OnConfigChanged,
+                                   base::Unretained(this)));
+  base::RunLoop().RunUntilIdle();
+
+  for (int i = 0; i < 5; i++) {
+    service_->OnNetworkChanged(NetworkChangeNotifier::CONNECTION_WIFI);
+    // Wait for config read after the change. OnConfigChanged() will only be
+    // called if the new config is different from the old one, so this can't be
+    // ExpectChange().
+    base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(50));
+    base::RunLoop().RunUntilIdle();
+  }
+
+  // There should never be more than 4 nameservers in a real config.
+  EXPECT_GT(5u, real_config_.nameservers.size());
 }
 
 }  // namespace internal

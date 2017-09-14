@@ -52,7 +52,7 @@ class NET_EXPORT_PRIVATE EVRootCAMetadata {
 
   // Returns true if the root CA with the given certificate fingerprint has
   // the EV policy OID policy_oid.
-  bool HasEVPolicyOID(const SHA1HashValue& fingerprint,
+  bool HasEVPolicyOID(const SHA256HashValue& fingerprint,
                       PolicyOID policy_oid) const;
 
   // Returns true if |policy_oid| is for 2.23.140.1.1 (CA/Browser Forum's
@@ -64,11 +64,11 @@ class NET_EXPORT_PRIVATE EVRootCAMetadata {
   // AddEVCA adds an EV CA to the list of known EV CAs with the given policy.
   // |policy| is expressed as a string of dotted numbers. It returns true on
   // success.
-  bool AddEVCA(const SHA1HashValue& fingerprint, const char* policy);
+  bool AddEVCA(const SHA256HashValue& fingerprint, const char* policy);
 
   // RemoveEVCA removes an EV CA that was previously added by AddEVCA. It
   // returns true on success.
-  bool RemoveEVCA(const SHA1HashValue& fingerprint);
+  bool RemoveEVCA(const SHA256HashValue& fingerprint);
 
  private:
   friend struct base::LazyInstanceTraitsBase<EVRootCAMetadata>;
@@ -77,8 +77,8 @@ class NET_EXPORT_PRIVATE EVRootCAMetadata {
   ~EVRootCAMetadata();
 
 #if defined(USE_NSS_CERTS)
-  typedef std::map<SHA1HashValue, std::vector<PolicyOID>,
-                   SHA1HashValueLessThan> PolicyOIDMap;
+  using PolicyOIDMap = std::
+      map<SHA256HashValue, std::vector<PolicyOID>, SHA256HashValueLessThan>;
 
   // RegisterOID registers |policy|, a policy OID in dotted string form, and
   // writes the memoized form to |*out|. It returns true on success.
@@ -87,15 +87,14 @@ class NET_EXPORT_PRIVATE EVRootCAMetadata {
   PolicyOIDMap ev_policy_;
   std::set<PolicyOID> policy_oids_;
 #elif defined(OS_WIN)
-  typedef std::map<SHA1HashValue, std::string,
-                   SHA1HashValueLessThan> ExtraEVCAMap;
+  using ExtraEVCAMap =
+      std::map<SHA256HashValue, std::string, SHA256HashValueLessThan>;
 
   // extra_cas_ contains any EV CA metadata that was added at runtime.
   ExtraEVCAMap extra_cas_;
 #elif defined(OS_MACOSX)
-  typedef std::
-      map<SHA1HashValue, std::vector<std::string>, SHA1HashValueLessThan>
-          PolicyOIDMap;
+  using PolicyOIDMap = std::
+      map<SHA256HashValue, std::vector<std::string>, SHA256HashValueLessThan>;
 
   PolicyOIDMap ev_policy_;
   std::set<std::string> policy_oids_;

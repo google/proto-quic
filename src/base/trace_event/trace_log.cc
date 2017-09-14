@@ -508,11 +508,11 @@ void TraceLog::CreateFiltersForTraceConfig() {
     std::unique_ptr<TraceEventFilter> new_filter;
     const std::string& predicate_name = filter_config.predicate_name();
     if (predicate_name == EventNameFilter::kName) {
-      auto whitelist = MakeUnique<std::unordered_set<std::string>>();
+      auto whitelist = std::make_unique<std::unordered_set<std::string>>();
       CHECK(filter_config.GetArgAsSet("event_name_whitelist", &*whitelist));
-      new_filter = MakeUnique<EventNameFilter>(std::move(whitelist));
+      new_filter = std::make_unique<EventNameFilter>(std::move(whitelist));
     } else if (predicate_name == HeapProfilerEventFilter::kName) {
-      new_filter = MakeUnique<HeapProfilerEventFilter>();
+      new_filter = std::make_unique<HeapProfilerEventFilter>();
     } else {
       if (filter_factory_for_testing_)
         new_filter = filter_factory_for_testing_(predicate_name);
@@ -573,17 +573,10 @@ void TraceLog::SetEnabled(const TraceConfig& trace_config,
       }
     }
 
-    // Update event filters.
-    if (modes_to_enable & FILTERING_MODE) {
-      DCHECK(!trace_config.event_filters().empty())
-          << "Attempting to enable filtering without any filters";
-      DCHECK(enabled_event_filters_.empty()) << "Attempting to re-enable "
-                                                "filtering when filters are "
-                                                "already enabled.";
-
-      // Use the given event filters only if filtering was not enabled.
-      if (enabled_event_filters_.empty())
-        enabled_event_filters_ = trace_config.event_filters();
+    // Update event filters only if filtering was not enabled.
+    if (modes_to_enable & FILTERING_MODE && enabled_event_filters_.empty()) {
+      DCHECK(!trace_config.event_filters().empty());
+      enabled_event_filters_ = trace_config.event_filters();
     }
     // Keep the |trace_config_| updated with only enabled filters in case anyone
     // tries to read it using |GetCurrentTraceConfig| (even if filters are

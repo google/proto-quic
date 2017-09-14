@@ -71,7 +71,7 @@ class ReportingCacheImpl : public ReportingCache {
                  std::unique_ptr<const base::Value> body,
                  base::TimeTicks queued,
                  int attempts) override {
-    auto report = base::MakeUnique<ReportingReport>(
+    auto report = std::make_unique<ReportingReport>(
         url, group, type, std::move(body), queued, attempts);
 
     auto inserted =
@@ -217,7 +217,7 @@ class ReportingCacheImpl : public ReportingCache {
       RemoveClient(old_client);
     }
 
-    AddClient(base::MakeUnique<ReportingClient>(origin, endpoint, subdomains,
+    AddClient(std::make_unique<ReportingClient>(origin, endpoint, subdomains,
                                                 group, expires),
               last_used);
 
@@ -463,7 +463,7 @@ class ReportingCacheImpl : public ReportingCache {
 // static
 std::unique_ptr<ReportingCache> ReportingCache::Create(
     ReportingContext* context) {
-  return base::MakeUnique<ReportingCacheImpl>(context);
+  return std::make_unique<ReportingCacheImpl>(context);
 }
 
 ReportingCache::~ReportingCache() {}

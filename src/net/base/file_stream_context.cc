@@ -9,7 +9,6 @@
 #include "base/debug/alias.h"
 #include "base/files/file_path.h"
 #include "base/location.h"
-#include "base/profiler/scoped_tracker.h"
 #include "base/task_runner.h"
 #include "base/task_runner_util.h"
 #include "base/threading/thread_restrictions.h"
@@ -152,7 +151,7 @@ void FileStream::Context::CheckNoAsyncInProgress() const {
     return;
   LastOperation state = last_operation_;
   base::debug::Alias(&state);
-  // TODO(xunjieli): Once https://crbug.com/487732 is fixed, use
+  // TODO(xunjieli): Once https://crbug.com/732321 is fixed, use
   // DCHECK(!async_in_progress_) directly at call places.
   CHECK(!async_in_progress_);
 }
@@ -235,10 +234,6 @@ Int64CompletionCallback FileStream::Context::IntToInt64(
 void FileStream::Context::OnAsyncCompleted(
     const Int64CompletionCallback& callback,
     const IOResult& result) {
-  // TODO(pkasting): Remove ScopedTracker below once crbug.com/477117 is fixed.
-  tracked_objects::ScopedTracker tracking_profile(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION(
-          "477117 FileStream::Context::OnAsyncCompleted"));
   // Reset this before Run() as Run() may issue a new async operation. Also it
   // should be reset before Close() because it shouldn't run if any async
   // operation is in progress.

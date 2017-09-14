@@ -64,7 +64,7 @@ class Thread;
 
 // Single log entry recorded for each function call.
 struct LogEntry {
-  LogEntry(const void* address);
+  LogEntry(const void* address, pid_t pid, pid_t tid);
 
   const timespec time;
   const pid_t pid;
@@ -99,6 +99,9 @@ class ThreadLog {
   // Default implementation (that can be overridden for testing) of the method
   // above.
   void FlushInternal(std::vector<LogEntry>* entries) const;
+
+  // Process ID, as returned by getpid().
+  const pid_t pid_;
 
   // Thread identifier as Linux kernel shows it.  LWP (light-weight process) is
   // a unique ID of the thread in the system, unlike pthread_self() which is the

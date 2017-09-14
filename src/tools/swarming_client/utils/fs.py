@@ -7,7 +7,9 @@
 import __builtin__
 import inspect
 import os
+import re
 import shutil
+import subprocess
 import sys
 
 
@@ -28,6 +30,46 @@ if sys.platform == 'win32':
   RemoveDirectory = ctypes.windll.kernel32.RemoveDirectoryW
   RemoveDirectory.argtypes = (ctypes.c_wchar_p,)
   RemoveDirectory.restype = ctypes.c_bool
+
+  _SUPPORTS_SYMLINKS = None
+
+  def _supports_unprivileged_symlinks():
+    """Returns True if the OS supports sane symlinks without any user privilege
+    modification.
+
+    Actively work around AppCompat version lie shim. This is kinda insane to
+    shell out to figure out the real Windows version but this is ironically the
+    the most reliable way. This code was inspired by _get_os_numbers() in
+    //appengine/swarming/swarming_bot/api/platforms/win.py.
+    """
+    global _SUPPORTS_SYMLINKS
+    if _SUPPORTS_SYMLINKS != None:
+      return _SUPPORTS_SYMLINKS
+
+    _SUPPORTS_SYMLINKS = False
+    # Windows is lying to us until python adds to its manifest:
+    #   <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
+    # and it doesn't.
+    # So ask nicely to cmd.exe instead, which will always happily report the
+    # right version. Here's some sample output:
+    # - XP: Microsoft Windows XP [Version 5.1.2600]
+    # - Win10: Microsoft Windows [Version 10.0.10240]
+    # - Win7 or Win2K8R2: Microsoft Windows [Version 6.1.7601]
+    try:
+      out = subprocess.check_output(['cmd.exe', '/c', 'ver']).strip()
+      match = re.search(r'\[Version (\d+\.\d+)\.(\d+)\]', out, re.IGNORECASE)
+      if match:
+        # That's a bit gross but good enough.
+        major = float(match.group(1))
+        if major > 10:
+          _SUPPORTS_SYMLINKS = True
+        elif major == 10:
+          # https://blogs.windows.com/buildingapps/2016/12/02/symlinks-windows-10/
+          _SUPPORTS_SYMLINKS = int(match.group(2)) >= 14971
+    except (subprocess.CalledProcessError, OSError):
+      # Catastrophic issue.
+      pass
+    return _SUPPORTS_SYMLINKS
 
 
   def extend(path):
@@ -57,7 +99,11 @@ if sys.platform == 'win32':
     https://msdn.microsoft.com/library/windows/desktop/aa365682.aspx
     """
     FILE_ATTRIBUTE_REPARSE_POINT = 1024
-    return bool(GetFileAttributesW(extend(path)) & FILE_ATTRIBUTE_REPARSE_POINT)
+    INVALID_FILE_ATTRIBUTES = 0xFFFFFFFF
+    res = GetFileAttributesW(extend(path))
+    if res == INVALID_FILE_ATTRIBUTES:
+      return False
+    return bool(res & FILE_ATTRIBUTE_REPARSE_POINT)
 
 
   def symlink(source, link_name):
@@ -73,12 +119,28 @@ if sys.platform == 'win32':
       https://msdn.microsoft.com/library/bb530410.aspx
     Privilege constants:
       https://msdn.microsoft.com/library/windows/desktop/bb530716.aspx
+    Windows 10 and developer mode:
+      https://blogs.windows.com/buildingapps/2016/12/02/symlinks-windows-10/
     """
+    SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE = 2
     # TODO(maruel): This forces always creating absolute path symlinks.
     source = extend(source)
     flags = 1 if os.path.isdir(source) else 0
+    if _supports_unprivileged_symlinks():
+      # This enables support for this specific case:
+      # - Windows 10 with build 14971 or later
+      # - Admin account
+      # - UAC enabled
+      # - Developer mode enabled (not the default)
+      #
+      # In this specific case, file_path.enable_symlink() is unnecessary and the
+      # following flag make it magically work.
+      flags |= SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE
     if not CreateSymbolicLinkW(extend(link_name), source, flags):
-      raise WindowsError()  # pylint: disable=undefined-variable
+      # pylint: disable=undefined-variable
+      raise WindowsError(
+          u'symlink(%r, %r) failed: %s' %
+            (source, link_name, ctypes.GetLastError()))
 
 
   def unlink(path):
@@ -101,11 +163,15 @@ if sys.platform == 'win32':
     if os.path.isdir(path):
       if not RemoveDirectory(path):
         # pylint: disable=undefined-variable
-        raise WindowsError('could not remove directory "%s"' % path)
+        raise WindowsError(
+            u'unlink(%r): could not remove directory: %s' %
+              (path, ctypes.GetLastError()))
     else:
       if not DeleteFile(path):
         # pylint: disable=undefined-variable
-        raise WindowsError('could not delete file "%s"' % path)
+        raise WindowsError(
+            u'unlink(%r): could not delete file: %s' %
+              (path, ctypes.GetLastError()))
 
 
   def walk(top, *args, **kwargs):

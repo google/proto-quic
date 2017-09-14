@@ -51,7 +51,7 @@ class MockCacheVisitor : public CachingCertVerifier::CacheVisitor {
 
 class CachingCertVerifierTest : public ::testing::Test {
  public:
-  CachingCertVerifierTest() : verifier_(base::MakeUnique<MockCertVerifier>()) {}
+  CachingCertVerifierTest() : verifier_(std::make_unique<MockCertVerifier>()) {}
   ~CachingCertVerifierTest() override {}
 
  protected:

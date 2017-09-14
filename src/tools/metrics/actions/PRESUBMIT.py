@@ -17,7 +17,8 @@ def CheckChange(input_api, output_api):
         and input_api.os_path.dirname(p) == input_api.PresubmitLocalPath()):
       cwd = input_api.os_path.dirname(p)
       exit_code = input_api.subprocess.call(
-          ['python', 'extract_actions.py', '--presubmit'], cwd=cwd)
+          [input_api.python_executable, 'extract_actions.py', '--presubmit'],
+          cwd=cwd)
       if exit_code != 0:
         return [output_api.PresubmitError(
             'actions.xml is not up to date or is not formatted correctly; '

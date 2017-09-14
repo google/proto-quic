@@ -9,12 +9,12 @@
 #include <stdint.h>
 
 #include <algorithm>
-#include <deque>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "base/containers/circular_deque.h"
 #include "base/logging.h"
 #include "net/spdy/core/spdy_bug_tracker.h"
 #include "net/spdy/core/spdy_protocol.h"
@@ -261,8 +261,8 @@ class PriorityWriteScheduler : public WriteScheduler<StreamIdType> {
     bool ready;
   };
 
-  // 0(1) size lookup, 0(1) insert at front or back.
-  typedef std::deque<StreamInfo*> ReadyList;
+  // 0(1) size lookup, Amortized 0(1) insert at front or back.
+  using ReadyList = base::circular_deque<StreamInfo*>;
 
   // State kept for each priority level.
   struct PriorityInfo {

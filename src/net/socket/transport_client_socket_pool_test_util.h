@@ -10,10 +10,10 @@
 #define NET_SOCKET_TRANSPORT_CLIENT_SOCKET_POOL_TEST_UTIL_H_
 
 #include <memory>
-#include <queue>
 
 #include "base/callback.h"
 #include "base/compiler_specific.h"
+#include "base/containers/queue.h"
 #include "base/macros.h"
 #include "base/time/time.h"
 #include "net/base/address_list.h"
@@ -122,7 +122,7 @@ class MockTransportClientSocketFactory : public ClientSocketFactory {
   int client_socket_index_;
   int client_socket_index_max_;
   base::TimeDelta delay_;
-  std::queue<base::Closure> triggerable_sockets_;
+  base::queue<base::Closure> triggerable_sockets_;
   base::Closure run_loop_quit_closure_;
 
   DISALLOW_COPY_AND_ASSIGN(MockTransportClientSocketFactory);

@@ -71,9 +71,6 @@ class NET_EXPORT_PRIVATE HttpAuthNegotiateAndroid {
   explicit HttpAuthNegotiateAndroid(const HttpAuthPreferences* prefs);
   ~HttpAuthNegotiateAndroid();
 
-  // Register the JNI for this class.
-  static bool Register(JNIEnv* env);
-
   // Does nothing, but needed for compatibility with the Negotiate
   // authenticators for other O.S.. Always returns true.
   bool Init();

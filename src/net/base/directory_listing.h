@@ -18,7 +18,7 @@ class Time;
 namespace net {
 
 // Call these functions to get the html snippet for a directory listing.
-// The return values of both functions are in UTF-8.
+// The return values of these functions are in UTF-8.
 NET_EXPORT std::string GetDirectoryListingHeader(const base::string16& title);
 
 // Given the name of a file in a directory (ftp or local) and
@@ -38,6 +38,8 @@ NET_EXPORT std::string GetDirectoryListingEntry(const base::string16& name,
                                                 bool is_dir,
                                                 int64_t size,
                                                 base::Time modified);
+
+NET_EXPORT std::string GetParentDirectoryLink();
 
 }  // namespace net
 

@@ -70,6 +70,11 @@
       "ui/webui/resources/.*(css|html|js)"
     ]
   },
+  "fuchsia": {
+    "exclusions": [
+      "build/fuchsia/.*py"
+    ]
+  },
   "ios": {
     "exclusions": [
       "ios/build/bots/.*"

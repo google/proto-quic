@@ -10,15 +10,14 @@
 
 namespace base {
 
-bool SequencedTaskRunner::PostNonNestableTask(
-    const tracked_objects::Location& from_here,
-    OnceClosure task) {
+bool SequencedTaskRunner::PostNonNestableTask(const Location& from_here,
+                                              OnceClosure task) {
   return PostNonNestableDelayedTask(from_here, std::move(task),
                                     base::TimeDelta());
 }
 
 bool SequencedTaskRunner::DeleteOrReleaseSoonInternal(
-    const tracked_objects::Location& from_here,
+    const Location& from_here,
     void (*deleter)(const void*),
     const void* object) {
   return PostNonNestableTask(from_here, BindOnce(deleter, object));

@@ -18,7 +18,6 @@
 #include "base/metrics/field_trial.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/sparse_histogram.h"
-#include "base/profiler/scoped_tracker.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/stringprintf.h"
@@ -902,6 +901,12 @@ int SSLClientSocketImpl::Init() {
     case kTLS13VariantNoSessionIDExperiment:
       SSL_set_tls13_variant(ssl_.get(), tls13_no_session_id_experiment);
       break;
+    case kTLS13VariantExperiment2:
+      SSL_set_tls13_variant(ssl_.get(), tls13_experiment2);
+      break;
+    case kTLS13VariantExperiment3:
+      SSL_set_tls13_variant(ssl_.get(), tls13_experiment3);
+      break;
   }
 
   // OpenSSL defaults some options to on, others to off. To avoid ambiguity,
@@ -1016,11 +1021,6 @@ int SSLClientSocketImpl::DoHandshake() {
     rv = SSL_do_handshake(ssl_.get());
   } else {
     if (g_first_run_completed.Get().Get()) {
-      // TODO(cbentzel): Remove ScopedTracker below once crbug.com/424386 is
-      // fixed.
-      tracked_objects::ScopedTracker tracking_profile(
-          FROM_HERE_WITH_EXPLICIT_FUNCTION("424386 SSL_do_handshake()"));
-
       rv = SSL_do_handshake(ssl_.get());
     } else {
       g_first_run_completed.Get().Set(true);

@@ -4,8 +4,11 @@
 
 #include "net/quic/core/quic_client_promised_info.h"
 
+#include <utility>
+
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/spdy/core/spdy_protocol.h"
 
 using std::string;
 
@@ -39,7 +42,7 @@ void QuicClientPromisedInfo::Init() {
 void QuicClientPromisedInfo::OnPromiseHeaders(const SpdyHeaderBlock& headers) {
   // RFC7540, Section 8.2, requests MUST be safe [RFC7231], Section
   // 4.2.1.  GET and HEAD are the methods that are safe and required.
-  SpdyHeaderBlock::const_iterator it = headers.find(":method");
+  SpdyHeaderBlock::const_iterator it = headers.find(kHttp2MethodHeader);
   DCHECK(it != headers.end());
   if (!(it->second == "GET" || it->second == "HEAD")) {
     QUIC_DVLOG(1) << "Promise for stream " << id_ << " has invalid method "

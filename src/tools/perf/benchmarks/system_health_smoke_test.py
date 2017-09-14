@@ -68,10 +68,8 @@ _DISABLED_TESTS = frozenset({
   # crbug.com/725386
   'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_desktop.browse:social:twitter', # pylint: disable=line-too-long
 
-  # crbug.com/749773 crbug.com/749918
-  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.load:news:cnn', # pylint: disable=line-too-long
-  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_desktop.browse:news:hackernews', # pylint: disable=line-too-long
-  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_desktop.browse:media:imgur', # pylint: disable=line-too-long
+  # crbug.com/755969
+  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_desktop.browse:search:google', # pylint: disable=line-too-long
 })
 
 
@@ -83,7 +81,7 @@ def _GenerateSmokeTestCase(benchmark_class, story_to_smoke_test):
   # disabling it for one failing or flaky benchmark would disable a much
   # wider swath of coverage  than is usally intended. Instead, if a test is
   # failing, disable it by putting it into the _DISABLED_TESTS list above.
-  @benchmark_module.Disabled('chromeos')  # crbug.com/351114
+  @decorators.Disabled('chromeos')  # crbug.com/351114
   def RunTest(self):
 
     class SinglePageBenchmark(benchmark_class):  # pylint: disable=no-init

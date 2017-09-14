@@ -79,10 +79,7 @@ TEST(ClientCertStoreNSSTest, BuildsCertificateChain) {
   scoped_refptr<X509Certificate> client_1_ca(
       ImportCertFromFile(GetTestCertsDirectory(), "client_1_ca.pem"));
   ASSERT_TRUE(client_1_ca.get());
-  ASSERT_EQ(SECSuccess,
-            PK11_ImportCert(test_db.slot(), client_1_ca->os_cert_handle(),
-                            CK_INVALID_HANDLE, "client_1_ca",
-                            PR_FALSE /* includeTrust (unused) */));
+  ASSERT_TRUE(ImportClientCertToSlot(client_1_ca, test_db.slot()));
   std::string pkcs8_key;
   ASSERT_TRUE(base::ReadFileToString(
       GetTestCertsDirectory().AppendASCII("client_1.pk8"), &pkcs8_key));

@@ -182,7 +182,6 @@ def Install(device, install_json, apk=None, enable_device_cache=False,
   cache_path = _DeviceCachePath(device)
   def restore_cache():
     if not enable_device_cache:
-      logging.info('Ignoring device cache')
       return
     if os.path.exists(cache_path):
       logging.info('Using device cache: %s', cache_path)
@@ -194,6 +193,8 @@ def Install(device, install_json, apk=None, enable_device_cache=False,
       logging.info('No device cache present: %s', cache_path)
 
   def save_cache():
+    if not enable_device_cache:
+      return
     with open(cache_path, 'w') as f:
       f.write(device.DumpCacheData())
       logging.info('Wrote device cache: %s', cache_path)

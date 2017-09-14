@@ -27,10 +27,16 @@ struct BASE_EXPORT Task : public PendingTask {
   // must expire before the Task runs. If |delay| is non-zero and the shutdown
   // behavior in |traits| is BLOCK_SHUTDOWN, the shutdown behavior is
   // automatically adjusted to SKIP_ON_SHUTDOWN.
-  Task(const tracked_objects::Location& posted_from,
+  Task(const Location& posted_from,
        OnceClosure task,
        const TaskTraits& traits,
        TimeDelta delay);
+
+  // Task is move-only to avoid mistakes that cause reference counts to be
+  // accidentally bumped.
+  Task(Task&& other) noexcept;
+  Task(const Task&) = delete;
+
   ~Task();
 
   // The TaskTraits of this task.
@@ -56,11 +62,6 @@ struct BASE_EXPORT Task : public PendingTask {
   // support TaskRunnerHandles.
   scoped_refptr<SequencedTaskRunner> sequenced_task_runner_ref;
   scoped_refptr<SingleThreadTaskRunner> single_thread_task_runner_ref;
-
- private:
-  // Disallow copies to make sure no unnecessary ref-bumps are incurred. Making
-  // it move-only would be an option, but isn't necessary for now.
-  DISALLOW_COPY_AND_ASSIGN(Task);
 };
 
 }  // namespace internal

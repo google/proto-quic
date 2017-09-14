@@ -88,11 +88,9 @@ bool LocalTestServer::GetTestServerPath(base::FilePath* testserver_path) const {
   return true;
 }
 
-bool LocalTestServer::Start() {
-  return StartInBackground() && BlockUntilStarted();
-}
-
 bool LocalTestServer::StartInBackground() {
+  DCHECK(!started());
+
   base::ThreadRestrictions::ScopedAllowIO allow_io_from_test_code;
 
   // Get path to Python server script.

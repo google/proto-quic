@@ -5,9 +5,9 @@
 #ifndef NET_FILTER_MOCK_SOURCE_STREAM_H_
 #define NET_FILTER_MOCK_SOURCE_STREAM_H_
 
-#include <queue>
 #include <string>
 
+#include "base/containers/queue.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "net/base/completion_callback.h"
@@ -69,7 +69,7 @@ class MockSourceStream : public SourceStream {
   };
 
   bool read_one_byte_at_a_time_;
-  std::queue<QueuedResult> results_;
+  base::queue<QueuedResult> results_;
   bool awaiting_completion_;
   scoped_refptr<IOBuffer> dest_buffer_;
   CompletionCallback callback_;

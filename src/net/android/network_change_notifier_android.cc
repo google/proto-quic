@@ -234,11 +234,6 @@ void NetworkChangeNotifierAndroid::OnNetworkMadeDefault(NetworkHandle network) {
       NetworkChangeType::MADE_DEFAULT, network);
 }
 
-// static
-bool NetworkChangeNotifierAndroid::Register(JNIEnv* env) {
-  return NetworkChangeNotifierDelegateAndroid::Register(env);
-}
-
 NetworkChangeNotifierAndroid::NetworkChangeNotifierAndroid(
     NetworkChangeNotifierDelegateAndroid* delegate,
     const DnsConfig* dns_config_for_testing)

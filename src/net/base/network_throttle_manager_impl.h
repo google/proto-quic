@@ -129,7 +129,7 @@ class NET_EXPORT NetworkThrottleManagerImpl : public NetworkThrottleManager {
   // throttles are outstanding.  This guarantees that the class will
   // eventually detect aging out of outstanding throttles and unblock
   // throttles blocked on those outstanding throttles.
-  base::Timer outstanding_recomputation_timer_;
+  std::unique_ptr<base::Timer> outstanding_recomputation_timer_;
 
   // FIFO of OUTSTANDING throttles (ordered by time of entry into the
   // OUTSTANDING state).

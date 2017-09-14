@@ -16,17 +16,17 @@ namespace {
 // Generates a simple dictionary value with simple data types, a string and a
 // list.
 std::unique_ptr<DictionaryValue> GenerateDict() {
-  auto root = MakeUnique<DictionaryValue>();
+  auto root = std::make_unique<DictionaryValue>();
   root->SetDouble("Double", 3.141);
   root->SetBoolean("Bool", true);
   root->SetInteger("Int", 42);
   root->SetString("String", "Foo");
 
-  auto list = MakeUnique<ListValue>();
-  list->Set(0, MakeUnique<Value>(2.718));
-  list->Set(1, MakeUnique<Value>(false));
-  list->Set(2, MakeUnique<Value>(123));
-  list->Set(3, MakeUnique<Value>("Bar"));
+  auto list = std::make_unique<ListValue>();
+  list->Set(0, std::make_unique<Value>(2.718));
+  list->Set(1, std::make_unique<Value>(false));
+  list->Set(2, std::make_unique<Value>(123));
+  list->Set(3, std::make_unique<Value>("Bar"));
   root->Set("List", std::move(list));
 
   return root;

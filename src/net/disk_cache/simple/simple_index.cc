@@ -63,13 +63,16 @@ static const int kEstimatedEntryOverhead = 512;
 namespace disk_cache {
 
 EntryMetadata::EntryMetadata()
-  : last_used_time_seconds_since_epoch_(0),
-    entry_size_(0) {
-}
+    : last_used_time_seconds_since_epoch_(0),
+      entry_size_256b_chunks_(0),
+      in_memory_data_(0) {}
 
 EntryMetadata::EntryMetadata(base::Time last_used_time,
                              base::StrictNumeric<uint32_t> entry_size)
-    : last_used_time_seconds_since_epoch_(0), entry_size_(entry_size) {
+    : last_used_time_seconds_since_epoch_(0),
+      entry_size_256b_chunks_(0),
+      in_memory_data_(0) {
+  SetEntrySize(entry_size);  // to round/pack properly.
   SetLastUsedTime(last_used_time);
 }
 
@@ -97,11 +100,12 @@ void EntryMetadata::SetLastUsedTime(const base::Time& last_used_time) {
 }
 
 uint32_t EntryMetadata::GetEntrySize() const {
-  return entry_size_;
+  return entry_size_256b_chunks_ << 8;
 }
 
 void EntryMetadata::SetEntrySize(base::StrictNumeric<uint32_t> entry_size) {
-  entry_size_ = entry_size;
+  // This should not overflow since we limit entries to 1/8th of the cache.
+  entry_size_256b_chunks_ = (static_cast<uint32_t>(entry_size) + 255) >> 8;
 }
 
 void EntryMetadata::Serialize(base::Pickle* pickle) const {
@@ -109,19 +113,29 @@ void EntryMetadata::Serialize(base::Pickle* pickle) const {
   int64_t internal_last_used_time = GetLastUsedTime().ToInternalValue();
   // If you modify the size of the size of the pickle, be sure to update
   // kOnDiskSizeBytes.
+  uint32_t packed_entry_info = (entry_size_256b_chunks_ << 8) | in_memory_data_;
   pickle->WriteInt64(internal_last_used_time);
-  pickle->WriteUInt64(entry_size_);
+  pickle->WriteUInt64(packed_entry_info);
 }
 
-bool EntryMetadata::Deserialize(base::PickleIterator* it) {
+bool EntryMetadata::Deserialize(base::PickleIterator* it,
+                                bool has_entry_in_memory_data) {
   DCHECK(it);
   int64_t tmp_last_used_time;
   uint64_t tmp_entry_size;
   if (!it->ReadInt64(&tmp_last_used_time) || !it->ReadUInt64(&tmp_entry_size) ||
-      tmp_entry_size > std::numeric_limits<decltype(entry_size_)>::max())
+      tmp_entry_size > std::numeric_limits<uint32_t>::max())
     return false;
   SetLastUsedTime(base::Time::FromInternalValue(tmp_last_used_time));
-  entry_size_ = static_cast<uint32_t>(tmp_entry_size);
+  if (has_entry_in_memory_data) {
+    // tmp_entry_size actually packs entry_size_256b_chunks_ and
+    // in_memory_data_.
+    SetEntrySize(static_cast<uint32_t>(tmp_entry_size & 0xFFFFFF00));
+    SetInMemoryData(static_cast<uint8_t>(tmp_entry_size & 0xFF));
+  } else {
+    SetEntrySize(static_cast<uint32_t>(tmp_entry_size));
+    SetInMemoryData(0);
+  }
   return true;
 }
 
@@ -292,6 +306,22 @@ bool SimpleIndex::Has(uint64_t hash) const {
   return !initialized_ || entries_set_.count(hash) > 0;
 }
 
+uint8_t SimpleIndex::GetEntryInMemoryData(uint64_t entry_hash) const {
+  DCHECK(io_thread_checker_.CalledOnValidThread());
+  EntrySet::const_iterator it = entries_set_.find(entry_hash);
+  if (it == entries_set_.end())
+    return 0;
+  return it->second.GetInMemoryData();
+}
+
+void SimpleIndex::SetEntryInMemoryData(uint64_t entry_hash, uint8_t value) {
+  DCHECK(io_thread_checker_.CalledOnValidThread());
+  EntrySet::iterator it = entries_set_.find(entry_hash);
+  if (it == entries_set_.end())
+    return;
+  return it->second.SetInMemoryData(value);
+}
+
 bool SimpleIndex::UseIfExists(uint64_t entry_hash) {
   DCHECK(io_thread_checker_.CalledOnValidThread());
   // Always update the last used time, even if it is during initialization.
@@ -427,8 +457,9 @@ void SimpleIndex::UpdateEntryIteratorSize(
   DCHECK(io_thread_checker_.CalledOnValidThread());
   DCHECK_GE(cache_size_, (*it)->second.GetEntrySize());
   cache_size_ -= (*it)->second.GetEntrySize();
-  cache_size_ += static_cast<uint32_t>(entry_size);
   (*it)->second.SetEntrySize(entry_size);
+  // We use GetEntrySize to get consistent rounding.
+  cache_size_ += (*it)->second.GetEntrySize();
 }
 
 void SimpleIndex::MergeInitializingSet(

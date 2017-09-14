@@ -21,6 +21,7 @@
 
   # https://crbug.com/330263
   'linux': [
+    'ppapi_nacl_tests_pnacl_newlib_x64.nexe',
   ],
 
   # https://crbug.com/330262

@@ -198,6 +198,12 @@ bool UpgradeSimpleCacheOnDisk(const base::FilePath& path,
     // the V7 index reader is backwards compatible.
     version_from++;
   }
+
+  if (version_from == 7) {
+    // Likewise, V7 -> V8 is handled entirely by the index reader.
+    version_from++;
+  }
+
   DCHECK_EQ(kSimpleVersion, version_from);
 
   if (!new_fake_index_needed)

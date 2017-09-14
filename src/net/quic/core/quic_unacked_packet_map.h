@@ -99,6 +99,8 @@ class QUIC_EXPORT_PRIVATE QuicUnackedPacketMap {
   // been acked by the peer.  If there are no unacked packets, returns 0.
   QuicPacketNumber GetLeastUnacked() const;
 
+  // This can not be a QuicDeque since pointers into this are
+  // assumed to be stable.
   typedef std::deque<QuicTransmissionInfo> UnackedPacketMap;
 
   typedef UnackedPacketMap::const_iterator const_iterator;

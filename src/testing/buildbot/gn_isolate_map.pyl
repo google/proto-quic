@@ -164,6 +164,14 @@
       "-v",
     ],
   },
+  "vr_perf_tests": {
+    "label": "//tools/perf/contrib/vr_benchmarks:vr_perf_tests",
+    "type": "script",
+    "script": "//testing/scripts/run_telemetry_benchmark_as_googletest.py",
+    "args": [
+      "../../tools/perf/run_benchmark",
+    ],
+  },
   "base_junit_tests": {
     "label": "//base:base_junit_tests",
     "type": "junit_test",
@@ -389,6 +397,18 @@
     "label": "//components/cronet/android:cronet_package",
     "type": "additional_compile_target",
   },
+  "cronet_sample_test_apk": {
+    "label": "//components/cronet/android:cronet_sample_test_apk",
+    "type": "console_test_launcher",
+  },
+  "cronet_smoketests_missing_native_library_instrumentation_apk": {
+    "label": "//components/cronet/android:cronet_smoketests_missing_native_library_instrumentation_apk",
+    "type": "console_test_launcher",
+  },
+  "cronet_smoketests_platform_only_instrumentation_apk": {
+    "label": "//components/cronet/android:cronet_smoketests_platform_only_instrumentation_apk",
+    "type": "console_test_launcher",
+  },
   "cronet_test": {
     "label": "//components/cronet/ios/test:cronet_test",
     "type": "raw",
@@ -396,6 +416,10 @@
   "cronet_test_instrumentation_apk": {
     "label": "//components/cronet/android:cronet_test_instrumentation_apk",
     "type": "additional_compile_target",
+  },
+  "cronet_unittests": {
+    "label": "//components/cronet/android:cronet_unittests",
+    "type": "console_test_launcher",
   },
   "crypto_unittests": {
     "label": "//crypto:crypto_unittests",
@@ -613,6 +637,11 @@
     "type": "raw",
     "args": [],
   },
+  "ios_web_view_unittests": {
+    "label": "//ios/web_view:ios_web_view_unittests",
+    "type": "raw",
+    "args": [],
+  },
   "ipc_tests": {
     "label": "//ipc:ipc_tests",
     "type": "console_test_launcher",
@@ -729,6 +758,10 @@
   "mojo_test_apk": {
     "label": "//mojo/android:mojo_test_apk",
     "type": "console_test_launcher",
+  },
+  "monochrome_static_initializers": {
+    "label": "//chrome/android:monochrome_static_initializers",
+    "type": "additional_compile_target",
   },
   "mus_browser_tests": {
     "label": "//chrome/test:mus_browser_tests",
@@ -1110,6 +1143,14 @@
       "--debug-rwt-logging",
       "--results-directory", "${ISOLATED_OUTDIR}/layout-test-results",
     ],
+  },
+  "webkit_python_tests": {
+    "label": "//:webkit_python_tests",
+    "type": "script",
+    "script": "//testing/scripts/run_isolated_script_test.py",
+    "args": [
+      "../../third_party/WebKit/Tools/Scripts/test-webkitpy"
+    ]
   },
   "webkit_unit_tests": {
     "label": "//third_party/WebKit/Source/controller:webkit_unit_tests",

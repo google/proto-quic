@@ -9,10 +9,14 @@
 #include "base/files/file.h"
 #include "base/files/file_util.h"
 #include "base/macros.h"
+#include "base/metrics/field_trial.h"
+#include "base/metrics/field_trial_param_associator.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "base/test/histogram_tester.h"
+#include "base/test/mock_entropy_provider.h"
+#include "base/test/scoped_feature_list.h"
 #include "base/threading/platform_thread.h"
 #include "net/base/completion_callback.h"
 #include "net/base/io_buffer.h"
@@ -75,7 +79,7 @@ class DiskCacheEntryTest : public DiskCacheTestWithCache {
   void UpdateSparseEntry();
   void DoomSparseEntry();
   void PartialSparseEntry();
-  bool SimpleCacheMakeBadChecksumEntry(const std::string& key, int* data_size);
+  bool SimpleCacheMakeBadChecksumEntry(const std::string& key, int data_size);
   bool SimpleCacheThirdStreamFileExists(const char* key);
   void SyncDoomEntry(const char* key);
 };
@@ -2632,7 +2636,7 @@ TEST_F(DiskCacheEntryTest, SimpleCacheDoomedEntry) {
 // Creates an entry with corrupted last byte in stream 0.
 // Requires SimpleCacheMode.
 bool DiskCacheEntryTest::SimpleCacheMakeBadChecksumEntry(const std::string& key,
-                                                         int* data_size) {
+                                                         int data_size) {
   disk_cache::Entry* entry = NULL;
 
   if (CreateEntry(key, &entry) != net::OK || !entry) {
@@ -2640,12 +2644,10 @@ bool DiskCacheEntryTest::SimpleCacheMakeBadChecksumEntry(const std::string& key,
     return false;
   }
 
-  const char data[] = "this is very good data";
-  const int kDataSize = arraysize(data);
-  scoped_refptr<net::IOBuffer> buffer(new net::IOBuffer(kDataSize));
-  base::strlcpy(buffer->data(), data, kDataSize);
+  scoped_refptr<net::IOBuffer> buffer(new net::IOBuffer(data_size));
+  memset(buffer->data(), 'A', data_size);
 
-  EXPECT_EQ(kDataSize, WriteData(entry, 1, 0, buffer.get(), kDataSize, false));
+  EXPECT_EQ(data_size, WriteData(entry, 1, 0, buffer.get(), data_size, false));
   entry->Close();
   entry = NULL;
 
@@ -2658,33 +2660,31 @@ bool DiskCacheEntryTest::SimpleCacheMakeBadChecksumEntry(const std::string& key,
     return false;
 
   int64_t file_offset =
-      sizeof(disk_cache::SimpleFileHeader) + key.size() + kDataSize - 2;
+      sizeof(disk_cache::SimpleFileHeader) + key.size() + data_size - 2;
   EXPECT_EQ(1, entry_file0.Write(file_offset, "X", 1));
-  *data_size = kDataSize;
   return true;
 }
 
-// Tests that the simple cache can detect entries that have bad data.
 TEST_F(DiskCacheEntryTest, SimpleCacheBadChecksum) {
   base::HistogramTester histogram_tester;
   SetSimpleCacheMode();
   InitCache();
 
   const char key[] = "the first key";
-  int size_unused;
-  ASSERT_TRUE(SimpleCacheMakeBadChecksumEntry(key, &size_unused));
+  const int kLargeSize = 50000;
+  ASSERT_TRUE(SimpleCacheMakeBadChecksumEntry(key, kLargeSize));
 
   disk_cache::Entry* entry = NULL;
 
-  // Open the entry.
+  // Open the entry. Can't spot the checksum that quickly with it so
+  // huge.
   ASSERT_THAT(OpenEntry(key, &entry), IsOk());
   ScopedEntryPtr entry_closer(entry);
 
-  const int kReadBufferSize = 200;
-  EXPECT_GE(kReadBufferSize, entry->GetDataSize(1));
-  scoped_refptr<net::IOBuffer> read_buffer(new net::IOBuffer(kReadBufferSize));
+  EXPECT_GE(kLargeSize, entry->GetDataSize(1));
+  scoped_refptr<net::IOBuffer> read_buffer(new net::IOBuffer(kLargeSize));
   EXPECT_EQ(net::ERR_CACHE_CHECKSUM_MISMATCH,
-            ReadData(entry, 1, 0, read_buffer.get(), kReadBufferSize));
+            ReadData(entry, 1, 0, read_buffer.get(), kLargeSize));
   histogram_tester.ExpectUniqueSample(
       "SimpleCache.Http.ReadResult",
       disk_cache::READ_RESULT_SYNC_CHECKSUM_FAILURE, 1);
@@ -2697,8 +2697,8 @@ TEST_F(DiskCacheEntryTest, SimpleCacheErrorThenDoom) {
   InitCache();
 
   const char key[] = "the first key";
-  int size_unused;
-  ASSERT_TRUE(SimpleCacheMakeBadChecksumEntry(key, &size_unused));
+  const int kLargeSize = 50000;
+  ASSERT_TRUE(SimpleCacheMakeBadChecksumEntry(key, kLargeSize));
 
   disk_cache::Entry* entry = NULL;
 
@@ -2706,11 +2706,10 @@ TEST_F(DiskCacheEntryTest, SimpleCacheErrorThenDoom) {
   ASSERT_THAT(OpenEntry(key, &entry), IsOk());
   ScopedEntryPtr entry_closer(entry);
 
-  const int kReadBufferSize = 200;
-  EXPECT_GE(kReadBufferSize, entry->GetDataSize(1));
-  scoped_refptr<net::IOBuffer> read_buffer(new net::IOBuffer(kReadBufferSize));
+  EXPECT_GE(kLargeSize, entry->GetDataSize(1));
+  scoped_refptr<net::IOBuffer> read_buffer(new net::IOBuffer(kLargeSize));
   EXPECT_EQ(net::ERR_CACHE_CHECKSUM_MISMATCH,
-            ReadData(entry, 1, 0, read_buffer.get(), kReadBufferSize));
+            ReadData(entry, 1, 0, read_buffer.get(), kLargeSize));
   histogram_tester.ExpectUniqueSample(
       "SimpleCache.Http.ReadResult",
       disk_cache::READ_RESULT_SYNC_CHECKSUM_FAILURE, 1);
@@ -3446,7 +3445,12 @@ TEST_F(DiskCacheEntryTest, SimpleCacheInFlightTruncate)  {
 
   const char key[] = "the first key";
 
-  const int kBufferSize = 1024;
+  // We use a very large entry size here to make sure this doesn't hit
+  // the prefetch path for any concievable setting. Hitting prefetch would
+  // make us serve the read below from memory entirely on I/O thread, missing
+  // the point of the test which coverred two concurrent disk ops, with
+  // portions of work happening on the workpool.
+  const int kBufferSize = 50000;
   scoped_refptr<net::IOBuffer> write_buffer(new net::IOBuffer(kBufferSize));
   CacheTestFillBuffer(write_buffer->data(), kBufferSize, false);
 
@@ -3577,8 +3581,8 @@ TEST_F(DiskCacheEntryTest, SimpleCacheMultipleReadersCheckCRC2) {
   InitCache();
 
   const char key[] = "key";
-  int size;
-  ASSERT_TRUE(SimpleCacheMakeBadChecksumEntry(key, &size));
+  int size = 50000;
+  ASSERT_TRUE(SimpleCacheMakeBadChecksumEntry(key, size));
 
   scoped_refptr<net::IOBuffer> read_buffer1(new net::IOBuffer(size));
   scoped_refptr<net::IOBuffer> read_buffer2(new net::IOBuffer(size));
@@ -4322,4 +4326,211 @@ TEST_F(DiskCacheEntryTest, SimpleCacheCreateRecoverFromRmdir) {
   std::string key("a key");
   ASSERT_THAT(CreateEntry(key, &entry), IsOk());
   entry->Close();
+}
+
+class DiskCacheSimplePrefetchTest : public DiskCacheEntryTest {
+ public:
+  DiskCacheSimplePrefetchTest()
+      : field_trial_list_(base::MakeUnique<base::FieldTrialList>(
+            base::MakeUnique<base::MockEntropyProvider>())) {}
+
+  enum { kEntrySize = 1024 };
+
+  void SetUp() override {
+    payload_ = new net::IOBuffer(kEntrySize);
+    CacheTestFillBuffer(payload_->data(), kEntrySize, false);
+    DiskCacheEntryTest::SetUp();
+  }
+
+  void SetupPrefetch(int size) {
+    std::map<std::string, std::string> params;
+    params[disk_cache::kSimplePrefetchBytesParam] = base::IntToString(size);
+    scoped_feature_list_.InitAndEnableFeatureWithParameters(
+        disk_cache::kSimpleCachePrefetchExperiment, params);
+  }
+
+  void InitCacheAndCreateEntry(const std::string& key) {
+    SetSimpleCacheMode();
+    InitCache();
+
+    disk_cache::Entry* entry;
+    ASSERT_EQ(net::OK, CreateEntry(key, &entry));
+    // Use stream 1 since that's what new prefetch stuff is about.
+    ASSERT_EQ(kEntrySize,
+              WriteData(entry, 1, 0, payload_.get(), kEntrySize, false));
+    entry->Close();
+  }
+
+  void InitCacheAndCreateEntryWithNoCrc(const std::string& key) {
+    const int kHalfSize = kEntrySize / 2;
+    const int kRemSize = kEntrySize - kHalfSize;
+
+    SetSimpleCacheMode();
+    InitCache();
+
+    disk_cache::Entry* entry;
+    ASSERT_EQ(net::OK, CreateEntry(key, &entry));
+    // Use stream 1 since that's what new prefetch stuff is about.
+    ASSERT_EQ(kEntrySize,
+              WriteData(entry, 1, 0, payload_.get(), kEntrySize, false));
+
+    // Overwrite later part of the buffer, since we can't keep track of
+    // the checksum in that case.  Do it with identical contents, though,
+    // so that the only difference between here and InitCacheAndCreateEntry()
+    // would be whether the result has a checkum or not.
+    scoped_refptr<net::IOBuffer> second_half(new net::IOBuffer(kRemSize));
+    memcpy(second_half->data(), payload_->data() + kHalfSize, kRemSize);
+    ASSERT_EQ(kRemSize, WriteData(entry, 1, kHalfSize, second_half.get(),
+                                  kRemSize, false));
+    entry->Close();
+  }
+
+  void TryRead(const std::string& key) {
+    disk_cache::Entry* entry = NULL;
+    ASSERT_THAT(OpenEntry(key, &entry), IsOk());
+    scoped_refptr<net::IOBuffer> read_buf(new net::IOBuffer(kEntrySize));
+    EXPECT_EQ(kEntrySize, ReadData(entry, 1, 0, read_buf.get(), kEntrySize));
+    EXPECT_EQ(0, memcmp(read_buf->data(), payload_->data(), kEntrySize));
+    entry->Close();
+  }
+
+ protected:
+  scoped_refptr<net::IOBuffer> payload_;
+
+  // Need to have the one "global" trial list before we change things.
+  std::unique_ptr<base::FieldTrialList> field_trial_list_;
+  base::test::ScopedFeatureList scoped_feature_list_;
+};
+
+TEST_F(DiskCacheSimplePrefetchTest, NoPrefetch) {
+  base::HistogramTester histogram_tester;
+  SetupPrefetch(0);
+
+  const char kKey[] = "a key";
+  InitCacheAndCreateEntry(kKey);
+  TryRead(kKey);
+
+  histogram_tester.ExpectUniqueSample("SimpleCache.Http.SyncOpenDidPrefetch",
+                                      false, 1);
+  histogram_tester.ExpectUniqueSample(
+      "SimpleCache.Http.ReadStream1FromPrefetched", false, 1);
+}
+
+TEST_F(DiskCacheSimplePrefetchTest, YesPrefetch) {
+  base::HistogramTester histogram_tester;
+  SetupPrefetch(2 * kEntrySize);
+
+  const char kKey[] = "a key";
+  InitCacheAndCreateEntry(kKey);
+  TryRead(kKey);
+
+  histogram_tester.ExpectUniqueSample("SimpleCache.Http.SyncOpenDidPrefetch",
+                                      true, 1);
+  histogram_tester.ExpectUniqueSample(
+      "SimpleCache.Http.ReadStream1FromPrefetched", true, 1);
+}
+
+TEST_F(DiskCacheSimplePrefetchTest, YesPrefetchNoRead) {
+  base::HistogramTester histogram_tester;
+  SetupPrefetch(2 * kEntrySize);
+
+  const char kKey[] = "a key";
+  InitCacheAndCreateEntry(kKey);
+
+  disk_cache::Entry* entry = NULL;
+  ASSERT_THAT(OpenEntry(kKey, &entry), IsOk());
+  entry->Close();
+
+  histogram_tester.ExpectUniqueSample("SimpleCache.Http.SyncOpenDidPrefetch",
+                                      true, 1);
+  // Have to use GetHistogramSamplesSinceCreation here since it's the only
+  // API that handles the cases where the histogram hasn't even been created.
+  std::unique_ptr<base::HistogramSamples> samples(
+      histogram_tester.GetHistogramSamplesSinceCreation(
+          "SimpleCache.Http.ReadStream1FromPrefetched"));
+  EXPECT_EQ(0, samples->TotalCount());
+}
+
+// This makes sure we detect checksum error on entry that's small enough to be
+// prefetched. This is like DiskCacheEntryTest.BadChecksum, but we make sure
+// to configure prefetch explicitly.
+TEST_F(DiskCacheSimplePrefetchTest, BadChecksumSmall) {
+  SetupPrefetch(1024);  // bigger than stuff below.
+  SetSimpleCacheMode();
+  InitCache();
+
+  const char key[] = "the first key";
+  ASSERT_TRUE(SimpleCacheMakeBadChecksumEntry(key, 10));
+
+  disk_cache::Entry* entry = NULL;
+
+  // Open the entry. Since we made a small entry, we will detect the CRC
+  // problem at open.
+  EXPECT_THAT(OpenEntry(key, &entry), IsError(net::ERR_FAILED));
+}
+
+TEST_F(DiskCacheSimplePrefetchTest, ChecksumNoPrefetch) {
+  base::HistogramTester histogram_tester;
+
+  SetupPrefetch(0);
+  const char kKey[] = "a key";
+  InitCacheAndCreateEntry(kKey);
+  TryRead(kKey);
+
+  // Expect 2 CRCs --- stream 0 and stream 1.
+  histogram_tester.ExpectUniqueSample("SimpleCache.Http.SyncCheckEOFHasCrc",
+                                      true, 2);
+  histogram_tester.ExpectUniqueSample("SimpleCache.Http.SyncCheckEOFResult",
+                                      disk_cache::CHECK_EOF_RESULT_SUCCESS, 2);
+}
+
+TEST_F(DiskCacheSimplePrefetchTest, NoChecksumNoPrefetch) {
+  base::HistogramTester histogram_tester;
+
+  SetupPrefetch(0);
+  const char kKey[] = "a key";
+  InitCacheAndCreateEntryWithNoCrc(kKey);
+  TryRead(kKey);
+
+  // Stream 0 has CRC, stream 1 doesn't.
+  histogram_tester.ExpectBucketCount("SimpleCache.Http.SyncCheckEOFHasCrc",
+                                     true, 1);
+  histogram_tester.ExpectBucketCount("SimpleCache.Http.SyncCheckEOFHasCrc",
+                                     false, 1);
+  // EOF check is recorded even if there is no CRC there.
+  histogram_tester.ExpectUniqueSample("SimpleCache.Http.SyncCheckEOFResult",
+                                      disk_cache::CHECK_EOF_RESULT_SUCCESS, 2);
+}
+
+TEST_F(DiskCacheSimplePrefetchTest, ChecksumPrefetch) {
+  base::HistogramTester histogram_tester;
+
+  SetupPrefetch(2 * kEntrySize);
+  const char kKey[] = "a key";
+  InitCacheAndCreateEntry(kKey);
+  TryRead(kKey);
+
+  // Expect 2 CRCs --- stream 0 and stream 1.
+  histogram_tester.ExpectUniqueSample("SimpleCache.Http.SyncCheckEOFHasCrc",
+                                      true, 2);
+  histogram_tester.ExpectUniqueSample("SimpleCache.Http.SyncCheckEOFResult",
+                                      disk_cache::CHECK_EOF_RESULT_SUCCESS, 2);
+}
+
+TEST_F(DiskCacheSimplePrefetchTest, NoChecksumPrefetch) {
+  base::HistogramTester histogram_tester;
+
+  SetupPrefetch(2 * kEntrySize);
+  const char kKey[] = "a key";
+  InitCacheAndCreateEntryWithNoCrc(kKey);
+  TryRead(kKey);
+
+  // Stream 0 has CRC, stream 1 doesn't.
+  histogram_tester.ExpectBucketCount("SimpleCache.Http.SyncCheckEOFHasCrc",
+                                     true, 1);
+  histogram_tester.ExpectBucketCount("SimpleCache.Http.SyncCheckEOFHasCrc",
+                                     false, 1);
+  // EOF check is recorded even if there is no CRC there.
+  histogram_tester.ExpectUniqueSample("SimpleCache.Http.SyncCheckEOFResult",
+                                      disk_cache::CHECK_EOF_RESULT_SUCCESS, 2);
 }

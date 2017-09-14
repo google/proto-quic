@@ -11,8 +11,8 @@ lists tests that should be excluded when running `browser_tests` in
 
 Contents of test filter files follow the syntax below:
 
--   Empty lines are ignored
--   Lines starting with the '#' character are treated as comments and ignored.
+-   Empty lines are ignored.
+-   Any text after '#' on each line is treated as comments and ignored.
 -   All other lines specify a single [test name pattern][gtest_filter].
     -   Negative patterns: Patterns prefixed with the '-' character specify
         tests to exclude from a test run.

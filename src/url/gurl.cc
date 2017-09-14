@@ -509,14 +509,14 @@ const GURL& GURL::EmptyGURL() {
 
 #endif  // WIN32
 
-bool GURL::DomainIs(base::StringPiece lower_ascii_domain) const {
+bool GURL::DomainIs(base::StringPiece canonical_domain) const {
   if (!is_valid_)
     return false;
 
   // FileSystem URLs have empty host_piece, so check this first.
-  if (SchemeIsFileSystem() && inner_url_)
-    return inner_url_->DomainIs(lower_ascii_domain);
-  return url::DomainIs(host_piece(), lower_ascii_domain);
+  if (inner_url_ && SchemeIsFileSystem())
+    return inner_url_->DomainIs(canonical_domain);
+  return url::DomainIs(host_piece(), canonical_domain);
 }
 
 bool GURL::EqualsIgnoringRef(const GURL& other) const {

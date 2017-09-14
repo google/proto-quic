@@ -11,7 +11,6 @@
 #include "base/callback_helpers.h"
 #include "base/memory/weak_ptr.h"
 #include "base/metrics/histogram_macros.h"
-#include "base/profiler/scoped_tracker.h"
 #include "base/values.h"
 #include "net/base/proxy_delegate.h"
 #include "net/http/http_proxy_client_socket.h"
@@ -580,8 +579,7 @@ int HttpProxyClientSocketWrapper::DoSpdyProxyCreateStreamComplete(int result) {
   DCHECK(stream.get());
   // |transport_socket_| will set itself as |stream|'s delegate.
   transport_socket_.reset(new SpdyProxyClientSocket(
-      stream, user_agent_, endpoint_, GetDestination().host_port_pair(),
-      net_log_, http_auth_controller_.get()));
+      stream, user_agent_, endpoint_, net_log_, http_auth_controller_.get()));
   return transport_socket_->Connect(base::Bind(
       &HttpProxyClientSocketWrapper::OnIOComplete, base::Unretained(this)));
 }

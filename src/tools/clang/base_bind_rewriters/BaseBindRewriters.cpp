@@ -42,16 +42,11 @@ class BindOnceRewriter : public MatchFinder::MatchCallback {
       : replacements_(replacements) {}
 
   StatementMatcher GetMatcher() {
-    auto is_once_callback =
-        hasType(hasCanonicalType(hasDeclaration(classTemplateSpecializationDecl(
-            hasName("::base::Callback"),
-            hasTemplateArgument(1, equalsIntegralValue("0")),
-            hasTemplateArgument(2, equalsIntegralValue("0"))))));
+    auto is_once_callback = hasType(hasCanonicalType(hasDeclaration(
+        classTemplateSpecializationDecl(hasName("::base::OnceCallback")))));
     auto is_repeating_callback =
         hasType(hasCanonicalType(hasDeclaration(classTemplateSpecializationDecl(
-            hasName("::base::Callback"),
-            hasTemplateArgument(1, equalsIntegralValue("1")),
-            hasTemplateArgument(2, equalsIntegralValue("1"))))));
+            hasName("::base::RepeatingCallback")))));
 
     auto bind_call =
         callExpr(callee(namedDecl(hasName("::base::Bind")))).bind("target");

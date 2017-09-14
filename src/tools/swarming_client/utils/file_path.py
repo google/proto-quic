@@ -348,7 +348,9 @@ if sys.platform == 'win32':
     try:
       if not AdjustTokenPrivileges(token, False, tp, 0, None, None):
         # pylint: disable=undefined-variable
-        raise WindowsError('Error in AdjustTokenPrivileges')
+        raise WindowsError(
+            u'AdjustTokenPrivileges(%r): failed: %s' %
+              (name, ctypes.GetLastError()))
     finally:
       ctypes.windll.kernel32.CloseHandle(token)
     return ctypes.windll.kernel32.GetLastError() != ERROR_NOT_ALL_ASSIGNED
@@ -357,10 +359,21 @@ if sys.platform == 'win32':
   def enable_symlink():
     """Enable SeCreateSymbolicLinkPrivilege for the current token.
 
+    This funciton is only helpful in ONE of the following case:
+    - UAC is disabled, account is admin OR SeCreateSymbolicLinkPrivilege was
+      manually granted.
+    - UAC is enabled, account is NOT admin AND SeCreateSymbolicLinkPrivilege was
+      manually granted.
+
+    If running Windows 10 and the following is true, then enable_symlink() is
+    unnecessary.
+    - Windows 10 with build 14971 or later
+    - Admin account
+    - UAC enabled
+    - Developer mode enabled (not the default)
+
     Returns:
     - True if symlink support is enabled.
-
-    Thanks Microsoft. This is appreciated.
     """
     return enable_privilege(u'SeCreateSymbolicLinkPrivilege')
 

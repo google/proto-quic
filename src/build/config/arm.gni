@@ -69,6 +69,7 @@ if (current_cpu == "arm" || v8_current_cpu == "arm") {
       arm_fpu = "vfp"
     }
     arm_use_thumb = false
+    arm_use_neon = false
   } else if (arm_version == 7) {
     if (arm_arch == "") {
       arm_arch = "armv7-a"

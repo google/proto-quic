@@ -1083,7 +1083,8 @@ class MetaBuildWrapper(object):
   def GetIsolateCommand(self, target, vals):
     isolate_map = self.ReadIsolateMap()
 
-    android = 'target_os="android"' in vals['gn_args']
+    is_android = 'target_os="android"' in vals['gn_args']
+    is_fuchsia = 'target_os="fuchsia"' in vals['gn_args']
 
     # This should be true if tests with type='windowed_test_launcher' are
     # expected to run using xvfb. For example, Linux Desktop, X11 CrOS and
@@ -1092,7 +1093,7 @@ class MetaBuildWrapper(object):
     # and both can run under Xvfb.
     # TODO(tonikitoo,msisov,fwang): Find a way to run tests for the Wayland
     # backend.
-    use_xvfb = self.platform == 'linux2' and not android
+    use_xvfb = self.platform == 'linux2' and not is_android and not is_fuchsia
 
     asan = 'is_asan=true' in vals['gn_args']
     msan = 'is_msan=true' in vals['gn_args']
@@ -1111,7 +1112,7 @@ class MetaBuildWrapper(object):
       self.WriteFailureAndRaise('We should not be isolating %s.' % target,
                                 output_path=None)
 
-    if android and test_type != "script":
+    if is_android and test_type != "script":
       cmdline = [
           '../../build/android/test_wrapper/logdog_wrapper.py',
           '--target', target,
@@ -1119,6 +1120,8 @@ class MetaBuildWrapper(object):
           '--logdog-bin-cmd', '../../bin/logdog_butler',
           '--logcat-output-file', '${ISOLATED_OUTDIR}/logcats',
           '--store-tombstones']
+    elif is_fuchsia and test_type != 'script':
+      cmdline = [os.path.join('bin', 'run_%s' % target)]
     elif use_xvfb and test_type == 'windowed_test_launcher':
       extra_files = [
           '../../testing/test_env.py',

@@ -332,7 +332,7 @@ def AddGTestOptions(parser):
   parser.add_argument(
       '--test-apk-incremental-install-json',
       type=os.path.realpath,
-      help='Path to install script for the test apk.')
+      help='Path to install json for the test apk.')
 
   filter_group = parser.add_mutually_exclusive_group()
   filter_group.add_argument(
@@ -382,6 +382,10 @@ def AddInstrumentationTestOptions(parser):
       '--disable-dalvik-asserts',
       dest='set_asserts', action='store_false', default=True,
       help='Removes the dalvik.vm.enableassertions property')
+  parser.add_argument(
+      '--enable-java-deobfuscation',
+      action='store_true',
+      help='Deobfuscate java stack traces in test output and logcat.')
   parser.add_argument(
       '-E', '--exclude-annotation',
       dest='exclude_annotation_str',

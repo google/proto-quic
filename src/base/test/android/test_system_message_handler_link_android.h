@@ -21,9 +21,6 @@ class TestJavaMessageHandlerFactory;
 // This provides a link to (a way to create) the java-side
 // TestSystemMessageHandler class.
 class TestSystemMessageHandlerLink {
- public:
-  static bool RegisterJNI(JNIEnv* env);
-
  private:
   friend class base::android::TestJavaMessageHandlerFactory;
 

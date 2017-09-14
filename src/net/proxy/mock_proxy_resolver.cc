@@ -110,7 +110,7 @@ void MockAsyncProxyResolverFactory::Request::CompleteNowWithForwarder(
     int rv,
     ProxyResolver* resolver) {
   DCHECK(resolver);
-  CompleteNow(rv, base::MakeUnique<ForwardingProxyResolver>(resolver));
+  CompleteNow(rv, std::make_unique<ForwardingProxyResolver>(resolver));
 }
 
 void MockAsyncProxyResolverFactory::Request::FactoryDestroyed() {

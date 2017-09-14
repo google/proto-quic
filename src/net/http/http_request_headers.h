@@ -28,7 +28,7 @@ class NetLogCaptureMode;
 
 class NET_EXPORT HttpRequestHeaders {
  public:
-  struct HeaderKeyValuePair {
+  struct NET_EXPORT HeaderKeyValuePair {
     HeaderKeyValuePair();
     HeaderKeyValuePair(const base::StringPiece& key,
                        const base::StringPiece& value);
@@ -112,6 +112,12 @@ class NET_EXPORT HttpRequestHeaders {
   // |value| passes HttpUtil::IsValidHeaderValue().
   void SetHeader(const base::StringPiece& key, const base::StringPiece& value);
 
+  // Does the same as above but without internal DCHECKs for validations.
+  void SetHeaderWithoutCheckForTesting(const base::StringPiece& key,
+                                       const base::StringPiece& value) {
+    SetHeaderInternal(key, value);
+  }
+
   // Sets the header value pair for |key| and |value|, if |key| does not exist.
   // If |key| already exists, the call is a no-op.
   // When comparing |key|, case is ignored.
@@ -167,18 +173,14 @@ class NET_EXPORT HttpRequestHeaders {
       const std::string* request_line,
       NetLogCaptureMode capture_mode) const;
 
-  // Takes in a Value created by the above function, and attempts to extract the
-  // request line and create a copy of the original headers.  Returns true on
-  // success.  On failure, clears |headers| and |request_line|.
-  // TODO(mmenke):  Long term, we want to remove this, and migrate external
-  //                consumers to be NetworkDelegates.
-  static bool FromNetLogParam(const base::Value* event_param,
-                              HttpRequestHeaders* headers,
-                              std::string* request_line);
+  const HeaderVector& GetHeaderVector() const { return headers_; }
 
  private:
   HeaderVector::iterator FindHeader(const base::StringPiece& key);
   HeaderVector::const_iterator FindHeader(const base::StringPiece& key) const;
+
+  void SetHeaderInternal(const base::StringPiece& key,
+                         const base::StringPiece& value);
 
   HeaderVector headers_;
 

@@ -34,7 +34,6 @@ class _OortOnlineMeasurement(legacy_page_test.LegacyPageTest):
             important=True, improvement_direction=improvement_direction.UP))
 
 
-@benchmark.Disabled('android')
 @benchmark.Owner(emails=['ulan@chromium.org'])
 class OortOnline(perf_benchmark.PerfBenchmark):
   """OortOnline benchmark that measures WebGL and V8 performance.
@@ -42,6 +41,7 @@ class OortOnline(perf_benchmark.PerfBenchmark):
   Info: http://v8project.blogspot.de/2015/10/jank-busters-part-one.html
   """
   test = _OortOnlineMeasurement
+  SUPPORTED_PLATFORMS = [story.expectations.ALL_DESKTOP]
 
   @classmethod
   def Name(cls):
@@ -53,11 +53,9 @@ class OortOnline(perf_benchmark.PerfBenchmark):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # http://oortonline.gl/#run not disabled.
+        pass
     return StoryExpectations()
 
-# Disabled on Linux due to timeouts; crbug.com/727850
-@benchmark.Disabled('linux', 'win')
 @benchmark.Owner(emails=['ulan@chromium.org'])
 class OortOnlineTBMv2(perf_benchmark.PerfBenchmark):
   """OortOnline benchmark that measures WebGL and V8 performance.
@@ -108,10 +106,6 @@ class OortOnlineTBMv2(perf_benchmark.PerfBenchmark):
     options.config.chrome_trace_config.SetMemoryDumpConfig(
         chrome_trace_config.MemoryDumpConfig())
     return options
-
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    return possible_browser.platform.GetDeviceTypeName() == 'Nexus 9'
 
   @classmethod
   def Name(cls):

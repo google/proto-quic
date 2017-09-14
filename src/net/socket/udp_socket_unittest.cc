@@ -5,6 +5,7 @@
 #include "net/socket/udp_socket.h"
 
 #include "base/bind.h"
+#include "base/containers/circular_deque.h"
 #include "base/location.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
@@ -62,8 +63,7 @@ class UDPSocketTest : public PlatformTest {
     return std::string(buffer_->data(), rv);
   }
 
-  // Loop until |msg| has been written to the socket or until an
-  // error occurs.
+  // Sends UDP packet.
   // If |address| is specified, then it is used for the destination
   // to send to. Otherwise, will send to the last socket this server
   // received from.
@@ -74,24 +74,11 @@ class UDPSocketTest : public PlatformTest {
   int SendToSocket(UDPServerSocket* socket,
                    std::string msg,
                    const IPEndPoint& address) {
+    scoped_refptr<StringIOBuffer> io_buffer = new StringIOBuffer(msg);
     TestCompletionCallback callback;
-
-    int length = msg.length();
-    scoped_refptr<StringIOBuffer> io_buffer(new StringIOBuffer(msg));
-    scoped_refptr<DrainableIOBuffer> buffer(
-        new DrainableIOBuffer(io_buffer.get(), length));
-
-    int bytes_sent = 0;
-    while (buffer->BytesRemaining()) {
-      int rv = socket->SendTo(
-          buffer.get(), buffer->BytesRemaining(), address, callback.callback());
-      rv = callback.GetResult(rv);
-      if (rv <= 0)
-        return bytes_sent > 0 ? bytes_sent : rv;
-      bytes_sent += rv;
-      buffer->DidConsume(rv);
-    }
-    return bytes_sent;
+    int rv = socket->SendTo(io_buffer.get(), io_buffer->size(), address,
+                            callback.callback());
+    return callback.GetResult(rv);
   }
 
   std::string ReadSocket(UDPClientSocket* socket) {
@@ -104,27 +91,13 @@ class UDPSocketTest : public PlatformTest {
     return std::string(buffer_->data(), rv);
   }
 
-  // Loop until |msg| has been written to the socket or until an
-  // error occurs.
+  // Writes specified message to the socket.
   int WriteSocket(UDPClientSocket* socket, const std::string& msg) {
-    TestCompletionCallback callback;
-
-    int length = msg.length();
     scoped_refptr<StringIOBuffer> io_buffer(new StringIOBuffer(msg));
-    scoped_refptr<DrainableIOBuffer> buffer(
-        new DrainableIOBuffer(io_buffer.get(), length));
-
-    int bytes_sent = 0;
-    while (buffer->BytesRemaining()) {
-      int rv = socket->Write(
-          buffer.get(), buffer->BytesRemaining(), callback.callback());
-      rv = callback.GetResult(rv);
-      if (rv <= 0)
-        return bytes_sent > 0 ? bytes_sent : rv;
-      bytes_sent += rv;
-      buffer->DidConsume(rv);
-    }
-    return bytes_sent;
+    TestCompletionCallback callback;
+    int rv =
+        socket->Write(io_buffer.get(), io_buffer->size(), callback.callback());
+    return callback.GetResult(rv);
   }
 
   void WriteSocketIgnoreResult(UDPClientSocket* socket,
@@ -163,8 +136,7 @@ void UDPSocketTest::ConnectTest(bool use_nonblocking_io) {
   std::string simple_message("hello world!");
 
   // Setup the server to listen.
-  IPEndPoint server_address;
-  CreateUDPAddress("127.0.0.1", kPort, &server_address);
+  IPEndPoint server_address(IPAddress::IPv4Localhost(), kPort);
   TestNetLog server_log;
   std::unique_ptr<UDPServerSocket> server(
       new UDPServerSocket(&server_log, NetLogSource()));
@@ -274,6 +246,44 @@ TEST_F(UDPSocketTest, ConnectNonBlocking) {
 }
 #endif
 
+TEST_F(UDPSocketTest, PartialRecv) {
+  UDPServerSocket server_socket(nullptr, NetLogSource());
+  ASSERT_THAT(server_socket.Listen(IPEndPoint(IPAddress::IPv4Localhost(), 0)),
+              IsOk());
+  IPEndPoint server_address;
+  ASSERT_THAT(server_socket.GetLocalAddress(&server_address), IsOk());
+
+  UDPClientSocket client_socket(DatagramSocket::DEFAULT_BIND, RandIntCallback(),
+                                nullptr, NetLogSource());
+  ASSERT_THAT(client_socket.Connect(server_address), IsOk());
+
+  std::string test_packet("hello world!");
+  ASSERT_EQ(static_cast<int>(test_packet.size()),
+            WriteSocket(&client_socket, test_packet));
+
+  TestCompletionCallback recv_callback;
+
+  // Read just 2 bytes. Read() is expected to return the first 2 bytes from the
+  // packet and discard the rest.
+  const int kPartialReadSize = 2;
+  scoped_refptr<IOBuffer> buffer = new IOBuffer(kPartialReadSize);
+  int rv =
+      server_socket.RecvFrom(buffer.get(), kPartialReadSize,
+                             &recv_from_address_, recv_callback.callback());
+  rv = recv_callback.GetResult(rv);
+
+  EXPECT_EQ(rv, ERR_MSG_TOO_BIG);
+
+  // Send a different message again.
+  std::string second_packet("Second packet");
+  ASSERT_EQ(static_cast<int>(second_packet.size()),
+            WriteSocket(&client_socket, second_packet));
+
+  // Read whole packet now.
+  std::string received = RecvFromSocket(&server_socket);
+  EXPECT_EQ(second_packet, received);
+}
+
 #if defined(OS_MACOSX) || defined(OS_ANDROID) || defined(OS_FUCHSIA)
 // - MacOS: requires root permissions on OSX 10.7+.
 // - Android: devices attached to testbots don't have default network, so
@@ -344,7 +354,8 @@ static const int kBindRetries = 10;
 
 class TestPrng {
  public:
-  explicit TestPrng(const std::deque<int>& numbers) : numbers_(numbers) {}
+  explicit TestPrng(const base::circular_deque<int>& numbers)
+      : numbers_(numbers) {}
   int GetNext(int /* min */, int /* max */) {
     DCHECK(!numbers_.empty());
     int rv = numbers_.front();
@@ -352,18 +363,17 @@ class TestPrng {
     return rv;
   }
  private:
-  std::deque<int> numbers_;
+  base::circular_deque<int> numbers_;
 
   DISALLOW_COPY_AND_ASSIGN(TestPrng);
 };
 
 TEST_F(UDPSocketTest, ConnectRandomBind) {
   std::vector<std::unique_ptr<UDPClientSocket>> sockets;
-  IPEndPoint peer_address;
-  CreateUDPAddress("127.0.0.1", 53, &peer_address);
+  IPEndPoint peer_address(IPAddress::IPv4Localhost(), 53);
 
   // Create and connect sockets and save port numbers.
-  std::deque<int> used_ports;
+  base::circular_deque<int> used_ports;
   for (int i = 0; i < kBindRetries; ++i) {
     UDPClientSocket* socket = new UDPClientSocket(
         DatagramSocket::DEFAULT_BIND, RandIntCallback(), NULL, NetLogSource());
@@ -399,9 +409,12 @@ int PrivilegedRand(int min, int max) {
   return 4;
 }
 
-#if defined(OS_IOS) && !TARGET_IPHONE_SIMULATOR
-// TODO(droger): On iOS this test fails on device (but passes on simulator).
-// See http://crbug.com/227760.
+#if defined(OS_IOS) && !TARGET_IPHONE_SIMULATOR || defined(OS_FUCHSIA)
+// On iOS this test fails on device (but passes on simulator). See
+// http://crbug.com/227760.
+//
+// On Fuchsia the tests run in an emulator and have permissions to bind to
+// privileged ports.
 #define MAYBE_ConnectFail DISABLED_ConnectFail
 #else
 #define MAYBE_ConnectFail ConnectFail
@@ -437,16 +450,14 @@ TEST_F(UDPSocketTest, VerifyConnectBindsAddr) {
   std::string foreign_message("BAD MESSAGE TO GET!!");
 
   // Setup the first server to listen.
-  IPEndPoint server1_address;
-  CreateUDPAddress("127.0.0.1", kPort1, &server1_address);
+  IPEndPoint server1_address(IPAddress::IPv4Localhost(), kPort1);
   UDPServerSocket server1(NULL, NetLogSource());
   server1.AllowAddressReuse();
   int rv = server1.Listen(server1_address);
   ASSERT_THAT(rv, IsOk());
 
   // Setup the second server to listen.
-  IPEndPoint server2_address;
-  CreateUDPAddress("127.0.0.1", kPort2, &server2_address);
+  IPEndPoint server2_address(IPAddress::IPv4Localhost(), kPort2);
   UDPServerSocket server2(NULL, NetLogSource());
   server2.AllowAddressReuse();
   rv = server2.Listen(server2_address);
@@ -541,8 +552,7 @@ TEST_F(UDPSocketTest, ClientGetLocalPeerAddresses) {
 }
 
 TEST_F(UDPSocketTest, ServerGetLocalAddress) {
-  IPEndPoint bind_address;
-  CreateUDPAddress("127.0.0.1", 0, &bind_address);
+  IPEndPoint bind_address(IPAddress::IPv4Localhost(), 0);
   UDPServerSocket server(NULL, NetLogSource());
   int rv = server.Listen(bind_address);
   EXPECT_THAT(rv, IsOk());
@@ -557,8 +567,7 @@ TEST_F(UDPSocketTest, ServerGetLocalAddress) {
 }
 
 TEST_F(UDPSocketTest, ServerGetPeerAddress) {
-  IPEndPoint bind_address;
-  CreateUDPAddress("127.0.0.1", 0, &bind_address);
+  IPEndPoint bind_address(IPAddress::IPv4Localhost(), 0);
   UDPServerSocket server(NULL, NetLogSource());
   int rv = server.Listen(bind_address);
   EXPECT_THAT(rv, IsOk());
@@ -613,8 +622,7 @@ TEST_F(UDPSocketTest, ServerSetDoNotFragment) {
 
 // Close the socket while read is pending.
 TEST_F(UDPSocketTest, CloseWithPendingRead) {
-  IPEndPoint bind_address;
-  CreateUDPAddress("127.0.0.1", 0, &bind_address);
+  IPEndPoint bind_address(IPAddress::IPv4Localhost(), 0);
   UDPServerSocket server(NULL, NetLogSource());
   int rv = server.Listen(bind_address);
   EXPECT_THAT(rv, IsOk());
@@ -702,8 +710,8 @@ TEST_F(UDPSocketTest, SetDSCP) {
 
   rv = client.Connect(bind_address);
   if (rv != OK) {
-    // Let's try localhost then..
-    CreateUDPAddress("127.0.0.1", 9999, &bind_address);
+    // Let's try localhost then.
+    bind_address = IPEndPoint(IPAddress::IPv4Localhost(), 9999);
     rv = client.Connect(bind_address);
   }
   EXPECT_THAT(rv, IsOk());

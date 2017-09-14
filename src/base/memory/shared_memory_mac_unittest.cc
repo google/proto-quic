@@ -205,7 +205,7 @@ class SharedMemoryMacMultiProcessTest : public MultiProcessTest {
     // similar tests.
     service_name_ = CreateRandomServiceName();
     server_port_.reset(BecomeMachServer(service_name_.c_str()));
-    spawn_child_ = SpawnChild(name);
+    child_process_ = SpawnChild(name);
     client_port_.reset(ReceiveMachPort(server_port_.get()));
   }
 
@@ -222,7 +222,7 @@ class SharedMemoryMacMultiProcessTest : public MultiProcessTest {
   // process.
   mac::ScopedMachSendRight client_port_;
 
-  base::SpawnChildResult spawn_child_;
+  base::Process child_process_;
   DISALLOW_COPY_AND_ASSIGN(SharedMemoryMacMultiProcessTest);
 };
 
@@ -238,7 +238,7 @@ TEST_F(SharedMemoryMacMultiProcessTest, MachBasedSharedMemory) {
   SendMachPort(client_port_.get(), shared_memory->handle().GetMemoryObject(),
                MACH_MSG_TYPE_COPY_SEND);
   int rv = -1;
-  ASSERT_TRUE(spawn_child_.process.WaitForExitWithTimeout(
+  ASSERT_TRUE(child_process_.WaitForExitWithTimeout(
       TestTimeouts::action_timeout(), &rv));
   EXPECT_EQ(0, rv);
 }
@@ -278,7 +278,7 @@ TEST_F(SharedMemoryMacMultiProcessTest, MachBasedSharedMemoryWithOffset) {
   SendMachPort(
       client_port_.get(), shm.GetMemoryObject(), MACH_MSG_TYPE_COPY_SEND);
   int rv = -1;
-  ASSERT_TRUE(spawn_child_.process.WaitForExitWithTimeout(
+  ASSERT_TRUE(child_process_.WaitForExitWithTimeout(
       TestTimeouts::action_timeout(), &rv));
   EXPECT_EQ(0, rv);
 }

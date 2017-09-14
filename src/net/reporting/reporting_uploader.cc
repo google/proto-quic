@@ -97,7 +97,7 @@ class ReportingUploaderImpl : public ReportingUploader, URLRequest::Delegate {
     // Have to grab the unique_ptr* first to ensure request.get() happens
     // before std::move(request).
     std::unique_ptr<Upload>* upload = &uploads_[request.get()];
-    *upload = base::MakeUnique<Upload>(std::move(request), callback);
+    *upload = std::make_unique<Upload>(std::move(request), callback);
   }
 
   // URLRequest::Delegate implementation:
@@ -170,7 +170,7 @@ ReportingUploader::~ReportingUploader() {}
 // static
 std::unique_ptr<ReportingUploader> ReportingUploader::Create(
     const URLRequestContext* context) {
-  return base::MakeUnique<ReportingUploaderImpl>(context);
+  return std::make_unique<ReportingUploaderImpl>(context);
 }
 
 }  // namespace net

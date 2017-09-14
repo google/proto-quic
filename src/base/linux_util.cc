@@ -22,6 +22,7 @@
 #include "base/process/launch.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
+#include "base/strings/string_tokenizer.h"
 #include "base/strings/string_util.h"
 #include "base/synchronization/lock.h"
 #include "build/build_config.h"
@@ -199,25 +200,24 @@ pid_t FindThreadID(pid_t pid, pid_t ns_tid, bool* ns_pid_supported) {
     std::string status;
     if (!ReadFileToString(FilePath(buf), &status))
       return -1;
-    StringPairs pairs;
-    SplitStringIntoKeyValuePairs(status, ':', '\n', &pairs);
-    for (const auto& pair : pairs) {
-      const std::string& key = pair.first;
-      const std::string& value_str = pair.second;
-      if (key == "NSpid") {
-        if (ns_pid_supported)
-          *ns_pid_supported = true;
-        std::vector<StringPiece> split_value_str = SplitStringPiece(
-            value_str, "\t", TRIM_WHITESPACE, SPLIT_WANT_NONEMPTY);
-        DCHECK_NE(split_value_str.size(), 0u);
-        int value;
-        // The last value in the list is the PID in the namespace.
-        if (StringToInt(split_value_str.back(), &value) && value == ns_tid) {
-          // The first value in the list is the real PID.
-          if (StringToInt(split_value_str.front(), &value))
-            return value;
-        }
+    StringTokenizer tokenizer(status, "\n");
+    while (tokenizer.GetNext()) {
+      StringPiece value_str(tokenizer.token_piece());
+      if (!value_str.starts_with("NSpid"))
+        continue;
+      if (ns_pid_supported)
+        *ns_pid_supported = true;
+      std::vector<StringPiece> split_value_str = SplitStringPiece(
+          value_str, "\t", TRIM_WHITESPACE, SPLIT_WANT_NONEMPTY);
+      DCHECK_GE(split_value_str.size(), 2u);
+      int value;
+      // The last value in the list is the PID in the namespace.
+      if (StringToInt(split_value_str.back(), &value) && value == ns_tid) {
+        // The second value in the list is the real PID.
+        if (StringToInt(split_value_str[1], &value))
+          return value;
       }
+      break;
     }
   }
   return -1;

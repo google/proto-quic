@@ -549,7 +549,7 @@ TEST_F(SQLitePersistentCookieStoreTest, FilterBadCookies) {
 
   // Add some cookies in by hand.
   base::FilePath store_name(temp_dir_.GetPath().Append(kCookieFilename));
-  std::unique_ptr<sql::Connection> db(base::MakeUnique<sql::Connection>());
+  std::unique_ptr<sql::Connection> db(std::make_unique<sql::Connection>());
   ASSERT_TRUE(db->Open(store_name));
   sql::Statement stmt(db->GetUniqueStatement(
       "INSERT INTO cookies (creation_utc, host_key, name, value, "

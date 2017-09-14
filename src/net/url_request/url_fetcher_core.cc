@@ -10,7 +10,6 @@
 #include "base/bind.h"
 #include "base/logging.h"
 #include "base/metrics/histogram_macros.h"
-#include "base/profiler/scoped_tracker.h"
 #include "base/sequenced_task_runner.h"
 #include "base/single_thread_task_runner.h"
 #include "base/stl_util.h"
@@ -933,12 +932,6 @@ void URLFetcherCore::InformDelegateUploadProgressInDelegateSequence(
 
 void URLFetcherCore::InformDelegateDownloadProgress() {
   DCHECK(network_task_runner_->BelongsToCurrentThread());
-
-  // TODO(pkasting): Remove ScopedTracker below once crbug.com/455952 is fixed.
-  tracked_objects::ScopedTracker tracking_profile2(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION(
-          "455952 delegate_task_runner_->PostTask()"));
-
   delegate_task_runner_->PostTask(
       FROM_HERE,
       base::Bind(

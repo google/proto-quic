@@ -64,7 +64,7 @@ class URLRequestContextBuilderTest : public PlatformTest {
         base::FilePath(FILE_PATH_LITERAL("net/data/url_request_unittest")));
 #if defined(OS_LINUX) || defined(OS_ANDROID)
     builder_.set_proxy_config_service(
-        base::MakeUnique<ProxyConfigServiceFixed>(ProxyConfig::CreateDirect()));
+        std::make_unique<ProxyConfigServiceFixed>(ProxyConfig::CreateDirect()));
 #endif  // defined(OS_LINUX) || defined(OS_ANDROID)
   }
 
@@ -120,7 +120,7 @@ TEST_F(URLRequestContextBuilderTest, CustomHttpAuthHandlerFactory) {
   const int kBasicReturnCode = OK;
   std::unique_ptr<HttpAuthHandler> handler;
   builder_.SetHttpAuthHandlerFactory(
-      base::MakeUnique<MockHttpAuthHandlerFactory>("ExtraScheme",
+      std::make_unique<MockHttpAuthHandlerFactory>("ExtraScheme",
                                                    kBasicReturnCode));
   std::unique_ptr<URLRequestContext> context(builder_.Build());
   SSLInfo null_ssl_info;

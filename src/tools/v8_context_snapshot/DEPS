@@ -1,0 +1,7 @@
+include_rules = [
+  "+base",
+  "+v8",
+  "+third_party/WebKit/public",
+  "+gin/v8_initializer.h",
+  "+mojo/edk/embedder/embedder.h",
+]

@@ -25,13 +25,6 @@ class V8DetachedContextAgeInGC(perf_benchmark.PerfBenchmark):
   def Name(cls):
     return 'v8.detached_context_age_in_gc'
 
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    # http://crbug.com/685350
-    if possible_browser.platform.GetDeviceTypeName() == 'Nexus 9':
-      return True
-    return False
-
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
@@ -86,7 +79,6 @@ class _Top25RuntimeStats(perf_benchmark.PerfBenchmark):
     return False
 
 
-@benchmark.Disabled('android', 'win', 'reference')  # crbug.com/664318
 @benchmark.Owner(emails=['cbruni@chromium.org'])
 class V8Top25RuntimeStats(_Top25RuntimeStats):
   """Runtime Stats benchmark for a 25 top V8 web pages.
@@ -105,5 +97,7 @@ class V8Top25RuntimeStats(_Top25RuntimeStats):
   def GetExpectations(self):
     class StoryExpectations(story.expectations.StoryExpectations):
       def SetExpectations(self):
-        pass # blank_page.html not disabled.
+        self.DisableBenchmark(
+            [story.expectations.ALL_ANDROID, story.expectations.ALL_WIN],
+            'crbug.com/664318')
     return StoryExpectations()

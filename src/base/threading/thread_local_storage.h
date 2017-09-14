@@ -97,9 +97,7 @@ class BASE_EXPORT ThreadLocalStorage {
   typedef void (*TLSDestructorFunc)(void* value);
 
   // StaticSlot uses its own struct initializer-list style static
-  // initialization, as base's LINKER_INITIALIZED requires a constructor and on
-  // some compilers (notably gcc 4.4) this still ends up needing runtime
-  // initialization.
+  // initialization, which does not require a constructor.
   #define TLS_INITIALIZER {0}
 
   // A key representing one value stored in TLS.

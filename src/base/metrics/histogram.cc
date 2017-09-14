@@ -327,7 +327,7 @@ void Histogram::InitializeBucketRanges(Sample minimum,
     // See where the next bucket would start.
     log_next = log_current + log_ratio;
     Sample next;
-    next = static_cast<int>(floor(exp(log_next) + 0.5));
+    next = static_cast<int>(std::round(exp(log_next)));
     if (next > current)
       current = next;
     else
@@ -546,7 +546,7 @@ void Histogram::WriteAscii(std::string* output) const {
 }
 
 bool Histogram::ValidateHistogramContents(bool crash_if_invalid,
-                                          int corrupted_count) const {
+                                          int identifier) const {
   enum Fields : int {
     kUnloggedBucketRangesField,
     kUnloggedSamplesField,
@@ -569,7 +569,9 @@ bool Histogram::ValidateHistogramContents(bool crash_if_invalid,
     bad_fields |= 1 << kLoggedBucketRangesField;
   else if (logged_samples_->id() == 0)
     bad_fields |= 1 << kIdField;
-  else if (HashMetricName(histogram_name()) != logged_samples_->id())
+  else if (histogram_name().length() > 20 && histogram_name().at(20) == '\0')
+    bad_fields |= 1 << kHistogramNameField;
+  else if (histogram_name().length() > 40 && histogram_name().at(40) == '\0')
     bad_fields |= 1 << kHistogramNameField;
   if (flags() == 0)
     bad_fields |= 1 << kFlagsField;
@@ -581,9 +583,8 @@ bool Histogram::ValidateHistogramContents(bool crash_if_invalid,
     return is_valid;
 
   // Abort if a problem is found (except "flags", which could legally be zero).
-  const std::string debug_string =
-      base::StringPrintf("%s/%" PRIu32 "/%d", histogram_name().c_str(),
-                         bad_fields, corrupted_count);
+  const std::string debug_string = base::StringPrintf(
+      "%s/%" PRIu32 "#%d", histogram_name().c_str(), bad_fields, identifier);
 #if !defined(OS_NACL)
   // Temporary for https://crbug.com/736675.
   base::debug::ScopedCrashKey crash_key("bad_histogram", debug_string);
@@ -1039,6 +1040,9 @@ HistogramBase* LinearHistogram::DeserializeInfoImpl(PickleIterator* iter) {
 
   HistogramBase* histogram = LinearHistogram::FactoryGet(
       histogram_name, declared_min, declared_max, bucket_count, flags);
+  if (!histogram)
+    return nullptr;
+
   if (!ValidateRangeChecksum(*histogram, range_checksum)) {
     // The serialized histogram might be corrupted.
     return nullptr;
@@ -1131,6 +1135,9 @@ HistogramBase* BooleanHistogram::DeserializeInfoImpl(PickleIterator* iter) {
 
   HistogramBase* histogram = BooleanHistogram::FactoryGet(
       histogram_name, flags);
+  if (!histogram)
+    return nullptr;
+
   if (!ValidateRangeChecksum(*histogram, range_checksum)) {
     // The serialized histogram might be corrupted.
     return nullptr;
@@ -1291,6 +1298,9 @@ HistogramBase* CustomHistogram::DeserializeInfoImpl(PickleIterator* iter) {
 
   HistogramBase* histogram = CustomHistogram::FactoryGet(
       histogram_name, sample_ranges, flags);
+  if (!histogram)
+    return nullptr;
+
   if (!ValidateRangeChecksum(*histogram, range_checksum)) {
     // The serialized histogram might be corrupted.
     return nullptr;

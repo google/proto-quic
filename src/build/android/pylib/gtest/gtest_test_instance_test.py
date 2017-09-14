@@ -98,7 +98,7 @@ class GtestTestInstanceTests(unittest.TestCase):
       '[ RUN      ] FooTest.Bar',
       '[       OK ] FooTest.Bar (1 ms)',
     ]
-    actual = gtest_test_instance.ParseGTestOutput(raw_output)
+    actual = gtest_test_instance.ParseGTestOutput(raw_output, None, None)
     self.assertEquals(1, len(actual))
     self.assertEquals('FooTest.Bar', actual[0].GetName())
     self.assertEquals(1, actual[0].GetDuration())
@@ -109,7 +109,7 @@ class GtestTestInstanceTests(unittest.TestCase):
       '[ RUN      ] FooTest.Bar',
       '[   FAILED ] FooTest.Bar (1 ms)',
     ]
-    actual = gtest_test_instance.ParseGTestOutput(raw_output)
+    actual = gtest_test_instance.ParseGTestOutput(raw_output, None, None)
     self.assertEquals(1, len(actual))
     self.assertEquals('FooTest.Bar', actual[0].GetName())
     self.assertEquals(1, actual[0].GetDuration())
@@ -120,7 +120,7 @@ class GtestTestInstanceTests(unittest.TestCase):
       '[ RUN      ] FooTest.Bar',
       '[  CRASHED ] FooTest.Bar (1 ms)',
     ]
-    actual = gtest_test_instance.ParseGTestOutput(raw_output)
+    actual = gtest_test_instance.ParseGTestOutput(raw_output, None, None)
     self.assertEquals(1, len(actual))
     self.assertEquals('FooTest.Bar', actual[0].GetName())
     self.assertEquals(1, actual[0].GetDuration())
@@ -131,7 +131,7 @@ class GtestTestInstanceTests(unittest.TestCase):
       '[ RUN      ] FooTest.Bar',
       '[ERROR:blah] Currently running: FooTest.Bar',
     ]
-    actual = gtest_test_instance.ParseGTestOutput(raw_output)
+    actual = gtest_test_instance.ParseGTestOutput(raw_output, None, None)
     self.assertEquals(1, len(actual))
     self.assertEquals('FooTest.Bar', actual[0].GetName())
     self.assertEquals(0, actual[0].GetDuration())
@@ -141,7 +141,7 @@ class GtestTestInstanceTests(unittest.TestCase):
     raw_output = [
       '[ RUN      ] FooTest.Bar',
     ]
-    actual = gtest_test_instance.ParseGTestOutput(raw_output)
+    actual = gtest_test_instance.ParseGTestOutput(raw_output, None, None)
     self.assertEquals(1, len(actual))
     self.assertEquals('FooTest.Bar', actual[0].GetName())
     self.assertEquals(0, actual[0].GetDuration())
@@ -153,7 +153,7 @@ class GtestTestInstanceTests(unittest.TestCase):
       '[ RUN      ] FooTest.Baz',
       '[       OK ] FooTest.Baz (1 ms)',
     ]
-    actual = gtest_test_instance.ParseGTestOutput(raw_output)
+    actual = gtest_test_instance.ParseGTestOutput(raw_output, None, None)
     self.assertEquals(2, len(actual))
 
     self.assertEquals('FooTest.Bar', actual[0].GetName())
@@ -170,7 +170,7 @@ class GtestTestInstanceTests(unittest.TestCase):
       '[ CRASHED      ]',
       '[       OK ] FooTest.Bar (1 ms)',
     ]
-    actual = gtest_test_instance.ParseGTestOutput(raw_output)
+    actual = gtest_test_instance.ParseGTestOutput(raw_output, None, None)
     self.assertEquals(1, len(actual))
 
     self.assertEquals('FooTest.Bar', actual[0].GetName())
@@ -181,7 +181,7 @@ class GtestTestInstanceTests(unittest.TestCase):
     input_lines = [
       'positive1',
       '# comment',
-      'positive2',
+      'positive2  # Another comment',
       ''
       'positive3'
     ]

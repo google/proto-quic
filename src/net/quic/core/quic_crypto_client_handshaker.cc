@@ -372,7 +372,7 @@ void QuicCryptoClientHandshaker::DoSendCHLO(
     return;
   }
   CryptoUtils::HashHandshakeMessage(out, &chlo_hash_, Perspective::IS_CLIENT);
-  channel_id_sent_ = (channel_id_key_.get() != nullptr);
+  channel_id_sent_ = (channel_id_key_ != nullptr);
   if (cached->proof_verify_details()) {
     proof_handler_->OnProofVerifyDetailsAvailable(
         *cached->proof_verify_details());
@@ -503,7 +503,7 @@ void QuicCryptoClientHandshaker::DoVerifyProofComplete(
                         base::TimeTicks::Now() - proof_verify_start_time_);
   }
   if (!verify_ok_) {
-    if (verify_details_.get()) {
+    if (verify_details_) {
       proof_handler_->OnProofVerifyDetailsAvailable(*verify_details_);
     }
     if (num_client_hellos_ == 0) {

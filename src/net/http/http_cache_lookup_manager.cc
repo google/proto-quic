@@ -72,7 +72,7 @@ void HttpCacheLookupManager::OnPush(
   if (base::ContainsKey(lookup_transactions_, pushed_url))
     return;
 
-  auto lookup = base::MakeUnique<LookupTransaction>(std::move(push_helper),
+  auto lookup = std::make_unique<LookupTransaction>(std::move(push_helper),
                                                     session_net_log.net_log());
   // TODO(zhongyi): add events in session net log to log the creation of
   // LookupTransaction.

@@ -20,7 +20,6 @@ import find_depot_tools
 find_depot_tools.add_depot_tools_to_path()
 import rietveld
 import roll_dep_svn
-from gclient import GClientKeywords
 from third_party import upload
 
 # Avoid depot_tools/third_party/upload.py print verbose messages.
@@ -62,6 +61,10 @@ CommitInfo = collections.namedtuple('CommitInfo', ['commit_position',
 CLInfo = collections.namedtuple('CLInfo', ['issue', 'url', 'rietveld_server'])
 
 
+def _VarLookup(local_scope):
+  return lambda var_name: local_scope['vars'][var_name]
+
+
 def _PosixPath(path):
   """Convert a possibly-Windows path to a posix-style path."""
   (_, path) = os.path.splitdrive(path)
@@ -94,9 +97,8 @@ def _ParseDepsFile(filename):
 
 def _ParseDepsDict(deps_content):
   local_scope = {}
-  var = GClientKeywords.VarImpl({}, local_scope)
   global_scope = {
-    'Var': var.Lookup,
+    'Var': _VarLookup(local_scope),
     'deps_os': {},
   }
   exec(deps_content, global_scope, local_scope)
@@ -198,17 +200,20 @@ class AutoRoller(object):
     webrtc_header = 'Roll WebRTC %s:%s (%d commit%s)' % (
         webrtc_current.commit_position, webrtc_new.commit_position,
         nb_commits, 's' if nb_commits > 1 else '')
-
+    git_author = self._RunCommand(
+        ['git', 'config', 'user.email'],
+        working_dir=self._chromium_src).splitlines()[0]
     description = ('%s\n\n'
                    'Changes: %s\n\n'
                    '$ %s\n'
                    '%s\n'
-                   'TBR=\n'
+                   'TBR=%s\n'
                    'CQ_INCLUDE_TRYBOTS=%s\n') % (
                        webrtc_header,
                        webrtc_changelog_url,
                        ' '.join(git_log_cmd),
                        git_log,
+                       git_author,
                        EXTRA_TRYBOTS)
 
     return description
@@ -319,15 +324,13 @@ class AutoRoller(object):
       self._RunCommand(['git', 'add', '--update', '.'])
       self._RunCommand(['git', 'commit', '-m', description])
       logging.debug('Uploading changes...')
-      self._RunCommand(['git', 'cl', 'upload'],
-                       extra_env={'EDITOR': 'true'})
-      cl_info = self._GetCLInfo()
-      logging.debug('Issue: %d URL: %s', cl_info.issue, cl_info.url)
-
+      upload_cmd = ['git', 'cl', 'upload']
       if not dry_run and not no_commit:
         logging.debug('Sending the CL to the CQ...')
-        self._RunCommand(['git', 'cl', 'set_commit'])
-        logging.debug('Sent the CL to the CQ. Monitor here: %s', cl_info.url)
+        upload_cmd.extend(['--use-commit-queue', '--send-mail'])
+      self._RunCommand(upload_cmd, extra_env={'EDITOR': 'true'})
+      cl_info = self._GetCLInfo()
+      logging.debug('Issue: %d URL: %s', cl_info.issue, cl_info.url)
 
     # TODO(kjellander): Checkout masters/previous branches again.
     return 0

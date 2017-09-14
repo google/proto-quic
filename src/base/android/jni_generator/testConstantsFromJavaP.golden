@@ -2223,8 +2223,6 @@ static void Java_MotionEvent_writeToParcel(JNIEnv* env, const
   jni_generator::CheckException(env);
 }
 
-// Step 3: RegisterNatives.
-
 }  // namespace JNI_MotionEvent
 
 #endif  // android_view_MotionEvent_JNI

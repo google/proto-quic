@@ -117,12 +117,17 @@ TEST(AtomicFlagTest, SetOnDifferentSequenceDeathTest) {
   // Checks that Set() can't be called from another sequence after being called
   // on this one. AtomicFlag should die on a DCHECK if Set() is called again
   // from another sequence.
+
+  // Note: flag must be declared before the Thread so that its destructor runs
+  // later. Otherwise there's a race between destructing flag and running
+  // ExpectSetFlagDeath.
+  AtomicFlag flag;
+
   ::testing::FLAGS_gtest_death_test_style = "threadsafe";
   Thread t("AtomicFlagTest.SetOnDifferentThreadDeathTest");
   ASSERT_TRUE(t.Start());
   EXPECT_TRUE(t.WaitUntilThreadStarted());
 
-  AtomicFlag flag;
   flag.Set();
   t.task_runner()->PostTask(FROM_HERE, BindOnce(&ExpectSetFlagDeath, &flag));
 }

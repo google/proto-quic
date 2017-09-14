@@ -48,6 +48,21 @@ class DummyProofSource : public ProofSource {
     proof.leaf_cert_scts = "Dummy timestamp";
     callback->Run(true, chain, proof, nullptr /* details */);
   }
+
+  QuicReferenceCountedPointer<Chain> GetCertChain(
+      const QuicSocketAddress& server_address,
+      const string& hostname) override {
+    return QuicReferenceCountedPointer<Chain>();
+  }
+
+  void ComputeTlsSignature(
+      const QuicSocketAddress& server_address,
+      const string& hostname,
+      uint16_t signature_algorithm,
+      QuicStringPiece in,
+      std::unique_ptr<SignatureCallback> callback) override {
+    callback->Run(true, "Dummy signature");
+  }
 };
 
 // Used by QuicCryptoClientConfig to ignore the peer's credentials
@@ -292,10 +307,6 @@ void QuartcSession::SetServerCryptoConfig(
 
 QuicStream* QuartcSession::CreateIncomingDynamicStream(QuicStreamId id) {
   return ActivateDataStream(CreateDataStream(id, kDefaultPriority));
-}
-
-std::unique_ptr<QuicStream> QuartcSession::CreateStream(QuicStreamId id) {
-  return CreateDataStream(id, kDefaultPriority);
 }
 
 std::unique_ptr<QuartcStream> QuartcSession::CreateDataStream(

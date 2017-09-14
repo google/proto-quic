@@ -251,6 +251,12 @@ class NET_EXPORT CookieStore {
       const std::string& name,
       const CookieChangedCallback& callback) = 0;
 
+  // Add a callback to be notified on all cookie changes (with a few
+  // bookkeeping exceptions; see kChangeCauseMapping in
+  // cookie_monster.cc).
+  virtual std::unique_ptr<CookieChangedSubscription> AddCallbackForAllChanges(
+      const CookieChangedCallback& callback) = 0;
+
   // Returns true if this cookie store is ephemeral, and false if it is backed
   // by some sort of persistence layer.
   // TODO(nharper): Remove this method once crbug.com/548423 has been closed.

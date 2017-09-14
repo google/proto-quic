@@ -14,8 +14,7 @@ namespace net {
 
 namespace {
 
-#if BUILDFLAG(USE_BYTE_CERTS) || (defined(OS_MACOSX) && !defined(OS_IOS)) || \
-    defined(OS_WIN)
+#if BUILDFLAG(USE_BYTE_CERTS)
 TEST(X509TypesTest, ParseDNVerisign) {
   CertPrincipal verisign;
   EXPECT_TRUE(verisign.ParseDistinguishedName(VerisignDN, sizeof(VerisignDN)));

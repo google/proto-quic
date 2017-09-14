@@ -9,7 +9,6 @@
 
 #include <stdint.h>
 
-#include <deque>
 #include <list>
 #include <memory>
 #include <set>
@@ -22,6 +21,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_server_session_base.h"
 #include "net/quic/core/quic_spdy_session.h"
+#include "net/quic/platform/api/quic_containers.h"
 #include "net/tools/quic/quic_http_response_cache.h"
 #include "net/tools/quic/quic_simple_server_stream.h"
 
@@ -82,14 +82,9 @@ class QuicSimpleServerSession : public QuicServerSessionBase {
 
  protected:
   // QuicSession methods:
-  // TODO(ckrasic) - remove these two when
-  // FLAGS_quic_reloadable_flag_quic_refactor_stream_creation is
-  // deprecated.
   QuicSpdyStream* CreateIncomingDynamicStream(QuicStreamId id) override;
   QuicSimpleServerStream* CreateOutgoingDynamicStream(
       SpdyPriority priority) override;
-  std::unique_ptr<QuicStream> CreateStream(QuicStreamId id) override;
-
   // Closing an outgoing stream can reduce open outgoing stream count, try
   // to handle queued promised streams right now.
   void CloseStreamInner(QuicStreamId stream_id, bool locally_reset) override;
@@ -149,7 +144,7 @@ class QuicSimpleServerSession : public QuicServerSessionBase {
   // the queue also increases by 2 from previous one's. The front element's
   // stream_id is always next_outgoing_stream_id_, and the last one is always
   // highest_promised_stream_id_.
-  std::deque<PromisedStreamInfo> promised_streams_;
+  QuicDeque<PromisedStreamInfo> promised_streams_;
 
   QuicHttpResponseCache* response_cache_;  // Not owned.
 

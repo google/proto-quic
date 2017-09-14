@@ -37,7 +37,7 @@ SpdyHttpStream::SpdyHttpStream(const base::WeakPtr<SpdySession>& spdy_session,
                                bool direct,
                                NetLogSource source_dependency)
     : MultiplexedHttpStream(
-          base::MakeUnique<MultiplexedSessionHandle>(spdy_session)),
+          std::make_unique<MultiplexedSessionHandle>(spdy_session)),
       spdy_session_(spdy_session),
       is_reused_(spdy_session_->IsReused()),
       source_dependency_(source_dependency),
@@ -316,7 +316,7 @@ void SpdyHttpStream::OnHeadersReceived(
 
   if (!response_info_) {
     DCHECK_EQ(stream_->type(), SPDY_PUSH_STREAM);
-    push_response_info_ = base::MakeUnique<HttpResponseInfo>();
+    push_response_info_ = std::make_unique<HttpResponseInfo>();
     response_info_ = push_response_info_.get();
   }
 

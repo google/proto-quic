@@ -48,11 +48,11 @@ FakeClientCertIdentity::CreateFromCertAndKeyFiles(
   if (!ssl_private_key)
     return nullptr;
 
-  return base::MakeUnique<FakeClientCertIdentity>(cert, ssl_private_key);
+  return std::make_unique<FakeClientCertIdentity>(cert, ssl_private_key);
 }
 
 std::unique_ptr<FakeClientCertIdentity> FakeClientCertIdentity::Copy() {
-  return base::MakeUnique<FakeClientCertIdentity>(certificate(), key_);
+  return std::make_unique<FakeClientCertIdentity>(certificate(), key_);
 }
 
 void FakeClientCertIdentity::AcquirePrivateKey(
@@ -74,7 +74,7 @@ ClientCertIdentityList FakeClientCertIdentityListFromCertificateList(
     const CertificateList& certs) {
   ClientCertIdentityList result;
   for (const auto& cert : certs) {
-    result.push_back(base::MakeUnique<FakeClientCertIdentity>(cert, nullptr));
+    result.push_back(std::make_unique<FakeClientCertIdentity>(cert, nullptr));
   }
   return result;
 }

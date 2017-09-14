@@ -7,6 +7,7 @@
 #include "base/numerics/safe_conversions.h"
 #include "base/pickle.h"
 #include "base/stl_util.h"
+#include "build/build_config.h"
 #include "crypto/openssl_util.h"
 #include "net/base/ip_address.h"
 #include "net/cert/asn1_util.h"
@@ -39,13 +40,31 @@ bool GeneralizedTimeToBaseTime(const der::GeneralizedTime& generalized,
   exploded.hour = generalized.hours;
   exploded.minute = generalized.minutes;
   exploded.second = generalized.seconds;
-  return base::Time::FromUTCExploded(exploded, result);
-}
+#if defined(OS_POSIX) && !defined(OS_MACOSX) && !defined(OS_ANDROID)
+  if (base::Time::FromUTCExploded(exploded, result))
+    return true;
 
-ParseCertificateOptions DefaultParseCertificateOptions() {
-  ParseCertificateOptions options;
-  options.allow_invalid_serial_numbers = true;
-  return options;
+  if (sizeof(time_t) == 4) {
+    // Fail on obviously bad dates before trying the 32-bit hacks.
+    if (!exploded.HasValidValues())
+      return false;
+
+    // Hack to handle dates that can't be converted on 32-bit systems.
+    // TODO(mattm): consider consolidating this with
+    // SaturatedTimeFromUTCExploded from cookie_util.cc
+    if (generalized.year >= 2038) {
+      *result = base::Time::Max();
+      return true;
+    }
+    if (generalized.year < 1970) {
+      *result = base::Time::Min();
+      return true;
+    }
+  }
+  return false;
+#else
+  return base::Time::FromUTCExploded(exploded, result);
+#endif
 }
 
 // Sets |value| to the Value from a DER Sequence Tag-Length-Value and return
@@ -71,7 +90,8 @@ bool GetNormalizedCertIssuer(CRYPTO_BUFFER* cert,
   }
   ParsedTbsCertificate tbs;
   if (!ParseTbsCertificate(tbs_certificate_tlv,
-                           DefaultParseCertificateOptions(), &tbs, nullptr))
+                           x509_util::DefaultParseCertificateOptions(), &tbs,
+                           nullptr))
     return false;
 
   der::Input issuer_value;
@@ -122,7 +142,8 @@ bool X509Certificate::Initialize() {
 
   ParsedTbsCertificate tbs;
   if (!ParseTbsCertificate(tbs_certificate_tlv,
-                           DefaultParseCertificateOptions(), &tbs, nullptr))
+                           x509_util::DefaultParseCertificateOptions(), &tbs,
+                           nullptr))
     return false;
 
   if (!subject_.ParseDistinguishedName(tbs.subject_tlv.UnsafeData(),
@@ -160,7 +181,8 @@ bool X509Certificate::GetSubjectAltName(
 
   ParsedTbsCertificate tbs;
   if (!ParseTbsCertificate(tbs_certificate_tlv,
-                           DefaultParseCertificateOptions(), &tbs, nullptr))
+                           x509_util::DefaultParseCertificateOptions(), &tbs,
+                           nullptr))
     return false;
   if (!tbs.has_extensions)
     return false;
@@ -385,7 +407,8 @@ bool X509Certificate::IsSelfSigned(OSCertHandle cert_handle) {
   }
   ParsedTbsCertificate tbs;
   if (!ParseTbsCertificate(tbs_certificate_tlv,
-                           DefaultParseCertificateOptions(), &tbs, nullptr)) {
+                           x509_util::DefaultParseCertificateOptions(), &tbs,
+                           nullptr)) {
     return false;
   }
 

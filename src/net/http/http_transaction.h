@@ -14,6 +14,7 @@
 #include "net/base/request_priority.h"
 #include "net/base/upload_progress.h"
 #include "net/http/http_raw_request_headers.h"
+#include "net/http/http_response_headers.h"
 #include "net/socket/connection_attempts.h"
 #include "net/websockets/websocket_handshake_stream_base.h"
 
@@ -193,7 +194,8 @@ class NET_EXPORT_PRIVATE HttpTransaction {
   virtual void SetBeforeHeadersSentCallback(
       const BeforeHeadersSentCallback& callback) = 0;
 
-  virtual void SetRequestHeadersCallback(RequestHeadersCallback) = 0;
+  virtual void SetRequestHeadersCallback(RequestHeadersCallback callback) = 0;
+  virtual void SetResponseHeadersCallback(ResponseHeadersCallback callback) = 0;
 
   // Resumes the transaction after being deferred.
   virtual int ResumeNetworkStart() = 0;

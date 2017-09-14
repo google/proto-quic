@@ -97,11 +97,11 @@ class BASE_EXPORT Timer {
 
   // Construct a timer with retained task info. If |tick_clock| is provided, it
   // is used instead of TimeTicks::Now() to get TimeTicks when scheduling tasks.
-  Timer(const tracked_objects::Location& posted_from,
+  Timer(const Location& posted_from,
         TimeDelta delay,
         const base::Closure& user_task,
         bool is_repeating);
-  Timer(const tracked_objects::Location& posted_from,
+  Timer(const Location& posted_from,
         TimeDelta delay,
         const base::Closure& user_task,
         bool is_repeating,
@@ -124,7 +124,7 @@ class BASE_EXPORT Timer {
 
   // Start the timer to run at the given |delay| from now. If the timer is
   // already running, it will be replaced to call the given |user_task|.
-  virtual void Start(const tracked_objects::Location& posted_from,
+  virtual void Start(const Location& posted_from,
                      TimeDelta delay,
                      const base::Closure& user_task);
 
@@ -155,7 +155,7 @@ class BASE_EXPORT Timer {
   void set_desired_run_time(TimeTicks desired) { desired_run_time_ = desired; }
   void set_is_running(bool running) { is_running_ = running; }
 
-  const tracked_objects::Location& posted_from() const { return posted_from_; }
+  const Location& posted_from() const { return posted_from_; }
   bool retain_user_task() const { return retain_user_task_; }
   bool is_repeating() const { return is_repeating_; }
   bool is_running() const { return is_running_; }
@@ -189,7 +189,7 @@ class BASE_EXPORT Timer {
   scoped_refptr<SequencedTaskRunner> task_runner_;
 
   // Location in user code.
-  tracked_objects::Location posted_from_;
+  Location posted_from_;
   // Delay requested by user.
   TimeDelta delay_;
   // |user_task_| is what the user wants to be run at |desired_run_time_|.
@@ -249,7 +249,7 @@ class BaseTimerMethodPointer : public Timer {
   // already running, it will be replaced to call a task formed from
   // |reviewer->*method|.
   template <class Receiver>
-  void Start(const tracked_objects::Location& posted_from,
+  void Start(const Location& posted_from,
              TimeDelta delay,
              Receiver* receiver,
              void (Receiver::*method)()) {
@@ -290,14 +290,14 @@ class RepeatingTimer : public BaseTimerMethodPointer {
 class DelayTimer : protected Timer {
  public:
   template <class Receiver>
-  DelayTimer(const tracked_objects::Location& posted_from,
+  DelayTimer(const Location& posted_from,
              TimeDelta delay,
              Receiver* receiver,
              void (Receiver::*method)())
       : DelayTimer(posted_from, delay, receiver, method, nullptr) {}
 
   template <class Receiver>
-  DelayTimer(const tracked_objects::Location& posted_from,
+  DelayTimer(const Location& posted_from,
              TimeDelta delay,
              Receiver* receiver,
              void (Receiver::*method)(),
@@ -308,16 +308,8 @@ class DelayTimer : protected Timer {
               false,
               tick_clock) {}
 
-  void Reset() override;
+  using Timer::Reset;
 };
-
-// This class has a templated method so it can not be exported without failing
-// to link in MSVC. But clang-plugin does not allow inline definitions of
-// virtual methods, so the inline definition lives in the header file here
-// to satisfy both.
-inline void DelayTimer::Reset() {
-  Timer::Reset();
-}
 
 }  // namespace base
 

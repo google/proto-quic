@@ -361,13 +361,20 @@ config("cfi_flags") {
     }
 
     if (use_cfi_diag) {
-      cflags += [
-        "-fno-sanitize-trap=cfi",
-        "-fno-inline-functions",
-        "-fno-inline",
-        "-fno-omit-frame-pointer",
-        "-O1",
-      ]
+      cflags += [ "-fno-sanitize-trap=cfi" ]
+      if (is_win) {
+        cflags += [
+          "/Oy-",
+          "/Ob0",
+        ]
+      } else {
+        cflags += [
+          "-fno-inline-functions",
+          "-fno-inline",
+          "-fno-omit-frame-pointer",
+          "-O1",
+        ]
+      }
       if (use_cfi_recover) {
         cflags += [ "-fsanitize-recover=cfi" ]
       }

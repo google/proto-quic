@@ -37,8 +37,8 @@ class ReportingContextImpl : public ReportingContext {
   ReportingContextImpl(const ReportingPolicy& policy,
                        URLRequestContext* request_context)
       : ReportingContext(policy,
-                         base::MakeUnique<base::DefaultClock>(),
-                         base::MakeUnique<base::DefaultTickClock>(),
+                         std::make_unique<base::DefaultClock>(),
+                         std::make_unique<base::DefaultTickClock>(),
                          ReportingUploader::Create(request_context),
                          ReportingDelegate::Create(request_context)) {}
 };
@@ -49,7 +49,7 @@ class ReportingContextImpl : public ReportingContext {
 std::unique_ptr<ReportingContext> ReportingContext::Create(
     const ReportingPolicy& policy,
     URLRequestContext* request_context) {
-  return base::MakeUnique<ReportingContextImpl>(policy, request_context);
+  return std::make_unique<ReportingContextImpl>(policy, request_context);
 }
 
 ReportingContext::~ReportingContext() {}

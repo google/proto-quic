@@ -15,6 +15,7 @@ from pylib import constants
 from pylib.constants import host_paths
 from pylib.base import base_test_result
 from pylib.base import test_instance
+from pylib.symbols import stack_symbolizer
 
 with host_paths.SysPath(host_paths.BUILD_COMMON_PATH):
   import unittest_util # pylint: disable=import-error
@@ -85,6 +86,9 @@ _RE_TEST_CURRENTLY_RUNNING = re.compile(r'\[ERROR:.*?\]'
 _RE_DISABLED = re.compile(r'DISABLED_')
 _RE_FLAKY = re.compile(r'FLAKY_')
 
+# Detect stack line in stdout.
+_STACK_LINE_RE = re.compile(r'\s*#\d+')
+
 def ParseGTestListTests(raw_list):
   """Parses a raw test list as provided by --gtest_list_tests.
 
@@ -120,27 +124,40 @@ def ParseGTestListTests(raw_list):
   return ret
 
 
-def ParseGTestOutput(output):
+def ParseGTestOutput(output, symbolizer, device_abi):
   """Parses raw gtest output and returns a list of results.
 
   Args:
     output: A list of output lines.
+    symbolizer: The symbolizer used to symbolize stack.
+    device_abi: Device abi that is needed for symbolization.
   Returns:
     A list of base_test_result.BaseTestResults.
   """
   duration = 0
   fallback_result_type = None
   log = []
+  stack = []
   result_type = None
   results = []
   test_name = None
+
+  def symbolize_stack_and_merge_with_log():
+    log_string = '\n'.join(log or [])
+    if not stack:
+      stack_string = ''
+    else:
+      stack_string = '\n'.join(
+          symbolizer.ExtractAndResolveNativeStackTraces(
+              stack, device_abi))
+    return '%s\n%s' % (log_string, stack_string)
 
   def handle_possibly_unknown_test():
     if test_name is not None:
       results.append(base_test_result.BaseTestResult(
           TestNameWithoutDisabledPrefix(test_name),
           fallback_result_type or base_test_result.ResultType.UNKNOWN,
-          duration, log=('\n'.join(log) if log else '')))
+          duration, log=symbolize_stack_and_merge_with_log()))
 
   for l in output:
     matcher = _RE_TEST_STATUS.match(l)
@@ -150,6 +167,7 @@ def ParseGTestOutput(output):
         duration = 0
         fallback_result_type = None
         log = []
+        stack = []
         result_type = None
       elif matcher.group(1) == 'OK':
         result_type = base_test_result.ResultType.PASS
@@ -170,12 +188,15 @@ def ParseGTestOutput(output):
         duration = 0 # Don't know.
 
     if log is not None:
-      log.append(l)
+      if not matcher and _STACK_LINE_RE.match(l):
+        stack.append(l)
+      else:
+        log.append(l)
 
     if result_type and test_name:
       results.append(base_test_result.BaseTestResult(
           TestNameWithoutDisabledPrefix(test_name), result_type, duration,
-          log=('\n'.join(log) if log else '')))
+          log=symbolize_stack_and_merge_with_log()))
       test_name = None
 
   handle_possibly_unknown_test()
@@ -225,9 +246,9 @@ def ConvertTestFilterFileIntoGTestFilterArgument(input_lines):
   Returns:
     a string suitable for feeding as an argument of --gtest_filter parameter.
   """
-  # Strip whitespace + skip empty lines and lines beginning with '#'.
-  stripped_lines = (l.strip() for l in input_lines)
-  filter_lines = list(l for l in stripped_lines if l and l[0] != '#')
+  # Strip comments and whitespace from each line and filter non-empty lines.
+  stripped_lines = (l.split('#', 1)[0].strip() for l in input_lines)
+  filter_lines = list(l for l in stripped_lines if l)
 
   # Split the tests into positive and negative patterns (gtest treats
   # every pattern after the first '-' sign as an exclusion).
@@ -268,6 +289,7 @@ class GtestTestInstance(test_instance.TestInstance):
     self._store_tombstones = args.store_tombstones
     self._total_external_shards = args.test_launcher_total_shards
     self._suite = args.suite_name[0]
+    self._symbolizer = stack_symbolizer.Symbolizer(None, False)
 
     # GYP:
     if args.executable_dist_dir:
@@ -421,6 +443,10 @@ class GtestTestInstance(test_instance.TestInstance):
   @property
   def suite(self):
     return self._suite
+
+  @property
+  def symbolizer(self):
+    return self._symbolizer
 
   @property
   def test_apk_incremental_install_json(self):

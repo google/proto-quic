@@ -15,7 +15,6 @@
 #include "base/mac/mac_logging.h"
 #include "base/mac/mac_util.h"
 #include "base/mac/scoped_cftyperef.h"
-#include "base/sha1.h"
 #include "base/strings/string_piece.h"
 #include "base/synchronization/lock.h"
 #include "crypto/mac_security_services_lock.h"
@@ -347,16 +346,12 @@ bool CheckCertChainEV(const X509Certificate* cert,
       cert->GetIntermediateCertificates();
 
   // Root should have matching policy in EVRootCAMetadata.
-  std::string der_cert;
-  if (os_cert_chain.empty() ||
-      !X509Certificate::GetDEREncoded(os_cert_chain.back(), &der_cert)) {
+  if (os_cert_chain.empty())
     return false;
-  }
-  SHA1HashValue weak_fingerprint;
-  base::SHA1HashBytes(reinterpret_cast<const unsigned char*>(der_cert.data()),
-                      der_cert.size(), weak_fingerprint.data);
+  SHA256HashValue fingerprint =
+      X509Certificate::CalculateFingerprint256(os_cert_chain.back());
   EVRootCAMetadata* metadata = EVRootCAMetadata::GetInstance();
-  if (!metadata->HasEVPolicyOID(weak_fingerprint, ev_policy_oid))
+  if (!metadata->HasEVPolicyOID(fingerprint, ev_policy_oid))
     return false;
 
   // Intermediates should have Certificate Policies extension with the EV policy
@@ -750,7 +745,8 @@ int VerifyWithGivenFlags(X509Certificate* cert,
     }
 
     ScopedCFTypeRef<CFMutableArrayRef> cert_array(
-        x509_util::CreateSecCertificateArrayForX509Certificate(cert));
+        x509_util::CreateSecCertificateArrayForX509Certificate(
+            cert, x509_util::InvalidIntermediateBehavior::kIgnore));
     if (!cert_array) {
       verify_result->cert_status |= CERT_STATUS_INVALID;
       return ERR_CERT_INVALID;

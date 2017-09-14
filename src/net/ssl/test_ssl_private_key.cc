@@ -105,7 +105,7 @@ scoped_refptr<SSLPrivateKey> WrapOpenSSLPrivateKey(
     return nullptr;
 
   return make_scoped_refptr(new ThreadedSSLPrivateKey(
-      base::MakeUnique<TestSSLPlatformKey>(std::move(key)),
+      std::make_unique<TestSSLPlatformKey>(std::move(key)),
       GetSSLPlatformKeyTaskRunner()));
 }
 

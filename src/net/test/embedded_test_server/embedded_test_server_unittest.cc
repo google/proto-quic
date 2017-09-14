@@ -502,11 +502,6 @@ const CertificateValuesEntry kCertificateValuesEntry[] = {
     {EmbeddedTestServer::CERT_COMMON_NAME_IS_DOMAIN, false, "localhost",
      "Test Root CA"},
     {EmbeddedTestServer::CERT_EXPIRED, true, "127.0.0.1", "Test Root CA"},
-    {EmbeddedTestServer::CERT_CHAIN_WRONG_ROOT, false, "127.0.0.1", "B CA"},
-#if !defined(OS_WIN) && !defined(OS_ANDROID)
-    {EmbeddedTestServer::CERT_BAD_VALIDITY, true, "Leaf Certificate",
-     "Test Root CA"},
-#endif
 };
 
 TEST_P(EmbeddedTestServerTest, GetCertificate) {
