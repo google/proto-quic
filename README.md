@@ -1,7 +1,16 @@
-proto-quic
-==========
+proto-quic is no longer being maintained
+========================================
+
+proto-quic is no longer being updated from Chromium. To checkout and build QUIC
+code, please follow the [Chromium instructions](https://www.chromium.org/quic/playing-with-quic).
 
 proto-quic is intended as a standalone library for [QUIC](https://www.chromium.org/quic).
+
+This repository will remain available for some period of time, but will
+eventually be remove.
+
+proto-quic
+==========
 
 It contains the subset of Chromium code and dependencies required for QUIC so
 folks can use the Chromium code without depending on all of Chromium.  It is
