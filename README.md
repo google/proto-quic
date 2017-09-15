@@ -5,7 +5,7 @@ proto-quic is no longer being updated from Chromium. To checkout and build QUIC
 code, please follow the [Chromium instructions](https://www.chromium.org/quic/playing-with-quic).
 
 This repository will remain available for some period of time, but will
-eventually be remove.
+eventually be removed.
 
 proto-quic
 ==========
