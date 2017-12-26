@@ -31,7 +31,12 @@ Building on Linux
 
 0. Clone this repository:
    ```
+   cd ~
    git clone https://github.com/google/proto-quic.git
+   git clone https://github.com/martine/ninja.git -b v1.7.2
+   cd ninja && ./configure.py --bootstrap
+   export PATH=$PATH:~/ninja/
+
    cd proto-quic
    export PROTO_QUIC_ROOT=`pwd`/src
    export PATH=$PATH:`pwd`/depot_tools
