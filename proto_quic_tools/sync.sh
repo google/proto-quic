@@ -1,4 +1,5 @@
 #!/bin/bash
+export PROTO_QUIC_ROOT=`pwd`/src
 
 if [ "$PROTO_QUIC_ROOT" == "" ]; then
     echo "PROTO_QUIC_ROOT is not set"
