@@ -12,6 +12,7 @@ import shlex
 import subprocess
 import sys
 from optparse import OptionParser
+import string
 
 """Start a client to fetch web pages either using wget or using quic_client.
 If --use_wget is set, it uses wget.
@@ -96,15 +97,23 @@ class PageloadExperiment:
     if self.use_wget:
       cmd = 'wget -O -'
     else:
-      cmd = '%s/quic_client --port=%s --address=%s' % (
+      cmd = '%s/quic_client --v=1 --port=%s --host=%s' % (
           self.quic_binary_dir, self.quic_server_port, self.quic_server_address)
     cmd_in_list = shlex.split(cmd)
     cmd_in_list.extend(urls)
+
+    #print(cmd_in_list)
+
     start_time = Timestamp()
+
     ps_proc = subprocess.Popen(cmd_in_list,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
+
     _std_out, std_err = ps_proc.communicate()
+
+    #print(std_err)
+
     end_time = Timestamp()
     delta_time = end_time - start_time
     max_packets = 0
@@ -170,17 +179,18 @@ def main():
   parser.add_option('--address', dest='quic_server_address',
                     default='127.0.0.1')
   parser.add_option('--port', dest='quic_server_port',
-                    default='5002')
+                    default='6121')
   parser.add_option('--delay_file', dest='delay_file', default='delay.csv')
   parser.add_option('--packets_file', dest='packets_file',
                     default='packets.csv')
   parser.add_option('--infile', dest='infile', default='test_urls.json')
+  parser.add_option('--iterations', dest='num_it', default='1')
   (options, _) = parser.parse_args()
 
   exp = PageloadExperiment(options.use_wget, options.quic_binary_dir,
                            options.quic_server_address,
                            options.quic_server_port)
-  exp.RunExperiment(options.infile, options.delay_file, options.packets_file)
+  exp.RunExperiment(options.infile, options.delay_file, options.packets_file, int(options.num_it))
 
 if __name__ == '__main__':
   sys.exit(main())
