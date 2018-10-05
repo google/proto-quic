@@ -102,8 +102,6 @@ class PageloadExperiment:
     cmd_in_list = shlex.split(cmd)
     cmd_in_list.extend(urls)
 
-    #print(cmd_in_list)
-
     start_time = Timestamp()
 
     ps_proc = subprocess.Popen(cmd_in_list,
@@ -111,8 +109,6 @@ class PageloadExperiment:
                                stderr=subprocess.PIPE)
 
     _std_out, std_err = ps_proc.communicate()
-
-    #print(std_err)
 
     end_time = Timestamp()
     delta_time = end_time - start_time
