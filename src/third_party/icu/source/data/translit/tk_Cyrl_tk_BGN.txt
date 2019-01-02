@@ -83,9 +83,9 @@ $wordBoundary =  [^[:L:][:M:][:N:]] ;
 #
 ########################################################################
 #
-Е}[[$upperVowels - [Ә]] [ЙЪЬ]] → YE ; # CYRILLIC CAPITAL LETTER IE
-Е}[[$lowerVowels - [ә]] [йъь]] → Ye ; # CYRILLIC CAPITAL LETTER IE
-$wordBoundary{Е → Ye ; # CYRILLIC CAPITAL LETTER IE
+Е}[[$upperVowels - [Ә]] [ЙЪЬ]] → Ýe ; # CYRILLIC CAPITAL LETTER IE
+Е}[[$lowerVowels - [ә]] [йъь]] → ýe ; # CYRILLIC CAPITAL LETTER IE
+$wordBoundary{Е → Ýe ; # CYRILLIC CAPITAL LETTER IE
 Е →  E ; # CYRILLIC CAPITAL LETTER IE
 е}[[$upperVowels - [Ә]] [$lowerVowels - [ә]] [ЙйЪъЬь]] → ye ; # CYRILLIC SMALL LETTER IE
 $wordBoundary{е → ye ; # CYRILLIC SMALL LETTER IE
@@ -164,8 +164,8 @@ $wordBoundary{е → ye ; # CYRILLIC SMALL LETTER IE
 ########################################################################
 #
 Ң} $lower → Ng ; # CYRILLIC CAPITAL LETTER EN WITH DESCENDER
-Ң → NG ; # CYRILLIC CAPITAL LETTER EN WITH DESCENDER
-ң → ng ; # CYRILLIC SMALL LETTER EN WITH DESCENDER
+Ң → Ň ; # CYRILLIC CAPITAL LETTER EN WITH DESCENDER
+ң → ň ; # CYRILLIC SMALL LETTER EN WITH DESCENDER
 О → O ; # CYRILLIC CAPITAL LETTER O
 о → o ; # CYRILLIC SMALL LETTER O
 Ө → Ö ; # CYRILLIC CAPITAL LETTER BARRED O
@@ -232,8 +232,8 @@ $wordBoundary{е → ye ; # CYRILLIC SMALL LETTER IE
 ########################################################################
 #
 Ч} $lower → Ch ; # CYRILLIC CAPITAL LETTER CHE
-Ч → CH ; # CYRILLIC CAPITAL LETTER CHE
-ч → ch ; # CYRILLIC SMALL LETTER CHE
+Ч → Ç ; # CYRILLIC CAPITAL LETTER CHE
+ч → ç ; # CYRILLIC SMALL LETTER CHE
 #
 #
 ########################################################################
@@ -297,11 +297,11 @@ $wordBoundary{е → ye ; # CYRILLIC SMALL LETTER IE
 Ә → Ä ; # CYRILLIC CAPITAL LETTER SCHWA
 ә → ä ; # CYRILLIC SMALL LETTER SCHWA
 Ю} $lower → Yu ; # CYRILLIC CAPITAL LETTER YU
-Ю → YU ; # CYRILLIC CAPITAL LETTER YU
-ю → yu ; # CYRILLIC SMALL LETTER YU
+Ю → Ýu ; # CYRILLIC CAPITAL LETTER YU
+ю → ýu ; # CYRILLIC SMALL LETTER YU
 Я} $lower → Ya ; # CYRILLIC CAPITAL LETTER YA
-Я → YA ; # CYRILLIC CAPITAL LETTER YA
-я → ya ; # CYRILLIC SMALL LETTER YA
+Я → Ýa; # CYRILLIC CAPITAL LETTER YA
+я → ýa ; # CYRILLIC SMALL LETTER YA
 #
 #
 ########################################################################
