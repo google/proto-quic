@@ -4,6 +4,11 @@ proto-quic is no longer being maintained
 proto-quic is no longer being updated from Chromium. To checkout and build QUIC
 code, please follow the [Chromium instructions](https://www.chromium.org/quic/playing-with-quic).
 
+The QUIC team at Google is actively working on a new open source repository,
+[QUICHE](https://quiche.googlesource.com/quiche/), it will include Google‘s
+implementation of QUIC and related protocols, and eventually will become the
+upstream of Chromium's QUIC code.
+
 This repository will remain available for some period of time, but will
 eventually be removed.
 
