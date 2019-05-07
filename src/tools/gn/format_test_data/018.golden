@@ -1,3 +1,0 @@
-# Don't crash when no block on a function call.
-
-import("wee.gni")

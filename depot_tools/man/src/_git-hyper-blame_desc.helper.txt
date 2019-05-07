@@ -1,1 +1,0 @@
-Like git blame, but with the ability to ignore or bypass certain commits.

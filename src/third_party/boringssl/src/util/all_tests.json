@@ -1,5 +1,0 @@
-[
-	["crypto/crypto_test"],
-	["decrepit/decrepit_test"],
-	["ssl/ssl_test"]
-]

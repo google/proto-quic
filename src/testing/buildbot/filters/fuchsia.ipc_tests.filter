@@ -1,8 +1,0 @@
-# TODO(fuchsia): Being ported, see https://crbug.com/734791
-
-# These tests are too slow under Fuchsia in QEMU w/out KVM.
--IPCSyncChannelTest.ChattyServer*
-
-# These tests require Mojo IPC support for transferring file descriptors.
--IPCChannelMojoTest.SendPlatformHandle*
--IPCSendFdsTest.DescriptorTest

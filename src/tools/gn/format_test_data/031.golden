@@ -1,8 +1,0 @@
-deps += [
-  ":packed_extra_resources",
-  ":packed_resources",
-
-  # This shouldn't crash.
-
-  # This shouldn't crash 2.
-]

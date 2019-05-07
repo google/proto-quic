@@ -1,1 +1,0 @@
-if (is_win) { sources = ["win.cc"] }

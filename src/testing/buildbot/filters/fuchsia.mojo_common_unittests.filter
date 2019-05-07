@@ -1,5 +1,0 @@
-# TODO(fuchsia): Fix the tests and delete this file. crbug.com/740791
-
-# These tests depend upon support for passing file-descriptors over IPC.
-# See crbug.com/754029.
--CommonCustomTypesTest.File

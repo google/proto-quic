@@ -1,1 +1,0 @@
-import("//build/config/sysroot.gni")  # Imports android/config.gni.

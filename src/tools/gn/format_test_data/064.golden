@@ -1,5 +1,0 @@
-source_set("test") {
-  deps = [
-    rebase_path(sdk_dep, ".", mojo_root),
-  ]
-}
